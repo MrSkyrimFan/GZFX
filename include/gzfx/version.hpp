@@ -2,7 +2,7 @@
 
 namespace gzfx
 {
-    inline constexpr char kVersion[] = "0.0.1-bootstrap";
+    inline constexpr char kVersion[] = "0.0.2-loader";
 }
 
 extern "C" __declspec(dllexport) const char* GZFX_GetVersion() noexcept;
