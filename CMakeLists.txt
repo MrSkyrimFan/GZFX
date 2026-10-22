@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.5
+    VERSION 0.0.6
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -63,6 +63,7 @@ add_library(GZFX SHARED
     src/diagnostics/d3d11_lifecycle.cpp
     src/diagnostics/renderer_forensics.cpp
     src/diagnostics/resource_intelligence.cpp
+    src/render/visible_pass.cpp
 )
 
 target_include_directories(GZFX
@@ -76,6 +77,7 @@ target_link_libraries(
     PRIVATE
         shell32
         ole32
+        user32
         d3dcompiler
         minhook
 )
@@ -112,6 +114,12 @@ add_executable(GZFXResourceIntelligenceHarness
 target_link_libraries(GZFXResourceIntelligenceHarness PRIVATE d3d11 dxgi user32)
 gzfx_apply_common(GZFXResourceIntelligenceHarness)
 
+add_executable(GZFXVisiblePassHarness
+    tests/visible_pass_harness.cpp
+)
+target_link_libraries(GZFXVisiblePassHarness PRIVATE d3d11 dxgi user32)
+gzfx_apply_common(GZFXVisiblePassHarness)
+
 enable_testing()
 
 add_test(
@@ -144,4 +152,12 @@ add_test(
         "$<TARGET_FILE:GZFXResourceIntelligenceHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/resource-intelligence-output"
+)
+
+add_test(
+    NAME visible_pass
+    COMMAND
+        "$<TARGET_FILE:GZFXVisiblePassHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/visible-pass-output"
 )
