@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.4
+    VERSION 0.0.5
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -62,6 +62,7 @@ add_library(GZFX SHARED
     src/version.cpp
     src/diagnostics/d3d11_lifecycle.cpp
     src/diagnostics/renderer_forensics.cpp
+    src/diagnostics/resource_intelligence.cpp
 )
 
 target_include_directories(GZFX
@@ -70,7 +71,14 @@ target_include_directories(GZFX
 )
 
 target_compile_definitions(GZFX PRIVATE GZFX_BUILD_DLL)
-target_link_libraries(GZFX PRIVATE shell32 ole32 minhook)
+target_link_libraries(
+    GZFX
+    PRIVATE
+        shell32
+        ole32
+        d3dcompiler
+        minhook
+)
 set_target_properties(GZFX PROPERTIES OUTPUT_NAME "GZFX")
 gzfx_apply_common(GZFX)
 
@@ -98,6 +106,12 @@ add_executable(GZFXRendererForensicsHarness
 target_link_libraries(GZFXRendererForensicsHarness PRIVATE d3d11 dxgi user32)
 gzfx_apply_common(GZFXRendererForensicsHarness)
 
+add_executable(GZFXResourceIntelligenceHarness
+    tests/resource_intelligence_harness.cpp
+)
+target_link_libraries(GZFXResourceIntelligenceHarness PRIVATE d3d11 dxgi user32)
+gzfx_apply_common(GZFXResourceIntelligenceHarness)
+
 enable_testing()
 
 add_test(
@@ -122,4 +136,12 @@ add_test(
         "$<TARGET_FILE:GZFXRendererForensicsHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/renderer-forensics-output"
+)
+
+add_test(
+    NAME resource_intelligence
+    COMMAND
+        "$<TARGET_FILE:GZFXResourceIntelligenceHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/resource-intelligence-output"
 )
