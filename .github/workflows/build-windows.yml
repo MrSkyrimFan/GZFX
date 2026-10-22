@@ -4,9 +4,14 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "LANCE YOUR FILE IS HERE/**"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -49,3 +54,22 @@ jobs:
           path: dist/GZFX-SkyrimSE-x64.zip
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish Lance test ZIP on main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "LANCE YOUR FILE IS HERE" -Force | Out-Null
+          Copy-Item "dist/GZFX-SkyrimSE-x64.zip" "LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip" -Force
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip"
+
+          if (git diff --cached --quiet) {
+            Write-Host "Lance ZIP is already current."
+            exit 0
+          }
+
+          git commit -m "chore: refresh Lance Skyrim test package"
+          git push origin HEAD:main

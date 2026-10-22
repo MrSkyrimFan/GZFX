@@ -1,11 +1,11 @@
-GZFX - SKYRIM LOADER TEST
-=========================
+GZFX - D3D11 LIFECYCLE PROBE
+============================
 
 STATUS
 ------
-This is the first in-game bootstrap proof.
+This build adds the first passive Direct3D 11 lifecycle diagnostic.
 
-It does NOT yet hook Direct3D 11 or modify Skyrim rendering.
+It does NOT modify Skyrim rendering.
 
 PACKAGE CONTENTS
 ----------------
@@ -27,19 +27,21 @@ INSTALLATION
          dinput8_gzfx_chain.dll
        Then extract this ZIP into the Skyrim root.
 
-3. Launch Skyrim normally.
+3. Launch Skyrim normally and load into the game.
 
 EXPECTED EVIDENCE
 -----------------
-On successful initialization GZFX creates:
+GZFX writes:
 
   Documents\My Games\Skyrim Special Edition\GZFX\GZFX.log
 
-Windows resolves the Documents location, including OneDrive redirection.
+and:
 
-The first log records whether d3d11.dll and dxgi.dll were already loaded when
-GZFX initialized. That tells us whether this bootstrap fires early enough for
-the renderer-watcher stage.
+  Documents\My Games\Skyrim Special Edition\GZFX\Diagnostics\d3d11_lifecycle.txt
+
+The lifecycle file records which D3D11/DXGI creation imports exist in
+SkyrimSE.exe and captures any device, context, swap-chain, or factory creation
+that happens after GZFX initializes.
 
 UNINSTALL
 ---------

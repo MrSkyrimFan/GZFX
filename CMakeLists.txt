@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.2
+    VERSION 0.0.3
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES CXX
 )
@@ -46,8 +46,10 @@ endfunction()
 
 add_library(GZFX SHARED
     src/dllmain.cpp
+    src/paths.cpp
     src/runtime.cpp
     src/version.cpp
+    src/diagnostics/d3d11_lifecycle.cpp
 )
 
 target_include_directories(GZFX
@@ -71,8 +73,13 @@ gzfx_apply_common(GZFXBootstrap)
 add_executable(GZFXSmokeHost
     tests/smoke_host.cpp
 )
-
 gzfx_apply_common(GZFXSmokeHost)
+
+add_executable(GZFXD3D11ProbeHarness
+    tests/d3d11_probe_harness.cpp
+)
+target_link_libraries(GZFXD3D11ProbeHarness PRIVATE d3d11)
+gzfx_apply_common(GZFXD3D11ProbeHarness)
 
 enable_testing()
 
@@ -82,4 +89,12 @@ add_test(
         "$<TARGET_FILE:GZFXSmokeHost>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/test-output"
+)
+
+add_test(
+    NAME d3d11_lifecycle_probe
+    COMMAND
+        "$<TARGET_FILE:GZFXD3D11ProbeHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/probe-test-output"
 )
