@@ -459,13 +459,26 @@ int wmain(int argc, wchar_t** argv)
         diagnostics /
         L"visible_pass.bmp";
 
+    const auto stageTrace =
+        diagnostics /
+        L"stage_trace.csv";
+
+    const auto settingsFile =
+        outputRoot /
+        L"GZFX" /
+        L"Settings.ini";
+
     const bool hasVisible = ExistsNonEmpty(visible);
     const bool hasValidation = ExistsNonEmpty(validation);
     const bool hasCapture = ExistsNonEmpty(capture);
+    const bool hasStageTrace = ExistsNonEmpty(stageTrace);
+    const bool hasSettings = ExistsNonEmpty(settingsFile);
 
     if (!hasVisible ||
         !hasValidation ||
-        !hasCapture)
+        !hasCapture ||
+        !hasStageTrace ||
+        !hasSettings)
     {
         std::wcerr
             << L"visible-pass evidence missing: visible="
