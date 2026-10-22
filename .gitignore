@@ -1,0 +1,29 @@
+# CMake / Visual Studio
+/build/
+/out/
+/dist/
+/.vs/
+CMakeUserPresets.json
+*.user
+*.suo
+*.VC.db
+*.VC.VC.opendb
+
+# Compiler output
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.dll
+
+# Local diagnostics / captures
+/GZFX/
+/captures/
+*.jsonl
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
