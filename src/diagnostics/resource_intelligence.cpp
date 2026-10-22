@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <iterator>
 #include <map>
 #include <mutex>
 #include <sstream>
