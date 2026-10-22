@@ -110,6 +110,7 @@ namespace gzfx::diagnostics
         std::uint64_t g_frame = 0;
         bool g_contextArmed = false;
 
+        std::atomic<std::uint64_t> g_drawOrdinalThisFrame{0};
         std::atomic<std::uint64_t> g_draws{0};
         std::atomic<std::uint64_t> g_drawIndexedCalls{0};
         std::atomic<std::uint64_t> g_drawInstancedCalls{0};
@@ -533,16 +534,44 @@ namespace gzfx::diagnostics
         { if (c == g_primaryContext) ++g_csChanges; g_csSetShader(c, s, i, n); }
 
         void STDMETHODCALLTYPE HookDraw(ID3D11DeviceContext* c, UINT a, UINT b)
-        { if (c == g_primaryContext) ++g_draws; g_draw(c, a, b); }
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_drawOrdinalThisFrame;
+                ++g_draws;
+            }
+            g_draw(c, a, b);
+        }
 
         void STDMETHODCALLTYPE HookDrawIndexed(ID3D11DeviceContext* c, UINT a, UINT b, INT d)
-        { if (c == g_primaryContext) ++g_drawIndexedCalls; g_drawIndexed(c, a, b, d); }
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_drawOrdinalThisFrame;
+                ++g_drawIndexedCalls;
+            }
+            g_drawIndexed(c, a, b, d);
+        }
 
         void STDMETHODCALLTYPE HookDrawInstanced(ID3D11DeviceContext* c, UINT a, UINT b, UINT d, UINT e)
-        { if (c == g_primaryContext) ++g_drawInstancedCalls; g_drawInstanced(c, a, b, d, e); }
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_drawOrdinalThisFrame;
+                ++g_drawInstancedCalls;
+            }
+            g_drawInstanced(c, a, b, d, e);
+        }
 
         void STDMETHODCALLTYPE HookDrawIndexedInstanced(ID3D11DeviceContext* c, UINT a, UINT b, UINT d, INT e, UINT f)
-        { if (c == g_primaryContext) ++g_drawIndexedInstancedCalls; g_drawIndexedInstanced(c, a, b, d, e, f); }
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_drawOrdinalThisFrame;
+                ++g_drawIndexedInstancedCalls;
+            }
+            g_drawIndexedInstanced(c, a, b, d, e, f);
+        }
 
         void STDMETHODCALLTYPE HookDispatch(ID3D11DeviceContext* c, UINT a, UINT b, UINT d)
         { if (c == g_primaryContext) ++g_dispatchCalls; g_dispatch(c, a, b, d); }
@@ -568,6 +597,7 @@ namespace gzfx::diagnostics
 
                 resource_intelligence::ObserveRenderTargets(
                     g_frame,
+                    g_drawOrdinalThisFrame.load(),
                     count,
                     rtvs,
                     dsv);
@@ -726,6 +756,9 @@ namespace gzfx::diagnostics
 
             if (swap == g_primarySwap && g_contextArmed)
             {
+                const std::uint64_t drawIndexedActivity =
+                    g_drawIndexedCalls.load();
+
                 WriteFrameSummary();
 
                 if (g_frame <= 3 || (g_frame % kSummaryEvery) == 0)
@@ -741,10 +774,12 @@ namespace gzfx::diagnostics
 
                 gzfx::render::RenderVisiblePass(
                     g_frame,
+                    drawIndexedActivity,
                     g_primarySwap,
                     g_primaryDevice,
                     g_primaryContext);
 
+                g_drawOrdinalThisFrame.store(0);
                 ++g_frame;
             }
         }
