@@ -1,8 +1,10 @@
 #include "gzfx/runtime.hpp"
+
+#include "gzfx/diagnostics/d3d11_lifecycle.hpp"
+#include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
 
 #include <Windows.h>
-#include <ShlObj.h>
 
 #include <chrono>
 #include <ctime>
@@ -21,79 +23,6 @@ namespace
     std::once_flag g_initializeOnce;
     bool g_initializeResult = false;
 
-    std::wstring GetEnvironmentValue(const wchar_t* name)
-    {
-        const DWORD required = GetEnvironmentVariableW(name, nullptr, 0);
-        if (required == 0)
-        {
-            return {};
-        }
-
-        std::wstring value(required, L'\0');
-        const DWORD written = GetEnvironmentVariableW(name, value.data(), required);
-        if (written == 0 || written >= required)
-        {
-            return {};
-        }
-
-        value.resize(written);
-        return value;
-    }
-
-    fs::path GetExecutablePath()
-    {
-        std::wstring buffer(32768, L'\0');
-        const DWORD written = GetModuleFileNameW(
-            nullptr,
-            buffer.data(),
-            static_cast<DWORD>(buffer.size()));
-
-        if (written == 0 || static_cast<std::size_t>(written) >= buffer.size())
-        {
-            return {};
-        }
-
-        buffer.resize(written);
-        return fs::path(buffer);
-    }
-
-    fs::path ResolveRuntimeRoot()
-    {
-        const std::wstring testRoot = GetEnvironmentValue(L"GZFX_TEST_OUTPUT_ROOT");
-        if (!testRoot.empty())
-        {
-            return fs::path(testRoot) / L"GZFX";
-        }
-
-        PWSTR documentsRaw = nullptr;
-        const HRESULT result = SHGetKnownFolderPath(
-            FOLDERID_Documents,
-            KF_FLAG_DEFAULT,
-            nullptr,
-            &documentsRaw);
-
-        if (FAILED(result) || documentsRaw == nullptr)
-        {
-            return {};
-        }
-
-        const fs::path documents(documentsRaw);
-        CoTaskMemFree(documentsRaw);
-
-        return documents / L"My Games" / L"Skyrim Special Edition" / L"GZFX";
-    }
-
-    bool IsAllowedProcess(const fs::path& executable)
-    {
-        if (!GetEnvironmentValue(L"GZFX_TEST_OUTPUT_ROOT").empty())
-        {
-            return true;
-        }
-
-        const std::wstring name = executable.filename().wstring();
-        return _wcsicmp(name.c_str(), L"SkyrimSE.exe") == 0;
-    }
-
     std::string CurrentTimestamp()
     {
         const auto now = std::chrono::system_clock::now();
@@ -108,27 +37,32 @@ namespace
 
     void InitializeRuntime()
     {
-        const fs::path executable = GetExecutablePath();
-        if (executable.empty() || !IsAllowedProcess(executable))
+        const fs::path executable = gzfx::paths::ExecutablePath();
+        if (executable.empty() || !gzfx::paths::IsAllowedProcess(executable))
         {
             g_initializeResult = false;
             return;
         }
 
-        const fs::path runtimeRoot = ResolveRuntimeRoot();
-        if (runtimeRoot.empty())
+        const fs::path runtimeRoot = gzfx::paths::RuntimeRoot();
+        const fs::path diagnosticsRoot = gzfx::paths::DiagnosticsRoot();
+
+        if (runtimeRoot.empty() || diagnosticsRoot.empty())
         {
             g_initializeResult = false;
             return;
         }
 
         std::error_code error;
-        fs::create_directories(runtimeRoot / L"Diagnostics", error);
+        fs::create_directories(diagnosticsRoot, error);
         if (error)
         {
             g_initializeResult = false;
             return;
         }
+
+        const bool lifecycleProbeArmed =
+            gzfx::diagnostics::ArmD3D11LifecycleProbe();
 
         const fs::path logPath = runtimeRoot / L"GZFX.log";
         std::ofstream log(logPath, std::ios::out | std::ios::app);
@@ -145,8 +79,15 @@ namespace
         log << "tid=" << GetCurrentThreadId() << "\n";
         log << "executable=" << executable.string() << "\n";
         log << "runtime_root=" << runtimeRoot.string() << "\n";
-        log << "d3d11_loaded=" << (GetModuleHandleW(L"d3d11.dll") != nullptr ? "true" : "false") << "\n";
-        log << "dxgi_loaded=" << (GetModuleHandleW(L"dxgi.dll") != nullptr ? "true" : "false") << "\n";
+        log << "d3d11_loaded="
+            << (GetModuleHandleW(L"d3d11.dll") != nullptr ? "true" : "false")
+            << "\n";
+        log << "dxgi_loaded="
+            << (GetModuleHandleW(L"dxgi.dll") != nullptr ? "true" : "false")
+            << "\n";
+        log << "d3d11_lifecycle_probe="
+            << (lifecycleProbeArmed ? "armed" : "no_supported_imports")
+            << "\n";
         log << "status=initialized\n";
         log << "===============================\n";
         log.flush();
