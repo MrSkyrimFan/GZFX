@@ -15,6 +15,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <iterator>
 #include <mutex>
 #include <sstream>
 #include <string>
@@ -1187,26 +1188,6 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 return false;
             }
 
-            ID3D11RenderTargetView* backRtv = nullptr;
-
-            result =
-                device->CreateRenderTargetView(
-                    backbuffer,
-                    nullptr,
-                    &backRtv);
-
-            if (FAILED(result) ||
-                backRtv == nullptr)
-            {
-                if (sceneSrv) sceneSrv->Release();
-                depthSrv->Release();
-                backbuffer->Release();
-
-                error =
-                    "backbuffer RTV creation failed";
-                return false;
-            }
-
             Parameters parameters{};
             parameters.invWidth =
                 1.0f /
@@ -1231,6 +1212,11 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 &parameters,
                 0,
                 0);
+
+            g_runtime.deferred->OMSetRenderTargets(
+                0,
+                nullptr,
+                nullptr);
 
             g_runtime.deferred->CopyResource(
                 g_runtime.sourceCopy,
@@ -1363,7 +1349,6 @@ float4 PSMain(VSOutput input) : SV_TARGET
             }
 
             if (commands) commands->Release();
-            backRtv->Release();
             if (sceneSrv) sceneSrv->Release();
             depthSrv->Release();
             backbuffer->Release();
