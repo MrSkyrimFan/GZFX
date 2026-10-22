@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cwchar>
 #include <filesystem>
+#include <iterator>
 #include <mutex>
 #include <string>
 
