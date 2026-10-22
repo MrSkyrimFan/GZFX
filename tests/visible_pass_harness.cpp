@@ -447,10 +447,33 @@ int wmain(int argc, wchar_t** argv)
         diagnostics /
         L"visible_pass.bmp";
 
-    if (!ExistsNonEmpty(visible) ||
-        !ExistsNonEmpty(validation) ||
-        !ExistsNonEmpty(capture))
+    const bool hasVisible = ExistsNonEmpty(visible);
+    const bool hasValidation = ExistsNonEmpty(validation);
+    const bool hasCapture = ExistsNonEmpty(capture);
+
+    if (!hasVisible ||
+        !hasValidation ||
+        !hasCapture)
     {
+        std::wcerr
+            << L"visible-pass evidence missing: visible="
+            << hasVisible
+            << L" validation="
+            << hasValidation
+            << L" capture="
+            << hasCapture
+            << L"\n";
+
+        if (hasVisible)
+        {
+            std::cerr << ReadAll(visible) << "\n";
+        }
+
+        if (hasValidation)
+        {
+            std::cerr << ReadAll(validation) << "\n";
+        }
+
         return 14;
     }
 
@@ -460,17 +483,41 @@ int wmain(int argc, wchar_t** argv)
     const std::string validationText =
         ReadAll(validation);
 
-    if (visibleText.find(
-            "status=active") ==
-            std::string::npos ||
-        visibleText.find(
-            "split_ambient_contact") ==
-            std::string::npos ||
-        validationText.find(
-            "status=validated") ==
-            std::string::npos ||
-        !CenterPixelIsMagenta(capture))
+    const bool active =
+        visibleText.find("status=active") !=
+        std::string::npos;
+
+    const bool splitMode =
+        visibleText.find("split_ambient_contact") !=
+        std::string::npos;
+
+    const bool validated =
+        validationText.find("status=validated") !=
+        std::string::npos;
+
+    const bool magenta =
+        CenterPixelIsMagenta(capture);
+
+    if (!active ||
+        !splitMode ||
+        !validated ||
+        !magenta)
     {
+        std::cerr
+            << "visible_pass.txt:\n"
+            << visibleText
+            << "\ncamera_validation.txt:\n"
+            << validationText
+            << "\nchecks: active="
+            << active
+            << " split="
+            << splitMode
+            << " validated="
+            << validated
+            << " magenta="
+            << magenta
+            << "\n";
+
         return 15;
     }
 
