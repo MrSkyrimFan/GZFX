@@ -1,4 +1,5 @@
 #include "gzfx/diagnostics/renderer_forensics.hpp"
+#include "gzfx/diagnostics/resource_intelligence.hpp"
 
 #include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
@@ -478,19 +479,46 @@ namespace gzfx::diagnostics
 
         void STDMETHODCALLTYPE HookVSSetCB(ID3D11DeviceContext* c, UINT slot, UINT count, ID3D11Buffer* const* b)
         {
-            if (c == g_primaryContext) Safe([&]{ g_vsCBBinds += count; std::scoped_lock l(g_mutex); TrackBuffers('V', slot, count, b); });
+            if (c == g_primaryContext) Safe([&]
+            {
+                g_vsCBBinds += count;
+                {
+                    std::scoped_lock l(g_mutex);
+                    TrackBuffers('V', slot, count, b);
+                }
+                resource_intelligence::ObserveConstantBuffers(
+                    g_frame, 'V', slot, count, b);
+            });
             g_vsSetCB(c, slot, count, b);
         }
 
         void STDMETHODCALLTYPE HookPSSetCB(ID3D11DeviceContext* c, UINT slot, UINT count, ID3D11Buffer* const* b)
         {
-            if (c == g_primaryContext) Safe([&]{ g_psCBBinds += count; std::scoped_lock l(g_mutex); TrackBuffers('P', slot, count, b); });
+            if (c == g_primaryContext) Safe([&]
+            {
+                g_psCBBinds += count;
+                {
+                    std::scoped_lock l(g_mutex);
+                    TrackBuffers('P', slot, count, b);
+                }
+                resource_intelligence::ObserveConstantBuffers(
+                    g_frame, 'P', slot, count, b);
+            });
             g_psSetCB(c, slot, count, b);
         }
 
         void STDMETHODCALLTYPE HookCSSetCB(ID3D11DeviceContext* c, UINT slot, UINT count, ID3D11Buffer* const* b)
         {
-            if (c == g_primaryContext) Safe([&]{ g_csCBBinds += count; std::scoped_lock l(g_mutex); TrackBuffers('C', slot, count, b); });
+            if (c == g_primaryContext) Safe([&]
+            {
+                g_csCBBinds += count;
+                {
+                    std::scoped_lock l(g_mutex);
+                    TrackBuffers('C', slot, count, b);
+                }
+                resource_intelligence::ObserveConstantBuffers(
+                    g_frame, 'C', slot, count, b);
+            });
             g_csSetCB(c, slot, count, b);
         }
 
@@ -523,9 +551,25 @@ namespace gzfx::diagnostics
             if (c == g_primaryContext) Safe([&]
             {
                 ++g_rtSets;
-                std::scoped_lock l(g_mutex);
-                for (UINT i = 0; i < count; ++i) TrackView(rtvs ? rtvs[i] : nullptr, true, false, false, false);
-                TrackView(dsv, false, true, false, false);
+                {
+                    std::scoped_lock l(g_mutex);
+                    for (UINT i = 0; i < count; ++i)
+                    {
+                        TrackView(
+                            rtvs ? rtvs[i] : nullptr,
+                            true,
+                            false,
+                            false,
+                            false);
+                    }
+                    TrackView(dsv, false, true, false, false);
+                }
+
+                resource_intelligence::ObserveRenderTargets(
+                    g_frame,
+                    count,
+                    rtvs,
+                    dsv);
             });
             g_omSetRT(c, count, rtvs, dsv);
         }
@@ -687,6 +731,12 @@ namespace gzfx::diagnostics
                 {
                     WriteRendererSummary();
                 }
+
+                resource_intelligence::OnPresent(
+                    g_frame,
+                    g_primarySwap,
+                    g_primaryDevice,
+                    g_primaryContext);
 
                 ++g_frame;
             }
