@@ -160,13 +160,11 @@ namespace gzfx::settings
 
             next.activationDrawIndexedThreshold =
                 static_cast<std::uint64_t>(
-                    std::max(
-                        0,
-                        GetPrivateProfileIntW(
-                            L"Development",
-                            L"ActivationDrawIndexedThreshold",
-                            1000,
-                            path.c_str())));
+                    GetPrivateProfileIntW(
+                        L"Development",
+                        L"ActivationDrawIndexedThreshold",
+                        1000,
+                        path.c_str()));
 
             next.accessibleDiagnostics =
                 GetPrivateProfileIntW(
