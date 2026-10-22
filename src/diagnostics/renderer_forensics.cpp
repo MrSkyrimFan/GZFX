@@ -1,5 +1,6 @@
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/diagnostics/resource_intelligence.hpp"
+#include "gzfx/render/visible_pass.hpp"
 
 #include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
@@ -733,6 +734,12 @@ namespace gzfx::diagnostics
                 }
 
                 resource_intelligence::OnPresent(
+                    g_frame,
+                    g_primarySwap,
+                    g_primaryDevice,
+                    g_primaryContext);
+
+                gzfx::render::RenderVisiblePass(
                     g_frame,
                     g_primarySwap,
                     g_primaryDevice,

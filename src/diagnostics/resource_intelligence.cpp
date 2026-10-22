@@ -901,6 +901,121 @@ namespace gzfx::diagnostics::resource_intelligence
         }
     }
 
+    bool AcquireLiveInputs(
+        IDXGISwapChain* swapChain,
+        LiveInputs& inputs) noexcept
+    {
+        try
+        {
+            ReleaseLiveInputs(inputs);
+
+            if (swapChain == nullptr)
+            {
+                return false;
+            }
+
+            DXGI_SWAP_CHAIN_DESC swapDesc{};
+            if (FAILED(swapChain->GetDesc(&swapDesc)))
+            {
+                return false;
+            }
+
+            std::scoped_lock lock(g_mutex);
+
+            std::uintptr_t depthId = 0;
+            TextureInfo* depth = SelectDepth(
+                swapDesc.BufferDesc.Width,
+                swapDesc.BufferDesc.Height,
+                depthId);
+
+            if (depth == nullptr || depth->texture == nullptr)
+            {
+                return false;
+            }
+
+            std::uintptr_t colorId = 0;
+            std::uint64_t pairCount = 0;
+            TextureInfo* color = SelectColor(
+                swapDesc.BufferDesc.Width,
+                swapDesc.BufferDesc.Height,
+                depthId,
+                colorId,
+                pairCount);
+
+            BufferInfo* camera = nullptr;
+            std::uint64_t cameraScore = 0;
+
+            for (auto& [id, info] : g_buffers)
+            {
+                (void)id;
+
+                constexpr std::uint64_t slot12 = 1ull << 12;
+                if (info.desc.ByteWidth != 720 ||
+                    (info.vsSlots & slot12) == 0 ||
+                    (info.psSlots & slot12) == 0 ||
+                    info.buffer == nullptr)
+                {
+                    continue;
+                }
+
+                const std::uint64_t score =
+                    info.vsBinds + info.psBinds;
+
+                if (score > cameraScore)
+                {
+                    cameraScore = score;
+                    camera = &info;
+                }
+            }
+
+            if (camera == nullptr)
+            {
+                return false;
+            }
+
+            depth->texture->AddRef();
+            camera->buffer->AddRef();
+
+            inputs.depthTexture = depth->texture;
+            inputs.depthDesc = depth->desc;
+            inputs.cameraBuffer = camera->buffer;
+
+            if (color != nullptr && color->texture != nullptr)
+            {
+                color->texture->AddRef();
+                inputs.sceneColorTexture = color->texture;
+                inputs.sceneColorDesc = color->desc;
+            }
+
+            return true;
+        }
+        catch (...)
+        {
+            ReleaseLiveInputs(inputs);
+            return false;
+        }
+    }
+
+    void ReleaseLiveInputs(LiveInputs& inputs) noexcept
+    {
+        if (inputs.cameraBuffer != nullptr)
+        {
+            inputs.cameraBuffer->Release();
+        }
+
+        if (inputs.sceneColorTexture != nullptr)
+        {
+            inputs.sceneColorTexture->Release();
+        }
+
+        if (inputs.depthTexture != nullptr)
+        {
+            inputs.depthTexture->Release();
+        }
+
+        inputs = {};
+    }
+
     void ObserveRenderTargets(
         const std::uint64_t frame,
         const UINT count,

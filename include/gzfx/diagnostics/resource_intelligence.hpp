@@ -7,6 +7,15 @@
 
 namespace gzfx::diagnostics::resource_intelligence
 {
+    struct LiveInputs
+    {
+        ID3D11Texture2D* depthTexture = nullptr;
+        ID3D11Texture2D* sceneColorTexture = nullptr;
+        ID3D11Buffer* cameraBuffer = nullptr;
+        D3D11_TEXTURE2D_DESC depthDesc{};
+        D3D11_TEXTURE2D_DESC sceneColorDesc{};
+    };
+
     void ObserveRenderTargets(
         std::uint64_t frame,
         UINT count,
@@ -25,4 +34,10 @@ namespace gzfx::diagnostics::resource_intelligence
         IDXGISwapChain* swapChain,
         ID3D11Device* device,
         ID3D11DeviceContext* context) noexcept;
+
+    bool AcquireLiveInputs(
+        IDXGISwapChain* swapChain,
+        LiveInputs& inputs) noexcept;
+
+    void ReleaseLiveInputs(LiveInputs& inputs) noexcept;
 }
