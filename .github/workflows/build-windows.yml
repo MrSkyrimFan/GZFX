@@ -15,13 +15,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
       - name: Build
         run: cmake --build build --config Release --parallel
+
+      - name: Runtime smoke test
+        run: ctest --test-dir build -C Release --output-on-failure
 
       - name: Package root-ready archive
         shell: pwsh
@@ -40,7 +43,7 @@ jobs:
           }
 
       - name: Upload Skyrim root package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: GZFX-SkyrimSE-x64
           path: dist/GZFX-SkyrimSE-x64.zip

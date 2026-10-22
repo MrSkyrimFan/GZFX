@@ -9,12 +9,15 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $buildPath = Join-Path $repoRoot $BuildDir
 $outputPath = Join-Path $repoRoot $OutputDir
 $stagePath = Join-Path $outputPath "stage"
-$dllPath = Join-Path $buildPath "bin\GZFX.dll"
+$runtimePath = Join-Path $buildPath "bin\GZFX.dll"
+$bootstrapPath = Join-Path $buildPath "bin\dinput8.dll"
 $installReadme = Join-Path $repoRoot "packaging\README_INSTALL.txt"
 $zipPath = Join-Path $outputPath "GZFX-SkyrimSE-x64.zip"
 
-if (-not (Test-Path $dllPath)) {
-    throw "GZFX.dll was not found at expected path: $dllPath"
+foreach ($required in @($runtimePath, $bootstrapPath, $installReadme)) {
+    if (-not (Test-Path $required)) {
+        throw "Required package input was not found: $required"
+    }
 }
 
 if (Test-Path $outputPath) {
@@ -23,7 +26,8 @@ if (Test-Path $outputPath) {
 
 New-Item -ItemType Directory -Path $stagePath -Force | Out-Null
 
-Copy-Item $dllPath (Join-Path $stagePath "GZFX.dll")
+Copy-Item $runtimePath (Join-Path $stagePath "GZFX.dll")
+Copy-Item $bootstrapPath (Join-Path $stagePath "dinput8.dll")
 Copy-Item $installReadme (Join-Path $stagePath "README_INSTALL.txt")
 
 Compress-Archive -Path (Join-Path $stagePath "*") -DestinationPath $zipPath -CompressionLevel Optimal
