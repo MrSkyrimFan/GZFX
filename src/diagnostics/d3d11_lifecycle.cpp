@@ -131,11 +131,11 @@ namespace gzfx::diagnostics
             HMODULE imageModule,
             const char* importedModuleName,
             const char* functionName,
-            const void* replacement,
-            void** original)
+            std::uintptr_t replacement,
+            std::uintptr_t* original)
         {
             if (imageModule == nullptr || importedModuleName == nullptr ||
-                functionName == nullptr || replacement == nullptr || original == nullptr)
+                functionName == nullptr || replacement == 0 || original == nullptr)
             {
                 return false;
             }
@@ -213,9 +213,8 @@ namespace gzfx::diagnostics
                         return false;
                     }
 
-                    *original = reinterpret_cast<void*>(slots->u1.Function);
-                    slots->u1.Function =
-                        static_cast<ULONGLONG>(reinterpret_cast<std::uintptr_t>(replacement));
+                    *original = static_cast<std::uintptr_t>(slots->u1.Function);
+                    slots->u1.Function = static_cast<ULONGLONG>(replacement);
 
                     DWORD ignoredProtection = 0;
                     VirtualProtect(
@@ -460,40 +459,77 @@ namespace gzfx::diagnostics
             WriteDiagnostic(
                 "dxgi_module=" + PointerString(GetModuleHandleW(L"dxgi.dll")));
 
+            std::uintptr_t originalCreateDevice = 0;
+            std::uintptr_t originalCreateDeviceAndSwapChain = 0;
+            std::uintptr_t originalCreateFactory = 0;
+            std::uintptr_t originalCreateFactory1 = 0;
+            std::uintptr_t originalCreateFactory2 = 0;
+
             const bool createDevice = PatchImport(
                 executable,
                 "d3d11.dll",
                 "D3D11CreateDevice",
-                reinterpret_cast<const void*>(&HookD3D11CreateDevice),
-                reinterpret_cast<void**>(&g_originalCreateDevice));
+                reinterpret_cast<std::uintptr_t>(&HookD3D11CreateDevice),
+                &originalCreateDevice);
 
             const bool createDeviceAndSwapChain = PatchImport(
                 executable,
                 "d3d11.dll",
                 "D3D11CreateDeviceAndSwapChain",
-                reinterpret_cast<const void*>(&HookD3D11CreateDeviceAndSwapChain),
-                reinterpret_cast<void**>(&g_originalCreateDeviceAndSwapChain));
+                reinterpret_cast<std::uintptr_t>(&HookD3D11CreateDeviceAndSwapChain),
+                &originalCreateDeviceAndSwapChain);
 
             const bool createFactory = PatchImport(
                 executable,
                 "dxgi.dll",
                 "CreateDXGIFactory",
-                reinterpret_cast<const void*>(&HookCreateDXGIFactory),
-                reinterpret_cast<void**>(&g_originalCreateFactory));
+                reinterpret_cast<std::uintptr_t>(&HookCreateDXGIFactory),
+                &originalCreateFactory);
 
             const bool createFactory1 = PatchImport(
                 executable,
                 "dxgi.dll",
                 "CreateDXGIFactory1",
-                reinterpret_cast<const void*>(&HookCreateDXGIFactory1),
-                reinterpret_cast<void**>(&g_originalCreateFactory1));
+                reinterpret_cast<std::uintptr_t>(&HookCreateDXGIFactory1),
+                &originalCreateFactory1);
 
             const bool createFactory2 = PatchImport(
                 executable,
                 "dxgi.dll",
                 "CreateDXGIFactory2",
-                reinterpret_cast<const void*>(&HookCreateDXGIFactory2),
-                reinterpret_cast<void**>(&g_originalCreateFactory2));
+                reinterpret_cast<std::uintptr_t>(&HookCreateDXGIFactory2),
+                &originalCreateFactory2);
+
+            if (createDevice)
+            {
+                g_originalCreateDevice =
+                    reinterpret_cast<D3D11CreateDeviceFn>(originalCreateDevice);
+            }
+
+            if (createDeviceAndSwapChain)
+            {
+                g_originalCreateDeviceAndSwapChain =
+                    reinterpret_cast<D3D11CreateDeviceAndSwapChainFn>(
+                        originalCreateDeviceAndSwapChain);
+            }
+
+            if (createFactory)
+            {
+                g_originalCreateFactory =
+                    reinterpret_cast<CreateDXGIFactoryFn>(originalCreateFactory);
+            }
+
+            if (createFactory1)
+            {
+                g_originalCreateFactory1 =
+                    reinterpret_cast<CreateDXGIFactory1Fn>(originalCreateFactory1);
+            }
+
+            if (createFactory2)
+            {
+                g_originalCreateFactory2 =
+                    reinterpret_cast<CreateDXGIFactory2Fn>(originalCreateFactory2);
+            }
 
             WriteDiagnostic(
                 std::string("import.D3D11CreateDevice=") +
