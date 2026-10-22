@@ -1131,9 +1131,12 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 return false;
             }
 
-            WriteText(
-                L"camera_validation.txt",
-                cameraReport);
+            if (!cameraReport.empty())
+            {
+                WriteText(
+                    L"camera_validation.txt",
+                    cameraReport);
+            }
 
             D3D11_SHADER_RESOURCE_VIEW_DESC
                 depthSrvDesc{};
