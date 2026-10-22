@@ -2,6 +2,7 @@
 
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 #include "gzfx/paths.hpp"
+#include "gzfx/settings.hpp"
 #include "gzfx/version.hpp"
 
 #include <Windows.h>
@@ -35,7 +36,8 @@ namespace gzfx::render
             float strength = 0.55f;
             float radiusPixels = 4.0f;
             std::uint32_t mode = 1;
-            float padding[3]{};
+            std::uint32_t accessibleDiagnostics = 1;
+            float padding[2]{};
         };
 
         struct Runtime
@@ -66,10 +68,17 @@ namespace gzfx::render
         Runtime g_runtime;
 
         std::uint32_t g_mode = 1;
+        bool g_modeInitialized = false;
+        bool g_f9WasDown = false;
         bool g_f10WasDown = false;
         bool g_cameraValidated = false;
         ID3D11Buffer* g_validatedCamera = nullptr;
-        bool g_captureWritten = false;
+
+        int g_worldActivityScore = 0;
+        bool g_worldActive = false;
+        bool g_captureRequested = false;
+        std::uint64_t g_worldEntryFrame = 0;
+        std::uint64_t g_drawIndexedThisFrame = 0;
 
         bool FastTestMode()
         {
@@ -83,11 +92,6 @@ namespace gzfx::render
         std::uint64_t ActivationFrame()
         {
             return FastTestMode() ? 3 : 120;
-        }
-
-        std::uint64_t CaptureFrame()
-        {
-            return FastTestMode() ? 8 : 1200;
         }
 
         void WriteText(
@@ -150,7 +154,16 @@ namespace gzfx::render
                 << "frame=" << frame << "\n"
                 << "status=" << status << "\n"
                 << "mode=" << g_mode
-                << " (" << ModeName(g_mode) << ")\n";
+                << " (" << ModeName(g_mode) << ")\n"
+                << "world_active="
+                << (g_worldActive ? "true" : "false")
+                << "\n"
+                << "world_activity_score="
+                << g_worldActivityScore
+                << "\n"
+                << "draw_indexed_this_frame="
+                << g_drawIndexedThisFrame
+                << "\n";
 
             if (inputs != nullptr)
             {
@@ -176,7 +189,13 @@ namespace gzfx::render
 
             stream
                 << "controls=F10 cycles Off/Split Contact/"
-                   "Full Contact/Depth/Pre-UI Color\n";
+                   "Full Contact/Depth/Pre-UI Color; "
+                   "F9 reloads Settings.ini\n"
+                << "diagnostic_accessibility="
+                << (gzfx::settings::Get().accessibleDiagnostics
+                    ? "monochrome_labels_and_pattern"
+                    : "disabled")
+                << "\n";
 
             WriteText(L"visible_pass.txt", stream.str());
         }
@@ -277,7 +296,8 @@ cbuffer GZFXParameters : register(b0)
     float RadiusPixels;
 
     uint Mode;
-    float3 ParameterPadding;
+    uint AccessibleDiagnostics;
+    float2 ParameterPadding;
 };
 
 cbuffer SkyrimPerFrame : register(b12)
@@ -412,6 +432,241 @@ float3 ToneMap(float3 color)
     return pow(color, 1.0 / 2.2);
 }
 
+
+uint GlyphRow(uint code, uint row)
+{
+    if (code == 0) // O
+    {
+        if (row == 0 || row == 6) return 14;
+        return 17;
+    }
+
+    if (code == 1) // R
+    {
+        if (row == 0 || row == 3) return 30;
+        if (row == 1 || row == 2) return 17;
+        if (row == 4) return 20;
+        if (row == 5) return 18;
+        return 17;
+    }
+
+    if (code == 2) // I
+    {
+        if (row == 0 || row == 6) return 31;
+        return 4;
+    }
+
+    if (code == 3) // G
+    {
+        if (row == 0) return 14;
+        if (row == 1 || row == 4 || row == 5) return 17;
+        if (row == 2) return 16;
+        if (row == 3) return 23;
+        return 15;
+    }
+
+    if (code == 4) // N
+    {
+        if (row == 1) return 25;
+        if (row == 2) return 21;
+        if (row == 3) return 19;
+        return 17;
+    }
+
+    if (code == 5) // A
+    {
+        if (row == 0) return 14;
+        if (row == 3) return 31;
+        return 17;
+    }
+
+    if (code == 6) // L
+    {
+        return row == 6 ? 31 : 16;
+    }
+
+    if (code == 7) // Z
+    {
+        if (row == 0 || row == 6) return 31;
+        if (row == 1) return 1;
+        if (row == 2) return 2;
+        if (row == 3) return 4;
+        if (row == 4) return 8;
+        return 16;
+    }
+
+    if (code == 8) // F
+    {
+        if (row == 0) return 31;
+        if (row == 3) return 30;
+        return 16;
+    }
+
+    if (code == 9) // X
+    {
+        if (row == 0 || row == 1 || row == 5 || row == 6) return 17;
+        if (row == 2 || row == 4) return 10;
+        return 4;
+    }
+
+    return 0;
+}
+
+uint OriginalCode(uint index)
+{
+    if (index == 0) return 0;
+    if (index == 1) return 1;
+    if (index == 2) return 2;
+    if (index == 3) return 3;
+    if (index == 4) return 2;
+    if (index == 5) return 4;
+    if (index == 6) return 5;
+    return 6;
+}
+
+uint GzfxCode(uint index)
+{
+    if (index == 0) return 3;
+    if (index == 1) return 7;
+    if (index == 2) return 8;
+    return 9;
+}
+
+float WordPixel(
+    float2 pixel,
+    float2 origin,
+    uint word,
+    uint length)
+{
+    const float scale = 2.0;
+    const float advance = 6.0 * scale;
+
+    float2 local = pixel - origin;
+
+    if (local.x < 0.0 ||
+        local.y < 0.0 ||
+        local.y >= 7.0 * scale)
+    {
+        return 0.0;
+    }
+
+    uint charIndex =
+        (uint)floor(local.x / advance);
+
+    if (charIndex >= length)
+    {
+        return 0.0;
+    }
+
+    float charX =
+        local.x -
+        charIndex * advance;
+
+    if (charX >= 5.0 * scale)
+    {
+        return 0.0;
+    }
+
+    uint column =
+        (uint)floor(charX / scale);
+
+    uint row =
+        (uint)floor(local.y / scale);
+
+    uint code =
+        word == 0
+        ? OriginalCode(charIndex)
+        : GzfxCode(charIndex);
+
+    uint bits = GlyphRow(code, row);
+    uint mask = 1u << (4u - column);
+
+    return (bits & mask) != 0u ? 1.0 : 0.0;
+}
+
+float4 AccessibleSplitOverlay(
+    float4 color,
+    VSOutput input)
+{
+    if (AccessibleDiagnostics == 0 ||
+        Mode != 1)
+    {
+        return color;
+    }
+
+    float2 pixel = input.position.xy;
+    float width = 1.0 / InvSize.x;
+    float center = width * 0.5;
+
+    if (abs(pixel.x - center) <= 3.0)
+    {
+        uint dash =
+            ((uint)floor(pixel.y / 8.0)) & 1u;
+
+        return dash == 0u
+            ? float4(1, 1, 1, 1)
+            : float4(0, 0, 0, 1);
+    }
+
+    float2 leftBoxMin = float2(12, 12);
+    float2 leftBoxMax = float2(116, 36);
+
+    float2 rightBoxMin =
+        float2(width - 68, 12);
+    float2 rightBoxMax =
+        float2(width - 12, 36);
+
+    bool inLeft =
+        all(pixel >= leftBoxMin) &&
+        all(pixel < leftBoxMax);
+
+    bool inRight =
+        all(pixel >= rightBoxMin) &&
+        all(pixel < rightBoxMax);
+
+    if (inLeft)
+    {
+        bool border =
+            pixel.x < leftBoxMin.x + 1 ||
+            pixel.x >= leftBoxMax.x - 1 ||
+            pixel.y < leftBoxMin.y + 1 ||
+            pixel.y >= leftBoxMax.y - 1;
+
+        float glyph =
+            WordPixel(
+                pixel,
+                leftBoxMin + float2(4, 5),
+                0,
+                8);
+
+        return (border || glyph > 0.5)
+            ? float4(1, 1, 1, 1)
+            : float4(0, 0, 0, 1);
+    }
+
+    if (inRight)
+    {
+        bool border =
+            pixel.x < rightBoxMin.x + 1 ||
+            pixel.x >= rightBoxMax.x - 1 ||
+            pixel.y < rightBoxMin.y + 1 ||
+            pixel.y >= rightBoxMax.y - 1;
+
+        float glyph =
+            WordPixel(
+                pixel,
+                rightBoxMin + float2(4, 5),
+                1,
+                4);
+
+        return (border || glyph > 0.5)
+            ? float4(1, 1, 1, 1)
+            : float4(0, 0, 0, 1);
+    }
+
+    return color;
+}
+
 float4 PSMain(VSOutput input) : SV_TARGET
 {
     float4 original =
@@ -468,19 +723,18 @@ float4 PSMain(VSOutput input) : SV_TARGET
         float separator =
             abs(input.uv.x - 0.5);
 
-        if (separator < InvSize.x * 2.5)
-        {
-            return float4(
-                1.0,
-                0.0,
-                1.0,
-                1.0);
-        }
-
         if (input.uv.x < 0.5)
         {
-            return original;
+            return AccessibleSplitOverlay(
+                original,
+                input);
         }
+
+        return AccessibleSplitOverlay(
+            float4(
+                effected,
+                original.a),
+            input);
     }
 
     return float4(
@@ -1050,7 +1304,27 @@ float4 PSMain(VSOutput input) : SV_TARGET
             return static_cast<bool>(out);
         }
 
-        void PollHotkey(
+        const wchar_t* ModeCaptureFile(
+            const std::uint32_t mode)
+        {
+            switch (mode)
+            {
+            case 0:
+                return L"visible_mode_0_off.bmp";
+            case 1:
+                return L"visible_mode_1_split_contact.bmp";
+            case 2:
+                return L"visible_mode_2_full_contact.bmp";
+            case 3:
+                return L"visible_mode_3_depth.bmp";
+            case 4:
+                return L"visible_mode_4_pre_ui_color.bmp";
+            default:
+                return L"visible_mode_unknown.bmp";
+            }
+        }
+
+        void PollHotkeys(
             const std::uint64_t frame)
         {
             if (FastTestMode())
@@ -1058,23 +1332,38 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 return;
             }
 
-            const SHORT state =
-                GetAsyncKeyState(VK_F10);
+            const bool f9Down =
+                (GetAsyncKeyState(VK_F9) & 0x8000) != 0;
 
-            const bool down =
-                (state & 0x8000) != 0;
+            if (f9Down && !g_f9WasDown)
+            {
+                gzfx::settings::Reload();
+                LogState(
+                    frame,
+                    "settings_reloaded");
+            }
 
-            if (down && !g_f10WasDown)
+            g_f9WasDown = f9Down;
+
+            const bool f10Down =
+                (GetAsyncKeyState(VK_F10) & 0x8000) != 0;
+
+            if (f10Down && !g_f10WasDown)
             {
                 g_mode =
                     (g_mode + 1) % 5;
+
+                if (gzfx::settings::Get().captureOnModeChange)
+                {
+                    g_captureRequested = true;
+                }
 
                 LogState(
                     frame,
                     "mode_changed");
             }
 
-            g_f10WasDown = down;
+            g_f10WasDown = f10Down;
         }
 
         bool ExecutePass(
@@ -1202,9 +1491,21 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 static_cast<float>(
                     backDesc.Height);
 
-            parameters.strength = 0.62f;
-            parameters.radiusPixels = 4.0f;
+            const auto& settings =
+                gzfx::settings::Get();
+
+            parameters.strength =
+                settings.ambientContactStrength;
+
+            parameters.radiusPixels =
+                settings.ambientContactRadiusPixels;
+
             parameters.mode = g_mode;
+
+            parameters.accessibleDiagnostics =
+                settings.accessibleDiagnostics
+                ? 1u
+                : 0u;
 
             g_runtime.deferred->ClearState();
 
@@ -1334,21 +1635,33 @@ float4 PSMain(VSOutput input) : SV_TARGET
             }
 
             if (SUCCEEDED(result) &&
-                !g_captureWritten &&
-                frame >= CaptureFrame())
+                g_captureRequested)
             {
                 context->CopyResource(
                     g_runtime.staging,
                     g_runtime.outputTexture);
 
-                g_captureWritten =
+                const fs::path root =
+                    gzfx::paths::DiagnosticsRoot();
+
+                const bool latest =
                     WriteDownsampledBmp(
-                        gzfx::paths::DiagnosticsRoot() /
-                            L"visible_pass.bmp",
+                        root / L"visible_pass.bmp",
                         g_runtime.staging,
                         context,
                         backDesc.Width,
                         backDesc.Height);
+
+                const bool modeCapture =
+                    WriteDownsampledBmp(
+                        root / ModeCaptureFile(g_mode),
+                        g_runtime.staging,
+                        context,
+                        backDesc.Width,
+                        backDesc.Height);
+
+                g_captureRequested =
+                    !(latest && modeCapture);
             }
 
             if (commands) commands->Release();
@@ -1379,6 +1692,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
     bool RenderVisiblePass(
         const std::uint64_t frame,
+        const std::uint64_t drawIndexedThisFrame,
         IDXGISwapChain* swapChain,
         ID3D11Device* device,
         ID3D11DeviceContext* context) noexcept
@@ -1387,7 +1701,69 @@ float4 PSMain(VSOutput input) : SV_TARGET
         {
             std::scoped_lock lock(g_mutex);
 
+            g_drawIndexedThisFrame =
+                drawIndexedThisFrame;
+
+            if (!g_modeInitialized)
+            {
+                g_mode =
+                    gzfx::settings::Get().defaultMode;
+
+                g_modeInitialized = true;
+            }
+
+            if (FastTestMode())
+            {
+                g_worldActivityScore = 20;
+            }
+            else
+            {
+                const auto threshold =
+                    gzfx::settings::Get()
+                        .activationDrawIndexedThreshold;
+
+                if (drawIndexedThisFrame >= threshold)
+                {
+                    g_worldActivityScore =
+                        std::min(
+                            20,
+                            g_worldActivityScore + 2);
+                }
+                else
+                {
+                    g_worldActivityScore =
+                        std::max(
+                            0,
+                            g_worldActivityScore - 1);
+                }
+            }
+
+            const bool wasWorldActive =
+                g_worldActive;
+
+            g_worldActive =
+                g_worldActivityScore >= 6;
+
+            if (g_worldActive &&
+                !wasWorldActive)
+            {
+                g_worldEntryFrame = frame;
+                g_captureRequested = true;
+
+                LogState(
+                    frame,
+                    "world_renderer_armed");
+            }
+            else if (!g_worldActive &&
+                     wasWorldActive)
+            {
+                LogState(
+                    frame,
+                    "world_renderer_dormant");
+            }
+
             if (frame < ActivationFrame() ||
+                !g_worldActive ||
                 swapChain == nullptr ||
                 device == nullptr ||
                 context == nullptr)
@@ -1395,7 +1771,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 return false;
             }
 
-            PollHotkey(frame);
+            PollHotkeys(frame);
 
             LiveInputs inputs{};
 
