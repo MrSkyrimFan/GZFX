@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <mutex>
 #include <string>
+#include <system_error>
 
 namespace
 {
@@ -36,8 +37,12 @@ namespace
     fs::path GetModulePath(HMODULE module)
     {
         std::wstring buffer(32768, L'\0');
-        const DWORD written = GetModuleFileNameW(module, buffer.data(), static_cast<DWORD>(buffer.size()));
-        if (written == 0 || written >= buffer.size())
+        const DWORD written = GetModuleFileNameW(
+            module,
+            buffer.data(),
+            static_cast<DWORD>(buffer.size()));
+
+        if (written == 0 || static_cast<std::size_t>(written) >= buffer.size())
         {
             return {};
         }
@@ -55,7 +60,9 @@ namespace
         }
 
         const fs::path chainPath = proxyPath.parent_path() / L"dinput8_gzfx_chain.dll";
-        if (fs::exists(chainPath))
+        std::error_code existsError;
+        const bool chainExists = fs::exists(chainPath, existsError);
+        if (!existsError && chainExists)
         {
             g_realDInput = LoadLibraryW(chainPath.c_str());
         }
@@ -63,8 +70,11 @@ namespace
         if (g_realDInput == nullptr)
         {
             std::wstring systemDirectory(32768, L'\0');
-            const UINT written = GetSystemDirectoryW(systemDirectory.data(), static_cast<UINT>(systemDirectory.size()));
-            if (written == 0 || written >= systemDirectory.size())
+            const UINT written = GetSystemDirectoryW(
+                systemDirectory.data(),
+                static_cast<UINT>(systemDirectory.size()));
+
+            if (written == 0 || static_cast<std::size_t>(written) >= systemDirectory.size())
             {
                 return;
             }
@@ -126,10 +136,16 @@ namespace
         std::call_once(g_gzfxOnce, LoadGzfx);
     }
 
-    void Prepare()
+    void Prepare() noexcept
     {
-        EnsureRealDInput();
-        EnsureGzfx();
+        try
+        {
+            EnsureRealDInput();
+            EnsureGzfx();
+        }
+        catch (...)
+        {
+        }
     }
 }
 
