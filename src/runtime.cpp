@@ -1,6 +1,7 @@
 #include "gzfx/runtime.hpp"
 
 #include "gzfx/diagnostics/d3d11_lifecycle.hpp"
+#include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
 
@@ -63,6 +64,8 @@ namespace
 
         const bool lifecycleProbeArmed =
             gzfx::diagnostics::ArmD3D11LifecycleProbe();
+        const bool rendererForensicsArmed =
+            gzfx::diagnostics::ArmRendererForensics();
 
         const fs::path logPath = runtimeRoot / L"GZFX.log";
         std::ofstream log(logPath, std::ios::out | std::ios::app);
@@ -87,6 +90,9 @@ namespace
             << "\n";
         log << "d3d11_lifecycle_probe="
             << (lifecycleProbeArmed ? "armed" : "no_supported_imports")
+            << "\n";
+        log << "renderer_forensics="
+            << (rendererForensicsArmed ? "armed" : "failed")
             << "\n";
         log << "status=initialized\n";
         log << "===============================\n";
