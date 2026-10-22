@@ -5,11 +5,14 @@
 #include <ShlObj.h>
 
 #include <chrono>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <mutex>
+#include <sstream>
 #include <string>
+#include <system_error>
 
 namespace
 {
@@ -40,8 +43,12 @@ namespace
     fs::path GetExecutablePath()
     {
         std::wstring buffer(32768, L'\0');
-        const DWORD written = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
-        if (written == 0 || written >= buffer.size())
+        const DWORD written = GetModuleFileNameW(
+            nullptr,
+            buffer.data(),
+            static_cast<DWORD>(buffer.size()));
+
+        if (written == 0 || static_cast<std::size_t>(written) >= buffer.size())
         {
             return {};
         }
@@ -59,7 +66,12 @@ namespace
         }
 
         PWSTR documentsRaw = nullptr;
-        const HRESULT result = SHGetKnownFolderPath(FOLDERID_Documents, KF_FLAG_DEFAULT, nullptr, &documentsRaw);
+        const HRESULT result = SHGetKnownFolderPath(
+            FOLDERID_Documents,
+            KF_FLAG_DEFAULT,
+            nullptr,
+            &documentsRaw);
+
         if (FAILED(result) || documentsRaw == nullptr)
         {
             return {};
