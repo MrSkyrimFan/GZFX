@@ -474,6 +474,10 @@ int wmain(int argc, wchar_t** argv)
             << hasValidation
             << L" capture="
             << hasCapture
+            << L" stage_trace="
+            << hasStageTrace
+            << L" settings="
+            << hasSettings
             << L"\n";
 
         if (hasVisible)
