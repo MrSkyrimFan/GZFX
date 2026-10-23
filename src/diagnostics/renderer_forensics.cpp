@@ -1600,23 +1600,265 @@ namespace gzfx::diagnostics
             g_setViewports(c, count, v);
         }
 
-        void STDMETHODCALLTYPE HookClearRTV(ID3D11DeviceContext* c, ID3D11RenderTargetView* v, const FLOAT color[4])
+        void STDMETHODCALLTYPE HookClearRTV(
+            ID3D11DeviceContext* c,
+            ID3D11RenderTargetView* view,
+            const FLOAT color[4])
         {
-            if (c == g_primaryContext) Safe([&]{ ++g_rtvClears; std::scoped_lock l(g_mutex); TrackView(v, false, false, true, false); });
-            g_clearRTV(c, v, color);
+            if (c == g_primaryContext)
+            {
+                Safe([&]
+                {
+                    ++g_rtvClears;
+
+                    {
+                        std::scoped_lock l(g_mutex);
+                        TrackView(
+                            view,
+                            false,
+                            false,
+                            true,
+                            false);
+                    }
+
+                    pipeline_cartography::ClearRenderTarget(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load(),
+                        view,
+                        color);
+                });
+            }
+
+            g_clearRTV(c, view, color);
         }
 
-        void STDMETHODCALLTYPE HookClearDSV(ID3D11DeviceContext* c, ID3D11DepthStencilView* v, UINT f, FLOAT d, UINT8 s)
+        void STDMETHODCALLTYPE HookClearUavUint(
+            ID3D11DeviceContext* c,
+            ID3D11UnorderedAccessView* view,
+            const UINT values[4])
         {
-            if (c == g_primaryContext) Safe([&]{ ++g_dsvClears; std::scoped_lock l(g_mutex); TrackView(v, false, false, false, true); });
-            g_clearDSV(c, v, f, d, s);
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::ClearUavUint(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    view,
+                    values);
+            }
+
+            g_clearUavUint(
+                c,
+                view,
+                values);
         }
 
-        void STDMETHODCALLTYPE HookCopy(ID3D11DeviceContext* c, ID3D11Resource* d, ID3D11Resource* s)
-        { if (c == g_primaryContext) ++g_copies; g_copyResource(c, d, s); }
+        void STDMETHODCALLTYPE HookClearUavFloat(
+            ID3D11DeviceContext* c,
+            ID3D11UnorderedAccessView* view,
+            const FLOAT values[4])
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::ClearUavFloat(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    view,
+                    values);
+            }
 
-        void STDMETHODCALLTYPE HookResolve(ID3D11DeviceContext* c, ID3D11Resource* d, UINT ds, ID3D11Resource* s, UINT ss, DXGI_FORMAT f)
-        { if (c == g_primaryContext) ++g_resolves; g_resolve(c, d, ds, s, ss, f); }
+            g_clearUavFloat(
+                c,
+                view,
+                values);
+        }
+
+        void STDMETHODCALLTYPE HookClearDSV(
+            ID3D11DeviceContext* c,
+            ID3D11DepthStencilView* view,
+            UINT flags,
+            FLOAT depth,
+            UINT8 stencil)
+        {
+            if (c == g_primaryContext)
+            {
+                Safe([&]
+                {
+                    ++g_dsvClears;
+
+                    {
+                        std::scoped_lock l(g_mutex);
+                        TrackView(
+                            view,
+                            false,
+                            false,
+                            false,
+                            true);
+                    }
+
+                    pipeline_cartography::ClearDepthStencil(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load(),
+                        view,
+                        flags,
+                        depth,
+                        stencil);
+                });
+            }
+
+            g_clearDSV(
+                c,
+                view,
+                flags,
+                depth,
+                stencil);
+        }
+
+        void STDMETHODCALLTYPE HookCopySubresource(
+            ID3D11DeviceContext* c,
+            ID3D11Resource* destination,
+            UINT destinationSubresource,
+            UINT destinationX,
+            UINT destinationY,
+            UINT destinationZ,
+            ID3D11Resource* source,
+            UINT sourceSubresource,
+            const D3D11_BOX* sourceBox)
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_copies;
+
+                pipeline_cartography::CopySubresourceRegion(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    destination,
+                    destinationSubresource,
+                    destinationX,
+                    destinationY,
+                    destinationZ,
+                    source,
+                    sourceSubresource,
+                    sourceBox);
+            }
+
+            g_copySubresource(
+                c,
+                destination,
+                destinationSubresource,
+                destinationX,
+                destinationY,
+                destinationZ,
+                source,
+                sourceSubresource,
+                sourceBox);
+        }
+
+        void STDMETHODCALLTYPE HookCopy(
+            ID3D11DeviceContext* c,
+            ID3D11Resource* destination,
+            ID3D11Resource* source)
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_copies;
+
+                pipeline_cartography::CopyResource(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    destination,
+                    source);
+            }
+
+            g_copyResource(
+                c,
+                destination,
+                source);
+        }
+
+        void STDMETHODCALLTYPE HookGenerateMips(
+            ID3D11DeviceContext* c,
+            ID3D11ShaderResourceView* view)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::GenerateMips(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    view);
+            }
+
+            g_generateMips(
+                c,
+                view);
+        }
+
+        void STDMETHODCALLTYPE HookResolve(
+            ID3D11DeviceContext* c,
+            ID3D11Resource* destination,
+            UINT destinationSubresource,
+            ID3D11Resource* source,
+            UINT sourceSubresource,
+            DXGI_FORMAT format)
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_resolves;
+
+                pipeline_cartography::ResolveSubresource(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    destination,
+                    destinationSubresource,
+                    source,
+                    sourceSubresource,
+                    format);
+            }
+
+            g_resolve(
+                c,
+                destination,
+                destinationSubresource,
+                source,
+                sourceSubresource,
+                format);
+        }
+
+        void STDMETHODCALLTYPE HookExecuteCommandList(
+            ID3D11DeviceContext* c,
+            ID3D11CommandList* commandList,
+            BOOL restoreContextState)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::ExecuteCommandList(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    commandList,
+                    restoreContextState);
+            }
+
+            g_executeCommandList(
+                c,
+                commandList,
+                restoreContextState);
+
+            if (c == g_primaryContext &&
+                !restoreContextState)
+            {
+                pipeline_cartography::ClearState();
+            }
+        }
+
+        void STDMETHODCALLTYPE HookClearState(
+            ID3D11DeviceContext* c)
+        {
+            g_clearState(c);
+
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::ClearState();
+            }
+        }
 
         bool InstallContextHooks(ID3D11DeviceContext* context)
         {
