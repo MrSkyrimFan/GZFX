@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.10-pre-ui-effect-stack";
+        "0.0.11-horizon-ao-ssil";
 }
 
 extern "C" __declspec(dllexport)

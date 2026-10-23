@@ -26,7 +26,7 @@ namespace gzfx::ui
     namespace
     {
         constexpr UINT kMenuWidth = 640;
-        constexpr UINT kMenuHeight = 480;
+        constexpr UINT kMenuHeight = 768;
 
         constexpr int kFirstRowY = 58;
         constexpr int kRowHeight = 34;
@@ -152,6 +152,30 @@ namespace gzfx::ui
                 AmbientContactRadiusPixels:
                 return L"AMBIENT CONTACT RADIUS";
 
+            case settings::Editable::HorizonOcclusionEnabled:
+                return L"HORIZON OCCLUSION";
+
+            case settings::Editable::HorizonOcclusionStrength:
+                return L"HORIZON OCCLUSION STRENGTH";
+
+            case settings::Editable::HorizonOcclusionRadiusPixels:
+                return L"HORIZON OCCLUSION RADIUS";
+
+            case settings::Editable::HorizonOcclusionQuality:
+                return L"HORIZON OCCLUSION QUALITY";
+
+            case settings::Editable::IndirectBounceEnabled:
+                return L"INDIRECT BOUNCE (SSIL)";
+
+            case settings::Editable::IndirectBounceStrength:
+                return L"INDIRECT BOUNCE STRENGTH";
+
+            case settings::Editable::IndirectBounceRadiusPixels:
+                return L"INDIRECT BOUNCE RADIUS";
+
+            case settings::Editable::IndirectBounceSaturation:
+                return L"INDIRECT BOUNCE SATURATION";
+
             case settings::Editable::LocalGlowEnabled:
                 return L"LOCAL GLOW";
 
@@ -211,6 +235,63 @@ namespace gzfx::ui
                     << std::setprecision(1)
                     << values.ambientContactRadiusPixels
                     << L" PX";
+                return stream.str();
+
+            case settings::Editable::HorizonOcclusionEnabled:
+                return values.horizonOcclusionEnabled
+                    ? L"ON"
+                    : L"OFF";
+
+            case settings::Editable::HorizonOcclusionStrength:
+                stream
+                    << std::fixed
+                    << std::setprecision(2)
+                    << values.horizonOcclusionStrength;
+                return stream.str();
+
+            case settings::Editable::HorizonOcclusionRadiusPixels:
+                stream
+                    << std::fixed
+                    << std::setprecision(1)
+                    << values.horizonOcclusionRadiusPixels
+                    << L" PX";
+                return stream.str();
+
+            case settings::Editable::HorizonOcclusionQuality:
+                switch (values.horizonOcclusionQuality)
+                {
+                case 0: return L"LOW";
+                case 1: return L"MEDIUM";
+                case 2: return L"HIGH";
+                case 3: return L"ULTRA";
+                default: return L"UNKNOWN";
+                }
+
+            case settings::Editable::IndirectBounceEnabled:
+                return values.indirectBounceEnabled
+                    ? L"ON"
+                    : L"OFF";
+
+            case settings::Editable::IndirectBounceStrength:
+                stream
+                    << std::fixed
+                    << std::setprecision(2)
+                    << values.indirectBounceStrength;
+                return stream.str();
+
+            case settings::Editable::IndirectBounceRadiusPixels:
+                stream
+                    << std::fixed
+                    << std::setprecision(1)
+                    << values.indirectBounceRadiusPixels
+                    << L" PX";
+                return stream.str();
+
+            case settings::Editable::IndirectBounceSaturation:
+                stream
+                    << std::fixed
+                    << std::setprecision(2)
+                    << values.indirectBounceSaturation;
                 return stream.str();
 
             case settings::Editable::LocalGlowEnabled:
@@ -274,6 +355,12 @@ namespace gzfx::ui
             return
                 item ==
                     settings::Editable::
+                        HorizonOcclusionEnabled ||
+                item ==
+                    settings::Editable::
+                        IndirectBounceEnabled ||
+                item ==
+                    settings::Editable::
                         LocalGlowEnabled ||
                 item ==
                     settings::Editable::
@@ -293,6 +380,24 @@ namespace gzfx::ui
                 item ==
                     settings::Editable::
                         AmbientContactRadiusPixels ||
+                item ==
+                    settings::Editable::
+                        HorizonOcclusionStrength ||
+                item ==
+                    settings::Editable::
+                        HorizonOcclusionRadiusPixels ||
+                item ==
+                    settings::Editable::
+                        HorizonOcclusionQuality ||
+                item ==
+                    settings::Editable::
+                        IndirectBounceStrength ||
+                item ==
+                    settings::Editable::
+                        IndirectBounceRadiusPixels ||
+                item ==
+                    settings::Editable::
+                        IndirectBounceSaturation ||
                 item ==
                     settings::Editable::
                         LocalGlowStrength ||

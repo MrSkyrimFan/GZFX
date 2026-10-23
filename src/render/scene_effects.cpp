@@ -1,6 +1,7 @@
 #include "gzfx/render/scene_effects.hpp"
 
 #include "gzfx/paths.hpp"
+#include "gzfx/render/ambient_depth_stack.hpp"
 #include "gzfx/render/runtime_state.hpp"
 #include "gzfx/settings.hpp"
 #include "gzfx/version.hpp"
@@ -1151,6 +1152,15 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
                 return false;
             }
+
+            const bool ambientDepthApplied =
+                gzfx::render::ambient_depth::Apply(
+                    frame,
+                    device,
+                    context,
+                    inputs);
+
+            (void)ambientDepthApplied;
 
             if (!EnsureRuntime(
                     device,

@@ -28,78 +28,64 @@ namespace gzfx::settings
             return root.empty() ? fs::path{} : root / L"Settings.ini";
         }
 
-        void EnsureDefaults(const fs::path& path)
+        void EnsureValue(
+            const fs::path& path,
+            const wchar_t* section,
+            const wchar_t* key,
+            const wchar_t* fallback)
+        {
+            wchar_t value[8]{};
+
+            const DWORD read =
+                GetPrivateProfileStringW(
+                    section,
+                    key,
+                    L"",
+                    value,
+                    static_cast<DWORD>(
+                        std::size(value)),
+                    path.c_str());
+
+            if (read == 0)
+            {
+                WritePrivateProfileStringW(
+                    section,
+                    key,
+                    fallback,
+                    path.c_str());
+            }
+        }
+
+        void EnsureDefaults(
+            const fs::path& path)
         {
             if (path.empty())
             {
                 return;
             }
 
-            std::error_code error;
-            if (fs::exists(path, error) && !error)
-            {
-                return;
-            }
+            EnsureValue(path, L"AmbientContact", L"Strength", L"0.62");
+            EnsureValue(path, L"AmbientContact", L"RadiusPixels", L"4.0");
 
-            WritePrivateProfileStringW(
-                L"AmbientContact",
-                L"Strength",
-                L"0.62",
-                path.c_str());
+            EnsureValue(path, L"HorizonOcclusion", L"Enabled", L"1");
+            EnsureValue(path, L"HorizonOcclusion", L"Strength", L"0.90");
+            EnsureValue(path, L"HorizonOcclusion", L"RadiusPixels", L"28.0");
+            EnsureValue(path, L"HorizonOcclusion", L"Quality", L"2");
 
-            WritePrivateProfileStringW(
-                L"AmbientContact",
-                L"RadiusPixels",
-                L"4.0",
-                path.c_str());
+            EnsureValue(path, L"IndirectBounce", L"Enabled", L"1");
+            EnsureValue(path, L"IndirectBounce", L"Strength", L"0.20");
+            EnsureValue(path, L"IndirectBounce", L"RadiusPixels", L"36.0");
+            EnsureValue(path, L"IndirectBounce", L"Saturation", L"0.85");
 
-            WritePrivateProfileStringW(
-                L"LocalGlow",
-                L"Enabled",
-                L"1",
-                path.c_str());
+            EnsureValue(path, L"LocalGlow", L"Enabled", L"1");
+            EnsureValue(path, L"LocalGlow", L"Strength", L"0.18");
+            EnsureValue(path, L"LocalGlow", L"Threshold", L"1.10");
+            EnsureValue(path, L"LocalGlow", L"RadiusPixels", L"8.0");
 
-            WritePrivateProfileStringW(
-                L"LocalGlow",
-                L"Strength",
-                L"0.18",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"LocalGlow",
-                L"Threshold",
-                L"1.10",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"LocalGlow",
-                L"RadiusPixels",
-                L"8.0",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"Development",
-                L"DefaultMode",
-                L"1",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"Development",
-                L"ActivationDrawIndexedThreshold",
-                L"1000",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"Development",
-                L"AccessibleDiagnostics",
-                L"1",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"Development",
-                L"CaptureOnModeChange",
-                L"1",
-                path.c_str());
+            EnsureValue(path, L"Development", L"DefaultMode", L"1");
+            EnsureValue(path, L"Development", L"ActivationDrawIndexedThreshold", L"1000");
+            EnsureValue(path, L"Development", L"AccessibleDiagnostics", L"1");
+            EnsureValue(path, L"Development", L"CaptureOnModeChange", L"1");
         }
 
         float ReadFloat(
@@ -178,6 +164,113 @@ namespace gzfx::settings
                     path,
                     L"AmbientContact",
                     L"RadiusPixels",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            if (!WriteString(
+                    path,
+                    L"HorizonOcclusion",
+                    L"Enabled",
+                    g_values.horizonOcclusionEnabled
+                        ? L"1"
+                        : L"0"))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.3f",
+                static_cast<double>(
+                    g_values.horizonOcclusionStrength));
+
+            if (!WriteString(
+                    path,
+                    L"HorizonOcclusion",
+                    L"Strength",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.2f",
+                static_cast<double>(
+                    g_values.horizonOcclusionRadiusPixels));
+
+            if (!WriteString(
+                    path,
+                    L"HorizonOcclusion",
+                    L"RadiusPixels",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            if (!WriteString(
+                    path,
+                    L"HorizonOcclusion",
+                    L"Quality",
+                    std::to_wstring(
+                        g_values.horizonOcclusionQuality)))
+            {
+                return false;
+            }
+
+            if (!WriteString(
+                    path,
+                    L"IndirectBounce",
+                    L"Enabled",
+                    g_values.indirectBounceEnabled
+                        ? L"1"
+                        : L"0"))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.3f",
+                static_cast<double>(
+                    g_values.indirectBounceStrength));
+
+            if (!WriteString(
+                    path,
+                    L"IndirectBounce",
+                    L"Strength",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.2f",
+                static_cast<double>(
+                    g_values.indirectBounceRadiusPixels));
+
+            if (!WriteString(
+                    path,
+                    L"IndirectBounce",
+                    L"RadiusPixels",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.3f",
+                static_cast<double>(
+                    g_values.indirectBounceSaturation));
+
+            if (!WriteString(
+                    path,
+                    L"IndirectBounce",
+                    L"Saturation",
                     floatBuffer))
             {
                 return false;
@@ -331,6 +424,81 @@ namespace gzfx::settings
                     1.0f,
                     24.0f);
 
+            next.horizonOcclusionEnabled =
+                GetPrivateProfileIntW(
+                    L"HorizonOcclusion",
+                    L"Enabled",
+                    1,
+                    path.c_str()) != 0;
+
+            next.horizonOcclusionStrength =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"HorizonOcclusion",
+                        L"Strength",
+                        L"0.90"),
+                    0.0f,
+                    2.0f);
+
+            next.horizonOcclusionRadiusPixels =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"HorizonOcclusion",
+                        L"RadiusPixels",
+                        L"28.0"),
+                    4.0f,
+                    96.0f);
+
+            next.horizonOcclusionQuality =
+                static_cast<std::uint32_t>(
+                    std::clamp(
+                        GetPrivateProfileIntW(
+                            L"HorizonOcclusion",
+                            L"Quality",
+                            2,
+                            path.c_str()),
+                        0u,
+                        3u));
+
+            next.indirectBounceEnabled =
+                GetPrivateProfileIntW(
+                    L"IndirectBounce",
+                    L"Enabled",
+                    1,
+                    path.c_str()) != 0;
+
+            next.indirectBounceStrength =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"IndirectBounce",
+                        L"Strength",
+                        L"0.20"),
+                    0.0f,
+                    1.5f);
+
+            next.indirectBounceRadiusPixels =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"IndirectBounce",
+                        L"RadiusPixels",
+                        L"36.0"),
+                    4.0f,
+                    128.0f);
+
+            next.indirectBounceSaturation =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"IndirectBounce",
+                        L"Saturation",
+                        L"0.85"),
+                    0.0f,
+                    2.0f);
+
             next.localGlowEnabled =
                 GetPrivateProfileIntW(
                     L"LocalGlow",
@@ -480,6 +648,77 @@ namespace gzfx::settings
                         24.0f);
                 break;
 
+            case Editable::HorizonOcclusionEnabled:
+                g_values.horizonOcclusionEnabled =
+                    direction > 0;
+                break;
+
+            case Editable::HorizonOcclusionStrength:
+                g_values.horizonOcclusionStrength =
+                    std::clamp(
+                        g_values.horizonOcclusionStrength +
+                            sign * 0.05f,
+                        0.0f,
+                        2.0f);
+                break;
+
+            case Editable::HorizonOcclusionRadiusPixels:
+                g_values.horizonOcclusionRadiusPixels =
+                    std::clamp(
+                        g_values.horizonOcclusionRadiusPixels +
+                            sign * 2.0f,
+                        4.0f,
+                        96.0f);
+                break;
+
+            case Editable::HorizonOcclusionQuality:
+            {
+                const int quality =
+                    static_cast<int>(
+                        g_values.horizonOcclusionQuality) +
+                    (direction > 0 ? 1 : -1);
+
+                g_values.horizonOcclusionQuality =
+                    static_cast<std::uint32_t>(
+                        std::clamp(
+                            quality,
+                            0,
+                            3));
+                break;
+            }
+
+            case Editable::IndirectBounceEnabled:
+                g_values.indirectBounceEnabled =
+                    direction > 0;
+                break;
+
+            case Editable::IndirectBounceStrength:
+                g_values.indirectBounceStrength =
+                    std::clamp(
+                        g_values.indirectBounceStrength +
+                            sign * 0.05f,
+                        0.0f,
+                        1.5f);
+                break;
+
+            case Editable::IndirectBounceRadiusPixels:
+                g_values.indirectBounceRadiusPixels =
+                    std::clamp(
+                        g_values.indirectBounceRadiusPixels +
+                            sign * 2.0f,
+                        4.0f,
+                        128.0f);
+                break;
+
+            case Editable::IndirectBounceSaturation:
+                g_values.indirectBounceSaturation =
+                    std::clamp(
+                        g_values.indirectBounceSaturation +
+                            sign * 0.05f,
+                        0.0f,
+                        2.0f);
+                break;
+
             case Editable::LocalGlowEnabled:
                 g_values.localGlowEnabled =
                     direction > 0;
@@ -515,7 +754,8 @@ namespace gzfx::settings
             case Editable::DefaultMode:
             {
                 int mode =
-                    static_cast<int>(g_values.defaultMode) +
+                    static_cast<int>(
+                        g_values.defaultMode) +
                     (direction > 0 ? 1 : -1);
 
                 if (mode < 0)
@@ -529,7 +769,8 @@ namespace gzfx::settings
                 }
 
                 g_values.defaultMode =
-                    static_cast<std::uint32_t>(mode);
+                    static_cast<std::uint32_t>(
+                        mode);
                 break;
             }
 
@@ -539,20 +780,14 @@ namespace gzfx::settings
                 const std::uint64_t current =
                     g_values.activationDrawIndexedThreshold;
 
-                if (direction > 0)
-                {
-                    g_values.activationDrawIndexedThreshold =
-                        std::min<std::uint64_t>(
-                            20000,
-                            current + step);
-                }
-                else
-                {
-                    g_values.activationDrawIndexedThreshold =
-                        current > step
-                            ? current - step
-                            : 0;
-                }
+                g_values.activationDrawIndexedThreshold =
+                    direction > 0
+                    ? std::min<std::uint64_t>(
+                        20000,
+                        current + step)
+                    : (current > step
+                        ? current - step
+                        : 0);
                 break;
             }
 
@@ -593,7 +828,10 @@ namespace gzfx::settings
             }
 
             const float value =
-                std::clamp(normalized, 0.0f, 1.0f);
+                std::clamp(
+                    normalized,
+                    0.0f,
+                    1.0f);
 
             switch (setting)
             {
@@ -605,6 +843,42 @@ namespace gzfx::settings
             case Editable::AmbientContactRadiusPixels:
                 g_values.ambientContactRadiusPixels =
                     1.0f + value * 23.0f;
+                break;
+
+            case Editable::HorizonOcclusionStrength:
+                g_values.horizonOcclusionStrength =
+                    value * 2.0f;
+                break;
+
+            case Editable::HorizonOcclusionRadiusPixels:
+                g_values.horizonOcclusionRadiusPixels =
+                    4.0f + value * 92.0f;
+                break;
+
+            case Editable::HorizonOcclusionQuality:
+                g_values.horizonOcclusionQuality =
+                    static_cast<std::uint32_t>(
+                        std::clamp(
+                            static_cast<int>(
+                                std::lround(
+                                    value * 3.0f)),
+                            0,
+                            3));
+                break;
+
+            case Editable::IndirectBounceStrength:
+                g_values.indirectBounceStrength =
+                    value * 1.5f;
+                break;
+
+            case Editable::IndirectBounceRadiusPixels:
+                g_values.indirectBounceRadiusPixels =
+                    4.0f + value * 124.0f;
+                break;
+
+            case Editable::IndirectBounceSaturation:
+                g_values.indirectBounceSaturation =
+                    value * 2.0f;
                 break;
 
             case Editable::LocalGlowStrength:
@@ -622,15 +896,13 @@ namespace gzfx::settings
                     1.0f + value * 31.0f;
                 break;
 
-            case Editable::LocalGlowEnabled:
-                return false;
-
             case Editable::DefaultMode:
                 g_values.defaultMode =
                     static_cast<std::uint32_t>(
                         std::clamp(
                             static_cast<int>(
-                                std::lround(value * 4.0f)),
+                                std::lround(
+                                    value * 4.0f)),
                             0,
                             4));
                 break;
@@ -639,10 +911,14 @@ namespace gzfx::settings
                 g_values.activationDrawIndexedThreshold =
                     static_cast<std::uint64_t>(
                         std::llround(
-                            static_cast<double>(value) *
+                            static_cast<double>(
+                                value) *
                             20000.0));
                 break;
 
+            case Editable::HorizonOcclusionEnabled:
+            case Editable::IndirectBounceEnabled:
+            case Editable::LocalGlowEnabled:
             case Editable::AccessibleDiagnostics:
             case Editable::CaptureOnModeChange:
             case Editable::Count:
@@ -682,6 +958,56 @@ namespace gzfx::settings
                 return std::clamp(
                     (g_values.ambientContactRadiusPixels - 1.0f) /
                         23.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::HorizonOcclusionEnabled:
+                return g_values.horizonOcclusionEnabled
+                    ? 1.0f
+                    : 0.0f;
+
+            case Editable::HorizonOcclusionStrength:
+                return std::clamp(
+                    g_values.horizonOcclusionStrength / 2.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::HorizonOcclusionRadiusPixels:
+                return std::clamp(
+                    (g_values.horizonOcclusionRadiusPixels - 4.0f) /
+                        92.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::HorizonOcclusionQuality:
+                return std::clamp(
+                    static_cast<float>(
+                        g_values.horizonOcclusionQuality) /
+                        3.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::IndirectBounceEnabled:
+                return g_values.indirectBounceEnabled
+                    ? 1.0f
+                    : 0.0f;
+
+            case Editable::IndirectBounceStrength:
+                return std::clamp(
+                    g_values.indirectBounceStrength / 1.5f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::IndirectBounceRadiusPixels:
+                return std::clamp(
+                    (g_values.indirectBounceRadiusPixels - 4.0f) /
+                        124.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::IndirectBounceSaturation:
+                return std::clamp(
+                    g_values.indirectBounceSaturation / 2.0f,
                     0.0f,
                     1.0f);
 
@@ -758,6 +1084,16 @@ namespace gzfx::settings
 
             switch (setting)
             {
+            case Editable::HorizonOcclusionEnabled:
+                g_values.horizonOcclusionEnabled =
+                    !g_values.horizonOcclusionEnabled;
+                break;
+
+            case Editable::IndirectBounceEnabled:
+                g_values.indirectBounceEnabled =
+                    !g_values.indirectBounceEnabled;
+                break;
+
             case Editable::LocalGlowEnabled:
                 g_values.localGlowEnabled =
                     !g_values.localGlowEnabled;
@@ -784,4 +1120,5 @@ namespace gzfx::settings
             return false;
         }
     }
+
 }

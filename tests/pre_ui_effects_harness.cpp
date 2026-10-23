@@ -527,6 +527,11 @@ int wmain(
             diagnostics /
             L"stage_trace.csv");
 
+    const std::string ambientDepthLog =
+        ReadAll(
+            diagnostics /
+            L"ambient_depth_stack.txt");
+
     const bool injected =
         effectLog.find(
             "status=pre_ui_injected") !=
@@ -543,15 +548,24 @@ int wmain(
     const bool sceneChanged =
         before != after;
 
+    const bool ambientDepthApplied =
+        ambientDepthLog.find(
+            "status=applied") !=
+            std::string::npos;
+
     if (!injected ||
         !signalRecorded ||
-        !sceneChanged)
+        !sceneChanged ||
+        !ambientDepthApplied)
     {
         std::cerr
             << "pre-UI stack failed acceptance\n"
             << "injected=" << injected
             << " signal=" << signalRecorded
             << " scene_changed=" << sceneChanged
+            << " ambient_depth=" << ambientDepthApplied
+            << "\n"
+            << ambientDepthLog
             << "\n"
             << effectLog
             << "\n"
