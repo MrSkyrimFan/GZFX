@@ -164,6 +164,18 @@ target_link_libraries(
 )
 gzfx_apply_common(GZFXAmbientVisibilityNeutralityHarness)
 
+add_executable(GZFXSemanticProbeHarness
+    tests/semantic_probe_harness.cpp
+)
+target_link_libraries(
+    GZFXSemanticProbeHarness
+    PRIVATE
+        d3d11
+        dxgi
+        user32
+)
+gzfx_apply_common(GZFXSemanticProbeHarness)
+
 enable_testing()
 
 add_test(
@@ -256,4 +268,13 @@ add_test(
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/ambient-visibility-uniform-ssil-output"
         "uniform_ssil"
+)
+
+
+add_test(
+    NAME renderer_semantic_probe
+    COMMAND
+        "$<TARGET_FILE:GZFXSemanticProbeHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/semantic-probe-output"
 )
