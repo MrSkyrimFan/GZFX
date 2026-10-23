@@ -75,6 +75,7 @@ namespace gzfx::ui
         bool g_dirty = true;
         bool g_cycleModeRequested = false;
         bool g_captureRequested = false;
+        bool g_manualCaptureRequested = false;
         std::uint32_t g_selected = 0;
         bool g_testAdjustmentApplied = false;
 
@@ -96,6 +97,7 @@ namespace gzfx::ui
         KeyEdge g_numpad1{};
         KeyEdge g_numpad2{};
         KeyEdge g_numpad3{};
+        KeyEdge g_numpad4{};
 
         bool TestFlag(const wchar_t* name)
         {
@@ -509,6 +511,7 @@ namespace gzfx::ui
                    "Shift+Numpad1 menu; "
                    "Shift+Numpad2 reload; "
                    "Shift+Numpad3 cycle view; "
+                   "Shift+Numpad4 capture frame+settings; "
                    "mouse click/drag sliders; "
                    "mouse click toggles\n";
         }
@@ -1477,6 +1480,11 @@ namespace gzfx::ui
                     VK_NUMPAD3,
                     VK_NEXT);
 
+            const bool num4 =
+                g_numpad4.Pressed(
+                    VK_NUMPAD4,
+                    VK_LEFT);
+
             if (shiftDown && num1)
             {
                 g_visible = !g_visible;
@@ -1524,6 +1532,16 @@ namespace gzfx::ui
                 WriteState(
                     frame,
                     "cycle_view_requested");
+            }
+
+            if (shiftDown && num4)
+            {
+                g_manualCaptureRequested = true;
+                g_captureRequested = true;
+
+                WriteState(
+                    frame,
+                    "manual_capture_requested");
             }
         }
         catch (...)
@@ -1628,6 +1646,24 @@ namespace gzfx::ui
                 g_captureRequested;
 
             g_captureRequested = false;
+            return requested;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    bool ConsumeManualCaptureRequest() noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+
+            const bool requested =
+                g_manualCaptureRequested;
+
+            g_manualCaptureRequested = false;
             return requested;
         }
         catch (...)
