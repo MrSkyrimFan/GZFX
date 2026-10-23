@@ -579,6 +579,9 @@
                     historyWriteIndex;
             }
 
+            const bool usedMotion =
+                motionSrv != nullptr;
+
             releaseInputViews();
 
             ++g_applyCount;
@@ -595,7 +598,7 @@
                     ? "true"
                     : "false")
                 << " motion="
-                << (motionSrv
+                << (usedMotion
                     ? "true"
                     : "false")
                 << " temporal="
