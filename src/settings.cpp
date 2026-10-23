@@ -673,7 +673,7 @@ namespace gzfx::settings
 
             case Editable::HorizonOcclusionQuality:
             {
-                int quality =
+                const int quality =
                     static_cast<int>(
                         g_values.horizonOcclusionQuality) +
                     (direction > 0 ? 1 : -1);
@@ -719,60 +719,10 @@ namespace gzfx::settings
                         2.0f);
                 break;
 
-            case Editable::HorizonOcclusionEnabled:
-                g_values.horizonOcclusionEnabled =
-                    !g_values.horizonOcclusionEnabled;
-                break;
-
-            case Editable::IndirectBounceEnabled:
-                g_values.indirectBounceEnabled =
-                    !g_values.indirectBounceEnabled;
-                break;
-
             case Editable::LocalGlowEnabled:
                 g_values.localGlowEnabled =
                     direction > 0;
                 break;
-
-            case Editable::HorizonOcclusionStrength:
-                g_values.horizonOcclusionStrength =
-                    value * 2.0f;
-                break;
-
-            case Editable::HorizonOcclusionRadiusPixels:
-                g_values.horizonOcclusionRadiusPixels =
-                    4.0f + value * 92.0f;
-                break;
-
-            case Editable::HorizonOcclusionQuality:
-                g_values.horizonOcclusionQuality =
-                    static_cast<std::uint32_t>(
-                        std::clamp(
-                            static_cast<int>(
-                                std::lround(
-                                    value * 3.0f)),
-                            0,
-                            3));
-                break;
-
-            case Editable::IndirectBounceStrength:
-                g_values.indirectBounceStrength =
-                    value * 1.5f;
-                break;
-
-            case Editable::IndirectBounceRadiusPixels:
-                g_values.indirectBounceRadiusPixels =
-                    4.0f + value * 124.0f;
-                break;
-
-            case Editable::IndirectBounceSaturation:
-                g_values.indirectBounceSaturation =
-                    value * 2.0f;
-                break;
-
-            case Editable::HorizonOcclusionEnabled:
-            case Editable::IndirectBounceEnabled:
-                return false;
 
             case Editable::LocalGlowStrength:
                 g_values.localGlowStrength =
@@ -804,7 +754,8 @@ namespace gzfx::settings
             case Editable::DefaultMode:
             {
                 int mode =
-                    static_cast<int>(g_values.defaultMode) +
+                    static_cast<int>(
+                        g_values.defaultMode) +
                     (direction > 0 ? 1 : -1);
 
                 if (mode < 0)
@@ -818,7 +769,8 @@ namespace gzfx::settings
                 }
 
                 g_values.defaultMode =
-                    static_cast<std::uint32_t>(mode);
+                    static_cast<std::uint32_t>(
+                        mode);
                 break;
             }
 
@@ -828,20 +780,14 @@ namespace gzfx::settings
                 const std::uint64_t current =
                     g_values.activationDrawIndexedThreshold;
 
-                if (direction > 0)
-                {
-                    g_values.activationDrawIndexedThreshold =
-                        std::min<std::uint64_t>(
-                            20000,
-                            current + step);
-                }
-                else
-                {
-                    g_values.activationDrawIndexedThreshold =
-                        current > step
-                            ? current - step
-                            : 0;
-                }
+                g_values.activationDrawIndexedThreshold =
+                    direction > 0
+                    ? std::min<std::uint64_t>(
+                        20000,
+                        current + step)
+                    : (current > step
+                        ? current - step
+                        : 0);
                 break;
             }
 
@@ -882,7 +828,10 @@ namespace gzfx::settings
             }
 
             const float value =
-                std::clamp(normalized, 0.0f, 1.0f);
+                std::clamp(
+                    normalized,
+                    0.0f,
+                    1.0f);
 
             switch (setting)
             {
@@ -894,6 +843,42 @@ namespace gzfx::settings
             case Editable::AmbientContactRadiusPixels:
                 g_values.ambientContactRadiusPixels =
                     1.0f + value * 23.0f;
+                break;
+
+            case Editable::HorizonOcclusionStrength:
+                g_values.horizonOcclusionStrength =
+                    value * 2.0f;
+                break;
+
+            case Editable::HorizonOcclusionRadiusPixels:
+                g_values.horizonOcclusionRadiusPixels =
+                    4.0f + value * 92.0f;
+                break;
+
+            case Editable::HorizonOcclusionQuality:
+                g_values.horizonOcclusionQuality =
+                    static_cast<std::uint32_t>(
+                        std::clamp(
+                            static_cast<int>(
+                                std::lround(
+                                    value * 3.0f)),
+                            0,
+                            3));
+                break;
+
+            case Editable::IndirectBounceStrength:
+                g_values.indirectBounceStrength =
+                    value * 1.5f;
+                break;
+
+            case Editable::IndirectBounceRadiusPixels:
+                g_values.indirectBounceRadiusPixels =
+                    4.0f + value * 124.0f;
+                break;
+
+            case Editable::IndirectBounceSaturation:
+                g_values.indirectBounceSaturation =
+                    value * 2.0f;
                 break;
 
             case Editable::LocalGlowStrength:
@@ -911,15 +896,13 @@ namespace gzfx::settings
                     1.0f + value * 31.0f;
                 break;
 
-            case Editable::LocalGlowEnabled:
-                return false;
-
             case Editable::DefaultMode:
                 g_values.defaultMode =
                     static_cast<std::uint32_t>(
                         std::clamp(
                             static_cast<int>(
-                                std::lround(value * 4.0f)),
+                                std::lround(
+                                    value * 4.0f)),
                             0,
                             4));
                 break;
@@ -928,10 +911,14 @@ namespace gzfx::settings
                 g_values.activationDrawIndexedThreshold =
                     static_cast<std::uint64_t>(
                         std::llround(
-                            static_cast<double>(value) *
+                            static_cast<double>(
+                                value) *
                             20000.0));
                 break;
 
+            case Editable::HorizonOcclusionEnabled:
+            case Editable::IndirectBounceEnabled:
+            case Editable::LocalGlowEnabled:
             case Editable::AccessibleDiagnostics:
             case Editable::CaptureOnModeChange:
             case Editable::Count:
@@ -1097,6 +1084,16 @@ namespace gzfx::settings
 
             switch (setting)
             {
+            case Editable::HorizonOcclusionEnabled:
+                g_values.horizonOcclusionEnabled =
+                    !g_values.horizonOcclusionEnabled;
+                break;
+
+            case Editable::IndirectBounceEnabled:
+                g_values.indirectBounceEnabled =
+                    !g_values.indirectBounceEnabled;
+                break;
+
             case Editable::LocalGlowEnabled:
                 g_values.localGlowEnabled =
                     !g_values.localGlowEnabled;
@@ -1123,4 +1120,5 @@ namespace gzfx::settings
             return false;
         }
     }
+
 }
