@@ -1423,6 +1423,196 @@ namespace gzfx::diagnostics::pipeline_cartography
             return result;
         }
 
+        bool RangeOverlaps(
+            const INT firstA,
+            const INT countA,
+            const INT firstB,
+            const INT countB)
+        {
+            if (firstA < 0 ||
+                countA < 0 ||
+                firstB < 0 ||
+                countB < 0)
+            {
+                return true;
+            }
+
+            const std::int64_t endA =
+                static_cast<std::int64_t>(firstA) +
+                std::max<INT>(countA, 1);
+
+            const std::int64_t endB =
+                static_cast<std::int64_t>(firstB) +
+                std::max<INT>(countB, 1);
+
+            return
+                static_cast<std::int64_t>(firstA) < endB &&
+                static_cast<std::int64_t>(firstB) < endA;
+        }
+
+        bool ViewsOverlap(
+            const ViewBinding& left,
+            const ViewBinding& right)
+        {
+            if (left.resource == 0 ||
+                right.resource == 0 ||
+                left.resource != right.resource)
+            {
+                return false;
+            }
+
+            if (left.view.subresource >= 0 ||
+                right.view.subresource >= 0)
+            {
+                // Copy/resolve records carry absolute subresource indices.
+                // If the other side is a view range we cannot safely derive
+                // mip/array coordinates without the resource's mip count,
+                // so remain conservative rather than inventing precision.
+                if (left.view.subresource >= 0 &&
+                    right.view.subresource >= 0)
+                {
+                    return
+                        left.view.subresource ==
+                        right.view.subresource;
+                }
+
+                return true;
+            }
+
+            return
+                RangeOverlaps(
+                    left.view.firstMip,
+                    left.view.mipCount,
+                    right.view.firstMip,
+                    right.view.mipCount) &&
+                RangeOverlaps(
+                    left.view.firstSlice,
+                    left.view.sliceCount,
+                    right.view.firstSlice,
+                    right.view.sliceCount);
+        }
+
+        bool ConflictsWithOutputsLocked(
+            const ViewBinding& binding)
+        {
+            if (binding.resource == 0)
+            {
+                return false;
+            }
+
+            for (const auto& output :
+                 g_state.rtvs)
+            {
+                if (ViewsOverlap(
+                        binding,
+                        output))
+                {
+                    return true;
+                }
+            }
+
+            if (ViewsOverlap(
+                    binding,
+                    g_state.dsv))
+            {
+                return true;
+            }
+
+            for (const auto& output :
+                 g_state.omUavs)
+            {
+                if (ViewsOverlap(
+                        binding,
+                        output))
+                {
+                    return true;
+                }
+            }
+
+            for (const auto& output :
+                 g_state.csUavs)
+            {
+                if (ViewsOverlap(
+                        binding,
+                        output))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        void UnbindInputsForOutputLocked(
+            const ViewBinding& output)
+        {
+            if (output.resource == 0)
+            {
+                return;
+            }
+
+            for (auto& stage :
+                 g_state.srvs)
+            {
+                for (auto& input :
+                     stage)
+                {
+                    if (ViewsOverlap(
+                            input,
+                            output))
+                    {
+                        input =
+                            ViewBinding{};
+                    }
+                }
+            }
+        }
+
+        void UnbindComputeUavsForOutputLocked(
+            const ViewBinding& output)
+        {
+            if (output.resource == 0)
+            {
+                return;
+            }
+
+            for (auto& uav :
+                 g_state.csUavs)
+            {
+                if (ViewsOverlap(
+                        uav,
+                        output))
+                {
+                    uav =
+                        ViewBinding{};
+                }
+            }
+        }
+
+        void UnbindOmOutputsForUavLocked(
+            const ViewBinding& uav,
+            const UINT uavStartSlot)
+        {
+            if (uav.resource == 0)
+            {
+                return;
+            }
+
+            for (std::size_t slot = 0;
+                 slot < g_state.rtvs.size();
+                 ++slot)
+            {
+                if (slot >= uavStartSlot ||
+                    ViewsOverlap(
+                        g_state.rtvs[slot],
+                        uav))
+                {
+                    g_state.rtvs[slot] =
+                        ViewBinding{};
+                }
+            }
+        }
+
         void AddAccess(
             PassRecord& pass,
             const char mode,
@@ -3544,11 +3734,17 @@ namespace gzfx::diagnostics::pipeline_cartography
                     slots.size();
                  ++i)
             {
-                slots[startSlot + i] =
+                const auto binding =
                     DescribeSrvLocked(
                         resources
                             ? resources[i]
                             : nullptr);
+
+                slots[startSlot + i] =
+                    ConflictsWithOutputsLocked(
+                        binding)
+                    ? ViewBinding{}
+                    : binding;
             }
         }
         catch (...)
@@ -3666,6 +3862,22 @@ namespace gzfx::diagnostics::pipeline_cartography
                 DescribeDsvLocked(
                     depthTarget);
 
+            for (const auto& output :
+                 g_state.rtvs)
+            {
+                UnbindInputsForOutputLocked(
+                    output);
+
+                UnbindComputeUavsForOutputLocked(
+                    output);
+            }
+
+            UnbindInputsForOutputLocked(
+                g_state.dsv);
+
+            UnbindComputeUavsForOutputLocked(
+                g_state.dsv);
+
             g_state.omUavs.fill(
                 ViewBinding{});
         }
@@ -3715,6 +3927,26 @@ namespace gzfx::diagnostics::pipeline_cartography
                         depthTarget);
             }
 
+            if (renderTargetCount !=
+                D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL)
+            {
+                for (const auto& output :
+                     g_state.rtvs)
+                {
+                    UnbindInputsForOutputLocked(
+                        output);
+
+                    UnbindComputeUavsForOutputLocked(
+                        output);
+                }
+
+                UnbindInputsForOutputLocked(
+                    g_state.dsv);
+
+                UnbindComputeUavsForOutputLocked(
+                    g_state.dsv);
+            }
+
             if (uavCount !=
                 D3D11_KEEP_UNORDERED_ACCESS_VIEWS)
             {
@@ -3724,12 +3956,29 @@ namespace gzfx::diagnostics::pipeline_cartography
                         g_state.omUavs.size();
                      ++i)
                 {
-                    g_state.omUavs[
-                        uavStartSlot + i] =
+                    const auto binding =
                         DescribeUavLocked(
                             uavs
                                 ? uavs[i]
                                 : nullptr);
+
+                    UnbindInputsForOutputLocked(
+                        binding);
+
+                    UnbindComputeUavsForOutputLocked(
+                        binding);
+
+                    if (renderTargetCount ==
+                        D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL)
+                    {
+                        UnbindOmOutputsForUavLocked(
+                            binding,
+                            uavStartSlot);
+                    }
+
+                    g_state.omUavs[
+                        uavStartSlot + i] =
+                        binding;
                 }
             }
         }
@@ -3759,12 +4008,18 @@ namespace gzfx::diagnostics::pipeline_cartography
                     g_state.csUavs.size();
                  ++i)
             {
-                g_state.csUavs[
-                    startSlot + i] =
+                const auto binding =
                     DescribeUavLocked(
                         uavs
                             ? uavs[i]
                             : nullptr);
+
+                UnbindInputsForOutputLocked(
+                    binding);
+
+                g_state.csUavs[
+                    startSlot + i] =
+                    binding;
             }
         }
         catch (...)
