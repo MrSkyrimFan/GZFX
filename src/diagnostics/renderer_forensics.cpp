@@ -45,6 +45,8 @@ namespace gzfx::diagnostics
         constexpr std::size_t kVSSetShader = 11;
         constexpr std::size_t kDrawIndexed = 12;
         constexpr std::size_t kDraw = 13;
+        constexpr std::size_t kMap = 14;
+        constexpr std::size_t kUnmap = 15;
         constexpr std::size_t kPSSetConstantBuffers = 16;
         constexpr std::size_t kDrawIndexedInstanced = 20;
         constexpr std::size_t kDrawInstanced = 21;
@@ -67,6 +69,7 @@ namespace gzfx::diagnostics
         constexpr std::size_t kRSSetViewports = 44;
         constexpr std::size_t kCopySubresourceRegion = 46;
         constexpr std::size_t kCopyResource = 47;
+        constexpr std::size_t kUpdateSubresource = 48;
         constexpr std::size_t kClearRenderTargetView = 50;
         constexpr std::size_t kClearUnorderedAccessViewUint = 51;
         constexpr std::size_t kClearUnorderedAccessViewFloat = 52;
@@ -111,6 +114,8 @@ namespace gzfx::diagnostics
         using DrawInstancedFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, UINT, UINT);
         using DrawIndexedInstancedIndirectFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Buffer*, UINT);
         using DrawInstancedIndirectFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Buffer*, UINT);
+        using MapFn = HRESULT(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, UINT, D3D11_MAP, UINT, D3D11_MAPPED_SUBRESOURCE*);
+        using UnmapFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, UINT);
 
         using IASetPrimitiveTopologyFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, D3D11_PRIMITIVE_TOPOLOGY);
         using OMSetRenderTargetsFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, ID3D11RenderTargetView* const*, ID3D11DepthStencilView*);
@@ -126,6 +131,7 @@ namespace gzfx::diagnostics
 
         using CopySubresourceRegionFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, UINT, UINT, UINT, UINT, ID3D11Resource*, UINT, const D3D11_BOX*);
         using CopyResourceFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, ID3D11Resource*);
+        using UpdateSubresourceFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, UINT, const D3D11_BOX*, const void*, UINT, UINT);
         using ClearRenderTargetViewFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11RenderTargetView*, const FLOAT[4]);
         using ClearUnorderedAccessViewUintFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11UnorderedAccessView*, const UINT[4]);
         using ClearUnorderedAccessViewFloatFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11UnorderedAccessView*, const FLOAT[4]);
@@ -173,6 +179,8 @@ namespace gzfx::diagnostics
         DrawInstancedFn g_drawInstanced = nullptr;
         DrawIndexedInstancedIndirectFn g_drawIndexedInstancedIndirect = nullptr;
         DrawInstancedIndirectFn g_drawInstancedIndirect = nullptr;
+        MapFn g_map = nullptr;
+        UnmapFn g_unmap = nullptr;
 
         IASetPrimitiveTopologyFn g_setTopology = nullptr;
         OMSetRenderTargetsFn g_omSetRT = nullptr;
@@ -187,6 +195,7 @@ namespace gzfx::diagnostics
 
         CopySubresourceRegionFn g_copySubresource = nullptr;
         CopyResourceFn g_copyResource = nullptr;
+        UpdateSubresourceFn g_updateSubresource = nullptr;
         ClearRenderTargetViewFn g_clearRTV = nullptr;
         ClearUnorderedAccessViewUintFn g_clearUavUint = nullptr;
         ClearUnorderedAccessViewFloatFn g_clearUavFloat = nullptr;
