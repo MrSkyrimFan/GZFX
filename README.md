@@ -6,7 +6,7 @@
 > It replaces the old bootstrap README.
 >
 > **Do not restart the project, do not return to baby-step probing, and do not resume stale branches.**
-> The current repository already contains a working SKSE-free native D3D11 framework, live in-game settings UI, pre-UI HDR injection, renderer-semantic tracing, native Skyrim motion/normal acquisition, and the first temporal AO/SSIL foundation.
+> The current repository already contains a working SKSE-free native D3D11 framework, live in-game settings UI, pre-UI HDR injection, renderer-semantic tracing, native Skyrim motion/normal acquisition, the first temporal AO/SSIL foundation, and the renderer-pipeline cartography system.
 
 ---
 
@@ -24,33 +24,54 @@ Current authoritative branch:
 main
 ```
 
-Current authoritative code/package baseline immediately before this README-only handoff update:
+Current authoritative source rule:
+
+```text
+current main
+```
+
+Do not pin future work to the old PR18 package-refresh SHA. The historical PR18 package baseline was:
 
 ```text
 c9de1705082f7efd740d709c1f916bf1dff2f381
 ```
 
-That commit is the automatic package refresh immediately after PR #18 merged. Later README-only handoff commits do not change the runtime code baseline described here.
+After PR #19 merges, its 0.0.17 renderer-cartography source and the subsequent automatic package refresh on `main` supersede that historical hash.
 
 Current runtime version:
 
 ```text
-0.0.16-native-surface-temporal-foundation
+0.0.17-renderer-pipeline-cartography
 ```
 
-PR #18 merge commit:
+Current engineering phase:
+
+```text
+RENDERER CARTOGRAPHY
+pipeline understanding first
+effect tuning later
+```
+
+PR #19:
+```text
+Map Skyrim renderer pipeline before further lighting tuning
+```
+
+PR #19 supersedes PR18 as the active engineering frontier after merge. PR18 remains the historical native-normal/motion/temporal foundation.
+
+Historical PR #18 merge commit:
 
 ```text
 b8596c0d2dd69dc22663fa6326463e8a8debfa1d
 ```
 
-PR #18 tested head:
+Historical PR #18 tested head:
 
 ```text
 5da67a6fffb1d176cc84e4bba24d34f6ec1b1b04
 ```
 
-PR #18 CI:
+Historical PR #18 CI:
 
 ```text
 Windows x64 run #80
@@ -60,7 +81,7 @@ run id: 39930954463
 0 failed
 ```
 
-PR #18 artifact:
+Historical PR #18 artifact:
 
 ```text
 GZFX-SkyrimSE-x64
@@ -730,9 +751,34 @@ The existing positive AO/SSIL tests and flat/uniform neutrality tests also remai
 
 This is synthetic/native CI proof.
 
-### IMPORTANT: PR18 has NOT YET RECEIVED THE NEXT REAL-SKYRIM FIELD VERDICT IN THIS HANDOFF.
+### PR18 REAL-SKYRIM FIELD VERDICT — COMPLETE
 
-That is the immediate next job.
+PR18 was field-tested on October 23, 2026.
+
+The important low-level path worked in real Skyrim:
+
+```text
+native_normal=true
+motion=true
+temporal=true
+history=true
+history_reused=true
+```
+
+But the artistic/behavior result was still poor:
+
+- Horizon/AO flicker remained;
+- bounce/SSIL was effectively nonfunctional visually;
+- raising bounce strength produced almost no meaningful scene response;
+- Local Glow still responded strongly, proving the UI/settings/composite plumbing itself was not generally dead.
+
+The SSIL field evidence was nearly empty even at high bounce strength.
+
+The user explicitly does NOT want more AO/SSIL slider tuning yet.
+
+Controlling conclusion:
+
+> GZFX must first map Skyrim's renderer much more completely and determine the correct resource semantics and lighting/integration stages. Only after that cartography is mature should AO, SSIL, temporal behavior, menu controls, and slider ranges be redesigned/tuned.
 
 ---
 
@@ -837,153 +883,82 @@ Keep using the same scene when comparing builds.
 
 ---
 
-# 16. Exact next action for the new agent
+# 16. Current phase — renderer pipeline cartography
 
-**DO NOT write another shader first.**
+**DO NOT tune AO/SSIL yet.**
 
-Current main already contains PR18.
+GZFX 0.0.17 adds a broad execution-level D3D11 cartographer that runs only inside the existing short STOCK semantic windows.
 
-The immediate next task is to field-test PR18 in real Skyrim and analyze the evidence.
+A Shift+Numpad5 capture now records:
 
-## User test goal
+- VS / HS / DS / GS / PS / CS shader identity;
+- SRV reads across all six shader stages;
+- RTV / DSV / OM-UAV / CS-UAV writes at actual draw/dispatch execution;
+- subresource mip/slice/view metadata;
+- DSV read-only depth/stencil flags;
+- all-stage constant-buffer bindings;
+- all-stage sampler bindings;
+- decoded sampler state;
+- decoded blend state;
+- decoded depth/stencil state;
+- decoded rasterizer state;
+- viewport and primitive topology;
+- direct and indirect draw/dispatch;
+- CopyResource;
+- CopySubresourceRegion;
+- ResolveSubresource;
+- GenerateMips;
+- RTV / DSV / UAV clears;
+- ExecuteCommandList coverage-boundary evidence;
+- small CPU-updated buffer fingerprints from Map/Unmap and UpdateSubresource;
+- resource descriptors and debug names when available;
+- producer -> consumer resource-lineage edges;
+- same-session pass signatures for comparing controlled captures.
 
-Determine whether:
+Evidence is written as numbered `pipeline_*_manual_####` files matching each manual semantic capture.
 
-1. native Skyrim normals materially reduce PR16 Horizon/AO flicker and crawling;
-2. temporal reprojection materially stabilizes AO/SSIL during camera motion;
-3. SSIL becomes more convincing/stable with source-facing native normal information;
-4. the native motion vector path is actually active in real Skyrim;
-5. temporal history is actually reused in real Skyrim;
-6. startup stock semantic capture completes and effects resume;
-7. manual semantic captures work at controlled day/night states.
+The experimental ID3D11Device creation-interception lane is intentionally DISABLED in the field build. CI proved that lane could destabilize D3D11 WARP harnesses. Do not enable `GZFX_EXPERIMENTAL_DEVICE_CREATION_HOOKS` for normal field work.
 
-## Recommended PR18 field procedure
-
-The new agent should give the user concise directions, not another essay.
-
-Suggested run:
-
-1. Install current main package from:
-   `LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip`.
-2. Go to the Standing Stones benchmark.
-3. Wait ~10 seconds after gameplay loads so the initial stock semantic window can complete and GZFX effects resume.
-4. Open menu with `Shift+Numpad1`.
-5. Test split view and focus on:
-   - rock/ground intersections;
-   - water;
-   - mountains;
-   - terrain folds;
-   - slow camera rotation;
-   - fast camera rotation.
-6. Compare Horizon strength around:
-   - 0.10–0.15;
-   - ~0.25;
-   - higher only if useful.
-7. Test SSIL around the range that previously mattered (~0.25) and watch for real local bounce vs broad brightness.
-8. Use `Shift+Numpad4` for exact frame/settings captures of:
-   - a good-looking configuration;
-   - a visible flicker/artifact configuration if one exists;
-   - an SSIL configuration.
-9. Use `Shift+Numpad5` once during DAY.
-10. Change Skyrim time to NIGHT.
-11. Use `Shift+Numpad5` again at NIGHT.
-12. Move camera both slowly and quickly for temporal stability evidence.
-13. Quit normally.
-14. ZIP/upload the entire runtime evidence folder:
-   `Documents\My Games\Skyrim Special Edition\GZFX`.
-
-## High-value files after PR18 test
-
-Look for:
-
-```text
-GZFX.log
-Settings.ini
-
-Diagnostics\native_surface_inputs.txt
-Diagnostics\ambient_depth_stack.txt
-Diagnostics\ambient_depth_fields.txt
-Diagnostics\ambient_depth_ao.bmp
-Diagnostics\ambient_depth_ssil.bmp
-
-Diagnostics\manual_capture_*.bmp
-Diagnostics\manual_capture_*.txt
-
-Diagnostics\renderer_semantics*.txt
-Diagnostics\semantic_bindings*.csv
-Diagnostics\semantic_candidate_*.bmp
-```
-
-The exact numbered/suffixed semantic files depend on how many manual `Shift+Numpad5` captures were requested.
+Same-session shader identities are sufficient for the controlled day/night/water/shadow/interior comparison campaign.
 
 ---
 
-# 17. What to analyze after the PR18 field run
+# 17. Immediate field evidence campaign
 
-The next agent should NOT immediately start tuning sliders.
+Use Shift+Numpad5 for controlled STOCK renderer captures.
 
-First inspect evidence.
+Keep captures in ONE Skyrim launch/session so pass signatures and live shader identities remain directly comparable.
 
-## Native input activation
+Capture these states in order:
 
-`ambient_depth_stack.txt` should indicate:
+1. exterior daylight, still camera;
+2. exterior daylight, slowly moving camera;
+3. exterior night, approximately same view;
+4. water/reflection-heavy view;
+5. strong directional-shadow view;
+6. normal interior cell.
 
-```text
-native_normal=true
-motion=true
-temporal=true
-history=true
-history_reused=true
-```
+Do not tune Horizon, Bounce, Local Glow, temporal weights, or other artistic controls during this campaign.
 
-or equivalent current logging.
+After upload, analyze the `pipeline_*` evidence as a resource/pass graph first.
 
-If native normal or motion is false in real Skyrim, fix acquisition/staleness logic before any artistic tuning.
+Priority questions:
 
-## Stability
+- where the final opaque depth is produced/copied;
+- which passes create and consume stock SAO/raw-AO/history resources;
+- which passes create and consume stock indirect-light/history resources;
+- exact motion/normal/aux target consumers;
+- shadow-map families and cascade/local-light behavior;
+- water/reflection/refraction/TAA chain;
+- volumetric 1D/2D-array/3D resource chain;
+- HDR downsample/luminance/exposure/adaptation chain;
+- bloom/blur chain;
+- temporal AA/image-space stages;
+- sky/fog/cloud/sun/moon composition;
+- where ambient/directional/indirect lighting is actually composed;
+- whether ExecuteCommandList exposes an immediate-context coverage boundary.
 
-Compare field behavior to PR16:
-
-PR16 failure baseline:
-
-- severe Horizon/AO flicker;
-- horizontal lines beginning around ~0.13+;
-- weak SSIL;
-- no configuration looked genuinely good.
-
-PR18 success criterion is not “different.”
-
-It should be:
-
-- significantly less crawling/flicker during motion;
-- less dependence on depth-derived orientation;
-- temporal stability without obvious ghosting;
-- SSIL that responds to actual source/receiver geometry.
-
-## Ghosting / history rejection
-
-If temporal history smears or ghosts:
-
-- inspect motion-vector convention;
-- verify history texture ping-pong;
-- verify current vs previous depth/normal comparison;
-- verify masks/TAA-related channels from the normal target if useful;
-- tighten disocclusion rejection before simply lowering temporal blend.
-
-## Remaining horizontal bands
-
-If bands survive even with native normals + temporal history:
-
-do not assume they are only AO sampling.
-
-Investigate:
-
-- depth quantization / projection behavior;
-- half-resolution reconstruction;
-- native normal decoding;
-- TAA/SSR mask channels;
-- whether stock SSAO/native image-space resources can replace parts of GZFX sampling;
-- whether AO should be integrated earlier into ambient/diffuse lighting rather than applied as HDR multiplicative visibility.
+Do not promote candidate tags to facts merely because a resource format looks familiar.
 
 ---
 
@@ -994,6 +969,7 @@ PR17 was a major breakthrough, not the end.
 Still unresolved / worth probing:
 
 - exact semantics of `SV_Target3 R8G8_UNORM`;
+- exact B/A semantics of the native-normal RGBA8 target — do NOT keep calling them TAA/SSR masks without field proof;
 - stock Skyrim SSAO intermediate resources and raw AO;
 - finalized opaque depth used by later image-space passes;
 - shadow-map taxonomy and day/night differences;
@@ -1115,6 +1091,6 @@ Never treat the stale `render/native-surface-temporal-foundation` branch as acti
 
 The exact current frontier is:
 
-> **GZFX 0.0.16 on current main, PR18 merged, 13/13 native tests GREEN, native Skyrim normals + motion + temporal AO/SSIL foundation implemented, awaiting the first real-Skyrim PR18 field verdict.**
+> **GZFX 0.0.17 renderer-pipeline cartography is the active frontier. PR18 was field-tested: native normals, motion and temporal history were active, but flicker remained and SSIL/bounce was effectively dead. Effect tuning is intentionally paused. PR19 adds execution-level renderer cartography so the next field run maps Skyrim's stock pipeline across controlled day/night/motion/water/shadow/interior captures.**
 
 That is where the next agent starts.

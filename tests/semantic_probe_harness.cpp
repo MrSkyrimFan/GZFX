@@ -2,6 +2,9 @@
 #include <d3d11.h>
 #include <dxgi.h>
 
+#include <array>
+#include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -292,6 +295,23 @@ int wmain(
         return 11;
     }
 
+    ID3D11Texture2D* scalarCopy = nullptr;
+    ID3D11ShaderResourceView* scalarCopySrv = nullptr;
+
+    if (FAILED(
+            device->CreateTexture2D(
+                &scalarDesc,
+                nullptr,
+                &scalarCopy)) ||
+        FAILED(
+            device->CreateShaderResourceView(
+                scalarCopy,
+                nullptr,
+                &scalarCopySrv)))
+    {
+        return 18;
+    }
+
     D3D11_TEXTURE2D_DESC depthDesc{};
     depthDesc.Width = 640;
     depthDesc.Height = 360;
@@ -359,6 +379,44 @@ int wmain(
         return 14;
     }
 
+    D3D11_BUFFER_DESC dynamicBufferDesc{};
+    dynamicBufferDesc.ByteWidth = 256;
+    dynamicBufferDesc.Usage =
+        D3D11_USAGE_DYNAMIC;
+    dynamicBufferDesc.BindFlags =
+        D3D11_BIND_CONSTANT_BUFFER;
+    dynamicBufferDesc.CPUAccessFlags =
+        D3D11_CPU_ACCESS_WRITE;
+
+    ID3D11Buffer* dynamicBuffer = nullptr;
+
+    if (FAILED(
+            device->CreateBuffer(
+                &dynamicBufferDesc,
+                nullptr,
+                &dynamicBuffer)))
+    {
+        return 20;
+    }
+
+    D3D11_BUFFER_DESC defaultBufferDesc =
+        dynamicBufferDesc;
+
+    defaultBufferDesc.Usage =
+        D3D11_USAGE_DEFAULT;
+    defaultBufferDesc.CPUAccessFlags = 0;
+
+    ID3D11Buffer* defaultBuffer = nullptr;
+
+    if (FAILED(
+            device->CreateBuffer(
+                &defaultBufferDesc,
+                nullptr,
+                &defaultBuffer)))
+    {
+        return 21;
+    }
+
     D3D11_VIEWPORT viewport{};
     viewport.Width = 640.0f;
     viewport.Height = 360.0f;
@@ -372,6 +430,71 @@ int wmain(
         context->RSSetViewports(
             1,
             &viewport);
+
+        std::array<std::uint32_t, 64>
+            mappedValues{};
+
+        for (std::size_t i = 0;
+             i < mappedValues.size();
+             ++i)
+        {
+            mappedValues[i] =
+                static_cast<std::uint32_t>(
+                    frame * 1000 +
+                    static_cast<int>(i));
+        }
+
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+
+        if (SUCCEEDED(
+                context->Map(
+                    dynamicBuffer,
+                    0,
+                    D3D11_MAP_WRITE_DISCARD,
+                    0,
+                    &mapped)))
+        {
+            std::memcpy(
+                mapped.pData,
+                mappedValues.data(),
+                sizeof(mappedValues));
+
+            context->Unmap(
+                dynamicBuffer,
+                0);
+        }
+
+        context->VSSetConstantBuffers(
+            3,
+            1,
+            &dynamicBuffer);
+
+        std::array<std::uint32_t, 64>
+            updateValues{};
+
+        for (std::size_t i = 0;
+             i < updateValues.size();
+             ++i)
+        {
+            updateValues[i] =
+                static_cast<std::uint32_t>(
+                    0xABC00000u +
+                    frame * 100 +
+                    static_cast<int>(i));
+        }
+
+        context->UpdateSubresource(
+            defaultBuffer,
+            0,
+            nullptr,
+            updateValues.data(),
+            0,
+            0);
+
+        context->PSSetConstantBuffers(
+            4,
+            1,
+            &defaultBuffer);
 
         ID3D11RenderTargetView*
             targets[3] =
@@ -396,19 +519,23 @@ int wmain(
                 0);
         }
 
+        context->OMSetRenderTargets(
+            0,
+            nullptr,
+            nullptr);
+
+        context->CopyResource(
+            scalarCopy,
+            scalar);
+
         ID3D11ShaderResourceView*
             pixelResources[4] =
         {
             depthSrv,
             normalSrv,
             motionSrv,
-            scalarSrv
+            scalarCopySrv
         };
-
-        context->OMSetRenderTargets(
-            0,
-            nullptr,
-            nullptr);
 
         context->PSSetShaderResources(
             0,
@@ -459,10 +586,75 @@ int wmain(
         diagnostics /
         L"semantic_bindings_manual_0001.csv";
 
+    const auto pipelineSummary =
+        diagnostics /
+        L"pipeline_summary.txt";
+
+    const auto pipelinePasses =
+        diagnostics /
+        L"pipeline_passes.csv";
+
+    const auto pipelineAccesses =
+        diagnostics /
+        L"pipeline_accesses.csv";
+
+    const auto pipelineResources =
+        diagnostics /
+        L"pipeline_resources.csv";
+
+    const auto pipelineShaders =
+        diagnostics /
+        L"pipeline_shaders.csv";
+
+    const auto pipelineSignatures =
+        diagnostics /
+        L"pipeline_signatures.csv";
+
+    const auto pipelineEdges =
+        diagnostics /
+        L"pipeline_edges.csv";
+
+    const auto pipelineBufferUpdates =
+        diagnostics /
+        L"pipeline_buffer_updates.csv";
+
+    const auto pipelineDepthStates =
+        diagnostics /
+        L"pipeline_depth_states.csv";
+
+    const auto pipelineBlendStates =
+        diagnostics /
+        L"pipeline_blend_states.csv";
+
+    const auto pipelineRasterStates =
+        diagnostics /
+        L"pipeline_raster_states.csv";
+
+    const auto pipelineSamplerStates =
+        diagnostics /
+        L"pipeline_sampler_states.csv";
+
+    const auto manualPipelineSummary =
+        diagnostics /
+        L"pipeline_summary_manual_0001.txt";
+
     if (!ExistsNonEmpty(semantics) ||
         !ExistsNonEmpty(bindings) ||
         !ExistsNonEmpty(manualSemantics) ||
-        !ExistsNonEmpty(manualBindings))
+        !ExistsNonEmpty(manualBindings) ||
+        !ExistsNonEmpty(pipelineSummary) ||
+        !ExistsNonEmpty(pipelinePasses) ||
+        !ExistsNonEmpty(pipelineAccesses) ||
+        !ExistsNonEmpty(pipelineResources) ||
+        !ExistsNonEmpty(pipelineShaders) ||
+        !ExistsNonEmpty(pipelineSignatures) ||
+        !ExistsNonEmpty(pipelineEdges) ||
+        !ExistsNonEmpty(pipelineBufferUpdates) ||
+        !ExistsNonEmpty(pipelineDepthStates) ||
+        !ExistsNonEmpty(pipelineBlendStates) ||
+        !ExistsNonEmpty(pipelineRasterStates) ||
+        !ExistsNonEmpty(pipelineSamplerStates) ||
+        !ExistsNonEmpty(manualPipelineSummary))
     {
         return 15;
     }
@@ -472,6 +664,27 @@ int wmain(
 
     const std::string manualSemanticText =
         ReadAll(manualSemantics);
+
+    const std::string pipelineSummaryText =
+        ReadAll(pipelineSummary);
+
+    const std::string pipelinePassesText =
+        ReadAll(pipelinePasses);
+
+    const std::string pipelineResourcesText =
+        ReadAll(pipelineResources);
+
+    const std::string pipelineShadersText =
+        ReadAll(pipelineShaders);
+
+    const std::string pipelineSignaturesText =
+        ReadAll(pipelineSignatures);
+
+    const std::string pipelineEdgesText =
+        ReadAll(pipelineEdges);
+
+    const std::string pipelineBufferUpdatesText =
+        ReadAll(pipelineBufferUpdates);
 
     if (semanticText.find(
             "format=28") ==
@@ -491,6 +704,56 @@ int wmain(
             << "\n";
 
         return 16;
+    }
+
+    if (pipelineSummaryText.find(
+            "passes=") ==
+            std::string::npos ||
+        pipelineSummaryText.find(
+            "copy_resolve_mip_passes=") ==
+            std::string::npos ||
+        pipelinePassesText.find(
+            "copy_resource") ==
+            std::string::npos ||
+        pipelineResourcesText.find(
+            "texture2d") ==
+            std::string::npos ||
+        pipelineSummaryText.find(
+            "creation_interception_enabled=false") ==
+            std::string::npos ||
+        pipelineShadersText.find(
+            "shader,birth,stage") ==
+            std::string::npos ||
+        pipelineSignaturesText.find(
+            "signature,kind,count") ==
+            std::string::npos ||
+        pipelineEdgesText.find(
+            "resource_lineage") ==
+            std::string::npos ||
+        pipelineBufferUpdatesText.find(
+            "map_unmap") ==
+            std::string::npos ||
+        pipelineBufferUpdatesText.find(
+            "update_subresource") ==
+            std::string::npos)
+    {
+        std::cerr
+            << pipelineSummaryText
+            << "\n"
+            << pipelinePassesText
+            << "\n"
+            << pipelineResourcesText
+            << "\n"
+            << pipelineShadersText
+            << "\n"
+            << pipelineSignaturesText
+            << "\n"
+            << pipelineEdgesText
+            << "\n"
+            << pipelineBufferUpdatesText
+            << "\n";
+
+        return 19;
     }
 
     std::size_t previewCount = 0;
@@ -519,6 +782,12 @@ int wmain(
     if (depthSrv) depthSrv->Release();
     if (depthView) depthView->Release();
     if (depth) depth->Release();
+
+    if (defaultBuffer) defaultBuffer->Release();
+    if (dynamicBuffer) dynamicBuffer->Release();
+
+    if (scalarCopySrv) scalarCopySrv->Release();
+    if (scalarCopy) scalarCopy->Release();
 
     if (scalarSrv) scalarSrv->Release();
     if (scalarRtv) scalarRtv->Release();

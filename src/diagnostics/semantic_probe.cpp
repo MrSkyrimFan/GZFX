@@ -1,6 +1,7 @@
 #include "gzfx/diagnostics/semantic_probe.hpp"
 
 #include "gzfx/diagnostics/resource_intelligence.hpp"
+#include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
 
@@ -1283,9 +1284,14 @@ float4 PSMain(V input) : SV_TARGET
 
         void BeginTrace(
             const std::uint64_t frame,
-            IDXGISwapChain* swapChain)
+            IDXGISwapChain* swapChain,
+            ID3D11DeviceContext* context)
         {
             resource_intelligence::LiveInputs inputs{};
+
+            std::uintptr_t knownMotion = 0;
+            std::uintptr_t knownNormal = 0;
+            std::uintptr_t knownAux = 0;
 
             if (resource_intelligence::
                     AcquireLiveInputs(
@@ -1302,6 +1308,21 @@ float4 PSMain(V input) : SV_TARGET
                         std::uintptr_t>(
                             inputs.sceneColorTexture);
 
+                knownMotion =
+                    reinterpret_cast<
+                        std::uintptr_t>(
+                            inputs.motionVectorTexture);
+
+                knownNormal =
+                    reinterpret_cast<
+                        std::uintptr_t>(
+                            inputs.nativeNormalTexture);
+
+                knownAux =
+                    reinterpret_cast<
+                        std::uintptr_t>(
+                            inputs.nativeAuxTexture);
+
                 resource_intelligence::
                     ReleaseLiveInputs(
                         inputs);
@@ -1313,6 +1334,16 @@ float4 PSMain(V input) : SV_TARGET
             g_traceEndFrame =
                 g_traceStartFrame +
                 kTraceFrames - 1;
+
+            pipeline_cartography::BeginCapture(
+                g_traceStartFrame,
+                g_traceEndFrame,
+                context,
+                g_knownSceneColor,
+                g_knownDepth,
+                knownMotion,
+                knownNormal,
+                knownAux);
 
             g_traceActive = true;
         }
@@ -1677,7 +1708,8 @@ float4 PSMain(V input) : SV_TARGET
 
                 BeginTrace(
                     frame,
-                    swapChain);
+                    swapChain,
+                    context);
 
                 return;
             }
@@ -1693,7 +1725,8 @@ float4 PSMain(V input) : SV_TARGET
 
                 BeginTrace(
                     frame,
-                    swapChain);
+                    swapChain,
+                    context);
 
                 return;
             }
@@ -1727,6 +1760,9 @@ float4 PSMain(V input) : SV_TARGET
                 CaptureCandidates(
                     device,
                     context,
+                    suffix);
+
+                pipeline_cartography::FinishCapture(
                     suffix);
 
                 if (g_manualTrace)
