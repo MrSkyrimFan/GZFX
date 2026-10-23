@@ -68,14 +68,14 @@ namespace gzfx::settings
             EnsureValue(path, L"AmbientContact", L"RadiusPixels", L"4.0");
 
             EnsureValue(path, L"HorizonOcclusion", L"Enabled", L"1");
-            EnsureValue(path, L"HorizonOcclusion", L"Strength", L"0.90");
+            EnsureValue(path, L"HorizonOcclusion", L"Strength", L"0.25");
             EnsureValue(path, L"HorizonOcclusion", L"RadiusPixels", L"28.0");
             EnsureValue(path, L"HorizonOcclusion", L"Quality", L"2");
 
             EnsureValue(path, L"IndirectBounce", L"Enabled", L"1");
-            EnsureValue(path, L"IndirectBounce", L"Strength", L"0.20");
+            EnsureValue(path, L"IndirectBounce", L"Strength", L"0.12");
             EnsureValue(path, L"IndirectBounce", L"RadiusPixels", L"36.0");
-            EnsureValue(path, L"IndirectBounce", L"Saturation", L"0.85");
+            EnsureValue(path, L"IndirectBounce", L"Saturation", L"1.00");
 
             EnsureValue(path, L"LocalGlow", L"Enabled", L"1");
             EnsureValue(path, L"LocalGlow", L"Strength", L"0.18");
@@ -439,7 +439,7 @@ namespace gzfx::settings
                         L"Strength",
                         L"0.90"),
                     0.0f,
-                    2.0f);
+                    1.0f);
 
             next.horizonOcclusionRadiusPixels =
                 std::clamp(
@@ -477,7 +477,7 @@ namespace gzfx::settings
                         L"Strength",
                         L"0.20"),
                     0.0f,
-                    1.5f);
+                    0.60f);
 
             next.indirectBounceRadiusPixels =
                 std::clamp(
@@ -497,7 +497,7 @@ namespace gzfx::settings
                         L"Saturation",
                         L"0.85"),
                     0.0f,
-                    2.0f);
+                    1.50f);
 
             next.localGlowEnabled =
                 GetPrivateProfileIntW(
@@ -634,9 +634,9 @@ namespace gzfx::settings
                 g_values.ambientContactStrength =
                     std::clamp(
                         g_values.ambientContactStrength +
-                            sign * 0.05f,
+                            sign * 0.025f,
                         0.0f,
-                        2.0f);
+                        1.0f);
                 break;
 
             case Editable::AmbientContactRadiusPixels:
@@ -696,9 +696,9 @@ namespace gzfx::settings
                 g_values.indirectBounceStrength =
                     std::clamp(
                         g_values.indirectBounceStrength +
-                            sign * 0.05f,
+                            sign * 0.025f,
                         0.0f,
-                        1.5f);
+                        0.60f);
                 break;
 
             case Editable::IndirectBounceRadiusPixels:
@@ -716,7 +716,7 @@ namespace gzfx::settings
                         g_values.indirectBounceSaturation +
                             sign * 0.05f,
                         0.0f,
-                        2.0f);
+                        1.50f);
                 break;
 
             case Editable::LocalGlowEnabled:
@@ -847,12 +847,15 @@ namespace gzfx::settings
 
             case Editable::HorizonOcclusionStrength:
                 g_values.horizonOcclusionStrength =
-                    value * 2.0f;
+                    value;
                 break;
 
             case Editable::HorizonOcclusionRadiusPixels:
                 g_values.horizonOcclusionRadiusPixels =
-                    4.0f + value * 92.0f;
+                    4.0f *
+                    std::pow(
+                        24.0f,
+                        value);
                 break;
 
             case Editable::HorizonOcclusionQuality:
@@ -868,17 +871,20 @@ namespace gzfx::settings
 
             case Editable::IndirectBounceStrength:
                 g_values.indirectBounceStrength =
-                    value * 1.5f;
+                    value * 0.60f;
                 break;
 
             case Editable::IndirectBounceRadiusPixels:
                 g_values.indirectBounceRadiusPixels =
-                    4.0f + value * 124.0f;
+                    4.0f *
+                    std::pow(
+                        32.0f,
+                        value);
                 break;
 
             case Editable::IndirectBounceSaturation:
                 g_values.indirectBounceSaturation =
-                    value * 2.0f;
+                    value * 1.50f;
                 break;
 
             case Editable::LocalGlowStrength:
@@ -968,14 +974,18 @@ namespace gzfx::settings
 
             case Editable::HorizonOcclusionStrength:
                 return std::clamp(
-                    g_values.horizonOcclusionStrength / 2.0f,
+                    g_values.horizonOcclusionStrength,
                     0.0f,
                     1.0f);
 
             case Editable::HorizonOcclusionRadiusPixels:
                 return std::clamp(
-                    (g_values.horizonOcclusionRadiusPixels - 4.0f) /
-                        92.0f,
+                    std::log(
+                        std::max(
+                            g_values.horizonOcclusionRadiusPixels,
+                            4.0f) /
+                        4.0f) /
+                    std::log(24.0f),
                     0.0f,
                     1.0f);
 
@@ -994,20 +1004,24 @@ namespace gzfx::settings
 
             case Editable::IndirectBounceStrength:
                 return std::clamp(
-                    g_values.indirectBounceStrength / 1.5f,
+                    g_values.indirectBounceStrength / 0.60f,
                     0.0f,
                     1.0f);
 
             case Editable::IndirectBounceRadiusPixels:
                 return std::clamp(
-                    (g_values.indirectBounceRadiusPixels - 4.0f) /
-                        124.0f,
+                    std::log(
+                        std::max(
+                            g_values.indirectBounceRadiusPixels,
+                            4.0f) /
+                        4.0f) /
+                    std::log(32.0f),
                     0.0f,
                     1.0f);
 
             case Editable::IndirectBounceSaturation:
                 return std::clamp(
-                    g_values.indirectBounceSaturation / 2.0f,
+                    g_values.indirectBounceSaturation / 1.50f,
                     0.0f,
                     1.0f);
 
