@@ -17,9 +17,18 @@ namespace gzfx::diagnostics::resource_intelligence
     {
         ID3D11Texture2D* depthTexture = nullptr;
         ID3D11Texture2D* sceneColorTexture = nullptr;
+        ID3D11Texture2D* motionVectorTexture = nullptr;
+        ID3D11Texture2D* nativeNormalTexture = nullptr;
+        ID3D11Texture2D* nativeAuxTexture = nullptr;
         ID3D11Buffer* cameraBuffer = nullptr;
+
         D3D11_TEXTURE2D_DESC depthDesc{};
         D3D11_TEXTURE2D_DESC sceneColorDesc{};
+        D3D11_TEXTURE2D_DESC motionVectorDesc{};
+        D3D11_TEXTURE2D_DESC nativeNormalDesc{};
+        D3D11_TEXTURE2D_DESC nativeAuxDesc{};
+
+        std::uint64_t nativeSurfaceFrame = 0;
     };
 
     void SetStageTraceEnabled(bool enabled) noexcept;

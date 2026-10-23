@@ -9,7 +9,17 @@
 
     uint sliceCount = SliceCount();
     uint stepCount = StepCount();
-    float2 noise = Hash22(floor(input.position.xy));
+
+    float2 temporalOffset =
+        TemporalEnabled != 0
+        ? float2(
+            (FrameIndex & 63u) * 17.0,
+            (FrameIndex & 63u) * 29.0)
+        : 0.0;
+
+    float2 noise = Hash22(
+        floor(input.position.xy) +
+        temporalOffset);
 
     float occlusionSum = 0.0;
     float3 indirectSum = 0.0;

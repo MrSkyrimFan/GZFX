@@ -34,6 +34,29 @@
                         float receiverFacing =
                             saturate(dot(normal, directionToSource));
 
+                        float sourceFacing = 1.0;
+
+                        if (NativeNormalEnabled != 0)
+                        {
+                            float3 sourceNormal =
+                                SurfaceNormal(
+                                    positiveIndirectUv,
+                                    positiveIndirectDepth);
+
+                            if (dot(
+                                    sourceNormal,
+                                    normalize(-positivePosition)) < 0.0)
+                            {
+                                sourceNormal = -sourceNormal;
+                            }
+
+                            sourceFacing =
+                                saturate(
+                                    dot(
+                                        sourceNormal,
+                                        -directionToSource));
+                        }
+
                         float distanceWeight = saturate(
                             1.0 - positiveDistance / indirectRadiusView);
 
@@ -46,20 +69,23 @@
                                 0).rgb,
                             0.0);
 
-                        float sourceLuminance = Luminance(sourceColor);
-                        float centerLuminance = Luminance(centerColor);
+                        float3 localRadiance =
+                            max(
+                                sourceColor -
+                                centerColor,
+                                0.0);
 
-                        float excess = saturate(
-                            (sourceLuminance - centerLuminance * 1.02) /
-                            max(sourceLuminance, 0.05));
+                        float localEnergy =
+                            Luminance(localRadiance);
 
                         float weight =
                             receiverFacing * receiverFacing *
+                            sourceFacing *
                             distanceWeight *
-                            excess;
+                            saturate(localEnergy * 2.0);
 
                         indirectSum +=
-                            sourceColor *
+                            localRadiance *
                             weight *
                             sampleNormalization;
 
@@ -87,6 +113,29 @@
                         float receiverFacing =
                             saturate(dot(normal, directionToSource));
 
+                        float sourceFacing = 1.0;
+
+                        if (NativeNormalEnabled != 0)
+                        {
+                            float3 sourceNormal =
+                                SurfaceNormal(
+                                    negativeIndirectUv,
+                                    negativeIndirectDepth);
+
+                            if (dot(
+                                    sourceNormal,
+                                    normalize(-negativePosition)) < 0.0)
+                            {
+                                sourceNormal = -sourceNormal;
+                            }
+
+                            sourceFacing =
+                                saturate(
+                                    dot(
+                                        sourceNormal,
+                                        -directionToSource));
+                        }
+
                         float distanceWeight = saturate(
                             1.0 - negativeDistance / indirectRadiusView);
 
@@ -99,20 +148,23 @@
                                 0).rgb,
                             0.0);
 
-                        float sourceLuminance = Luminance(sourceColor);
-                        float centerLuminance = Luminance(centerColor);
+                        float3 localRadiance =
+                            max(
+                                sourceColor -
+                                centerColor,
+                                0.0);
 
-                        float excess = saturate(
-                            (sourceLuminance - centerLuminance * 1.02) /
-                            max(sourceLuminance, 0.05));
+                        float localEnergy =
+                            Luminance(localRadiance);
 
                         float weight =
                             receiverFacing * receiverFacing *
+                            sourceFacing *
                             distanceWeight *
-                            excess;
+                            saturate(localEnergy * 2.0);
 
                         indirectSum +=
-                            sourceColor *
+                            localRadiance *
                             weight *
                             sampleNormalization;
 

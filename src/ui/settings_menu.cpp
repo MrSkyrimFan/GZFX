@@ -1,5 +1,6 @@
 #include "gzfx/ui/settings_menu.hpp"
 
+#include "gzfx/diagnostics/semantic_probe.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/settings.hpp"
 
@@ -99,6 +100,7 @@ namespace gzfx::ui
         KeyEdge g_numpad2{};
         KeyEdge g_numpad3{};
         KeyEdge g_numpad4{};
+        KeyEdge g_numpad5{};
 
         bool TestFlag(const wchar_t* name)
         {
@@ -513,6 +515,7 @@ namespace gzfx::ui
                    "Shift+Numpad2 reload; "
                    "Shift+Numpad3 cycle view; "
                    "Shift+Numpad4 capture frame+settings; "
+                   "Shift+Numpad5 capture stock renderer semantics; "
                    "mouse click/drag sliders; "
                    "mouse click toggles\n";
         }
@@ -1499,6 +1502,11 @@ namespace gzfx::ui
                     VK_NUMPAD4,
                     VK_LEFT);
 
+            const bool num5 =
+                g_numpad5.Pressed(
+                    VK_NUMPAD5,
+                    VK_CLEAR);
+
             if (shiftDown && num1)
             {
                 g_visible = !g_visible;
@@ -1556,6 +1564,17 @@ namespace gzfx::ui
                 WriteState(
                     frame,
                     "manual_capture_requested");
+            }
+
+            if (shiftDown && num5)
+            {
+                gzfx::diagnostics::
+                    semantic_probe::
+                    RequestManualCapture();
+
+                WriteState(
+                    frame,
+                    "semantic_capture_requested");
             }
         }
         catch (...)

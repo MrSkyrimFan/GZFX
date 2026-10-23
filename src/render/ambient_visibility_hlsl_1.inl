@@ -40,8 +40,14 @@ cbuffer GZFXAmbientVisibilityParameters : register(b0)
     float AoPower;
     float IndirectEnergyLimit;
 
+    uint NativeNormalEnabled;
+    uint TemporalEnabled;
+    uint HistoryValid;
+    float TemporalBlend;
+
     float2 FilterAxis;
-    float2 ParameterPadding;
+    uint FrameIndex;
+    float ParameterPadding;
 };
 
 cbuffer SkyrimPerFrame : register(b12)
@@ -67,6 +73,11 @@ Texture2D<float4> SceneColor : register(t0);
 Texture2D<float> SceneDepth : register(t1);
 Texture2D<float> AoInput : register(t2);
 Texture2D<float4> IndirectInput : register(t3);
+Texture2D<float4> NativeNormalMask : register(t4);
+Texture2D<float2> MotionVectors : register(t5);
+Texture2D<float> HistoryAo : register(t6);
+Texture2D<float4> HistoryIndirect : register(t7);
+Texture2D<float4> HistoryGeometry : register(t8);
 
 SamplerState LinearSampler : register(s0);
 SamplerState PointSampler : register(s1);
@@ -130,6 +141,36 @@ float3 ReconstructNormal(float2 uv, float centerDepth)
     return normal;
 }
 
+float3 DecodeNativeNormal(float2 encoded)
+{
+    // Algebraic inverse of Skyrim's two-channel vanilla normal encoding.
+    float2 e = encoded - 0.5;
+    float nz = clamp(8.0 * dot(e, e) - 1.0, -1.0, 1.0);
+    float q = sqrt(max(8.0 - 8.0 * nz, 0.0));
+    return normalize(float3(e * q, nz));
+}
+
+float3 SurfaceNormal(float2 uv, float centerDepth)
+{
+    if (NativeNormalEnabled != 0)
+    {
+        float2 encoded = NativeNormalMask.SampleLevel(
+            PointSampler,
+            saturate(uv),
+            0).rg;
+
+        float3 nativeNormal = DecodeNativeNormal(encoded);
+
+        if (all(isfinite(nativeNormal)) &&
+            dot(nativeNormal, nativeNormal) > 0.25)
+        {
+            return nativeNormal;
+        }
+    }
+
+    return ReconstructNormal(uv, centerDepth);
+}
+
 float Luminance(float3 color)
 {
     return dot(color, float3(0.2126, 0.7152, 0.0722));
@@ -191,7 +232,12 @@ AnalyzeOutput AnalyzePS(VSOutput input)
 
     float3 center = ReconstructView(input.uv, centerDepth);
     float3 viewVector = normalize(-center);
-    float3 normal = ReconstructNormal(input.uv, centerDepth);
+    float3 normal = SurfaceNormal(input.uv, centerDepth);
+
+    if (dot(normal, viewVector) < 0.0)
+    {
+        normal = -normal;
+    }
     float3 centerColor = max(
         SceneColor.SampleLevel(LinearSampler, input.uv, 0).rgb,
         0.0);

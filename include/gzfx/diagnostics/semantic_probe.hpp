@@ -46,5 +46,6 @@ namespace gzfx::diagnostics::semantic_probe
         ID3D11Device* device,
         ID3D11DeviceContext* context) noexcept;
 
+    void RequestManualCapture() noexcept;
     bool SuppressSceneEffects() noexcept;
 }
