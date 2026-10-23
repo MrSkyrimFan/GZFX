@@ -27,6 +27,11 @@ namespace gzfx::ui
         constexpr UINT kMenuWidth = 640;
         constexpr UINT kMenuHeight = 320;
 
+        constexpr int kFirstRowY = 58;
+        constexpr int kRowHeight = 34;
+        constexpr int kSliderLeft = 430;
+        constexpr int kSliderRight = 610;
+
         struct Runtime
         {
             ID3D11Device* device = nullptr;
@@ -72,24 +77,50 @@ namespace gzfx::ui
         std::uint32_t g_selected = 0;
         bool g_testAdjustmentApplied = false;
 
+        HWND g_window = nullptr;
+        WNDPROC g_originalWindowProc = nullptr;
+
+        POINT g_cursor{
+            static_cast<LONG>(kMenuWidth / 2),
+            static_cast<LONG>(kMenuHeight / 2)
+        };
+
+        bool g_leftDown = false;
+
         KeyEdge g_numpad1{};
         KeyEdge g_numpad2{};
         KeyEdge g_numpad3{};
-        KeyEdge g_numpad4{};
-        KeyEdge g_numpad5{};
-        KeyEdge g_numpad6{};
-        KeyEdge g_numpad8{};
 
         bool TestFlag(const wchar_t* name)
         {
             wchar_t value[8]{};
+
             return GetEnvironmentVariableW(
                 name,
                 value,
-                static_cast<DWORD>(std::size(value))) > 0;
+                static_cast<DWORD>(
+                    std::size(value))) > 0;
         }
 
-        const wchar_t* ModeName(const std::uint32_t mode)
+        void ClampCursor()
+        {
+            g_cursor.x =
+                std::clamp<LONG>(
+                    g_cursor.x,
+                    0,
+                    static_cast<LONG>(
+                        kMenuWidth - 1));
+
+            g_cursor.y =
+                std::clamp<LONG>(
+                    g_cursor.y,
+                    0,
+                    static_cast<LONG>(
+                        kMenuHeight - 1));
+        }
+
+        const wchar_t* ModeName(
+            const std::uint32_t mode)
         {
             switch (mode)
             {
@@ -107,22 +138,27 @@ namespace gzfx::ui
         {
             switch (item)
             {
-            case settings::Editable::AmbientContactStrength:
+            case settings::Editable::
+                AmbientContactStrength:
                 return L"AMBIENT CONTACT STRENGTH";
 
-            case settings::Editable::AmbientContactRadiusPixels:
+            case settings::Editable::
+                AmbientContactRadiusPixels:
                 return L"AMBIENT CONTACT RADIUS";
 
             case settings::Editable::DefaultMode:
                 return L"DEFAULT DEVELOPMENT VIEW";
 
-            case settings::Editable::ActivationDrawIndexedThreshold:
+            case settings::Editable::
+                ActivationDrawIndexedThreshold:
                 return L"WORLD DRAW THRESHOLD";
 
-            case settings::Editable::AccessibleDiagnostics:
+            case settings::Editable::
+                AccessibleDiagnostics:
                 return L"ACCESSIBLE DIAGNOSTICS";
 
-            case settings::Editable::CaptureOnModeChange:
+            case settings::Editable::
+                CaptureOnModeChange:
                 return L"CAPTURE ON MODE CHANGE";
 
             case settings::Editable::Count:
@@ -135,19 +171,23 @@ namespace gzfx::ui
         std::wstring ItemValue(
             const settings::Editable item)
         {
-            const auto& values = settings::Get();
+            const auto& values =
+                settings::Get();
+
             std::wostringstream stream;
 
             switch (item)
             {
-            case settings::Editable::AmbientContactStrength:
+            case settings::Editable::
+                AmbientContactStrength:
                 stream
                     << std::fixed
                     << std::setprecision(2)
                     << values.ambientContactStrength;
                 return stream.str();
 
-            case settings::Editable::AmbientContactRadiusPixels:
+            case settings::Editable::
+                AmbientContactRadiusPixels:
                 stream
                     << std::fixed
                     << std::setprecision(1)
@@ -156,18 +196,22 @@ namespace gzfx::ui
                 return stream.str();
 
             case settings::Editable::DefaultMode:
-                return ModeName(values.defaultMode);
+                return ModeName(
+                    values.defaultMode);
 
-            case settings::Editable::ActivationDrawIndexedThreshold:
+            case settings::Editable::
+                ActivationDrawIndexedThreshold:
                 return std::to_wstring(
                     values.activationDrawIndexedThreshold);
 
-            case settings::Editable::AccessibleDiagnostics:
+            case settings::Editable::
+                AccessibleDiagnostics:
                 return values.accessibleDiagnostics
                     ? L"ON"
                     : L"OFF";
 
-            case settings::Editable::CaptureOnModeChange:
+            case settings::Editable::
+                CaptureOnModeChange:
                 return values.captureOnModeChange
                     ? L"ON"
                     : L"OFF";
@@ -177,6 +221,72 @@ namespace gzfx::ui
             }
 
             return L"";
+        }
+
+        bool BooleanItem(
+            const settings::Editable item)
+        {
+            return
+                item ==
+                    settings::Editable::
+                        AccessibleDiagnostics ||
+                item ==
+                    settings::Editable::
+                        CaptureOnModeChange;
+        }
+
+        bool SliderItem(
+            const settings::Editable item)
+        {
+            return
+                item ==
+                    settings::Editable::
+                        AmbientContactStrength ||
+                item ==
+                    settings::Editable::
+                        AmbientContactRadiusPixels ||
+                item ==
+                    settings::Editable::
+                        DefaultMode ||
+                item ==
+                    settings::Editable::
+                        ActivationDrawIndexedThreshold;
+        }
+
+        int RowFromCursor()
+        {
+            if (g_cursor.y < kFirstRowY)
+            {
+                return -1;
+            }
+
+            const int relative =
+                static_cast<int>(g_cursor.y) -
+                kFirstRowY;
+
+            const int row =
+                relative / kRowHeight;
+
+            const int count =
+                static_cast<int>(
+                    settings::Editable::Count);
+
+            if (row < 0 || row >= count)
+            {
+                return -1;
+            }
+
+            const int rowTop =
+                kFirstRowY +
+                row * kRowHeight;
+
+            if (g_cursor.y >=
+                rowTop + kRowHeight - 4)
+            {
+                return -1;
+            }
+
+            return row;
         }
 
         void WriteState(
@@ -192,7 +302,9 @@ namespace gzfx::ui
             }
 
             std::error_code error;
-            fs::create_directories(root, error);
+            fs::create_directories(
+                root,
+                error);
 
             if (error)
             {
@@ -201,7 +313,8 @@ namespace gzfx::ui
 
             std::ofstream out(
                 root / L"settings_menu.txt",
-                std::ios::out | std::ios::trunc);
+                std::ios::out |
+                    std::ios::trunc);
 
             if (!out)
             {
@@ -214,14 +327,17 @@ namespace gzfx::ui
                 << "visible="
                 << (g_visible ? "true" : "false")
                 << "\n"
-                << "selected=" << g_selected << "\n"
+                << "selected="
+                << g_selected << "\n"
+                << "cursor="
+                << g_cursor.x << ","
+                << g_cursor.y << "\n"
                 << "controls="
                    "Shift+Numpad1 menu; "
                    "Shift+Numpad2 reload; "
                    "Shift+Numpad3 cycle view; "
-                   "Numpad8/2 select; "
-                   "Numpad4/6 change; "
-                   "Numpad5 toggle\n";
+                   "mouse click/drag sliders; "
+                   "mouse click toggles\n";
         }
 
         void ReleaseRuntime()
@@ -244,7 +360,8 @@ namespace gzfx::ui
             g_runtime = {};
         }
 
-        bool EnsureTexture(ID3D11Device* device)
+        bool EnsureTexture(
+            ID3D11Device* device)
         {
             if (device == nullptr)
             {
@@ -298,6 +415,7 @@ namespace gzfx::ui
 
             g_runtime.device = device;
             device->AddRef();
+
             g_dirty = true;
             return true;
         }
@@ -316,16 +434,21 @@ namespace gzfx::ui
             info.bmiHeader.biSize =
                 sizeof(BITMAPINFOHEADER);
             info.bmiHeader.biWidth =
-                static_cast<LONG>(kMenuWidth);
+                static_cast<LONG>(
+                    kMenuWidth);
             info.bmiHeader.biHeight =
-                -static_cast<LONG>(kMenuHeight);
+                -static_cast<LONG>(
+                    kMenuHeight);
             info.bmiHeader.biPlanes = 1;
             info.bmiHeader.biBitCount = 32;
-            info.bmiHeader.biCompression = BI_RGB;
+            info.bmiHeader.biCompression =
+                BI_RGB;
 
             void* dibPixels = nullptr;
 
-            HDC dc = CreateCompatibleDC(nullptr);
+            HDC dc =
+                CreateCompatibleDC(nullptr);
+
             if (dc == nullptr)
             {
                 return false;
@@ -392,19 +515,24 @@ namespace gzfx::ui
                     L"Segoe UI");
 
             const HBRUSH background =
-                CreateSolidBrush(RGB(18, 18, 18));
+                CreateSolidBrush(
+                    RGB(18, 18, 18));
 
             const HBRUSH selectedBrush =
-                CreateSolidBrush(RGB(245, 245, 245));
+                CreateSolidBrush(
+                    RGB(245, 245, 245));
 
             const HBRUSH borderBrush =
-                CreateSolidBrush(RGB(255, 255, 255));
+                CreateSolidBrush(
+                    RGB(255, 255, 255));
 
             RECT full{
                 0,
                 0,
-                static_cast<LONG>(kMenuWidth),
-                static_cast<LONG>(kMenuHeight)
+                static_cast<LONG>(
+                    kMenuWidth),
+                static_cast<LONG>(
+                    kMenuHeight)
             };
 
             FillRect(
@@ -417,16 +545,24 @@ namespace gzfx::ui
                 &full,
                 borderBrush);
 
-            SetBkMode(dc, TRANSPARENT);
-            SetTextColor(dc, RGB(255, 255, 255));
+            SetBkMode(
+                dc,
+                TRANSPARENT);
+
+            SetTextColor(
+                dc,
+                RGB(255, 255, 255));
 
             HGDIOBJ oldFont =
-                SelectObject(dc, titleFont);
+                SelectObject(
+                    dc,
+                    titleFont);
 
             RECT title{
                 18,
                 12,
-                static_cast<LONG>(kMenuWidth - 18),
+                static_cast<LONG>(
+                    kMenuWidth - 18),
                 44
             };
 
@@ -439,10 +575,9 @@ namespace gzfx::ui
                     DT_SINGLELINE |
                     DT_VCENTER);
 
-            SelectObject(dc, bodyFont);
-
-            constexpr int firstRowY = 58;
-            constexpr int rowHeight = 34;
+            SelectObject(
+                dc,
+                bodyFont);
 
             const auto count =
                 static_cast<std::uint32_t>(
@@ -453,23 +588,34 @@ namespace gzfx::ui
                  ++index)
             {
                 const auto item =
-                    static_cast<settings::Editable>(
-                        index);
+                    static_cast<
+                        settings::Editable>(
+                            index);
 
                 RECT row{
                     14,
-                    firstRowY +
+                    kFirstRowY +
                         static_cast<int>(index) *
-                            rowHeight,
+                            kRowHeight,
                     static_cast<LONG>(
                         kMenuWidth - 14),
-                    firstRowY +
+                    kFirstRowY +
                         static_cast<int>(index + 1) *
-                            rowHeight - 4
+                            kRowHeight - 4
                 };
 
                 const bool selected =
                     index == g_selected;
+
+                const COLORREF foreground =
+                    selected
+                        ? RGB(0, 0, 0)
+                        : RGB(255, 255, 255);
+
+                const COLORREF backgroundColor =
+                    selected
+                        ? RGB(245, 245, 245)
+                        : RGB(18, 18, 18);
 
                 if (selected)
                 {
@@ -477,21 +623,15 @@ namespace gzfx::ui
                         dc,
                         &row,
                         selectedBrush);
+                }
 
-                    SetTextColor(
-                        dc,
-                        RGB(0, 0, 0));
-                }
-                else
-                {
-                    SetTextColor(
-                        dc,
-                        RGB(255, 255, 255));
-                }
+                SetTextColor(
+                    dc,
+                    foreground);
 
                 RECT label = row;
                 label.left += 10;
-                label.right = 430;
+                label.right = 360;
 
                 DrawTextW(
                     dc,
@@ -506,8 +646,8 @@ namespace gzfx::ui
                     ItemValue(item);
 
                 RECT valueRect = row;
-                valueRect.left = 430;
-                valueRect.right -= 10;
+                valueRect.left = 360;
+                valueRect.right = 425;
 
                 DrawTextW(
                     dc,
@@ -517,6 +657,98 @@ namespace gzfx::ui
                     DT_RIGHT |
                         DT_SINGLELINE |
                         DT_VCENTER);
+
+                if (SliderItem(item))
+                {
+                    const int centerY =
+                        (row.top + row.bottom) / 2;
+
+                    HPEN trackPen =
+                        CreatePen(
+                            PS_SOLID,
+                            2,
+                            foreground);
+
+                    const HGDIOBJ oldPen =
+                        SelectObject(
+                            dc,
+                            trackPen);
+
+                    MoveToEx(
+                        dc,
+                        kSliderLeft,
+                        centerY,
+                        nullptr);
+
+                    LineTo(
+                        dc,
+                        kSliderRight,
+                        centerY);
+
+                    const float normalized =
+                        settings::GetNormalized(
+                            item);
+
+                    const int knobX =
+                        kSliderLeft +
+                        static_cast<int>(
+                            normalized *
+                            static_cast<float>(
+                                kSliderRight -
+                                kSliderLeft));
+
+                    const HBRUSH knobBrush =
+                        CreateSolidBrush(
+                            foreground);
+
+                    RECT knob{
+                        knobX - 5,
+                        centerY - 7,
+                        knobX + 6,
+                        centerY + 8
+                    };
+
+                    FillRect(
+                        dc,
+                        &knob,
+                        knobBrush);
+
+                    DeleteObject(
+                        knobBrush);
+
+                    SelectObject(
+                        dc,
+                        oldPen);
+
+                    DeleteObject(
+                        trackPen);
+                }
+                else
+                {
+                    RECT toggle{
+                        kSliderLeft,
+                        row.top + 5,
+                        kSliderRight,
+                        row.bottom - 5
+                    };
+
+                    const HBRUSH toggleBrush =
+                        CreateSolidBrush(
+                            backgroundColor);
+
+                    FillRect(
+                        dc,
+                        &toggle,
+                        toggleBrush);
+
+                    FrameRect(
+                        dc,
+                        &toggle,
+                        borderBrush);
+
+                    DeleteObject(
+                        toggleBrush);
+                }
             }
 
             SetTextColor(
@@ -526,23 +758,122 @@ namespace gzfx::ui
             RECT footer{
                 18,
                 270,
-                static_cast<LONG>(kMenuWidth - 18),
+                static_cast<LONG>(
+                    kMenuWidth - 18),
                 310
             };
 
             DrawTextW(
                 dc,
-                L"NUM8/2 SELECT   NUM4/6 CHANGE   NUM5 TOGGLE   SHIFT+NUM1 CLOSE",
+                L"MOUSE: CLICK / DRAG SLIDERS   CLICK TOGGLES   SHIFT+NUM1 CLOSE",
                 -1,
                 &footer,
                 DT_LEFT |
                     DT_WORDBREAK);
 
-            SelectObject(dc, oldFont);
+            // Custom monochrome cursor. Black outline + white core.
+            HPEN blackPen =
+                CreatePen(
+                    PS_SOLID,
+                    5,
+                    RGB(0, 0, 0));
+
+            HPEN whitePen =
+                CreatePen(
+                    PS_SOLID,
+                    2,
+                    RGB(255, 255, 255));
+
+            HGDIOBJ oldPen =
+                SelectObject(
+                    dc,
+                    blackPen);
+
+            MoveToEx(
+                dc,
+                g_cursor.x - 8,
+                g_cursor.y,
+                nullptr);
+
+            LineTo(
+                dc,
+                g_cursor.x + 9,
+                g_cursor.y);
+
+            MoveToEx(
+                dc,
+                g_cursor.x,
+                g_cursor.y - 8,
+                nullptr);
+
+            LineTo(
+                dc,
+                g_cursor.x,
+                g_cursor.y + 9);
+
+            SelectObject(
+                dc,
+                whitePen);
+
+            MoveToEx(
+                dc,
+                g_cursor.x - 7,
+                g_cursor.y,
+                nullptr);
+
+            LineTo(
+                dc,
+                g_cursor.x + 8,
+                g_cursor.y);
+
+            MoveToEx(
+                dc,
+                g_cursor.x,
+                g_cursor.y - 7,
+                nullptr);
+
+            LineTo(
+                dc,
+                g_cursor.x,
+                g_cursor.y + 8);
+
+            SelectObject(
+                dc,
+                oldPen);
+
+            DeleteObject(
+                whitePen);
+
+            DeleteObject(
+                blackPen);
+
+            SelectObject(
+                dc,
+                oldFont);
+
+            DeleteObject(
+                borderBrush);
+
+            DeleteObject(
+                selectedBrush);
+
+            DeleteObject(
+                background);
+
+            DeleteObject(
+                bodyFont);
+
+            DeleteObject(
+                titleFont);
+
+            SelectObject(
+                dc,
+                oldBitmap);
 
             const auto* source =
-                static_cast<const std::uint8_t*>(
-                    dibPixels);
+                static_cast<
+                    const std::uint8_t*>(
+                        dibPixels);
 
             const std::size_t pixelCount =
                 static_cast<std::size_t>(
@@ -568,13 +899,6 @@ namespace gzfx::ui
                 pixels[offset + 3] = 235;
             }
 
-            DeleteObject(borderBrush);
-            DeleteObject(selectedBrush);
-            DeleteObject(background);
-            DeleteObject(bodyFont);
-            DeleteObject(titleFont);
-
-            SelectObject(dc, oldBitmap);
             DeleteObject(bitmap);
             DeleteDC(dc);
 
@@ -590,7 +914,8 @@ namespace gzfx::ui
                 return false;
             }
 
-            std::vector<std::uint8_t> pixels;
+            std::vector<std::uint8_t>
+                pixels;
 
             if (!BuildMenuPixels(pixels))
             {
@@ -640,55 +965,295 @@ namespace gzfx::ui
             return true;
         }
 
-        bool BooleanItem(
-            const settings::Editable item)
+        void MarkChanged()
         {
-            return
-                item ==
-                    settings::Editable::
-                        AccessibleDiagnostics ||
-                item ==
-                    settings::Editable::
-                        CaptureOnModeChange;
+            g_dirty = true;
+            g_captureRequested = true;
         }
 
-        void ApplyAdjustment(
-            const int direction)
+        void ApplyMouse(
+            const bool click)
         {
+            ClampCursor();
+
+            const int row =
+                RowFromCursor();
+
+            if (row < 0)
+            {
+                return;
+            }
+
+            g_selected =
+                static_cast<std::uint32_t>(
+                    row);
+
             const auto item =
                 static_cast<settings::Editable>(
                     g_selected);
 
-            if (BooleanItem(item))
+            if (SliderItem(item))
             {
-                settings::Adjust(
-                    item,
-                    direction);
+                const float normalized =
+                    std::clamp(
+                        (
+                            static_cast<float>(
+                                g_cursor.x) -
+                            static_cast<float>(
+                                kSliderLeft)
+                        ) /
+                        static_cast<float>(
+                            kSliderRight -
+                            kSliderLeft),
+                        0.0f,
+                        1.0f);
+
+                if (g_cursor.x >=
+                        kSliderLeft - 12 &&
+                    g_cursor.x <=
+                        kSliderRight + 12)
+                {
+                    settings::SetNormalized(
+                        item,
+                        normalized);
+
+                    MarkChanged();
+                }
+            }
+            else if (click &&
+                     BooleanItem(item))
+            {
+                settings::Toggle(item);
+                MarkChanged();
             }
             else
             {
-                settings::Adjust(
-                    item,
-                    direction);
+                g_dirty = true;
+            }
+        }
+
+        void UpdateCursorFromClient(
+            const LPARAM lParam)
+        {
+            g_cursor.x =
+                GET_X_LPARAM(lParam);
+
+            g_cursor.y =
+                GET_Y_LPARAM(lParam);
+
+            ClampCursor();
+
+            const int row =
+                RowFromCursor();
+
+            if (row >= 0)
+            {
+                g_selected =
+                    static_cast<
+                        std::uint32_t>(row);
             }
 
             g_dirty = true;
         }
+
+        LRESULT CALLBACK WindowProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam)
+        {
+            {
+                std::scoped_lock lock(
+                    g_mutex);
+
+                if (g_visible)
+                {
+                    switch (message)
+                    {
+                    case WM_MOUSEMOVE:
+                        UpdateCursorFromClient(
+                            lParam);
+
+                        if (g_leftDown)
+                        {
+                            ApplyMouse(false);
+                        }
+
+                        return 0;
+
+                    case WM_LBUTTONDOWN:
+                        UpdateCursorFromClient(
+                            lParam);
+
+                        g_leftDown = true;
+                        ApplyMouse(true);
+                        SetCapture(window);
+                        return 0;
+
+                    case WM_LBUTTONUP:
+                        UpdateCursorFromClient(
+                            lParam);
+
+                        g_leftDown = false;
+                        ReleaseCapture();
+                        return 0;
+
+                    case WM_INPUT:
+                    {
+                        UINT size = 0;
+
+                        GetRawInputData(
+                            reinterpret_cast<HRAWINPUT>(
+                                lParam),
+                            RID_INPUT,
+                            nullptr,
+                            &size,
+                            sizeof(RAWINPUTHEADER));
+
+                        if (size > 0 &&
+                            size <= 4096)
+                        {
+                            std::vector<std::uint8_t>
+                                bytes(size);
+
+                            if (GetRawInputData(
+                                    reinterpret_cast<
+                                        HRAWINPUT>(lParam),
+                                    RID_INPUT,
+                                    bytes.data(),
+                                    &size,
+                                    sizeof(RAWINPUTHEADER)) ==
+                                size)
+                            {
+                                const RAWINPUT* input =
+                                    reinterpret_cast<
+                                        const RAWINPUT*>(
+                                            bytes.data());
+
+                                if (input->header.dwType ==
+                                    RIM_TYPEMOUSE)
+                                {
+                                    g_cursor.x +=
+                                        input->data.mouse
+                                            .lLastX;
+
+                                    g_cursor.y +=
+                                        input->data.mouse
+                                            .lLastY;
+
+                                    ClampCursor();
+
+                                    const int row =
+                                        RowFromCursor();
+
+                                    if (row >= 0)
+                                    {
+                                        g_selected =
+                                            static_cast<
+                                                std::uint32_t>(
+                                                    row);
+                                    }
+
+                                    if (g_leftDown)
+                                    {
+                                        ApplyMouse(false);
+                                    }
+
+                                    g_dirty = true;
+                                }
+                            }
+                        }
+
+                        return 0;
+                    }
+
+                    case WM_SETCURSOR:
+                        SetCursor(nullptr);
+                        return TRUE;
+
+                    case WM_RBUTTONDOWN:
+                    case WM_RBUTTONUP:
+                    case WM_MBUTTONDOWN:
+                    case WM_MBUTTONUP:
+                    case WM_MOUSEWHEEL:
+                        return 0;
+
+                    default:
+                        break;
+                    }
+                }
+            }
+
+            return g_originalWindowProc != nullptr
+                ? CallWindowProcW(
+                    g_originalWindowProc,
+                    window,
+                    message,
+                    wParam,
+                    lParam)
+                : DefWindowProcW(
+                    window,
+                    message,
+                    wParam,
+                    lParam);
+        }
+
+        bool EnsureWindowHook(HWND window)
+        {
+            if (window == nullptr)
+            {
+                return false;
+            }
+
+            if (g_window == window &&
+                g_originalWindowProc != nullptr)
+            {
+                return true;
+            }
+
+            SetLastError(ERROR_SUCCESS);
+
+            const LONG_PTR previous =
+                SetWindowLongPtrW(
+                    window,
+                    GWLP_WNDPROC,
+                    reinterpret_cast<LONG_PTR>(
+                        &WindowProc));
+
+            if (previous == 0 &&
+                GetLastError() != ERROR_SUCCESS)
+            {
+                return false;
+            }
+
+            g_window = window;
+
+            g_originalWindowProc =
+                reinterpret_cast<WNDPROC>(
+                    previous);
+
+            return g_originalWindowProc != nullptr;
+        }
     }
 
     void ProcessInput(
-        const std::uint64_t frame) noexcept
+        const std::uint64_t frame,
+        HWND gameWindow) noexcept
     {
         try
         {
             std::scoped_lock lock(g_mutex);
 
-            if (TestFlag(L"GZFX_TEST_MENU_VISIBLE"))
+            EnsureWindowHook(gameWindow);
+
+            if (TestFlag(
+                    L"GZFX_TEST_MENU_VISIBLE"))
             {
                 g_visible = true;
             }
 
-            if (TestFlag(L"GZFX_TEST_MENU_ADJUST") &&
+            if (TestFlag(
+                    L"GZFX_TEST_MENU_ADJUST") &&
                 !g_testAdjustmentApplied)
             {
                 settings::Adjust(
@@ -697,11 +1262,12 @@ namespace gzfx::ui
                     1);
 
                 g_testAdjustmentApplied = true;
-                g_dirty = true;
+                MarkChanged();
             }
 
             const bool shiftDown =
-                (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+                (GetAsyncKeyState(
+                    VK_SHIFT) & 0x8000) != 0;
 
             const bool num1 =
                 g_numpad1.Pressed(
@@ -718,31 +1284,27 @@ namespace gzfx::ui
                     VK_NUMPAD3,
                     VK_NEXT);
 
-            const bool num4 =
-                g_numpad4.Pressed(
-                    VK_NUMPAD4,
-                    VK_LEFT);
-
-            const bool num5 =
-                g_numpad5.Pressed(
-                    VK_NUMPAD5,
-                    VK_CLEAR);
-
-            const bool num6 =
-                g_numpad6.Pressed(
-                    VK_NUMPAD6,
-                    VK_RIGHT);
-
-            const bool num8 =
-                g_numpad8.Pressed(
-                    VK_NUMPAD8,
-                    VK_UP);
-
             if (shiftDown && num1)
             {
                 g_visible = !g_visible;
-                g_dirty = true;
-                g_captureRequested = true;
+
+                if (g_visible)
+                {
+                    g_cursor.x =
+                        static_cast<LONG>(
+                            kMenuWidth / 2);
+
+                    g_cursor.y =
+                        static_cast<LONG>(
+                            kMenuHeight / 2);
+                }
+                else
+                {
+                    g_leftDown = false;
+                    ReleaseCapture();
+                }
+
+                MarkChanged();
 
                 WriteState(
                     frame,
@@ -754,8 +1316,7 @@ namespace gzfx::ui
             if (shiftDown && num2)
             {
                 settings::Reload();
-                g_dirty = true;
-                g_captureRequested = true;
+                MarkChanged();
 
                 WriteState(
                     frame,
@@ -765,77 +1326,11 @@ namespace gzfx::ui
             if (shiftDown && num3)
             {
                 g_cycleModeRequested = true;
+                g_captureRequested = true;
 
                 WriteState(
                     frame,
                     "cycle_view_requested");
-            }
-
-            if (!g_visible || shiftDown)
-            {
-                return;
-            }
-
-            const auto count =
-                static_cast<std::uint32_t>(
-                    settings::Editable::Count);
-
-            if (num8)
-            {
-                g_selected =
-                    g_selected == 0
-                        ? count - 1
-                        : g_selected - 1;
-
-                g_dirty = true;
-                g_captureRequested = true;
-            }
-
-            if (num2)
-            {
-                g_selected =
-                    (g_selected + 1) %
-                    count;
-
-                g_dirty = true;
-                g_captureRequested = true;
-            }
-
-            if (num4)
-            {
-                ApplyAdjustment(-1);
-                g_captureRequested = true;
-            }
-
-            if (num6)
-            {
-                ApplyAdjustment(1);
-                g_captureRequested = true;
-            }
-
-            if (num5)
-            {
-                const auto item =
-                    static_cast<settings::Editable>(
-                        g_selected);
-
-                if (BooleanItem(item))
-                {
-                    settings::Toggle(item);
-                    g_dirty = true;
-                    g_captureRequested = true;
-                }
-            }
-
-            if (num8 ||
-                num2 ||
-                num4 ||
-                num5 ||
-                num6)
-            {
-                WriteState(
-                    frame,
-                    "menu_changed");
             }
         }
         catch (...)
@@ -907,9 +1402,15 @@ namespace gzfx::ui
                 return false;
             }
 
-            overlay.srv = g_runtime.srv;
-            overlay.width = kMenuWidth;
-            overlay.height = kMenuHeight;
+            overlay.srv =
+                g_runtime.srv;
+
+            overlay.width =
+                kMenuWidth;
+
+            overlay.height =
+                kMenuHeight;
+
             return overlay.srv != nullptr;
         }
         catch (...)
