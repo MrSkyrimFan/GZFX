@@ -199,7 +199,8 @@ namespace gzfx::settings
                 return false;
             }
 
-            FlushPrivateProfileStringW(
+            WritePrivateProfileStringW(
+                nullptr,
                 nullptr,
                 nullptr,
                 path.c_str());
