@@ -34,23 +34,28 @@
                         float receiverFacing =
                             saturate(dot(normal, directionToSource));
 
-                        float3 sourceNormal =
-                            SurfaceNormal(
-                                positiveIndirectUv,
-                                positiveIndirectDepth);
+                        float sourceFacing = 1.0;
 
-                        if (dot(
-                                sourceNormal,
-                                normalize(-positivePosition)) < 0.0)
+                        if (NativeNormalEnabled != 0)
                         {
-                            sourceNormal = -sourceNormal;
-                        }
+                            float3 sourceNormal =
+                                SurfaceNormal(
+                                    positiveIndirectUv,
+                                    positiveIndirectDepth);
 
-                        float sourceFacing =
-                            saturate(
-                                dot(
+                            if (dot(
                                     sourceNormal,
-                                    -directionToSource));
+                                    normalize(-positivePosition)) < 0.0)
+                            {
+                                sourceNormal = -sourceNormal;
+                            }
+
+                            sourceFacing =
+                                saturate(
+                                    dot(
+                                        sourceNormal,
+                                        -directionToSource));
+                        }
 
                         float distanceWeight = saturate(
                             1.0 - positiveDistance / indirectRadiusView);
@@ -108,23 +113,28 @@
                         float receiverFacing =
                             saturate(dot(normal, directionToSource));
 
-                        float3 sourceNormal =
-                            SurfaceNormal(
-                                negativeIndirectUv,
-                                negativeIndirectDepth);
+                        float sourceFacing = 1.0;
 
-                        if (dot(
-                                sourceNormal,
-                                normalize(-negativePosition)) < 0.0)
+                        if (NativeNormalEnabled != 0)
                         {
-                            sourceNormal = -sourceNormal;
-                        }
+                            float3 sourceNormal =
+                                SurfaceNormal(
+                                    negativeIndirectUv,
+                                    negativeIndirectDepth);
 
-                        float sourceFacing =
-                            saturate(
-                                dot(
+                            if (dot(
                                     sourceNormal,
-                                    -directionToSource));
+                                    normalize(-negativePosition)) < 0.0)
+                            {
+                                sourceNormal = -sourceNormal;
+                            }
+
+                            sourceFacing =
+                                saturate(
+                                    dot(
+                                        sourceNormal,
+                                        -directionToSource));
+                        }
 
                         float distanceWeight = saturate(
                             1.0 - negativeDistance / indirectRadiusView);
