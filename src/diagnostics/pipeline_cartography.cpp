@@ -5292,6 +5292,245 @@ namespace gzfx::diagnostics::pipeline_cartography
         }
     }
 
+    void ObserveMap(
+        const std::uint64_t frame,
+        const std::uint64_t drawOrdinal,
+        ID3D11Resource* resource,
+        const UINT subresource,
+        const D3D11_MAP mapType,
+        const UINT mapFlags,
+        const D3D11_MAPPED_SUBRESOURCE* mapped) noexcept
+    {
+        try
+        {
+            if (resource == nullptr ||
+                mapped == nullptr ||
+                mapped->pData == nullptr)
+            {
+                return;
+            }
+
+            if (mapType == D3D11_MAP_READ)
+            {
+                return;
+            }
+
+            std::scoped_lock lock(g_mutex);
+
+            if (!CaptureFrame(frame))
+            {
+                return;
+            }
+
+            const auto id =
+                RegisterResourceLocked(
+                    resource);
+
+            const auto found =
+                g_resources.find(id);
+
+            if (found == g_resources.end() ||
+                found->second.type !=
+                    ResourceType::Buffer ||
+                found->second.bufferBytes == 0 ||
+                found->second.bufferBytes >
+                    65536)
+            {
+                return;
+            }
+
+            MappedBuffer mapping{};
+            mapping.frame = frame;
+            mapping.drawOrdinal =
+                drawOrdinal;
+            mapping.resource = id;
+            mapping.subresource =
+                subresource;
+            mapping.mapType =
+                mapType;
+            mapping.mapFlags =
+                mapFlags;
+            mapping.data =
+                mapped->pData;
+            mapping.bytes =
+                found->second.bufferBytes;
+
+            g_mappedBuffers[
+                {id, subresource}] =
+                mapping;
+        }
+        catch (...)
+        {
+        }
+    }
+
+    void ObserveUnmap(
+        const std::uint64_t frame,
+        const std::uint64_t drawOrdinal,
+        ID3D11Resource* resource,
+        const UINT subresource) noexcept
+    {
+        try
+        {
+            if (resource == nullptr)
+            {
+                return;
+            }
+
+            std::scoped_lock lock(g_mutex);
+
+            if (!g_captureActive)
+            {
+                return;
+            }
+
+            const auto id =
+                CanonicalId(resource);
+
+            const auto found =
+                g_mappedBuffers.find(
+                    {id, subresource});
+
+            if (found ==
+                g_mappedBuffers.end())
+            {
+                return;
+            }
+
+            const auto mapping =
+                found->second;
+
+            if (mapping.data != nullptr &&
+                mapping.bytes != 0)
+            {
+                BufferUpdateRecord update{};
+                update.frame =
+                    mapping.frame != 0
+                        ? mapping.frame
+                        : frame;
+                update.drawOrdinal =
+                    mapping.drawOrdinal != 0
+                        ? mapping.drawOrdinal
+                        : drawOrdinal;
+                update.resource =
+                    mapping.resource;
+                update.subresource =
+                    mapping.subresource;
+                update.source = "map_unmap";
+                update.mode =
+                    static_cast<UINT>(
+                        mapping.mapType);
+                update.flags =
+                    mapping.mapFlags;
+                update.bytes =
+                    mapping.bytes;
+                update.hash =
+                    HashBytes(
+                        mapping.data,
+                        mapping.bytes);
+
+                g_bufferUpdates.push_back(
+                    update);
+            }
+
+            g_mappedBuffers.erase(
+                found);
+        }
+        catch (...)
+        {
+        }
+    }
+
+    void ObserveUpdateSubresource(
+        const std::uint64_t frame,
+        const std::uint64_t drawOrdinal,
+        ID3D11Resource* resource,
+        const UINT destinationSubresource,
+        const D3D11_BOX* destinationBox,
+        const void* sourceData,
+        const UINT sourceRowPitch,
+        const UINT sourceDepthPitch) noexcept
+    {
+        try
+        {
+            (void)sourceRowPitch;
+            (void)sourceDepthPitch;
+
+            if (resource == nullptr ||
+                sourceData == nullptr)
+            {
+                return;
+            }
+
+            std::scoped_lock lock(g_mutex);
+
+            if (!CaptureFrame(frame))
+            {
+                return;
+            }
+
+            const auto id =
+                RegisterResourceLocked(
+                    resource);
+
+            const auto found =
+                g_resources.find(id);
+
+            if (found == g_resources.end() ||
+                found->second.type !=
+                    ResourceType::Buffer ||
+                found->second.bufferBytes == 0 ||
+                found->second.bufferBytes >
+                    65536)
+            {
+                return;
+            }
+
+            std::size_t bytes =
+                found->second.bufferBytes;
+
+            if (destinationBox != nullptr &&
+                destinationBox->right >
+                    destinationBox->left)
+            {
+                bytes =
+                    std::min<std::size_t>(
+                        bytes,
+                        static_cast<std::size_t>(
+                            destinationBox->right -
+                            destinationBox->left));
+            }
+
+            if (bytes == 0)
+            {
+                return;
+            }
+
+            BufferUpdateRecord update{};
+            update.frame = frame;
+            update.drawOrdinal =
+                drawOrdinal;
+            update.resource = id;
+            update.subresource =
+                destinationSubresource;
+            update.source =
+                "update_subresource";
+            update.mode = 0;
+            update.flags = 0;
+            update.bytes = bytes;
+            update.hash =
+                HashBytes(
+                    sourceData,
+                    bytes);
+
+            g_bufferUpdates.push_back(
+                update);
+        }
+        catch (...)
+        {
+        }
+    }
+
     void CopyResource(
         const std::uint64_t frame,
         const std::uint64_t drawOrdinal,
