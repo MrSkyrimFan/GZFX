@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.12
+    VERSION 0.0.13
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -67,7 +67,7 @@ add_library(GZFX SHARED
     src/diagnostics/renderer_forensics.cpp
     src/diagnostics/resource_intelligence.cpp
     src/render/runtime_state.cpp
-    src/render/ambient_depth_stack.cpp
+    src/render/ambient_depth_stack_recovered.cpp
     src/render/scene_effects.cpp
     src/render/visible_pass.cpp
 )
@@ -145,6 +145,12 @@ add_executable(GZFXPreUiEffectsHarness
 target_link_libraries(GZFXPreUiEffectsHarness PRIVATE d3d11 dxgi user32)
 gzfx_apply_common(GZFXPreUiEffectsHarness)
 
+add_executable(GZFXAmbientDepthFunctionalHarness
+    tests/ambient_depth_functional_harness.cpp
+)
+target_link_libraries(GZFXAmbientDepthFunctionalHarness PRIVATE d3d11 dxgi user32)
+gzfx_apply_common(GZFXAmbientDepthFunctionalHarness)
+
 enable_testing()
 
 add_test(
@@ -187,7 +193,6 @@ add_test(
         "${CMAKE_BINARY_DIR}/visible-pass-output"
 )
 
-
 add_test(
     NAME menu_only
     COMMAND
@@ -196,11 +201,28 @@ add_test(
         "${CMAKE_BINARY_DIR}/menu-only-output"
 )
 
-
 add_test(
     NAME pre_ui_effects
     COMMAND
         "$<TARGET_FILE:GZFXPreUiEffectsHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/pre-ui-effects-output"
+)
+
+add_test(
+    NAME ambient_depth_ao
+    COMMAND
+        "$<TARGET_FILE:GZFXAmbientDepthFunctionalHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/ambient-depth-ao-output"
+        "ao"
+)
+
+add_test(
+    NAME ambient_depth_ssil
+    COMMAND
+        "$<TARGET_FILE:GZFXAmbientDepthFunctionalHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/ambient-depth-ssil-output"
+        "ssil"
 )
