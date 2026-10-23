@@ -1256,10 +1256,10 @@ namespace gzfx::ui
                     L"GZFX_TEST_MENU_ADJUST") &&
                 !g_testAdjustmentApplied)
             {
-                settings::Adjust(
+                settings::SetNormalized(
                     settings::Editable::
                         AmbientContactStrength,
-                    1);
+                    0.335f);
 
                 g_testAdjustmentApplied = true;
                 MarkChanged();
