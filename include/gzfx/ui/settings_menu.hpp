@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Windows.h>
 #include <d3d11.h>
 
 #include <cstdint>
@@ -14,7 +15,10 @@ namespace gzfx::ui
         bool visible = false;
     };
 
-    void ProcessInput(std::uint64_t frame) noexcept;
+    void ProcessInput(
+        std::uint64_t frame,
+        HWND gameWindow) noexcept;
+
     bool ConsumeCycleModeRequest() noexcept;
     bool ConsumeCaptureRequest() noexcept;
 
