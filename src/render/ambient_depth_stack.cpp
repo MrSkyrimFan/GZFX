@@ -2339,6 +2339,11 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
+                StampGpuTimer(
+                    context,
+                    gpuTimer,
+                    1);
+
                 FinishGpuTimer(
                     context,
                     gpuTimer);
@@ -2388,6 +2393,11 @@ float4 CompositePS(
                     error))
             {
                 depthSrv->Release();
+
+                StampGpuTimer(
+                    context,
+                    gpuTimer,
+                    2);
 
                 FinishGpuTimer(
                     context,
@@ -2440,6 +2450,11 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
+                StampGpuTimer(
+                    context,
+                    gpuTimer,
+                    3);
+
                 FinishGpuTimer(
                     context,
                     gpuTimer);
@@ -2491,6 +2506,11 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
+                StampGpuTimer(
+                    context,
+                    gpuTimer,
+                    4);
+
                 FinishGpuTimer(
                     context,
                     gpuTimer);
@@ -2537,6 +2557,11 @@ float4 CompositePS(
                     error))
             {
                 depthSrv->Release();
+
+                StampGpuTimer(
+                    context,
+                    gpuTimer,
+                    5);
 
                 FinishGpuTimer(
                     context,
