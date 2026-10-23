@@ -4,6 +4,7 @@
 #include "gzfx/settings.hpp"
 
 #include <Windows.h>
+#include <windowsx.h>
 
 #include <algorithm>
 #include <array>
@@ -1163,6 +1164,12 @@ namespace gzfx::ui
                                 }
                             }
                         }
+
+                        DefWindowProcW(
+                            window,
+                            message,
+                            wParam,
+                            lParam);
 
                         return 0;
                     }
