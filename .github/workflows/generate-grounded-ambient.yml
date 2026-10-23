@@ -1,0 +1,39 @@
+name: Generate Grounded Ambient Sources
+
+on:
+  push:
+    branches:
+      - render/ground-truth-ambient-shaping
+    paths:
+      - scripts/generate_grounded_sources.py
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    name: Materialize grounded ambient sources
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v7
+        with:
+          ref: render/ground-truth-ambient-shaping
+
+      - name: Generate source files
+        run: python scripts/generate_grounded_sources.py
+
+      - name: Commit generated files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/render/ambient_depth_stack_grounded.cpp tests/ambient_depth_neutrality_harness.cpp
+          if git diff --cached --quiet; then
+            echo "Generated sources are already current."
+            exit 0
+          fi
+          git commit -m "feat: materialize grounded ambient lighting sources"
+          git push origin HEAD:render/ground-truth-ambient-shaping
