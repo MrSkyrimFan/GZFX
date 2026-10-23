@@ -264,6 +264,9 @@
                 ? 1u
                 : 0u;
 
+            const bool historyReused =
+                parameters.historyValid != 0u;
+
             parameters.temporalBlend = 0.18f;
             parameters.frameIndex =
                 static_cast<std::uint32_t>(
@@ -610,6 +613,10 @@
                     : "false")
                 << " history="
                 << (g_runtime.historyValid
+                    ? "true"
+                    : "false")
+                << " history_reused="
+                << (historyReused
                     ? "true"
                     : "false");
 
