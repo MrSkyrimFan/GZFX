@@ -35,6 +35,7 @@
             const std::string shaderSource = ShaderSource();
             ID3DBlob* vertexBlob = nullptr;
             ID3DBlob* analyzeBlob = nullptr;
+            ID3DBlob* temporalBlob = nullptr;
             ID3DBlob* denoiseBlob = nullptr;
             ID3DBlob* compositeBlob = nullptr;
 
@@ -46,6 +47,12 @@
 
             if (SUCCEEDED(result) &&
                 !Compile(shaderSource.c_str(), "AnalyzePS", "ps_5_0", &analyzeBlob, error))
+            {
+                result = E_FAIL;
+            }
+
+            if (SUCCEEDED(result) &&
+                !Compile(shaderSource.c_str(), "TemporalPS", "ps_5_0", &temporalBlob, error))
             {
                 result = E_FAIL;
             }
@@ -78,6 +85,15 @@
                     analyzeBlob->GetBufferSize(),
                     nullptr,
                     &g_runtime.analyzeShader);
+            }
+
+            if (SUCCEEDED(result))
+            {
+                result = device->CreatePixelShader(
+                    temporalBlob->GetBufferPointer(),
+                    temporalBlob->GetBufferSize(),
+                    nullptr,
+                    &g_runtime.temporalShader);
             }
 
             if (SUCCEEDED(result))
@@ -169,6 +185,19 @@
                 result = E_FAIL;
             }
 
+            for (auto& history : g_runtime.history)
+            {
+                if (SUCCEEDED(result) &&
+                    !CreateHistorySurface(
+                        device,
+                        halfWidth,
+                        halfHeight,
+                        history))
+                {
+                    result = E_FAIL;
+                }
+            }
+
             D3D11_TEXTURE2D_DESC compositeDesc = sceneDesc;
             compositeDesc.Usage = D3D11_USAGE_DEFAULT;
             compositeDesc.BindFlags = D3D11_BIND_RENDER_TARGET;
@@ -193,6 +222,7 @@
 
             if (vertexBlob) vertexBlob->Release();
             if (analyzeBlob) analyzeBlob->Release();
+            if (temporalBlob) temporalBlob->Release();
             if (denoiseBlob) denoiseBlob->Release();
             if (compositeBlob) compositeBlob->Release();
 
@@ -219,6 +249,8 @@
             g_runtime.halfWidth = halfWidth;
             g_runtime.halfHeight = halfHeight;
             g_runtime.sceneFormat = sceneDesc.Format;
+            g_runtime.historyWriteIndex = 0;
+            g_runtime.historyValid = false;
             return true;
         }
 
@@ -290,8 +322,13 @@
             g_runtime.deferred->PSSetSamplers(0, 2, samplers);
             g_runtime.deferred->Draw(3, 0);
 
-            ID3D11ShaderResourceView* nullResources[4] =
+            ID3D11ShaderResourceView* nullResources[9] =
             {
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
                 nullptr,
                 nullptr,
                 nullptr,
@@ -300,7 +337,7 @@
 
             g_runtime.deferred->PSSetShaderResources(
                 0,
-                4,
+                9,
                 nullResources);
             g_runtime.deferred->OMSetRenderTargets(0, nullptr, nullptr);
 
