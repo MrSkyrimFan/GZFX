@@ -8,6 +8,12 @@ namespace gzfx::settings
     {
         float ambientContactStrength = 0.62f;
         float ambientContactRadiusPixels = 4.0f;
+
+        bool localGlowEnabled = true;
+        float localGlowStrength = 0.18f;
+        float localGlowThreshold = 1.10f;
+        float localGlowRadiusPixels = 8.0f;
+
         std::uint32_t defaultMode = 1;
         std::uint64_t activationDrawIndexedThreshold = 1000;
         bool accessibleDiagnostics = true;
@@ -18,6 +24,10 @@ namespace gzfx::settings
     {
         AmbientContactStrength = 0,
         AmbientContactRadiusPixels,
+        LocalGlowEnabled,
+        LocalGlowStrength,
+        LocalGlowThreshold,
+        LocalGlowRadiusPixels,
         DefaultMode,
         ActivationDrawIndexedThreshold,
         AccessibleDiagnostics,
