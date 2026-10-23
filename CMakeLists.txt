@@ -176,6 +176,18 @@ target_link_libraries(
 )
 gzfx_apply_common(GZFXSemanticProbeHarness)
 
+add_executable(GZFXNativeSurfaceTemporalHarness
+    tests/native_surface_temporal_harness.cpp
+)
+target_link_libraries(
+    GZFXNativeSurfaceTemporalHarness
+    PRIVATE
+        d3d11
+        dxgi
+        user32
+)
+gzfx_apply_common(GZFXNativeSurfaceTemporalHarness)
+
 enable_testing()
 
 add_test(
@@ -277,4 +289,13 @@ add_test(
         "$<TARGET_FILE:GZFXSemanticProbeHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/semantic-probe-output"
+)
+
+
+add_test(
+    NAME native_surface_temporal
+    COMMAND
+        "$<TARGET_FILE:GZFXNativeSurfaceTemporalHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/native-surface-temporal-output"
 )
