@@ -1664,14 +1664,13 @@ float4 PSMain(V input) : SV_TARGET
     {
         try
         {
-            // The semantic harness explicitly asks for a stock-render capture.
+            // The dedicated semantic harness always asks for stock capture.
             if (FastTestMode())
             {
                 return true;
             }
 
-            // All other synthetic CI harnesses set GZFX_TEST_OUTPUT_ROOT
-            // and must retain normal GZFX effect behavior.
+            // Other CI harnesses must retain normal effect behavior.
             wchar_t testRoot[4]{};
 
             if (GetEnvironmentVariableW(
@@ -1683,12 +1682,14 @@ float4 PSMain(V input) : SV_TARGET
                 return false;
             }
 
-            // Real Skyrim semantic-map build: keep the frame stock.
-            return true;
+            // In real Skyrim keep the renderer stock only until the
+            // first semantic capture is complete. Once mapped, release
+            // the frame back to the normal GZFX lighting stack.
+            return !g_complete;
         }
         catch (...)
         {
-            return true;
+            return false;
         }
     }
 }
