@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.8
+    VERSION 0.0.9
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -57,6 +57,7 @@ endfunction()
 
 add_library(GZFX SHARED
     src/dllmain.cpp
+    src/input_bridge.cpp
     src/paths.cpp
     src/runtime.cpp
     src/settings.cpp
@@ -91,6 +92,7 @@ add_library(GZFXBootstrap SHARED
     bootstrap/dinput8_proxy.cpp
     bootstrap/dinput8.def
 )
+target_link_libraries(GZFXBootstrap PRIVATE minhook)
 set_target_properties(GZFXBootstrap PROPERTIES OUTPUT_NAME "dinput8")
 gzfx_apply_common(GZFXBootstrap)
 
@@ -122,6 +124,12 @@ add_executable(GZFXVisiblePassHarness
 )
 target_link_libraries(GZFXVisiblePassHarness PRIVATE d3d11 dxgi user32)
 gzfx_apply_common(GZFXVisiblePassHarness)
+
+add_executable(GZFXMenuOnlyHarness
+    tests/menu_only_harness.cpp
+)
+target_link_libraries(GZFXMenuOnlyHarness PRIVATE d3d11 dxgi user32)
+gzfx_apply_common(GZFXMenuOnlyHarness)
 
 enable_testing()
 
@@ -163,4 +171,13 @@ add_test(
         "$<TARGET_FILE:GZFXVisiblePassHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/visible-pass-output"
+)
+
+
+add_test(
+    NAME menu_only
+    COMMAND
+        "$<TARGET_FILE:GZFXMenuOnlyHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/menu-only-output"
 )
