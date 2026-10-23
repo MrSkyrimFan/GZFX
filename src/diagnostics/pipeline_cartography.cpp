@@ -4546,6 +4546,10 @@ namespace gzfx::diagnostics::pipeline_cartography
                 g_passes.clear();
                 g_bufferUpdates.clear();
                 g_mappedBuffers.clear();
+                g_blendStates.clear();
+                g_depthStates.clear();
+                g_rasterStates.clear();
+                g_samplerStates.clear();
                 g_state =
                     CurrentState{};
                 g_captureActive = true;
