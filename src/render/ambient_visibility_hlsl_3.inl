@@ -39,6 +39,13 @@
                                 positiveIndirectUv,
                                 positiveIndirectDepth);
 
+                        if (dot(
+                                sourceNormal,
+                                normalize(-positivePosition)) < 0.0)
+                        {
+                            sourceNormal = -sourceNormal;
+                        }
+
                         float sourceFacing =
                             saturate(
                                 dot(
@@ -103,6 +110,13 @@
                             SurfaceNormal(
                                 negativeIndirectUv,
                                 negativeIndirectDepth);
+
+                        if (dot(
+                                sourceNormal,
+                                normalize(-negativePosition)) < 0.0)
+                        {
+                            sourceNormal = -sourceNormal;
+                        }
 
                         float sourceFacing =
                             saturate(
