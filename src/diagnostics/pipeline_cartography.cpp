@@ -132,6 +132,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::uint64_t birth = 0;
             ResourceType type = ResourceType::Unknown;
             std::string owner = "unknown/preexisting";
+            std::string debugName;
 
             UINT width = 0;
             UINT height = 0;
@@ -157,6 +158,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::uint64_t hash = 0;
             std::uint64_t bytecodeBytes = 0;
             std::string owner = "unknown/preexisting";
+            std::string debugName;
         };
 
         struct DeviceHookState
@@ -414,6 +416,59 @@ namespace gzfx::diagnostics::pipeline_cartography
                 nullptr);
 
             return result;
+        }
+
+        std::string DebugObjectName(
+            ID3D11DeviceChild* child)
+        {
+            if (child == nullptr)
+            {
+                return {};
+            }
+
+            UINT bytes = 0;
+
+            if (FAILED(
+                    child->GetPrivateData(
+                        WKPDID_D3DDebugObjectName,
+                        &bytes,
+                        nullptr)) ||
+                bytes == 0 ||
+                bytes > 4096)
+            {
+                return {};
+            }
+
+            std::string name(
+                bytes,
+                '\0');
+
+            if (FAILED(
+                    child->GetPrivateData(
+                        WKPDID_D3DDebugObjectName,
+                        &bytes,
+                        name.data())))
+            {
+                return {};
+            }
+
+            while (!name.empty() &&
+                   name.back() == '\0')
+            {
+                name.pop_back();
+            }
+
+            for (char& value : name)
+            {
+                if (value == ',' ||
+                    value == '\r' ||
+                    value == '\n')
+                {
+                    value = '_';
+                }
+            }
+
+            return name;
         }
 
         std::string CallerModuleName(void* address)
@@ -783,17 +838,30 @@ namespace gzfx::diagnostics::pipeline_cartography
                     resource,
                     meta);
 
+                meta.debugName =
+                    DebugObjectName(
+                        resource);
+
                 g_resources.emplace(
                     id,
                     std::move(meta));
             }
-            else if (
-                owner != nullptr &&
-                !owner->empty() &&
-                found->second.owner ==
-                    "unknown/preexisting")
+            else
             {
-                found->second.owner = *owner;
+                if (owner != nullptr &&
+                    !owner->empty() &&
+                    found->second.owner ==
+                        "unknown/preexisting")
+                {
+                    found->second.owner = *owner;
+                }
+
+                if (found->second.debugName.empty())
+                {
+                    found->second.debugName =
+                        DebugObjectName(
+                            resource);
+                }
             }
 
             return id;
@@ -862,6 +930,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                 static_cast<std::uint64_t>(
                     bytecodeBytes);
             meta.owner = owner;
+            meta.debugName =
+                DebugObjectName(shader);
 
             g_shaders[id] =
                 std::move(meta);
@@ -888,6 +958,13 @@ namespace gzfx::diagnostics::pipeline_cartography
             {
                 result.hash =
                     found->second.hash;
+
+                if (found->second.debugName.empty())
+                {
+                    found->second.debugName =
+                        DebugObjectName(shader);
+                }
+
                 return result;
             }
 
@@ -898,6 +975,8 @@ namespace gzfx::diagnostics::pipeline_cartography
             meta.hash = 0;
             meta.bytecodeBytes = 0;
             meta.owner = "unknown/preexisting";
+            meta.debugName =
+                DebugObjectName(shader);
 
             g_shaders.emplace(
                 result.id,
@@ -3087,7 +3166,7 @@ namespace gzfx::diagnostics::pipeline_cartography
                         << "resource,birth,owner,type,width,height,depth,"
                            "mips,array_size,format,bind_flags,misc_flags,"
                            "sample_count,buffer_bytes,usage,cpu_access,"
-                           "structure_stride,reads,writes,first_pass,last_pass,tags\n";
+                           "structure_stride,reads,writes,first_pass,last_pass,debug_name,tags\n";
 
                     std::vector<ResourceMeta>
                         resources;
@@ -3186,6 +3265,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                                 ? 0
                                 : last->second)
                             << ","
+                            << resource.debugName
+                            << ","
                             << CandidateTags(
                                 resource,
                                 screenWidth,
@@ -3206,7 +3287,7 @@ namespace gzfx::diagnostics::pipeline_cartography
                 if (out)
                 {
                     out
-                        << "shader,birth,stage,hash,bytecode_bytes,owner\n";
+                        << "shader,birth,stage,hash,bytecode_bytes,owner,debug_name\n";
 
                     std::vector<ShaderMeta>
                         shaders;
@@ -3250,6 +3331,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                             << shader.bytecodeBytes
                             << ","
                             << shader.owner
+                            << ","
+                            << shader.debugName
                             << "\n";
                     }
                 }
