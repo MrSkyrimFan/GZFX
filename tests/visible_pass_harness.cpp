@@ -105,10 +105,10 @@ namespace
         const std::filesystem::path& path)
     {
         const auto white =
-            ReadBmpPixel(path, 320, 180);
+            ReadBmpPixel(path, 320, 336);
 
         const auto black =
-            ReadBmpPixel(path, 320, 188);
+            ReadBmpPixel(path, 320, 344);
 
         const bool firstIsWhite =
             white[0] > 240 &&
@@ -121,6 +121,28 @@ namespace
             black[2] < 15;
 
         return firstIsWhite && secondIsBlack;
+    }
+
+    bool SettingsMenuLooksPresent(
+        const std::filesystem::path& path)
+    {
+        const auto selectedRow =
+            ReadBmpPixel(path, 20, 70);
+
+        const auto panelBackground =
+            ReadBmpPixel(path, 20, 48);
+
+        const bool selectedIsLight =
+            selectedRow[0] > 210 &&
+            selectedRow[1] > 210 &&
+            selectedRow[2] > 210;
+
+        const bool panelIsDark =
+            panelBackground[0] < 60 &&
+            panelBackground[1] < 60 &&
+            panelBackground[2] < 60;
+
+        return selectedIsLight && panelIsDark;
     }
 }
 
@@ -145,6 +167,12 @@ int wmain(int argc, wchar_t** argv)
             outputRoot.c_str()) ||
         !SetEnvironmentVariableW(
             L"GZFX_TEST_FAST_CAPTURE",
+            L"1") ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_MENU_VISIBLE",
+            L"1") ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_MENU_ADJUST",
             L"1"))
     {
         return 3;
@@ -527,10 +555,22 @@ int wmain(int argc, wchar_t** argv)
     const bool accessibleSeparator =
         CenterSeparatorIsAccessiblePattern(capture);
 
+    const bool settingsMenuVisible =
+        SettingsMenuLooksPresent(capture);
+
+    const std::string settingsText =
+        ReadAll(settingsFile);
+
+    const bool settingsPersisted =
+        settingsText.find("Strength=0.670") !=
+        std::string::npos;
+
     if (!active ||
         !splitMode ||
         !validated ||
-        !accessibleSeparator)
+        !accessibleSeparator ||
+        !settingsMenuVisible ||
+        !settingsPersisted)
     {
         std::cerr
             << "visible_pass.txt:\n"
@@ -545,6 +585,12 @@ int wmain(int argc, wchar_t** argv)
             << validated
             << " accessible_separator="
             << accessibleSeparator
+            << " settings_menu_visible="
+            << settingsMenuVisible
+            << " settings_persisted="
+            << settingsPersisted
+            << "\nSettings.ini:\n"
+            << settingsText
             << "\n";
 
         return 15;
