@@ -24,13 +24,13 @@ Current authoritative branch:
 main
 ```
 
-Current `main` head at handoff creation:
+Current authoritative code/package baseline immediately before this README-only handoff update:
 
 ```text
 c9de1705082f7efd740d709c1f916bf1dff2f381
 ```
 
-That head is the automatic package-refresh commit immediately after PR #18 merged.
+That commit is the automatic package refresh immediately after PR #18 merged. Later README-only handoff commits do not change the runtime code baseline described here.
 
 Current runtime version:
 
