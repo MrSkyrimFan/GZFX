@@ -2070,6 +2070,12 @@ namespace gzfx::diagnostics
             g_drawInstancedIndirect =
                 Original<DrawInstancedIndirectFn>(
                     kDrawInstancedIndirect);
+            g_map =
+                Original<MapFn>(
+                    kMap);
+            g_unmap =
+                Original<UnmapFn>(
+                    kUnmap);
 
             g_setTopology =
                 Original<IASetPrimitiveTopologyFn>(
@@ -2107,6 +2113,9 @@ namespace gzfx::diagnostics
             g_copyResource =
                 Original<CopyResourceFn>(
                     kCopyResource);
+            g_updateSubresource =
+                Original<UpdateSubresourceFn>(
+                    kUpdateSubresource);
             g_clearRTV =
                 Original<ClearRenderTargetViewFn>(
                     kClearRenderTargetView);
@@ -2230,6 +2239,12 @@ namespace gzfx::diagnostics
             g_contextVtable[kDrawInstancedIndirect] =
                 reinterpret_cast<std::uintptr_t>(
                     &HookDrawInstancedIndirect);
+            g_contextVtable[kMap] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookMap);
+            g_contextVtable[kUnmap] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookUnmap);
 
             g_contextVtable[kIASetPrimitiveTopology] =
                 reinterpret_cast<std::uintptr_t>(
@@ -2267,6 +2282,9 @@ namespace gzfx::diagnostics
             g_contextVtable[kCopyResource] =
                 reinterpret_cast<std::uintptr_t>(
                     &HookCopy);
+            g_contextVtable[kUpdateSubresource] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookUpdateSubresource);
             g_contextVtable[kClearRenderTargetView] =
                 reinterpret_cast<std::uintptr_t>(
                     &HookClearRTV);
