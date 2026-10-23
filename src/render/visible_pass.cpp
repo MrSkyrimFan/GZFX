@@ -2,6 +2,8 @@
 
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 #include "gzfx/paths.hpp"
+#include "gzfx/render/runtime_state.hpp"
+#include "gzfx/render/scene_effects.hpp"
 #include "gzfx/settings.hpp"
 #include "gzfx/ui/settings_menu.hpp"
 #include "gzfx/version.hpp"
@@ -43,7 +45,8 @@ namespace gzfx::render
 
             float menuWidth = 0.0f;
             float menuHeight = 0.0f;
-            float padding1[2]{};
+            std::uint32_t preUiInjected = 0;
+            float padding1 = 0.0f;
         };
 
         struct Runtime
@@ -157,8 +160,12 @@ namespace gzfx::render
                 << "version=" << gzfx::kVersion << "\n"
                 << "frame=" << frame << "\n"
                 << "status=" << status << "\n"
-                << "mode=" << g_mode
-                << " (" << ModeName(g_mode) << ")\n"
+                << "mode="
+                << gzfx::render::state::GetDevelopmentMode()
+                << " ("
+                << ModeName(
+                    gzfx::render::state::GetDevelopmentMode())
+                << ")\n"
                 << "world_active="
                 << (g_worldActive ? "true" : "false")
                 << "\n"
@@ -306,7 +313,8 @@ cbuffer GZFXParameters : register(b0)
     uint ParameterPadding0;
 
     float2 MenuSize;
-    float2 ParameterPadding1;
+    uint PreUiInjected;
+    float ParameterPadding1;
 };
 
 cbuffer SkyrimPerFrame : register(b12)
@@ -764,18 +772,24 @@ float4 PSMain(VSOutput input) : SV_TARGET
             input);
     }
 
-    float contact =
-        AmbientContact(input.uv);
+    float4 effected = original;
 
-    float3 effected =
-        original.rgb *
-        (1.0 - contact * Strength);
+    // The real effect stack now runs on Skyrim's HDR scene texture
+    // before later image-space/UI work. If the stage classifier
+    // declines a frame, preserve the proven Present-time Ambient
+    // Contact path as a fail-soft fallback.
+    if (PreUiInjected == 0)
+    {
+        float contact =
+            AmbientContact(input.uv);
+
+        effected.rgb =
+            original.rgb *
+            (1.0 - contact * Strength);
+    }
 
     if (Mode == 1)
     {
-        float separator =
-            abs(input.uv.x - 0.5);
-
         if (input.uv.x < 0.5)
         {
             return ApplyMenuOverlay(
@@ -787,17 +801,13 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
         return ApplyMenuOverlay(
             AccessibleSplitOverlay(
-                float4(
-                    effected,
-                    original.a),
+                effected,
                 input),
             input);
     }
 
     return ApplyMenuOverlay(
-        float4(
-            effected,
-            original.a),
+        effected,
         input);
 }
 )";
@@ -1534,9 +1544,12 @@ float4 PSMain(VSOutput input) : SV_TARGET
             parameters.radiusPixels =
                 settings.ambientContactRadiusPixels;
 
+            const std::uint32_t developmentMode =
+                gzfx::render::state::GetDevelopmentMode();
+
             parameters.mode =
                 inputs != nullptr
-                    ? g_mode
+                    ? developmentMode
                     : 0u;
 
             parameters.accessibleDiagnostics =
@@ -1554,6 +1567,12 @@ float4 PSMain(VSOutput input) : SV_TARGET
             parameters.menuHeight =
                 static_cast<float>(
                     menuOverlay.height);
+
+            parameters.preUiInjected =
+                gzfx::render::scene_effects::
+                    WasInjectedFrame(frame)
+                ? 1u
+                : 0u;
 
             g_runtime.deferred->ClearState();
 
@@ -1707,7 +1726,9 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
                 const bool modeCapture =
                     WriteDownsampledBmp(
-                        root / ModeCaptureFile(g_mode),
+                        root / ModeCaptureFile(
+                            gzfx::render::state::
+                                GetDevelopmentMode()),
                         g_runtime.staging,
                         context,
                         backDesc.Width,
@@ -1759,13 +1780,11 @@ float4 PSMain(VSOutput input) : SV_TARGET
             g_drawIndexedThisFrame =
                 drawIndexedThisFrame;
 
-            if (!g_modeInitialized)
-            {
-                g_mode =
-                    gzfx::settings::Get().defaultMode;
+            g_mode =
+                gzfx::render::state::
+                    GetDevelopmentMode();
 
-                g_modeInitialized = true;
-            }
+            g_modeInitialized = true;
 
             if (FastTestMode())
             {
@@ -1849,7 +1868,8 @@ float4 PSMain(VSOutput input) : SV_TARGET
             if (gzfx::ui::ConsumeCycleModeRequest())
             {
                 g_mode =
-                    (g_mode + 1) % 5;
+                    gzfx::render::state::
+                        CycleDevelopmentMode();
 
                 if (gzfx::settings::Get()
                         .captureOnModeChange)
