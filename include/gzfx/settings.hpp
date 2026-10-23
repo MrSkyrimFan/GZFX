@@ -29,5 +29,7 @@ namespace gzfx::settings
     bool Reload() noexcept;
 
     bool Adjust(Editable setting, int direction) noexcept;
+    bool SetNormalized(Editable setting, float normalized) noexcept;
+    float GetNormalized(Editable setting) noexcept;
     bool Toggle(Editable setting) noexcept;
 }
