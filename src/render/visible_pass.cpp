@@ -1388,7 +1388,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
             IDXGISwapChain* swapChain,
             ID3D11Device* device,
             ID3D11DeviceContext* context,
-            LiveInputs& inputs,
+            LiveInputs* inputs,
             std::string& error)
         {
             ID3D11Texture2D* backbuffer = nullptr;
@@ -1419,82 +1419,84 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 return false;
             }
 
-            std::string cameraReport;
-
-            if (!ValidateCamera(
-                    device,
-                    context,
-                    inputs.cameraBuffer,
-                    cameraReport))
-            {
-                WriteText(
-                    L"camera_validation.txt",
-                    cameraReport);
-
-                backbuffer->Release();
-                error =
-                    "camera buffer validation rejected";
-                return false;
-            }
-
-            if (!cameraReport.empty())
-            {
-                WriteText(
-                    L"camera_validation.txt",
-                    cameraReport);
-            }
-
-            D3D11_SHADER_RESOURCE_VIEW_DESC
-                depthSrvDesc{};
-
-            depthSrvDesc.Format =
-                DepthSrvFormat(
-                    inputs.depthDesc.Format);
-
-            depthSrvDesc.ViewDimension =
-                D3D11_SRV_DIMENSION_TEXTURE2D;
-
-            depthSrvDesc.Texture2D.MipLevels = 1;
-
-            if (depthSrvDesc.Format ==
-                DXGI_FORMAT_UNKNOWN)
-            {
-                backbuffer->Release();
-                error =
-                    "unsupported depth format";
-                return false;
-            }
-
             ID3D11ShaderResourceView* depthSrv = nullptr;
-
-            result =
-                device->CreateShaderResourceView(
-                    inputs.depthTexture,
-                    &depthSrvDesc,
-                    &depthSrv);
-
             ID3D11ShaderResourceView* sceneSrv = nullptr;
 
-            if (SUCCEEDED(result) &&
-                inputs.sceneColorTexture != nullptr)
+            if (inputs != nullptr)
             {
-                result =
+                std::string cameraReport;
+
+                if (!ValidateCamera(
+                        device,
+                        context,
+                        inputs->cameraBuffer,
+                        cameraReport))
+                {
+                    WriteText(
+                        L"camera_validation.txt",
+                        cameraReport);
+
+                    backbuffer->Release();
+                    error =
+                        "camera buffer validation rejected";
+                    return false;
+                }
+
+                if (!cameraReport.empty())
+                {
+                    WriteText(
+                        L"camera_validation.txt",
+                        cameraReport);
+                }
+
+                D3D11_SHADER_RESOURCE_VIEW_DESC
+                    depthSrvDesc{};
+
+                depthSrvDesc.Format =
+                    DepthSrvFormat(
+                        inputs->depthDesc.Format);
+
+                depthSrvDesc.ViewDimension =
+                    D3D11_SRV_DIMENSION_TEXTURE2D;
+
+                depthSrvDesc.Texture2D.MipLevels = 1;
+
+                if (depthSrvDesc.Format ==
+                    DXGI_FORMAT_UNKNOWN)
+                {
+                    backbuffer->Release();
+                    error =
+                        "unsupported depth format";
+                    return false;
+                }
+
+                HRESULT depthResult =
                     device->CreateShaderResourceView(
-                        inputs.sceneColorTexture,
-                        nullptr,
-                        &sceneSrv);
-            }
+                        inputs->depthTexture,
+                        &depthSrvDesc,
+                        &depthSrv);
 
-            if (FAILED(result) ||
-                depthSrv == nullptr)
-            {
-                if (sceneSrv) sceneSrv->Release();
-                if (depthSrv) depthSrv->Release();
-                backbuffer->Release();
+                if (SUCCEEDED(depthResult) &&
+                    inputs->sceneColorTexture != nullptr)
+                {
+                    depthResult =
+                        device->CreateShaderResourceView(
+                            inputs->sceneColorTexture,
+                            nullptr,
+                            &sceneSrv);
+                }
 
-                error =
-                    "input SRV creation failed";
-                return false;
+                if (FAILED(depthResult) ||
+                    depthSrv == nullptr)
+                {
+                    if (sceneSrv) sceneSrv->Release();
+                    if (depthSrv) depthSrv->Release();
+                    backbuffer->Release();
+
+                    error =
+                        "input SRV creation failed";
+                    return false;
+                }
             }
 
             gzfx::ui::MenuOverlay menuOverlay{};
@@ -1505,7 +1507,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
                     menuOverlay))
             {
                 if (sceneSrv) sceneSrv->Release();
-                depthSrv->Release();
+                if (depthSrv) depthSrv->Release();
                 backbuffer->Release();
 
                 error = "settings menu overlay unavailable";
@@ -1532,7 +1534,10 @@ float4 PSMain(VSOutput input) : SV_TARGET
             parameters.radiusPixels =
                 settings.ambientContactRadiusPixels;
 
-            parameters.mode = g_mode;
+            parameters.mode =
+                inputs != nullptr
+                    ? g_mode
+                    : 0u;
 
             parameters.accessibleDiagnostics =
                 settings.accessibleDiagnostics
@@ -1623,10 +1628,13 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 1,
                 &g_runtime.parameters);
 
-            g_runtime.deferred->PSSetConstantBuffers(
-                12,
-                1,
-                &inputs.cameraBuffer);
+            if (inputs != nullptr)
+            {
+                g_runtime.deferred->PSSetConstantBuffers(
+                    12,
+                    1,
+                    &inputs->cameraBuffer);
+            }
 
             g_runtime.deferred->PSSetShaderResources(
                 0,
@@ -1711,7 +1719,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
             if (commands) commands->Release();
             if (sceneSrv) sceneSrv->Release();
-            depthSrv->Release();
+            if (depthSrv) depthSrv->Release();
             backbuffer->Release();
 
             if (FAILED(result))
@@ -1728,8 +1736,10 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
             LogState(
                 frame,
-                "active",
-                &inputs);
+                inputs != nullptr
+                    ? "active"
+                    : "menu_only",
+                inputs);
 
             return true;
         }
@@ -1807,16 +1817,21 @@ float4 PSMain(VSOutput input) : SV_TARGET
                     "world_renderer_dormant");
             }
 
-            if (frame < ActivationFrame() ||
-                !g_worldActive ||
-                swapChain == nullptr ||
+            gzfx::diagnostics::
+                resource_intelligence::
+                SetStageTraceEnabled(
+                    g_worldActive);
+
+            if (swapChain == nullptr ||
                 device == nullptr ||
                 context == nullptr)
             {
                 return false;
             }
 
-            DXGI_SWAP_CHAIN_DESC inputSwapDescription{};
+            DXGI_SWAP_CHAIN_DESC
+                inputSwapDescription{};
+
             HWND gameWindow = nullptr;
 
             if (SUCCEEDED(
@@ -1852,35 +1867,60 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 g_captureRequested = true;
             }
 
-            LiveInputs inputs{};
-
-            if (!gzfx::diagnostics::
-                    resource_intelligence::
-                    AcquireLiveInputs(
-                        swapChain,
-                        inputs))
+            if (frame < ActivationFrame())
             {
-                LogState(
-                    frame,
-                    "waiting_for_inputs");
-
                 return false;
             }
 
             std::string error;
+            bool result = false;
 
-            const bool result =
-                ExecutePass(
-                    frame,
-                    swapChain,
-                    device,
-                    context,
-                    inputs,
-                    error);
+            if (g_worldActive)
+            {
+                LiveInputs inputs{};
 
-            gzfx::diagnostics::
-                resource_intelligence::
-                ReleaseLiveInputs(inputs);
+                if (!gzfx::diagnostics::
+                        resource_intelligence::
+                        AcquireLiveInputs(
+                            swapChain,
+                            inputs))
+                {
+                    LogState(
+                        frame,
+                        "waiting_for_inputs");
+
+                    return false;
+                }
+
+                result =
+                    ExecutePass(
+                        frame,
+                        swapChain,
+                        device,
+                        context,
+                        &inputs,
+                        error);
+
+                gzfx::diagnostics::
+                    resource_intelligence::
+                    ReleaseLiveInputs(
+                        inputs);
+            }
+            else if (gzfx::ui::IsMenuVisible())
+            {
+                result =
+                    ExecutePass(
+                        frame,
+                        swapChain,
+                        device,
+                        context,
+                        nullptr,
+                        error);
+            }
+            else
+            {
+                return false;
+            }
 
             if (!result)
             {

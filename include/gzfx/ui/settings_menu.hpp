@@ -22,6 +22,14 @@ namespace gzfx::ui
     bool ConsumeCycleModeRequest() noexcept;
     bool ConsumeCaptureRequest() noexcept;
 
+    bool IsMenuVisible() noexcept;
+
+    void SubmitDirectInputMouse(
+        LONG deltaX,
+        LONG deltaY,
+        LONG wheel,
+        std::uint32_t buttonMask) noexcept;
+
     bool GetMenuOverlay(
         ID3D11Device* device,
         ID3D11DeviceContext* context,

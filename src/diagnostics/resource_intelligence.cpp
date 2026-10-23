@@ -60,6 +60,7 @@ namespace gzfx::diagnostics::resource_intelligence
         UINT g_swapWidth = 0;
         UINT g_swapHeight = 0;
         std::uint64_t g_stageTraceEvents = 0;
+        bool g_stageTraceEnabled = false;
         bool g_lastStageColorBound = false;
         bool g_lastStageDepthBound = false;
 
@@ -1049,6 +1050,32 @@ namespace gzfx::diagnostics::resource_intelligence
         inputs = {};
     }
 
+    void SetStageTraceEnabled(
+        const bool enabled) noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+
+            if (enabled &&
+                !g_stageTraceEnabled)
+            {
+                g_stageTraceEvents = 0;
+                g_lastStageColorBound = false;
+                g_lastStageDepthBound = false;
+
+                WriteText(
+                    L"stage_trace.csv",
+                    "");
+            }
+
+            g_stageTraceEnabled = enabled;
+        }
+        catch (...)
+        {
+        }
+    }
+
     void ObserveRenderTargets(
         const std::uint64_t frame,
         const std::uint64_t drawOrdinal,
@@ -1083,7 +1110,8 @@ namespace gzfx::diagnostics::resource_intelligence
                 }
             }
 
-            if (g_swapWidth == 0 ||
+            if (!g_stageTraceEnabled ||
+                g_swapWidth == 0 ||
                 g_swapHeight == 0 ||
                 g_stageTraceEvents >= 2048)
             {

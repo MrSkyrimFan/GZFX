@@ -11,6 +11,12 @@
 #include <string>
 
 using InitializeFn = bool (*)();
+using IsMenuOpenFn = bool (*)();
+using SubmitMouseInputFn = void (*)(
+    LONG,
+    LONG,
+    LONG,
+    std::uint32_t);
 
 namespace
 {
@@ -170,9 +176,6 @@ int wmain(int argc, wchar_t** argv)
             L"1") ||
         !SetEnvironmentVariableW(
             L"GZFX_TEST_MENU_VISIBLE",
-            L"1") ||
-        !SetEnvironmentVariableW(
-            L"GZFX_TEST_MENU_ADJUST",
             L"1"))
     {
         return 3;
@@ -196,6 +199,24 @@ int wmain(int argc, wchar_t** argv)
         !initialize())
     {
         return 5;
+    }
+
+    const auto isMenuOpen =
+        reinterpret_cast<IsMenuOpenFn>(
+            GetProcAddress(
+                gzfx,
+                "GZFX_IsSettingsMenuOpen"));
+
+    const auto submitMouse =
+        reinterpret_cast<SubmitMouseInputFn>(
+            GetProcAddress(
+                gzfx,
+                "GZFX_SubmitMouseInput"));
+
+    if (isMenuOpen == nullptr ||
+        submitMouse == nullptr)
+    {
+        return 6;
     }
 
     const wchar_t* className =
@@ -399,8 +420,28 @@ int wmain(int argc, wchar_t** argv)
         return 13;
     }
 
-    // First Present lets GZFX acquire this real swap chain/context.
+    // First Present lets GZFX acquire this real swap chain/context
+    // and opens the forced test menu.
     swap->Present(0, 0);
+
+    if (!isMenuOpen())
+    {
+        return 16;
+    }
+
+    // Drive the first numeric slider through the same exported
+    // relative-mouse bridge used by the dinput8 proxy.
+    submitMouse(
+        200,
+        -90,
+        0,
+        0x1u);
+
+    submitMouse(
+        0,
+        0,
+        0,
+        0x0u);
 
     D3D11_VIEWPORT viewport{};
     viewport.Width = 640.0f;
@@ -562,7 +603,7 @@ int wmain(int argc, wchar_t** argv)
         ReadAll(settingsFile);
 
     const bool settingsPersisted =
-        settingsText.find("Strength=0.670") !=
+        settingsText.find("Strength=1.000") !=
         std::string::npos;
 
     if (!active ||
