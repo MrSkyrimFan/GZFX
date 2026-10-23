@@ -124,29 +124,63 @@
             }
         }
 
+        float baselineNegativeHorizon =
+            -acos(clamp(lowNegative, -1.0, 1.0));
+
+        float baselinePositiveHorizon =
+            acos(clamp(lowPositive, -1.0, 1.0));
+
         float negativeHorizon =
             -acos(clamp(horizonNegative, -1.0, 1.0));
 
         float positiveHorizon =
             acos(clamp(horizonPositive, -1.0, 1.0));
 
+        float baselineVisibility =
+            projectedLength *
+            (
+                IntegrateArc(
+                    baselineNegativeHorizon,
+                    normalAngle,
+                    cosNormal) +
+                IntegrateArc(
+                    baselinePositiveHorizon,
+                    normalAngle,
+                    cosNormal)
+            );
+
         float localVisibility =
             projectedLength *
             (
-                IntegrateArc(negativeHorizon, normalAngle, cosNormal) +
-                IntegrateArc(positiveHorizon, normalAngle, cosNormal)
+                IntegrateArc(
+                    negativeHorizon,
+                    normalAngle,
+                    cosNormal) +
+                IntegrateArc(
+                    positiveHorizon,
+                    normalAngle,
+                    cosNormal)
             );
 
-        visibility += saturate(localVisibility);
+        float sliceOcclusion = saturate(
+            (baselineVisibility - localVisibility) /
+            max(abs(baselineVisibility), 1e-4));
+
+        occlusionSum += sliceOcclusion;
     }
 
-    visibility = saturate(visibility / max((float)sliceCount, 1.0));
-    visibility = pow(visibility, 1.10);
+    // Occlusion is defined only as visibility lost relative to the
+    // receiver's own unoccluded hemisphere. A flat surface therefore
+    // produces exactly zero regardless of projection or viewing angle.
+    float occlusion = saturate(
+        occlusionSum /
+        max((float)sliceCount, 1.0) *
+        1.75);
 
-    float occlusion = saturate(1.0 - visibility);
     occlusion = saturate(
         (occlusion - AoBias) /
         max(1.0 - AoBias, 1e-4));
+
     occlusion = pow(occlusion, AoPower);
 
 )GZFX";
