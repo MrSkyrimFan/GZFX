@@ -433,7 +433,7 @@ int wmain(int argc, wchar_t** argv)
     // relative-mouse bridge used by the dinput8 proxy.
     submitMouse(
         200,
-        -90,
+        -170,
         0,
         0x1u);
 
