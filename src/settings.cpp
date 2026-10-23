@@ -28,126 +28,64 @@ namespace gzfx::settings
             return root.empty() ? fs::path{} : root / L"Settings.ini";
         }
 
-        void EnsureDefaults(const fs::path& path)
+        void EnsureValue(
+            const fs::path& path,
+            const wchar_t* section,
+            const wchar_t* key,
+            const wchar_t* fallback)
+        {
+            wchar_t value[8]{};
+
+            const DWORD read =
+                GetPrivateProfileStringW(
+                    section,
+                    key,
+                    L"",
+                    value,
+                    static_cast<DWORD>(
+                        std::size(value)),
+                    path.c_str());
+
+            if (read == 0)
+            {
+                WritePrivateProfileStringW(
+                    section,
+                    key,
+                    fallback,
+                    path.c_str());
+            }
+        }
+
+        void EnsureDefaults(
+            const fs::path& path)
         {
             if (path.empty())
             {
                 return;
             }
 
-            std::error_code error;
-            if (fs::exists(path, error) && !error)
-            {
-                return;
-            }
+            EnsureValue(path, L"AmbientContact", L"Strength", L"0.62");
+            EnsureValue(path, L"AmbientContact", L"RadiusPixels", L"4.0");
 
-            WritePrivateProfileStringW(
-                L"AmbientContact",
-                L"Strength",
-                L"0.62",
-                path.c_str());
+            EnsureValue(path, L"HorizonOcclusion", L"Enabled", L"1");
+            EnsureValue(path, L"HorizonOcclusion", L"Strength", L"0.90");
+            EnsureValue(path, L"HorizonOcclusion", L"RadiusPixels", L"28.0");
+            EnsureValue(path, L"HorizonOcclusion", L"Quality", L"2");
 
-            WritePrivateProfileStringW(
-                L"AmbientContact",
-                L"RadiusPixels",
-                L"4.0",
-                path.c_str());
+            EnsureValue(path, L"IndirectBounce", L"Enabled", L"1");
+            EnsureValue(path, L"IndirectBounce", L"Strength", L"0.20");
+            EnsureValue(path, L"IndirectBounce", L"RadiusPixels", L"36.0");
+            EnsureValue(path, L"IndirectBounce", L"Saturation", L"0.85");
 
-            WritePrivateProfileStringW(
-                L"HorizonOcclusion",
-                L"Enabled",
-                L"1",
-                path.c_str());
+            EnsureValue(path, L"LocalGlow", L"Enabled", L"1");
+            EnsureValue(path, L"LocalGlow", L"Strength", L"0.18");
+            EnsureValue(path, L"LocalGlow", L"Threshold", L"1.10");
+            EnsureValue(path, L"LocalGlow", L"RadiusPixels", L"8.0");
 
-            WritePrivateProfileStringW(
-                L"HorizonOcclusion",
-                L"Strength",
-                L"0.90",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"HorizonOcclusion",
-                L"RadiusPixels",
-                L"28.0",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"HorizonOcclusion",
-                L"Quality",
-                L"2",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"IndirectBounce",
-                L"Enabled",
-                L"1",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"IndirectBounce",
-                L"Strength",
-                L"0.20",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"IndirectBounce",
-                L"RadiusPixels",
-                L"36.0",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"IndirectBounce",
-                L"Saturation",
-                L"0.85",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"LocalGlow",
-                L"Enabled",
-                L"1",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"LocalGlow",
-                L"Strength",
-                L"0.18",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"LocalGlow",
-                L"Threshold",
-                L"1.10",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"LocalGlow",
-                L"RadiusPixels",
-                L"8.0",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"Development",
-                L"DefaultMode",
-                L"1",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"Development",
-                L"ActivationDrawIndexedThreshold",
-                L"1000",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"Development",
-                L"AccessibleDiagnostics",
-                L"1",
-                path.c_str());
-
-            WritePrivateProfileStringW(
-                L"Development",
-                L"CaptureOnModeChange",
-                L"1",
-                path.c_str());
+            EnsureValue(path, L"Development", L"DefaultMode", L"1");
+            EnsureValue(path, L"Development", L"ActivationDrawIndexedThreshold", L"1000");
+            EnsureValue(path, L"Development", L"AccessibleDiagnostics", L"1");
+            EnsureValue(path, L"Development", L"CaptureOnModeChange", L"1");
         }
 
         float ReadFloat(
