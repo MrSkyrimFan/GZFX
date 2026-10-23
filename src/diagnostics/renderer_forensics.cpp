@@ -1390,6 +1390,91 @@ namespace gzfx::diagnostics
                 offset);
         }
 
+        HRESULT STDMETHODCALLTYPE HookMap(
+            ID3D11DeviceContext* c,
+            ID3D11Resource* resource,
+            UINT subresource,
+            D3D11_MAP mapType,
+            UINT mapFlags,
+            D3D11_MAPPED_SUBRESOURCE* mapped)
+        {
+            const HRESULT result =
+                g_map(
+                    c,
+                    resource,
+                    subresource,
+                    mapType,
+                    mapFlags,
+                    mapped);
+
+            if (c == g_primaryContext &&
+                SUCCEEDED(result))
+            {
+                pipeline_cartography::ObserveMap(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    resource,
+                    subresource,
+                    mapType,
+                    mapFlags,
+                    mapped);
+            }
+
+            return result;
+        }
+
+        void STDMETHODCALLTYPE HookUnmap(
+            ID3D11DeviceContext* c,
+            ID3D11Resource* resource,
+            UINT subresource)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::ObserveUnmap(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    resource,
+                    subresource);
+            }
+
+            g_unmap(
+                c,
+                resource,
+                subresource);
+        }
+
+        void STDMETHODCALLTYPE HookUpdateSubresource(
+            ID3D11DeviceContext* c,
+            ID3D11Resource* destination,
+            UINT destinationSubresource,
+            const D3D11_BOX* destinationBox,
+            const void* sourceData,
+            UINT sourceRowPitch,
+            UINT sourceDepthPitch)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::ObserveUpdateSubresource(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    destination,
+                    destinationSubresource,
+                    destinationBox,
+                    sourceData,
+                    sourceRowPitch,
+                    sourceDepthPitch);
+            }
+
+            g_updateSubresource(
+                c,
+                destination,
+                destinationSubresource,
+                destinationBox,
+                sourceData,
+                sourceRowPitch,
+                sourceDepthPitch);
+        }
+
         void STDMETHODCALLTYPE HookTopology(
             ID3D11DeviceContext* c,
             D3D11_PRIMITIVE_TOPOLOGY topology)
