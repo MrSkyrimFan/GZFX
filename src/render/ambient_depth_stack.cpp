@@ -1514,7 +1514,6 @@ float4 CompositePS(
 )GZFX";
             return source;
         }
-        }
 
         DXGI_FORMAT DepthSrvFormat(
             const DXGI_FORMAT format)
