@@ -1,6 +1,7 @@
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 #include "gzfx/diagnostics/semantic_probe.hpp"
+#include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/render/scene_effects.hpp"
 #include "gzfx/render/visible_pass.hpp"
 
@@ -40,73 +41,167 @@ namespace gzfx::diagnostics
         constexpr std::size_t kVSSetConstantBuffers = 7;
         constexpr std::size_t kPSSetShaderResources = 8;
         constexpr std::size_t kPSSetShader = 9;
+        constexpr std::size_t kPSSetSamplers = 10;
         constexpr std::size_t kVSSetShader = 11;
         constexpr std::size_t kDrawIndexed = 12;
         constexpr std::size_t kDraw = 13;
         constexpr std::size_t kPSSetConstantBuffers = 16;
         constexpr std::size_t kDrawIndexedInstanced = 20;
         constexpr std::size_t kDrawInstanced = 21;
+        constexpr std::size_t kGSSetConstantBuffers = 22;
+        constexpr std::size_t kGSSetShader = 23;
+        constexpr std::size_t kIASetPrimitiveTopology = 24;
+        constexpr std::size_t kVSSetShaderResources = 25;
+        constexpr std::size_t kVSSetSamplers = 26;
+        constexpr std::size_t kGSSetShaderResources = 31;
+        constexpr std::size_t kGSSetSamplers = 32;
         constexpr std::size_t kOMSetRenderTargets = 33;
+        constexpr std::size_t kOMSetRenderTargetsAndUavs = 34;
+        constexpr std::size_t kOMSetBlendState = 35;
+        constexpr std::size_t kOMSetDepthStencilState = 36;
+        constexpr std::size_t kDrawIndexedInstancedIndirect = 39;
+        constexpr std::size_t kDrawInstancedIndirect = 40;
         constexpr std::size_t kDispatch = 41;
+        constexpr std::size_t kDispatchIndirect = 42;
+        constexpr std::size_t kRSSetState = 43;
         constexpr std::size_t kRSSetViewports = 44;
+        constexpr std::size_t kCopySubresourceRegion = 46;
         constexpr std::size_t kCopyResource = 47;
+        constexpr std::size_t kUpdateSubresource = 48;
+        constexpr std::size_t kCopyStructureCount = 49;
         constexpr std::size_t kClearRenderTargetView = 50;
+        constexpr std::size_t kClearUnorderedAccessViewUint = 51;
+        constexpr std::size_t kClearUnorderedAccessViewFloat = 52;
         constexpr std::size_t kClearDepthStencilView = 53;
+        constexpr std::size_t kGenerateMips = 54;
         constexpr std::size_t kResolveSubresource = 57;
+        constexpr std::size_t kExecuteCommandList = 58;
+        constexpr std::size_t kHSSetShaderResources = 59;
+        constexpr std::size_t kHSSetShader = 60;
+        constexpr std::size_t kHSSetSamplers = 61;
+        constexpr std::size_t kHSSetConstantBuffers = 62;
+        constexpr std::size_t kDSSetShaderResources = 63;
+        constexpr std::size_t kDSSetShader = 64;
+        constexpr std::size_t kDSSetSamplers = 65;
+        constexpr std::size_t kDSSetConstantBuffers = 66;
         constexpr std::size_t kCSSetShaderResources = 67;
         constexpr std::size_t kCSSetUnorderedAccessViews = 68;
         constexpr std::size_t kCSSetShader = 69;
+        constexpr std::size_t kCSSetSamplers = 70;
         constexpr std::size_t kCSSetConstantBuffers = 71;
+        constexpr std::size_t kClearState = 110;
 
         using PresentFn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT);
         using Present1Fn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain1*, UINT, UINT, const DXGI_PRESENT_PARAMETERS*);
         using ResizeBuffersFn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT, UINT, DXGI_FORMAT, UINT);
 
-        using VSSetConstantBuffersFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11Buffer* const*);
-        using PSSetShaderResourcesFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11ShaderResourceView* const*);
-        using PSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11PixelShader*, ID3D11ClassInstance* const*, UINT);
+        using SetConstantBuffersFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11Buffer* const*);
+        using SetShaderResourcesFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11ShaderResourceView* const*);
+        using SetSamplersFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11SamplerState* const*);
+
         using VSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11VertexShader*, ID3D11ClassInstance* const*, UINT);
+        using HSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11HullShader*, ID3D11ClassInstance* const*, UINT);
+        using DSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11DomainShader*, ID3D11ClassInstance* const*, UINT);
+        using GSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11GeometryShader*, ID3D11ClassInstance* const*, UINT);
+        using PSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11PixelShader*, ID3D11ClassInstance* const*, UINT);
+        using CSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11ComputeShader*, ID3D11ClassInstance* const*, UINT);
+
         using DrawIndexedFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, INT);
         using DrawFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT);
-        using PSSetConstantBuffersFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11Buffer* const*);
         using DrawIndexedInstancedFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, UINT, INT, UINT);
         using DrawInstancedFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, UINT, UINT);
+        using DrawIndexedInstancedIndirectFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Buffer*, UINT);
+        using DrawInstancedIndirectFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Buffer*, UINT);
+
+        using IASetPrimitiveTopologyFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, D3D11_PRIMITIVE_TOPOLOGY);
         using OMSetRenderTargetsFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, ID3D11RenderTargetView* const*, ID3D11DepthStencilView*);
+        using OMSetRenderTargetsAndUavsFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, ID3D11RenderTargetView* const*, ID3D11DepthStencilView*, UINT, UINT, ID3D11UnorderedAccessView* const*, const UINT*);
+        using OMSetBlendStateFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11BlendState*, const FLOAT[4], UINT);
+        using OMSetDepthStencilStateFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11DepthStencilState*, UINT);
+
         using DispatchFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, UINT);
+        using DispatchIndirectFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Buffer*, UINT);
+
+        using RSSetStateFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11RasterizerState*);
         using RSSetViewportsFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, const D3D11_VIEWPORT*);
+
+        using CopySubresourceRegionFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, UINT, UINT, UINT, UINT, ID3D11Resource*, UINT, const D3D11_BOX*);
         using CopyResourceFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, ID3D11Resource*);
+        using UpdateSubresourceFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, UINT, const D3D11_BOX*, const void*, UINT, UINT);
+        using CopyStructureCountFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Buffer*, UINT, ID3D11UnorderedAccessView*);
         using ClearRenderTargetViewFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11RenderTargetView*, const FLOAT[4]);
+        using ClearUnorderedAccessViewUintFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11UnorderedAccessView*, const UINT[4]);
+        using ClearUnorderedAccessViewFloatFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11UnorderedAccessView*, const FLOAT[4]);
         using ClearDepthStencilViewFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11DepthStencilView*, UINT, FLOAT, UINT8);
+        using GenerateMipsFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11ShaderResourceView*);
         using ResolveSubresourceFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, UINT, ID3D11Resource*, UINT, DXGI_FORMAT);
-        using CSSetShaderResourcesFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11ShaderResourceView* const*);
-        using CSSetUnorderedAccessViewsFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11UnorderedAccessView* const*, const UINT*);
-        using CSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11ComputeShader*, ID3D11ClassInstance* const*, UINT);
-        using CSSetConstantBuffersFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11Buffer* const*);
+        using ExecuteCommandListFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11CommandList*, BOOL);
+        using ClearStateFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*);
 
         PresentFn g_present = nullptr;
         Present1Fn g_present1 = nullptr;
         ResizeBuffersFn g_resizeBuffers = nullptr;
 
-        VSSetConstantBuffersFn g_vsSetCB = nullptr;
-        PSSetShaderResourcesFn g_psSetResources = nullptr;
-        PSSetShaderFn g_psSetShader = nullptr;
+        SetConstantBuffersFn g_vsSetCB = nullptr;
+        SetConstantBuffersFn g_hsSetCB = nullptr;
+        SetConstantBuffersFn g_dsSetCB = nullptr;
+        SetConstantBuffersFn g_gsSetCB = nullptr;
+        SetConstantBuffersFn g_psSetCB = nullptr;
+        SetConstantBuffersFn g_csSetCB = nullptr;
+
+        SetShaderResourcesFn g_vsSetResources = nullptr;
+        SetShaderResourcesFn g_hsSetResources = nullptr;
+        SetShaderResourcesFn g_dsSetResources = nullptr;
+        SetShaderResourcesFn g_gsSetResources = nullptr;
+        SetShaderResourcesFn g_psSetResources = nullptr;
+        SetShaderResourcesFn g_csSetResources = nullptr;
+
+        SetSamplersFn g_vsSetSamplers = nullptr;
+        SetSamplersFn g_hsSetSamplers = nullptr;
+        SetSamplersFn g_dsSetSamplers = nullptr;
+        SetSamplersFn g_gsSetSamplers = nullptr;
+        SetSamplersFn g_psSetSamplers = nullptr;
+        SetSamplersFn g_csSetSamplers = nullptr;
+
         VSSetShaderFn g_vsSetShader = nullptr;
+        HSSetShaderFn g_hsSetShader = nullptr;
+        DSSetShaderFn g_dsSetShader = nullptr;
+        GSSetShaderFn g_gsSetShader = nullptr;
+        PSSetShaderFn g_psSetShader = nullptr;
+        CSSetShaderFn g_csSetShader = nullptr;
+
         DrawIndexedFn g_drawIndexed = nullptr;
         DrawFn g_draw = nullptr;
-        PSSetConstantBuffersFn g_psSetCB = nullptr;
         DrawIndexedInstancedFn g_drawIndexedInstanced = nullptr;
         DrawInstancedFn g_drawInstanced = nullptr;
+        DrawIndexedInstancedIndirectFn g_drawIndexedInstancedIndirect = nullptr;
+        DrawInstancedIndirectFn g_drawInstancedIndirect = nullptr;
+
+        IASetPrimitiveTopologyFn g_setTopology = nullptr;
         OMSetRenderTargetsFn g_omSetRT = nullptr;
+        OMSetRenderTargetsAndUavsFn g_omSetRTUavs = nullptr;
+        OMSetBlendStateFn g_omSetBlend = nullptr;
+        OMSetDepthStencilStateFn g_omSetDepth = nullptr;
+
         DispatchFn g_dispatch = nullptr;
+        DispatchIndirectFn g_dispatchIndirect = nullptr;
+        RSSetStateFn g_setRaster = nullptr;
         RSSetViewportsFn g_setViewports = nullptr;
+
+        CopySubresourceRegionFn g_copySubresource = nullptr;
         CopyResourceFn g_copyResource = nullptr;
+        UpdateSubresourceFn g_updateSubresource = nullptr;
+        CopyStructureCountFn g_copyStructureCount = nullptr;
         ClearRenderTargetViewFn g_clearRTV = nullptr;
+        ClearUnorderedAccessViewUintFn g_clearUavUint = nullptr;
+        ClearUnorderedAccessViewFloatFn g_clearUavFloat = nullptr;
         ClearDepthStencilViewFn g_clearDSV = nullptr;
+        GenerateMipsFn g_generateMips = nullptr;
         ResolveSubresourceFn g_resolve = nullptr;
-        CSSetShaderResourcesFn g_csSetResources = nullptr;
+        ExecuteCommandListFn g_executeCommandList = nullptr;
+
         CSSetUnorderedAccessViewsFn g_csSetUavs = nullptr;
-        CSSetShaderFn g_csSetShader = nullptr;
-        CSSetConstantBuffersFn g_csSetCB = nullptr;
+        ClearStateFn g_clearState = nullptr;
 
         std::once_flag g_once;
         bool g_armed = false;
