@@ -7,7 +7,7 @@
     uint stepCount = StepCount();
     float2 noise = Hash22(floor(input.position.xy));
 
-    float visibility = 0.0;
+    float occlusionSum = 0.0;
     float3 indirectSum = 0.0;
     float indirectNormalizer = 0.0;
 
@@ -37,7 +37,6 @@
         float orthogonalLength = length(orthogonalDirection);
         if (orthogonalLength < 1e-5)
         {
-            visibility += 1.0;
             continue;
         }
 
@@ -51,7 +50,6 @@
         float projectedLength = length(projectedNormal);
         if (projectedLength < 1e-5)
         {
-            visibility += 1.0;
             continue;
         }
 
