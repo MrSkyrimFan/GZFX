@@ -63,6 +63,7 @@ namespace gzfx::render::ambient_depth
             ID3D11DeviceContext* deferred = nullptr;
 
             ID3D11VertexShader* vertexShader = nullptr;
+            ID3D11PixelShader* downsampleShader = nullptr;
             ID3D11PixelShader* analyzeShader = nullptr;
             ID3D11PixelShader* denoiseShader = nullptr;
             ID3D11PixelShader* compositeShader = nullptr;
@@ -73,6 +74,14 @@ namespace gzfx::render::ambient_depth
 
             ID3D11Texture2D* sceneCopy = nullptr;
             ID3D11ShaderResourceView* sceneCopySrv = nullptr;
+
+            ID3D11Texture2D* workingDepth = nullptr;
+            ID3D11RenderTargetView* workingDepthRtv = nullptr;
+            ID3D11ShaderResourceView* workingDepthSrv = nullptr;
+
+            ID3D11Texture2D* workingColor = nullptr;
+            ID3D11RenderTargetView* workingColorRtv = nullptr;
+            ID3D11ShaderResourceView* workingColorSrv = nullptr;
 
             SurfacePair first{};
             SurfacePair second{};
@@ -200,6 +209,14 @@ namespace gzfx::render::ambient_depth
             ReleaseSurface(g_runtime.second);
             ReleaseSurface(g_runtime.first);
 
+            if (g_runtime.workingColorSrv) g_runtime.workingColorSrv->Release();
+            if (g_runtime.workingColorRtv) g_runtime.workingColorRtv->Release();
+            if (g_runtime.workingColor) g_runtime.workingColor->Release();
+
+            if (g_runtime.workingDepthSrv) g_runtime.workingDepthSrv->Release();
+            if (g_runtime.workingDepthRtv) g_runtime.workingDepthRtv->Release();
+            if (g_runtime.workingDepth) g_runtime.workingDepth->Release();
+
             if (g_runtime.sceneCopySrv) g_runtime.sceneCopySrv->Release();
             if (g_runtime.sceneCopy) g_runtime.sceneCopy->Release();
 
@@ -210,6 +227,7 @@ namespace gzfx::render::ambient_depth
             if (g_runtime.compositeShader) g_runtime.compositeShader->Release();
             if (g_runtime.denoiseShader) g_runtime.denoiseShader->Release();
             if (g_runtime.analyzeShader) g_runtime.analyzeShader->Release();
+            if (g_runtime.downsampleShader) g_runtime.downsampleShader->Release();
             if (g_runtime.vertexShader) g_runtime.vertexShader->Release();
 
             if (g_runtime.deferred) g_runtime.deferred->Release();
@@ -338,6 +356,9 @@ Texture2D<float> SceneDepth : register(t1);
 Texture2D<float> AoInput : register(t2);
 Texture2D<float4> IndirectInput : register(t3);
 
+Texture2D<float> WorkingDepth : register(t4);
+Texture2D<float4> WorkingColor : register(t5);
+
 SamplerState LinearSampler : register(s0);
 SamplerState PointSampler : register(s1);
 
@@ -380,26 +401,24 @@ float3 ReconstructNormal(
 {
     float2 dx =
         float2(
-            FullInvSize.x,
+            HalfInvSize.x,
             0.0);
 
     float2 dy =
         float2(
             0.0,
-            FullInvSize.y);
+            HalfInvSize.y);
 
     float depthX =
-        SceneDepth.SampleLevel(
+        WorkingDepth.SampleLevel(
             PointSampler,
-            DepthUv(
-                saturate(uv + dx)),
+            saturate(uv + dx),
             0).x;
 
     float depthY =
-        SceneDepth.SampleLevel(
+        WorkingDepth.SampleLevel(
             PointSampler,
-            DepthUv(
-                saturate(uv + dy)),
+            saturate(uv + dy),
             0).x;
 
     float3 center =
@@ -460,18 +479,46 @@ float3 ApplySaturation(
 
 uint DirectionCount()
 {
-    if (Quality == 0) return 4;
-    if (Quality == 1) return 6;
-    if (Quality == 2) return 8;
-    return 12;
+    if (Quality == 0) return 3;
+    if (Quality == 1) return 4;
+    if (Quality == 2) return 6;
+    return 8;
 }
 
 uint StepCount()
 {
     if (Quality == 0) return 3;
-    if (Quality == 1) return 4;
+    if (Quality == 1) return 3;
     if (Quality == 2) return 4;
-    return 6;
+    return 5;
+}
+
+float2 SpatialNoise(float2 pixel)
+{
+    float first =
+        frac(
+            52.9829189 *
+            frac(
+                dot(
+                    pixel,
+                    float2(
+                        0.06711056,
+                        0.00583715))));
+
+    float second =
+        frac(
+            0.5 +
+            first *
+            0.7548776662 +
+            dot(
+                pixel,
+                float2(
+                    0.569840296,
+                    0.438289)));
+
+    return float2(
+        first,
+        second);
 }
 
 static const float2 Directions[12] =
@@ -490,6 +537,101 @@ static const float2 Directions[12] =
     float2( 0.8660, -0.5000)
 };
 
+struct DownsampleOutput
+{
+    float depth : SV_TARGET0;
+    float4 color : SV_TARGET1;
+};
+
+DownsampleOutput DownsamplePS(
+    VSOutput input)
+{
+    DownsampleOutput output;
+
+    float2 offset =
+        FullInvSize * 0.5;
+
+    float2 uv0 =
+        saturate(
+            input.uv +
+            float2(
+                -offset.x,
+                -offset.y));
+
+    float2 uv1 =
+        saturate(
+            input.uv +
+            float2(
+                 offset.x,
+                -offset.y));
+
+    float2 uv2 =
+        saturate(
+            input.uv +
+            float2(
+                -offset.x,
+                 offset.y));
+
+    float2 uv3 =
+        saturate(
+            input.uv +
+            float2(
+                 offset.x,
+                 offset.y));
+
+    float depths[4] =
+    {
+        SceneDepth.SampleLevel(
+            PointSampler,
+            DepthUv(uv0),
+            0).x,
+        SceneDepth.SampleLevel(
+            PointSampler,
+            DepthUv(uv1),
+            0).x,
+        SceneDepth.SampleLevel(
+            PointSampler,
+            DepthUv(uv2),
+            0).x,
+        SceneDepth.SampleLevel(
+            PointSampler,
+            DepthUv(uv3),
+            0).x
+    };
+
+    float2 uvs[4] =
+    {
+        uv0,
+        uv1,
+        uv2,
+        uv3
+    };
+
+    uint closest = 0;
+
+    [unroll]
+    for (uint i = 1;
+         i < 4;
+         ++i)
+    {
+        if (depths[i] < depths[closest])
+        {
+            closest = i;
+        }
+    }
+
+    output.depth =
+        depths[closest];
+
+    output.color =
+        SceneColor.SampleLevel(
+            LinearSampler,
+            uvs[closest],
+            0);
+
+    return output;
+}
+
 struct AnalyzeOutput
 {
     float ao : SV_TARGET0;
@@ -502,9 +644,9 @@ AnalyzeOutput AnalyzePS(
     AnalyzeOutput output;
 
     float centerDepth =
-        SceneDepth.SampleLevel(
+        WorkingDepth.SampleLevel(
             PointSampler,
-            DepthUv(input.uv),
+            input.uv,
             0).x;
 
     if (centerDepth >= 0.99999)
@@ -530,6 +672,31 @@ AnalyzeOutput AnalyzePS(
             input.uv,
             centerDepth);
 
+    float2 pixel =
+        floor(
+            input.uv /
+            HalfInvSize);
+
+    float2 noise =
+        SpatialNoise(pixel);
+
+    float rotationAngle =
+        noise.x *
+        6.28318530718;
+
+    float rotationCos =
+        cos(rotationAngle);
+
+    float rotationSin =
+        sin(rotationAngle);
+
+    float2x2 rotation =
+        float2x2(
+            rotationCos,
+            -rotationSin,
+            rotationSin,
+            rotationCos);
+
     uint directionCount =
         DirectionCount();
 
@@ -551,7 +718,9 @@ AnalyzeOutput AnalyzePS(
         }
 
         float2 direction =
-            Directions[directionIndex];
+            mul(
+                rotation,
+                Directions[directionIndex]);
 
         float maxHorizon = 0.0;
 
@@ -566,8 +735,21 @@ AnalyzeOutput AnalyzePS(
             }
 
             float stepFraction =
-                (float)stepIndex /
+                (
+                    (float)stepIndex -
+                    0.65 +
+                    noise.y * 0.30
+                ) /
                 (float)stepCount;
+
+            stepFraction =
+                saturate(
+                    stepFraction);
+
+            // Bias samples toward the receiver to retain fine detail
+            // while still reaching the configured far radius.
+            stepFraction *=
+                stepFraction;
 
             float radiusPixels =
                 max(
@@ -583,9 +765,9 @@ AnalyzeOutput AnalyzePS(
                     stepFraction);
 
             float sampleDepth =
-                SceneDepth.SampleLevel(
+                WorkingDepth.SampleLevel(
                     PointSampler,
-                    DepthUv(sampleUv),
+                    sampleUv,
                     0).x;
 
             if (sampleDepth >= 0.99999)
@@ -670,7 +852,7 @@ AnalyzeOutput AnalyzePS(
                 {
                     float3 radiance =
                         max(
-                            SceneColor.SampleLevel(
+                            WorkingColor.SampleLevel(
                                 LinearSampler,
                                 sampleUv,
                                 0).rgb,
@@ -850,51 +1032,152 @@ float4 CompositePS(
         return original;
     }
 
+    float fullDepth =
+        SceneDepth.SampleLevel(
+            PointSampler,
+            DepthUv(input.uv),
+            0).x;
+
+    float fullViewDepth =
+        fullDepth >= 0.99999
+        ? 1e6
+        : abs(
+            ReconstructView(
+                input.uv,
+                fullDepth).z);
+
+    static const float2 offsets[4] =
+    {
+        float2(-0.5, -0.5),
+        float2( 0.5, -0.5),
+        float2(-0.5,  0.5),
+        float2( 0.5,  0.5)
+    };
+
+    float aoSum = 0.0;
+    float3 indirectSum = 0.0;
+    float weightSum = 0.0;
+
+    [unroll]
+    for (uint i = 0;
+         i < 4;
+         ++i)
+    {
+        float2 sampleUv =
+            saturate(
+                input.uv +
+                offsets[i] *
+                HalfInvSize);
+
+        float4 indirectSample =
+            IndirectInput.SampleLevel(
+                PointSampler,
+                sampleUv,
+                0);
+
+        float aoSample =
+            AoInput.SampleLevel(
+                PointSampler,
+                sampleUv,
+                0);
+
+        float relativeDepth =
+            abs(
+                indirectSample.a -
+                fullViewDepth) /
+            max(
+                fullViewDepth,
+                1.0);
+
+        float depthWeight =
+            exp2(
+                -relativeDepth *
+                128.0);
+
+        float spatialWeight =
+            1.0 /
+            (
+                1.0 +
+                dot(
+                    offsets[i],
+                    offsets[i])
+            );
+
+        float weight =
+            max(
+                depthWeight *
+                spatialWeight,
+                1e-4);
+
+        aoSum +=
+            aoSample *
+            weight;
+
+        indirectSum +=
+            indirectSample.rgb *
+            weight;
+
+        weightSum +=
+            weight;
+    }
+
+    weightSum =
+        max(
+            weightSum,
+            1e-4);
+
     float ao =
-        AoInput.SampleLevel(
-            LinearSampler,
-            input.uv,
-            0);
+        aoSum /
+        weightSum;
 
     float3 indirect =
-        IndirectInput.SampleLevel(
-            LinearSampler,
-            input.uv,
-            0).rgb;
+        indirectSum /
+        weightSum;
 
     float3 color =
         max(
             original.rgb,
             0.0);
 
-    color *=
-        1.0 -
-        saturate(
-            ao *
-            AoStrength);
+    // Exponential visibility keeps the full slider useful without
+    // turning high AO values into a flat gray multiplication.
+    float visibility =
+        exp2(
+            -ao *
+            AoStrength *
+            1.15);
+
+    color *= visibility;
 
     if (IndirectEnabled != 0)
     {
         float centerLuminance =
             max(
                 Luminance(color),
-                0.05);
+                0.02);
 
         float bounceLuminance =
-            Luminance(indirect);
+            max(
+                Luminance(indirect),
+                1e-4);
 
-        // Keep SSIL useful without simply becoming a second exposure slider.
+        // Bound bounced energy relative to the receiving pixel.
+        // This prevents high settings from becoming a second exposure pass.
+        float maximumBounce =
+            0.10 +
+            centerLuminance *
+            0.45;
+
         float limiter =
-            saturate(
-                centerLuminance /
-                max(
-                    bounceLuminance,
-                    centerLuminance));
+            min(
+                1.0,
+                maximumBounce /
+                bounceLuminance);
 
         color +=
             indirect *
             IndirectStrength *
-            (0.35 + 0.65 * limiter);
+            limiter;
     }
 
     return
@@ -902,6 +1185,7 @@ float4 CompositePS(
             color,
             original.a);
 }
+
 )";
         }
 
@@ -1057,6 +1341,7 @@ float4 CompositePS(
                     &g_runtime.deferred);
 
             ID3DBlob* vertexBlob = nullptr;
+            ID3DBlob* downsampleBlob = nullptr;
             ID3DBlob* analyzeBlob = nullptr;
             ID3DBlob* denoiseBlob = nullptr;
             ID3DBlob* compositeBlob = nullptr;
@@ -1067,6 +1352,17 @@ float4 CompositePS(
                     "VSMain",
                     "vs_5_0",
                     &vertexBlob,
+                    error))
+            {
+                result = E_FAIL;
+            }
+
+            if (SUCCEEDED(result) &&
+                !Compile(
+                    ShaderSource(),
+                    "DownsamplePS",
+                    "ps_5_0",
+                    &downsampleBlob,
                     error))
             {
                 result = E_FAIL;
@@ -1113,6 +1409,16 @@ float4 CompositePS(
                         vertexBlob->GetBufferSize(),
                         nullptr,
                         &g_runtime.vertexShader);
+            }
+
+            if (SUCCEEDED(result))
+            {
+                result =
+                    device->CreatePixelShader(
+                        downsampleBlob->GetBufferPointer(),
+                        downsampleBlob->GetBufferSize(),
+                        nullptr,
+                        &g_runtime.downsampleShader);
             }
 
             if (SUCCEEDED(result))
@@ -1224,6 +1530,80 @@ float4 CompositePS(
                         &g_runtime.sceneCopySrv);
             }
 
+            D3D11_TEXTURE2D_DESC workingDepthDesc{};
+            workingDepthDesc.Width = halfWidth;
+            workingDepthDesc.Height = halfHeight;
+            workingDepthDesc.MipLevels = 1;
+            workingDepthDesc.ArraySize = 1;
+            workingDepthDesc.Format =
+                DXGI_FORMAT_R32_FLOAT;
+            workingDepthDesc.SampleDesc.Count = 1;
+            workingDepthDesc.Usage =
+                D3D11_USAGE_DEFAULT;
+            workingDepthDesc.BindFlags =
+                D3D11_BIND_RENDER_TARGET |
+                D3D11_BIND_SHADER_RESOURCE;
+
+            if (SUCCEEDED(result))
+            {
+                result =
+                    device->CreateTexture2D(
+                        &workingDepthDesc,
+                        nullptr,
+                        &g_runtime.workingDepth);
+            }
+
+            if (SUCCEEDED(result))
+            {
+                result =
+                    device->CreateRenderTargetView(
+                        g_runtime.workingDepth,
+                        nullptr,
+                        &g_runtime.workingDepthRtv);
+            }
+
+            if (SUCCEEDED(result))
+            {
+                result =
+                    device->CreateShaderResourceView(
+                        g_runtime.workingDepth,
+                        nullptr,
+                        &g_runtime.workingDepthSrv);
+            }
+
+            D3D11_TEXTURE2D_DESC workingColorDesc =
+                workingDepthDesc;
+
+            workingColorDesc.Format =
+                DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+            if (SUCCEEDED(result))
+            {
+                result =
+                    device->CreateTexture2D(
+                        &workingColorDesc,
+                        nullptr,
+                        &g_runtime.workingColor);
+            }
+
+            if (SUCCEEDED(result))
+            {
+                result =
+                    device->CreateRenderTargetView(
+                        g_runtime.workingColor,
+                        nullptr,
+                        &g_runtime.workingColorRtv);
+            }
+
+            if (SUCCEEDED(result))
+            {
+                result =
+                    device->CreateShaderResourceView(
+                        g_runtime.workingColor,
+                        nullptr,
+                        &g_runtime.workingColorSrv);
+            }
+
             if (SUCCEEDED(result) &&
                 !CreateSurface(
                     device,
@@ -1273,6 +1653,7 @@ float4 CompositePS(
             }
 
             if (vertexBlob) vertexBlob->Release();
+            if (downsampleBlob) downsampleBlob->Release();
             if (analyzeBlob) analyzeBlob->Release();
             if (denoiseBlob) denoiseBlob->Release();
             if (compositeBlob) compositeBlob->Release();
@@ -1397,8 +1778,10 @@ float4 CompositePS(
                 0);
 
             ID3D11ShaderResourceView*
-                nullResources[4] =
+                nullResources[6] =
             {
+                nullptr,
+                nullptr,
                 nullptr,
                 nullptr,
                 nullptr,
@@ -1407,7 +1790,7 @@ float4 CompositePS(
 
             g_runtime.deferred->PSSetShaderResources(
                 0,
-                4,
+                6,
                 nullResources);
 
             g_runtime.deferred->OMSetRenderTargets(
@@ -1619,6 +2002,43 @@ float4 CompositePS(
                 : 0u;
 
             ID3D11RenderTargetView*
+                downsampleTargets[2] =
+            {
+                g_runtime.workingDepthRtv,
+                g_runtime.workingColorRtv
+            };
+
+            ID3D11ShaderResourceView*
+                downsampleResources[2] =
+            {
+                g_runtime.sceneCopySrv,
+                depthSrv
+            };
+
+            if (!RunPass(
+                    context,
+                    downsampleTargets,
+                    2,
+                    g_runtime.downsampleShader,
+                    downsampleResources,
+                    2,
+                    g_runtime.halfWidth,
+                    g_runtime.halfHeight,
+                    parameters,
+                    nullptr,
+                    error))
+            {
+                depthSrv->Release();
+
+                WriteLog(
+                    frame,
+                    "failed_downsample",
+                    error);
+
+                return false;
+            }
+
+            ID3D11RenderTargetView*
                 analyzeTargets[2] =
             {
                 g_runtime.first.aoRtv,
@@ -1626,10 +2046,14 @@ float4 CompositePS(
             };
 
             ID3D11ShaderResourceView*
-                analyzeResources[2] =
+                analyzeResources[6] =
             {
                 g_runtime.sceneCopySrv,
-                depthSrv
+                depthSrv,
+                nullptr,
+                nullptr,
+                g_runtime.workingDepthSrv,
+                g_runtime.workingColorSrv
             };
 
             if (!RunPass(
@@ -1638,7 +2062,7 @@ float4 CompositePS(
                     2,
                     g_runtime.analyzeShader,
                     analyzeResources,
-                    2,
+                    6,
                     g_runtime.halfWidth,
                     g_runtime.halfHeight,
                     parameters,
