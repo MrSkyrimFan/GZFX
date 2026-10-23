@@ -26,7 +26,7 @@ namespace gzfx::ui
     namespace
     {
         constexpr UINT kMenuWidth = 640;
-        constexpr UINT kMenuHeight = 320;
+        constexpr UINT kMenuHeight = 480;
 
         constexpr int kFirstRowY = 58;
         constexpr int kRowHeight = 34;
@@ -152,6 +152,18 @@ namespace gzfx::ui
                 AmbientContactRadiusPixels:
                 return L"AMBIENT CONTACT RADIUS";
 
+            case settings::Editable::LocalGlowEnabled:
+                return L"LOCAL GLOW";
+
+            case settings::Editable::LocalGlowStrength:
+                return L"LOCAL GLOW STRENGTH";
+
+            case settings::Editable::LocalGlowThreshold:
+                return L"LOCAL GLOW THRESHOLD";
+
+            case settings::Editable::LocalGlowRadiusPixels:
+                return L"LOCAL GLOW RADIUS";
+
             case settings::Editable::DefaultMode:
                 return L"DEFAULT DEVELOPMENT VIEW";
 
@@ -201,6 +213,33 @@ namespace gzfx::ui
                     << L" PX";
                 return stream.str();
 
+            case settings::Editable::LocalGlowEnabled:
+                return values.localGlowEnabled
+                    ? L"ON"
+                    : L"OFF";
+
+            case settings::Editable::LocalGlowStrength:
+                stream
+                    << std::fixed
+                    << std::setprecision(2)
+                    << values.localGlowStrength;
+                return stream.str();
+
+            case settings::Editable::LocalGlowThreshold:
+                stream
+                    << std::fixed
+                    << std::setprecision(2)
+                    << values.localGlowThreshold;
+                return stream.str();
+
+            case settings::Editable::LocalGlowRadiusPixels:
+                stream
+                    << std::fixed
+                    << std::setprecision(1)
+                    << values.localGlowRadiusPixels
+                    << L" PX";
+                return stream.str();
+
             case settings::Editable::DefaultMode:
                 return ModeName(
                     values.defaultMode);
@@ -235,6 +274,9 @@ namespace gzfx::ui
             return
                 item ==
                     settings::Editable::
+                        LocalGlowEnabled ||
+                item ==
+                    settings::Editable::
                         AccessibleDiagnostics ||
                 item ==
                     settings::Editable::
@@ -251,6 +293,15 @@ namespace gzfx::ui
                 item ==
                     settings::Editable::
                         AmbientContactRadiusPixels ||
+                item ==
+                    settings::Editable::
+                        LocalGlowStrength ||
+                item ==
+                    settings::Editable::
+                        LocalGlowThreshold ||
+                item ==
+                    settings::Editable::
+                        LocalGlowRadiusPixels ||
                 item ==
                     settings::Editable::
                         DefaultMode ||
@@ -774,10 +825,12 @@ namespace gzfx::ui
 
             RECT footer{
                 18,
-                270,
+                static_cast<LONG>(
+                    kMenuHeight - 54),
                 static_cast<LONG>(
                     kMenuWidth - 18),
-                310
+                static_cast<LONG>(
+                    kMenuHeight - 10)
             };
 
             DrawTextW(
