@@ -136,7 +136,10 @@ TemporalOutput TemporalPS(VSOutput input)
     float3 indirectAllowance =
         max(
             abs(currentIndirect.rgb) * 0.50,
-            0.035.xxx);
+            float3(
+                0.035,
+                0.035,
+                0.035));
 
     previousIndirect =
         clamp(
