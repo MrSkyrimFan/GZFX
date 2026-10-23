@@ -16,6 +16,7 @@ namespace gzfx::ui
 
     void ProcessInput(std::uint64_t frame) noexcept;
     bool ConsumeCycleModeRequest() noexcept;
+    bool ConsumeCaptureRequest() noexcept;
 
     bool GetMenuOverlay(
         ID3D11Device* device,
