@@ -1816,7 +1816,20 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 return false;
             }
 
-            gzfx::ui::ProcessInput(frame);
+            DXGI_SWAP_CHAIN_DESC inputSwapDescription{};
+            HWND gameWindow = nullptr;
+
+            if (SUCCEEDED(
+                    swapChain->GetDesc(
+                        &inputSwapDescription)))
+            {
+                gameWindow =
+                    inputSwapDescription.OutputWindow;
+            }
+
+            gzfx::ui::ProcessInput(
+                frame,
+                gameWindow);
 
             if (gzfx::ui::ConsumeCycleModeRequest())
             {
