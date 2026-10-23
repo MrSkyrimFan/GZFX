@@ -13,11 +13,13 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <iterator>
 #include <map>
 #include <mutex>
 #include <set>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -2278,31 +2280,43 @@ namespace gzfx::diagnostics::pipeline_cartography
 
             std::array<ID3D11RenderTargetView*, kRtvSlots>
                 rtvs{};
-            std::array<ID3D11UnorderedAccessView*, kUavSlots>
-                omUavs{};
             ID3D11DepthStencilView* dsv = nullptr;
 
-            context->OMGetRenderTargetsAndUnorderedAccessViews(
+            context->OMGetRenderTargets(
                 static_cast<UINT>(rtvs.size()),
                 rtvs.data(),
-                &dsv,
-                0,
-                static_cast<UINT>(omUavs.size()),
-                omUavs.data());
+                &dsv);
 
-            SetRenderTargetsAndUavs(
+            SetRenderTargets(
                 static_cast<UINT>(rtvs.size()),
                 rtvs.data(),
-                dsv,
-                0,
-                static_cast<UINT>(omUavs.size()),
-                omUavs.data());
+                dsv);
 
             for (auto* view : rtvs)
             {
                 if (view != nullptr) view->Release();
             }
             if (dsv != nullptr) dsv->Release();
+
+            std::array<ID3D11UnorderedAccessView*, kUavSlots>
+                omUavs{};
+
+            context->OMGetRenderTargetsAndUnorderedAccessViews(
+                0,
+                nullptr,
+                nullptr,
+                0,
+                static_cast<UINT>(omUavs.size()),
+                omUavs.data());
+
+            SetRenderTargetsAndUavs(
+                D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL,
+                nullptr,
+                nullptr,
+                0,
+                static_cast<UINT>(omUavs.size()),
+                omUavs.data());
+
             for (auto* view : omUavs)
             {
                 if (view != nullptr) view->Release();
