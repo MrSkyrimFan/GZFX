@@ -46,7 +46,8 @@ cbuffer GZFXAmbientVisibilityParameters : register(b0)
     float TemporalBlend;
 
     float2 FilterAxis;
-    float2 ParameterPadding;
+    uint FrameIndex;
+    float ParameterPadding;
 };
 
 cbuffer SkyrimPerFrame : register(b12)
