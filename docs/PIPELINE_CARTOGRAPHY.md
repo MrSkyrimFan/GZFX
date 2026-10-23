@@ -19,11 +19,13 @@ For each captured draw, dispatch, copy, resolve, clear, mip-generation event, or
 - RTV, DSV, pixel-UAV, and compute-UAV outputs;
 - subresource view ranges where D3D11 exposes them;
 - constant-buffer bindings across all six shader stages;
-- sampler-state fingerprints;
-- blend, depth/stencil, and rasterizer-state fingerprints;
+- decoded sampler-state descriptors;
+- decoded blend, depth/stencil, and rasterizer-state descriptors;
 - viewport and primitive topology;
 - copy / resolve lineage;
-- resource descriptor, lifetime identity, and creation owner module where observed.
+- DSV read-only depth/stencil flags and effective depth/stencil write classification;
+- fingerprints of CPU-visible small-buffer updates from Map/Unmap and UpdateSubresource;
+- resource descriptor, lifetime identity, and D3D debug name when present.
 
 The state tracker mirrors D3D11 resource-conflict behavior so a resource automatically nulled by the runtime is not falsely reported as an active read.
 
@@ -36,11 +38,29 @@ Each semantic capture produces:
 - `pipeline_accesses*.csv`
 - `pipeline_constant_buffers*.csv`
 - `pipeline_samplers*.csv`
+- `pipeline_sampler_states*.csv`
+- `pipeline_blend_states*.csv`
+- `pipeline_depth_states*.csv`
+- `pipeline_raster_states*.csv`
+- `pipeline_buffer_updates*.csv`
 - `pipeline_resources*.csv`
 - `pipeline_shaders*.csv`
 - `pipeline_edges*.csv`
+- `pipeline_signatures*.csv`
 
 The unsuffixed set belongs to the automatic startup capture. Manual Shift+Numpad5 captures receive the same `_manual_####` suffix as the existing semantic evidence.
+
+## Safe field mode
+
+The field build intentionally does **not** enable the experimental device-creation vtable interception lane.
+
+An early CI campaign showed that creation interception could destabilize ordinary D3D11 WARP harnesses even though the execution cartographer itself was sound. The risky lane is therefore gated behind `GZFX_EXPERIMENTAL_DEVICE_CREATION_HOOKS` and must remain off for user field tests.
+
+Safe mode still captures the execution-level frame graph, live resource/view descriptors, debug names when present, current shader object identities, producer/consumer lineage, render states, copies/resolves, and CPU buffer update fingerprints.
+
+Pass signatures in safe mode are intended for comparisons between the numbered captures from the **same Skyrim process/session**. Do not compare those signatures across separate launches as if pointer identities were globally stable.
+
+`ExecuteCommandList` remains the practical coverage boundary detector. If command-list playback is observed, the report explicitly says immediate-context cartography may not include the work originally recorded on a deferred context.
 
 ## Current known anchors
 
