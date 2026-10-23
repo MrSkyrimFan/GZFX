@@ -517,6 +517,11 @@ int wmain(
             "history=true") !=
         std::string::npos;
 
+    const bool historyReused =
+        stackLog.find(
+            "history_reused=true") !=
+        std::string::npos;
+
     const bool nativeInputsFound =
         nativeInputs.find(
             "motion=0x0") ==
@@ -529,6 +534,7 @@ int wmain(
         !motionActive ||
         !temporalActive ||
         !historyActive ||
+        !historyReused ||
         !nativeInputsFound)
     {
         std::cerr
@@ -537,6 +543,7 @@ int wmain(
             << " motion=" << motionActive
             << " temporal=" << temporalActive
             << " history=" << historyActive
+            << " history_reused=" << historyReused
             << " native_inputs="
             << nativeInputsFound
             << "\n"
