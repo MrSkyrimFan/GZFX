@@ -87,3 +87,59 @@
             return SUCCEEDED(result);
         }
 
+        bool CreateHistorySurface(
+            ID3D11Device* device,
+            const UINT width,
+            const UINT height,
+            HistorySurface& history)
+        {
+            if (!CreateSurface(
+                    device,
+                    width,
+                    height,
+                    history.signals))
+            {
+                return false;
+            }
+
+            D3D11_TEXTURE2D_DESC geometryDesc{};
+            geometryDesc.Width = width;
+            geometryDesc.Height = height;
+            geometryDesc.MipLevels = 1;
+            geometryDesc.ArraySize = 1;
+            geometryDesc.Format =
+                DXGI_FORMAT_R16G16B16A16_FLOAT;
+            geometryDesc.SampleDesc.Count = 1;
+            geometryDesc.Usage =
+                D3D11_USAGE_DEFAULT;
+            geometryDesc.BindFlags =
+                D3D11_BIND_RENDER_TARGET |
+                D3D11_BIND_SHADER_RESOURCE;
+
+            HRESULT result =
+                device->CreateTexture2D(
+                    &geometryDesc,
+                    nullptr,
+                    &history.geometry);
+
+            if (SUCCEEDED(result))
+            {
+                result =
+                    device->CreateRenderTargetView(
+                        history.geometry,
+                        nullptr,
+                        &history.geometryRtv);
+            }
+
+            if (SUCCEEDED(result))
+            {
+                result =
+                    device->CreateShaderResourceView(
+                        history.geometry,
+                        nullptr,
+                        &history.geometrySrv);
+            }
+
+            return SUCCEEDED(result);
+        }
+
