@@ -59,7 +59,7 @@ namespace gzfx::render::ambient_depth
 
             float axisX = 0.0f;
             float axisY = 0.0f;
-            float padding0 = 0.0f;
+            std::uint32_t frameIndex = 0;
             float padding1 = 0.0f;
         };
 
