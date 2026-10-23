@@ -92,6 +92,79 @@ Public Skyrim renderer research indicates that the stock renderer has distinct f
 
 These names are research leads only. GZFX must promote a semantic only after its own controlled captures establish the writer, consumers, chronology, dimensions/formats, and state dependence.
 
+## Public research target catalog
+
+These names come from current public Skyrim renderer research and are **landmarks only**. GZFX does not claim a live resource/pass matches one until its own capture graph proves the chronology and dependencies.
+
+High-value stage families to look for in the captured signatures:
+
+### Geometry / shadows
+
+- directional-light shadowmaps;
+- spot-light shadowmaps;
+- omnidirectional-light shadowmaps;
+- main depth;
+- shadowmasks;
+- finished opaque depth after alpha-tested geometry.
+
+### Stock ambient occlusion
+
+- SSAO CameraZ;
+- SSAO CameraZ + mip generation compute;
+- SSAO RawAO;
+- SSAO RawAO NoTemporal;
+- SSAO RawAO compute;
+- horizontal/vertical AO blur, graphics and compute variants;
+- SAO composite;
+- fog/SAO composite variants.
+
+### Stock screen-space indirect lighting
+
+- SIL RawInd;
+- SIL Composite.
+
+### Temporal
+
+- TemporalAA;
+- TemporalAA UI;
+- TemporalAA Water.
+
+### Water
+
+- water effects;
+- water displacement clear/offset/ripples;
+- wading/rain heightmaps;
+- heightmap blend/smooth;
+- displacement normals;
+- water blend/flow;
+- reflection blur and water temporal-history behavior.
+
+### Volumetric lighting
+
+- volumetric-lighting generation;
+- apply volumetric lighting;
+- horizontal/vertical volumetric blur;
+- volumetric composite;
+- lens-flare + volumetric composite;
+- shadow-map arrays, inverse-repartition 1D lookup, 3D noise, and 3D density UAV resources.
+
+### Lighting / image space
+
+- LightingComposite;
+- LightingCompositeNoDirectionalLight;
+- LightingCompositeMenu;
+- ApplyReflections;
+- HDR downsample 16/4;
+- HDR luminance downsample;
+- luminance clamp;
+- light adaptation;
+- bright-pass blur;
+- general blur/minify/downsample families;
+- tonemap/cinematic blend;
+- final copy/composite stages.
+
+This catalog exists so the field graph can be compared against a finite set of known renderer behaviors rather than guessed from texture format alone.
+
 ## Controlled comparison strategy
 
 Use the same location/camera whenever possible and capture discrete states:
