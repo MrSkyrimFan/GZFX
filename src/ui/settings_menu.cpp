@@ -89,6 +89,10 @@ namespace gzfx::ui
         bool g_leftDown = false;
         bool g_directInputSeen = false;
 
+        std::uint64_t g_directInputPackets = 0;
+        std::int64_t g_directInputDeltaX = 0;
+        std::int64_t g_directInputDeltaY = 0;
+
         KeyEdge g_numpad1{};
         KeyEdge g_numpad2{};
         KeyEdge g_numpad3{};
@@ -334,6 +338,17 @@ namespace gzfx::ui
                 << "cursor="
                 << g_cursor.x << ","
                 << g_cursor.y << "\n"
+                << "directinput_seen="
+                << (g_directInputSeen ? "true" : "false")
+                << "\n"
+                << "directinput_packets="
+                << g_directInputPackets
+                << "\n"
+                << "directinput_delta_total="
+                << g_directInputDeltaX
+                << ","
+                << g_directInputDeltaY
+                << "\n"
                 << "controls="
                    "Shift+Numpad1 menu; "
                    "Shift+Numpad2 reload; "
@@ -1387,6 +1402,9 @@ namespace gzfx::ui
             }
 
             g_directInputSeen = true;
+            ++g_directInputPackets;
+            g_directInputDeltaX += deltaX;
+            g_directInputDeltaY += deltaY;
 
             g_cursor.x += deltaX;
             g_cursor.y += deltaY;
