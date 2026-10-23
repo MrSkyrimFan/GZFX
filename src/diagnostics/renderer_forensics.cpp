@@ -67,8 +67,6 @@ namespace gzfx::diagnostics
         constexpr std::size_t kRSSetViewports = 44;
         constexpr std::size_t kCopySubresourceRegion = 46;
         constexpr std::size_t kCopyResource = 47;
-        constexpr std::size_t kUpdateSubresource = 48;
-        constexpr std::size_t kCopyStructureCount = 49;
         constexpr std::size_t kClearRenderTargetView = 50;
         constexpr std::size_t kClearUnorderedAccessViewUint = 51;
         constexpr std::size_t kClearUnorderedAccessViewFloat = 52;
@@ -127,8 +125,6 @@ namespace gzfx::diagnostics
 
         using CopySubresourceRegionFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, UINT, UINT, UINT, UINT, ID3D11Resource*, UINT, const D3D11_BOX*);
         using CopyResourceFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, ID3D11Resource*);
-        using UpdateSubresourceFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, UINT, const D3D11_BOX*, const void*, UINT, UINT);
-        using CopyStructureCountFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Buffer*, UINT, ID3D11UnorderedAccessView*);
         using ClearRenderTargetViewFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11RenderTargetView*, const FLOAT[4]);
         using ClearUnorderedAccessViewUintFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11UnorderedAccessView*, const UINT[4]);
         using ClearUnorderedAccessViewFloatFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11UnorderedAccessView*, const FLOAT[4]);
@@ -190,8 +186,6 @@ namespace gzfx::diagnostics
 
         CopySubresourceRegionFn g_copySubresource = nullptr;
         CopyResourceFn g_copyResource = nullptr;
-        UpdateSubresourceFn g_updateSubresource = nullptr;
-        CopyStructureCountFn g_copyStructureCount = nullptr;
         ClearRenderTargetViewFn g_clearRTV = nullptr;
         ClearUnorderedAccessViewUintFn g_clearUavUint = nullptr;
         ClearUnorderedAccessViewFloatFn g_clearUavFloat = nullptr;
@@ -1502,6 +1496,11 @@ namespace gzfx::diagnostics
                         count,
                         rtvs,
                         dsv);
+
+                    pipeline_cartography::SetRenderTargets(
+                        count,
+                        rtvs,
+                        dsv);
                 });
             }
 
@@ -1546,6 +1545,38 @@ namespace gzfx::diagnostics
             }
         }
 
+        void STDMETHODCALLTYPE HookOMSetRTUavs(
+            ID3D11DeviceContext* c,
+            UINT renderTargetCount,
+            ID3D11RenderTargetView* const* renderTargets,
+            ID3D11DepthStencilView* depthTarget,
+            UINT uavStartSlot,
+            UINT uavCount,
+            ID3D11UnorderedAccessView* const* uavs,
+            const UINT* initialCounts)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::SetRenderTargetsAndUavs(
+                    renderTargetCount,
+                    renderTargets,
+                    depthTarget,
+                    uavStartSlot,
+                    uavCount,
+                    uavs);
+            }
+
+            g_omSetRTUavs(
+                c,
+                renderTargetCount,
+                renderTargets,
+                depthTarget,
+                uavStartSlot,
+                uavCount,
+                uavs,
+                initialCounts);
+        }
+
         void STDMETHODCALLTYPE HookViewports(ID3D11DeviceContext* c, UINT count, const D3D11_VIEWPORT* v)
         {
             if (c == g_primaryContext) Safe([&]
@@ -1553,6 +1584,10 @@ namespace gzfx::diagnostics
                 ++g_viewportSets;
 
                 semantic_probe::SetViewport(
+                    count,
+                    v);
+
+                pipeline_cartography::SetViewports(
                     count,
                     v);
 
