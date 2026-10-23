@@ -177,21 +177,26 @@
             D3D11_MAPPED_SUBRESOURCE aoMapped{};
             D3D11_MAPPED_SUBRESOURCE indirectMapped{};
 
-            if (FAILED(context->Map(
-                    aoStaging,
-                    0,
-                    D3D11_MAP_READ,
-                    0,
-                    &aoMapped)) ||
-                FAILED(context->Map(
+            const HRESULT aoMap = context->Map(
+                aoStaging,
+                0,
+                D3D11_MAP_READ,
+                0,
+                &aoMapped);
+
+            const HRESULT indirectMap = SUCCEEDED(aoMap)
+                ? context->Map(
                     indirectStaging,
                     0,
                     D3D11_MAP_READ,
                     0,
-                    &indirectMapped)))
+                    &indirectMapped)
+                : E_FAIL;
+
+            if (FAILED(aoMap) || FAILED(indirectMap))
             {
-                if (aoMapped.pData) context->Unmap(aoStaging, 0);
-                if (indirectMapped.pData) context->Unmap(indirectStaging, 0);
+                if (SUCCEEDED(aoMap)) context->Unmap(aoStaging, 0);
+                if (SUCCEEDED(indirectMap)) context->Unmap(indirectStaging, 0);
                 aoStaging->Release();
                 indirectStaging->Release();
                 return;
@@ -229,7 +234,8 @@
                     const float red = std::max(HalfToFloat(indirectRow[x * 4 + 0]), 0.0f);
                     const float green = std::max(HalfToFloat(indirectRow[x * 4 + 1]), 0.0f);
                     const float blue = std::max(HalfToFloat(indirectRow[x * 4 + 2]), 0.0f);
-                    const float luma = red * 0.2126f + green * 0.7152f + blue * 0.0722f;
+                    const float luma =
+                        red * 0.2126f + green * 0.7152f + blue * 0.0722f;
 
                     aoValues[index] = ao;
                     indirectValues[index * 3 + 0] = red;
@@ -272,8 +278,11 @@
 
             if (report)
             {
+                // Keep the original report identity for compatibility with
+                // older acceptance harnesses while declaring the new math.
                 report
-                    << "GZFX ambient visibility fields\n"
+                    << "GZFX ambient depth fields\n"
+                    << "implementation=slice_integrated_visibility_v1\n"
                     << "version=" << gzfx::kVersion << "\n"
                     << "frame=" << frame << "\n"
                     << "resolution=" << aoDesc.Width << "x" << aoDesc.Height << "\n"
