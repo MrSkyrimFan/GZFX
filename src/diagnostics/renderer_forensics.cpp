@@ -1,5 +1,6 @@
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/diagnostics/resource_intelligence.hpp"
+#include "gzfx/render/scene_effects.hpp"
 #include "gzfx/render/visible_pass.hpp"
 
 #include "gzfx/paths.hpp"
@@ -578,33 +579,91 @@ namespace gzfx::diagnostics
         void STDMETHODCALLTYPE HookDispatch(ID3D11DeviceContext* c, UINT a, UINT b, UINT d)
         { if (c == g_primaryContext) ++g_dispatchCalls; g_dispatch(c, a, b, d); }
 
-        void STDMETHODCALLTYPE HookOMSetRT(ID3D11DeviceContext* c, UINT count, ID3D11RenderTargetView* const* rtvs, ID3D11DepthStencilView* dsv)
+        void STDMETHODCALLTYPE HookOMSetRT(
+            ID3D11DeviceContext* c,
+            UINT count,
+            ID3D11RenderTargetView* const* rtvs,
+            ID3D11DepthStencilView* dsv)
         {
-            if (c == g_primaryContext) Safe([&]
+            resource_intelligence::StageSignal stageSignal =
+                resource_intelligence::StageSignal::None;
+
+            if (c == g_primaryContext)
             {
-                ++g_rtSets;
+                Safe([&]
                 {
-                    std::scoped_lock l(g_mutex);
-                    for (UINT i = 0; i < count; ++i)
+                    ++g_rtSets;
+
                     {
+                        std::scoped_lock l(g_mutex);
+
+                        for (UINT i = 0; i < count; ++i)
+                        {
+                            TrackView(
+                                rtvs ? rtvs[i] : nullptr,
+                                true,
+                                false,
+                                false,
+                                false);
+                        }
+
                         TrackView(
-                            rtvs ? rtvs[i] : nullptr,
-                            true,
+                            dsv,
                             false,
+                            true,
                             false,
                             false);
                     }
-                    TrackView(dsv, false, true, false, false);
-                }
 
-                resource_intelligence::ObserveRenderTargets(
-                    g_frame,
-                    g_drawOrdinalThisFrame.load(),
-                    count,
-                    rtvs,
-                    dsv);
-            });
-            g_omSetRT(c, count, rtvs, dsv);
+                    stageSignal =
+                        resource_intelligence::
+                            ObserveRenderTargets(
+                                g_frame,
+                                g_drawOrdinalThisFrame.load(),
+                                count,
+                                rtvs,
+                                dsv);
+                });
+            }
+
+            // Let Skyrim establish the next render stage first.
+            // If the previous stage was the evidence-backed terminal
+            // HDR-color phase, the scene resource is now unbound as an
+            // output and can be sampled/mutated safely before the next draw.
+            g_omSetRT(
+                c,
+                count,
+                rtvs,
+                dsv);
+
+            if (c == g_primaryContext &&
+                stageSignal ==
+                    resource_intelligence::
+                        StageSignal::PreUiSceneReady)
+            {
+                Safe([&]
+                {
+                    resource_intelligence::LiveInputs inputs{};
+
+                    if (resource_intelligence::
+                            AcquireLiveInputs(
+                                g_primarySwap,
+                                inputs))
+                    {
+                        gzfx::render::scene_effects::
+                            ApplyPreUi(
+                                g_frame,
+                                g_drawOrdinalThisFrame.load(),
+                                g_primaryDevice,
+                                g_primaryContext,
+                                inputs);
+
+                        resource_intelligence::
+                            ReleaseLiveInputs(
+                                inputs);
+                    }
+                });
+            }
         }
 
         void STDMETHODCALLTYPE HookViewports(ID3D11DeviceContext* c, UINT count, const D3D11_VIEWPORT* v)
