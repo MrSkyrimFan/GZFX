@@ -16,6 +16,8 @@ namespace gzfx::diagnostics::resource_intelligence
         D3D11_TEXTURE2D_DESC sceneColorDesc{};
     };
 
+    void SetStageTraceEnabled(bool enabled) noexcept;
+
     void ObserveRenderTargets(
         std::uint64_t frame,
         std::uint64_t drawOrdinal,
