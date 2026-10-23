@@ -151,6 +151,18 @@ add_executable(GZFXAmbientDepthFunctionalHarness
 target_link_libraries(GZFXAmbientDepthFunctionalHarness PRIVATE d3d11 dxgi user32)
 gzfx_apply_common(GZFXAmbientDepthFunctionalHarness)
 
+add_executable(GZFXAmbientVisibilityNeutralityHarness
+    tests/ambient_visibility_neutrality_harness.cpp
+)
+target_link_libraries(
+    GZFXAmbientVisibilityNeutralityHarness
+    PRIVATE
+        d3d11
+        dxgi
+        user32
+)
+gzfx_apply_common(GZFXAmbientVisibilityNeutralityHarness)
+
 enable_testing()
 
 add_test(
@@ -225,4 +237,22 @@ add_test(
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/ambient-depth-ssil-output"
         "ssil"
+)
+
+add_test(
+    NAME ambient_visibility_flat_ao
+    COMMAND
+        "$<TARGET_FILE:GZFXAmbientVisibilityNeutralityHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/ambient-visibility-flat-ao-output"
+        "flat_ao"
+)
+
+add_test(
+    NAME ambient_visibility_uniform_ssil
+    COMMAND
+        "$<TARGET_FILE:GZFXAmbientVisibilityNeutralityHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/ambient-visibility-uniform-ssil-output"
+        "uniform_ssil"
 )
