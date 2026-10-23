@@ -292,6 +292,23 @@ int wmain(
         return 11;
     }
 
+    ID3D11Texture2D* scalarCopy = nullptr;
+    ID3D11ShaderResourceView* scalarCopySrv = nullptr;
+
+    if (FAILED(
+            device->CreateTexture2D(
+                &scalarDesc,
+                nullptr,
+                &scalarCopy)) ||
+        FAILED(
+            device->CreateShaderResourceView(
+                scalarCopy,
+                nullptr,
+                &scalarCopySrv)))
+    {
+        return 18;
+    }
+
     D3D11_TEXTURE2D_DESC depthDesc{};
     depthDesc.Width = 640;
     depthDesc.Height = 360;
@@ -396,19 +413,23 @@ int wmain(
                 0);
         }
 
+        context->OMSetRenderTargets(
+            0,
+            nullptr,
+            nullptr);
+
+        context->CopyResource(
+            scalarCopy,
+            scalar);
+
         ID3D11ShaderResourceView*
             pixelResources[4] =
         {
             depthSrv,
             normalSrv,
             motionSrv,
-            scalarSrv
+            scalarCopySrv
         };
-
-        context->OMSetRenderTargets(
-            0,
-            nullptr,
-            nullptr);
 
         context->PSSetShaderResources(
             0,
@@ -459,10 +480,45 @@ int wmain(
         diagnostics /
         L"semantic_bindings_manual_0001.csv";
 
+    const auto pipelineSummary =
+        diagnostics /
+        L"pipeline_summary.txt";
+
+    const auto pipelinePasses =
+        diagnostics /
+        L"pipeline_passes.csv";
+
+    const auto pipelineAccesses =
+        diagnostics /
+        L"pipeline_accesses.csv";
+
+    const auto pipelineResources =
+        diagnostics /
+        L"pipeline_resources.csv";
+
+    const auto pipelineShaders =
+        diagnostics /
+        L"pipeline_shaders.csv";
+
+    const auto pipelineEdges =
+        diagnostics /
+        L"pipeline_edges.csv";
+
+    const auto manualPipelineSummary =
+        diagnostics /
+        L"pipeline_summary_manual_0001.txt";
+
     if (!ExistsNonEmpty(semantics) ||
         !ExistsNonEmpty(bindings) ||
         !ExistsNonEmpty(manualSemantics) ||
-        !ExistsNonEmpty(manualBindings))
+        !ExistsNonEmpty(manualBindings) ||
+        !ExistsNonEmpty(pipelineSummary) ||
+        !ExistsNonEmpty(pipelinePasses) ||
+        !ExistsNonEmpty(pipelineAccesses) ||
+        !ExistsNonEmpty(pipelineResources) ||
+        !ExistsNonEmpty(pipelineShaders) ||
+        !ExistsNonEmpty(pipelineEdges) ||
+        !ExistsNonEmpty(manualPipelineSummary))
     {
         return 15;
     }
@@ -472,6 +528,21 @@ int wmain(
 
     const std::string manualSemanticText =
         ReadAll(manualSemantics);
+
+    const std::string pipelineSummaryText =
+        ReadAll(pipelineSummary);
+
+    const std::string pipelinePassesText =
+        ReadAll(pipelinePasses);
+
+    const std::string pipelineResourcesText =
+        ReadAll(pipelineResources);
+
+    const std::string pipelineShadersText =
+        ReadAll(pipelineShaders);
+
+    const std::string pipelineEdgesText =
+        ReadAll(pipelineEdges);
 
     if (semanticText.find(
             "format=28") ==
@@ -491,6 +562,43 @@ int wmain(
             << "\n";
 
         return 16;
+    }
+
+    if (pipelineSummaryText.find(
+            "passes=") ==
+            std::string::npos ||
+        pipelineSummaryText.find(
+            "copy_resolve_mip_passes=") ==
+            std::string::npos ||
+        pipelinePassesText.find(
+            "copy_resource") ==
+            std::string::npos ||
+        pipelineResourcesText.find(
+            "texture2d") ==
+            std::string::npos ||
+        pipelineResourcesText.find(
+            "GZFXSemanticProbeHarness.exe") ==
+            std::string::npos ||
+        pipelineShadersText.find(
+            "GZFX.dll") ==
+            std::string::npos ||
+        pipelineEdgesText.find(
+            "resource_lineage") ==
+            std::string::npos)
+    {
+        std::cerr
+            << pipelineSummaryText
+            << "\n"
+            << pipelinePassesText
+            << "\n"
+            << pipelineResourcesText
+            << "\n"
+            << pipelineShadersText
+            << "\n"
+            << pipelineEdgesText
+            << "\n";
+
+        return 19;
     }
 
     std::size_t previewCount = 0;
@@ -519,6 +627,9 @@ int wmain(
     if (depthSrv) depthSrv->Release();
     if (depthView) depthView->Release();
     if (depth) depth->Release();
+
+    if (scalarCopySrv) scalarCopySrv->Release();
+    if (scalarCopy) scalarCopy->Release();
 
     if (scalarSrv) scalarSrv->Release();
     if (scalarRtv) scalarRtv->Release();
