@@ -336,6 +336,8 @@ namespace gzfx::diagnostics::pipeline_cartography
         std::uint64_t g_shaderBirth = 0;
         std::uint64_t g_passId = 0;
         std::uint64_t g_deferredContextsCreated = 0;
+        bool g_deviceAttachSeen = false;
+        bool g_creationInterceptionEnabled = false;
 
         bool g_captureActive = false;
         std::uint64_t g_startFrame = 0;
@@ -3041,12 +3043,14 @@ namespace gzfx::diagnostics::pipeline_cartography
             for (const auto& shader :
                  pass.shaders)
             {
-                // Zero means creation was not observed. Do not substitute a
-                // pointer here; pointer values would destroy cross-capture
-                // stability.
+                // Prefer bytecode fingerprints when creation interception
+                // is proven. Otherwise pointer identity remains stable for
+                // the controlled captures in this one Skyrim session.
                 HashMix(
                     hash,
-                    shader.hash);
+                    shader.hash != 0
+                        ? shader.hash
+                        : shader.id);
             }
 
             for (const auto& access :
@@ -3951,6 +3955,17 @@ namespace gzfx::diagnostics::pipeline_cartography
                         << "deferred_contexts_created="
                         << g_deferredContextsCreated
                         << "\n"
+                        << "device_attach_seen="
+                        << (g_deviceAttachSeen ? "true" : "false")
+                        << "\n"
+                        << "creation_interception_enabled="
+                        << (g_creationInterceptionEnabled ? "true" : "false")
+                        << "\n"
+                        << "pass_signature_scope="
+                        << (g_creationInterceptionEnabled
+                            ? "cross_capture_bytecode_preferred"
+                            : "same_process_session_identity")
+                        << "\n"
                         << "known_scene_color="
                         << PointerString(
                             g_knownSceneColor)
@@ -4005,6 +4020,31 @@ namespace gzfx::diagnostics::pipeline_cartography
             if (device == nullptr)
             {
                 return false;
+            }
+
+            wchar_t enabled[8]{};
+
+            const bool experimental =
+                GetEnvironmentVariableW(
+                    L"GZFX_EXPERIMENTAL_DEVICE_CREATION_HOOKS",
+                    enabled,
+                    static_cast<DWORD>(
+                        std::size(enabled))) > 0;
+
+            {
+                std::scoped_lock lock(g_mutex);
+                g_deviceAttachSeen = true;
+                g_creationInterceptionEnabled =
+                    experimental;
+            }
+
+            // The execution-level cartographer does not require device
+            // creation interception. The vtable creation lane remains
+            // explicitly experimental until it receives an isolated proof
+            // campaign; default field builds keep it disabled.
+            if (!experimental)
+            {
+                return true;
             }
 
             std::scoped_lock lock(g_mutex);
