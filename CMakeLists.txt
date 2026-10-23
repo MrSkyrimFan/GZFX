@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.11
+    VERSION 0.0.12
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )

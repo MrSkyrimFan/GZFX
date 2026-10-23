@@ -176,6 +176,9 @@ int wmain(int argc, wchar_t** argv)
             L"1") ||
         !SetEnvironmentVariableW(
             L"GZFX_TEST_MENU_VISIBLE",
+            L"1") ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_MANUAL_CAPTURE",
             L"1"))
     {
         return 3;
@@ -537,17 +540,33 @@ int wmain(int argc, wchar_t** argv)
         L"GZFX" /
         L"Settings.ini";
 
+    const auto manualCapture =
+        diagnostics /
+        L"manual_capture_0001.bmp";
+
+    const auto manualSettings =
+        diagnostics /
+        L"manual_capture_0001.txt";
+
     const bool hasVisible = ExistsNonEmpty(visible);
     const bool hasValidation = ExistsNonEmpty(validation);
     const bool hasCapture = ExistsNonEmpty(capture);
     const bool hasStageTrace = ExistsNonEmpty(stageTrace);
     const bool hasSettings = ExistsNonEmpty(settingsFile);
 
+    const bool hasManualCapture =
+        ExistsNonEmpty(manualCapture);
+
+    const bool hasManualSettings =
+        ExistsNonEmpty(manualSettings);
+
     if (!hasVisible ||
         !hasValidation ||
         !hasCapture ||
         !hasStageTrace ||
-        !hasSettings)
+        !hasSettings ||
+        !hasManualCapture ||
+        !hasManualSettings)
     {
         std::wcerr
             << L"visible-pass evidence missing: visible="
@@ -560,6 +579,10 @@ int wmain(int argc, wchar_t** argv)
             << hasStageTrace
             << L" settings="
             << hasSettings
+            << L" manual_capture="
+            << hasManualCapture
+            << L" manual_settings="
+            << hasManualSettings
             << L"\n";
 
         if (hasVisible)
@@ -602,6 +625,20 @@ int wmain(int argc, wchar_t** argv)
     const std::string settingsText =
         ReadAll(settingsFile);
 
+    const std::string manualSettingsText =
+        ReadAll(manualSettings);
+
+    const bool manualSettingsComplete =
+        manualSettingsText.find(
+            "horizon_occlusion_strength=") !=
+            std::string::npos &&
+        manualSettingsText.find(
+            "indirect_bounce_strength=") !=
+            std::string::npos &&
+        manualSettingsText.find(
+            "local_glow_strength=") !=
+            std::string::npos;
+
     const bool settingsPersisted =
         settingsText.find("Strength=1.000") !=
         std::string::npos;
@@ -610,7 +647,8 @@ int wmain(int argc, wchar_t** argv)
         !splitMode ||
         !validated ||
         !settingsMenuVisible ||
-        !settingsPersisted)
+        !settingsPersisted ||
+        !manualSettingsComplete)
     {
         std::cerr
             << "visible_pass.txt:\n"
@@ -629,6 +667,8 @@ int wmain(int argc, wchar_t** argv)
             << settingsMenuVisible
             << " settings_persisted="
             << settingsPersisted
+            << " manual_settings_complete="
+            << manualSettingsComplete
             << "\nSettings.ini:\n"
             << settingsText
             << "\n";
