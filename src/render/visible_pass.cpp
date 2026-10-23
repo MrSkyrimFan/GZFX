@@ -3,6 +3,7 @@
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/settings.hpp"
+#include "gzfx/ui/settings_menu.hpp"
 #include "gzfx/version.hpp"
 
 #include <Windows.h>
@@ -37,7 +38,12 @@ namespace gzfx::render
             float radiusPixels = 4.0f;
             std::uint32_t mode = 1;
             std::uint32_t accessibleDiagnostics = 1;
-            float padding[2]{};
+            std::uint32_t menuVisible = 0;
+            std::uint32_t padding0 = 0;
+
+            float menuWidth = 0.0f;
+            float menuHeight = 0.0f;
+            float padding1[2]{};
         };
 
         struct Runtime
@@ -69,8 +75,6 @@ namespace gzfx::render
 
         std::uint32_t g_mode = 1;
         bool g_modeInitialized = false;
-        bool g_f9WasDown = false;
-        bool g_f10WasDown = false;
         bool g_cameraValidated = false;
         ID3D11Buffer* g_validatedCamera = nullptr;
 
@@ -188,9 +192,10 @@ namespace gzfx::render
             }
 
             stream
-                << "controls=F10 cycles Off/Split Contact/"
-                   "Full Contact/Depth/Pre-UI Color; "
-                   "F9 reloads Settings.ini\n"
+                << "controls=Shift+Numpad1 menu; "
+                   "Shift+Numpad2 reload Settings.ini; "
+                   "Shift+Numpad3 cycles Off/Split Contact/"
+                   "Full Contact/Depth/Pre-UI Color\n"
                 << "diagnostic_accessibility="
                 << (gzfx::settings::Get().accessibleDiagnostics
                     ? "monochrome_labels_and_pattern"
@@ -297,7 +302,11 @@ cbuffer GZFXParameters : register(b0)
 
     uint Mode;
     uint AccessibleDiagnostics;
-    float2 ParameterPadding;
+    uint MenuVisible;
+    uint ParameterPadding0;
+
+    float2 MenuSize;
+    float2 ParameterPadding1;
 };
 
 cbuffer SkyrimPerFrame : register(b12)
@@ -322,6 +331,7 @@ cbuffer SkyrimPerFrame : register(b12)
 Texture2D<float4> BackColor : register(t0);
 Texture2D<float> SceneDepth : register(t1);
 Texture2D<float4> PreUiColor : register(t2);
+Texture2D<float4> MenuOverlay : register(t3);
 
 SamplerState LinearSampler : register(s0);
 SamplerState PointSampler : register(s1);
@@ -667,6 +677,43 @@ float4 AccessibleSplitOverlay(
     return color;
 }
 
+float4 ApplyMenuOverlay(
+    float4 baseColor,
+    VSOutput input)
+{
+    if (MenuVisible == 0)
+    {
+        return baseColor;
+    }
+
+    float2 pixel = input.position.xy;
+
+    if (pixel.x < 0.0 ||
+        pixel.y < 0.0 ||
+        pixel.x >= MenuSize.x ||
+        pixel.y >= MenuSize.y)
+    {
+        return baseColor;
+    }
+
+    float2 uv =
+        pixel /
+        max(MenuSize, float2(1.0, 1.0));
+
+    float4 menu =
+        MenuOverlay.SampleLevel(
+            PointSampler,
+            uv,
+            0);
+
+    return float4(
+        lerp(
+            baseColor.rgb,
+            menu.rgb,
+            saturate(menu.a)),
+        baseColor.a);
+}
+
 float4 PSMain(VSOutput input) : SV_TARGET
 {
     float4 original =
@@ -677,7 +724,9 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
     if (Mode == 0)
     {
-        return original;
+        return ApplyMenuOverlay(
+            original,
+            input);
     }
 
     if (Mode == 3)
@@ -693,22 +742,26 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 saturate(1.0 - depth),
                 0.20);
 
-        return float4(
-            visible,
-            visible,
-            visible,
-            1.0);
+        return ApplyMenuOverlay(
+            float4(
+                visible,
+                visible,
+                visible,
+                1.0),
+            input);
     }
 
     if (Mode == 4)
     {
-        return float4(
-            ToneMap(
-                PreUiColor.SampleLevel(
-                    LinearSampler,
-                    DepthUv(input.uv),
-                    0).rgb),
-            1.0);
+        return ApplyMenuOverlay(
+            float4(
+                ToneMap(
+                    PreUiColor.SampleLevel(
+                        LinearSampler,
+                        DepthUv(input.uv),
+                        0).rgb),
+                1.0),
+            input);
     }
 
     float contact =
@@ -725,21 +778,27 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
         if (input.uv.x < 0.5)
         {
-            return AccessibleSplitOverlay(
-                original,
+            return ApplyMenuOverlay(
+                AccessibleSplitOverlay(
+                    original,
+                    input),
                 input);
         }
 
-        return AccessibleSplitOverlay(
-            float4(
-                effected,
-                original.a),
+        return ApplyMenuOverlay(
+            AccessibleSplitOverlay(
+                float4(
+                    effected,
+                    original.a),
+                input),
             input);
     }
 
-    return float4(
-        effected,
-        original.a);
+    return ApplyMenuOverlay(
+        float4(
+            effected,
+            original.a),
+        input);
 }
 )";
         }
@@ -1324,48 +1383,6 @@ float4 PSMain(VSOutput input) : SV_TARGET
             }
         }
 
-        void PollHotkeys(
-            const std::uint64_t frame)
-        {
-            if (FastTestMode())
-            {
-                return;
-            }
-
-            const bool f9Down =
-                (GetAsyncKeyState(VK_F9) & 0x8000) != 0;
-
-            if (f9Down && !g_f9WasDown)
-            {
-                gzfx::settings::Reload();
-                LogState(
-                    frame,
-                    "settings_reloaded");
-            }
-
-            g_f9WasDown = f9Down;
-
-            const bool f10Down =
-                (GetAsyncKeyState(VK_F10) & 0x8000) != 0;
-
-            if (f10Down && !g_f10WasDown)
-            {
-                g_mode =
-                    (g_mode + 1) % 5;
-
-                if (gzfx::settings::Get().captureOnModeChange)
-                {
-                    g_captureRequested = true;
-                }
-
-                LogState(
-                    frame,
-                    "mode_changed");
-            }
-
-            g_f10WasDown = f10Down;
-        }
-
         bool ExecutePass(
             const std::uint64_t frame,
             IDXGISwapChain* swapChain,
@@ -1480,6 +1497,21 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 return false;
             }
 
+            gzfx::ui::MenuOverlay menuOverlay{};
+
+            if (!gzfx::ui::GetMenuOverlay(
+                    device,
+                    context,
+                    menuOverlay))
+            {
+                if (sceneSrv) sceneSrv->Release();
+                depthSrv->Release();
+                backbuffer->Release();
+
+                error = "settings menu overlay unavailable";
+                return false;
+            }
+
             Parameters parameters{};
             parameters.invWidth =
                 1.0f /
@@ -1506,6 +1538,17 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 settings.accessibleDiagnostics
                 ? 1u
                 : 0u;
+
+            parameters.menuVisible =
+                menuOverlay.visible ? 1u : 0u;
+
+            parameters.menuWidth =
+                static_cast<float>(
+                    menuOverlay.width);
+
+            parameters.menuHeight =
+                static_cast<float>(
+                    menuOverlay.height);
 
             g_runtime.deferred->ClearState();
 
@@ -1536,11 +1579,12 @@ float4 PSMain(VSOutput input) : SV_TARGET
             viewport.MinDepth = 0.0f;
             viewport.MaxDepth = 1.0f;
 
-            ID3D11ShaderResourceView* srvs[3] =
+            ID3D11ShaderResourceView* srvs[4] =
             {
                 g_runtime.sourceCopySrv,
                 depthSrv,
-                sceneSrv
+                sceneSrv,
+                menuOverlay.srv
             };
 
             ID3D11SamplerState* samplers[2] =
@@ -1586,7 +1630,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
             g_runtime.deferred->PSSetShaderResources(
                 0,
-                3,
+                4,
                 srvs);
 
             g_runtime.deferred->PSSetSamplers(
@@ -1598,8 +1642,9 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 3,
                 0);
 
-            ID3D11ShaderResourceView* nullSrvs[3] =
+            ID3D11ShaderResourceView* nullSrvs[4] =
             {
+                nullptr,
                 nullptr,
                 nullptr,
                 nullptr
@@ -1607,7 +1652,7 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
             g_runtime.deferred->PSSetShaderResources(
                 0,
-                3,
+                4,
                 nullSrvs);
 
             g_runtime.deferred->OMSetRenderTargets(
@@ -1771,7 +1816,28 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 return false;
             }
 
-            PollHotkeys(frame);
+            gzfx::ui::ProcessInput(frame);
+
+            if (gzfx::ui::ConsumeCycleModeRequest())
+            {
+                g_mode =
+                    (g_mode + 1) % 5;
+
+                if (gzfx::settings::Get()
+                        .captureOnModeChange)
+                {
+                    g_captureRequested = true;
+                }
+
+                LogState(
+                    frame,
+                    "mode_changed");
+            }
+
+            if (gzfx::ui::ConsumeCaptureRequest())
+            {
+                g_captureRequested = true;
+            }
 
             LiveInputs inputs{};
 
