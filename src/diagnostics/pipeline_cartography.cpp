@@ -349,6 +349,25 @@ namespace gzfx::diagnostics::pipeline_cartography
         std::uintptr_t g_knownNormal = 0;
         std::uintptr_t g_knownAux = 0;
 
+        void HashMix(
+            std::uint64_t& hash,
+            const std::uint64_t value)
+        {
+            constexpr std::uint64_t prime =
+                1099511628211ull;
+
+            for (std::size_t i = 0;
+                 i < sizeof(value);
+                 ++i)
+            {
+                hash ^=
+                    static_cast<std::uint8_t>(
+                        value >> (i * 8));
+
+                hash *= prime;
+            }
+        }
+
         std::uint64_t HashBytes(const void* data, const std::size_t bytes)
         {
             constexpr std::uint64_t offset =
@@ -2990,6 +3009,138 @@ namespace gzfx::diagnostics::pipeline_cartography
             return stream.str();
         }
 
+        std::uint64_t PassSignatureLocked(
+            const PassRecord& pass)
+        {
+            std::uint64_t hash =
+                14695981039346656037ull;
+
+            HashMix(
+                hash,
+                static_cast<std::uint64_t>(
+                    pass.kind));
+
+            HashMix(
+                hash,
+                static_cast<std::uint64_t>(
+                    pass.drawKind));
+
+            HashMix(hash, pass.viewportWidth);
+            HashMix(hash, pass.viewportHeight);
+            HashMix(hash, pass.viewportCount);
+
+            HashMix(
+                hash,
+                static_cast<std::uint64_t>(
+                    pass.topology));
+
+            HashMix(hash, pass.blendHash);
+            HashMix(hash, pass.depthHash);
+            HashMix(hash, pass.rasterHash);
+
+            for (const auto& shader :
+                 pass.shaders)
+            {
+                // Zero means creation was not observed. Do not substitute a
+                // pointer here; pointer values would destroy cross-capture
+                // stability.
+                HashMix(
+                    hash,
+                    shader.hash);
+            }
+
+            for (const auto& access :
+                 pass.accesses)
+            {
+                HashMix(
+                    hash,
+                    static_cast<std::uint8_t>(
+                        access.mode));
+
+                HashMix(
+                    hash,
+                    static_cast<std::uint8_t>(
+                        access.stage));
+
+                HashMix(
+                    hash,
+                    access.slot);
+
+                HashMix(
+                    hash,
+                    static_cast<std::uint64_t>(
+                        access.binding.view.format));
+
+                HashMix(
+                    hash,
+                    access.binding.view.dimension);
+
+                HashMix(
+                    hash,
+                    static_cast<std::uint64_t>(
+                        static_cast<std::int64_t>(
+                            access.binding.view.firstMip)));
+
+                HashMix(
+                    hash,
+                    static_cast<std::uint64_t>(
+                        static_cast<std::int64_t>(
+                            access.binding.view.mipCount)));
+
+                HashMix(
+                    hash,
+                    static_cast<std::uint64_t>(
+                        static_cast<std::int64_t>(
+                            access.binding.view.firstSlice)));
+
+                HashMix(
+                    hash,
+                    static_cast<std::uint64_t>(
+                        static_cast<std::int64_t>(
+                            access.binding.view.sliceCount)));
+
+                const auto resource =
+                    g_resources.find(
+                        access.binding.resource);
+
+                if (resource !=
+                    g_resources.end())
+                {
+                    HashMix(
+                        hash,
+                        static_cast<std::uint64_t>(
+                            resource->second.type));
+
+                    HashMix(
+                        hash,
+                        resource->second.width);
+
+                    HashMix(
+                        hash,
+                        resource->second.height);
+
+                    HashMix(
+                        hash,
+                        resource->second.depth);
+
+                    HashMix(
+                        hash,
+                        resource->second.mipLevels);
+
+                    HashMix(
+                        hash,
+                        resource->second.arraySize);
+
+                    HashMix(
+                        hash,
+                        static_cast<std::uint64_t>(
+                            resource->second.format));
+                }
+            }
+
+            return hash;
+        }
+
         void WriteCaptureLocked(
             const std::wstring& suffix)
         {
@@ -3330,6 +3481,91 @@ namespace gzfx::diagnostics::pipeline_cartography
             }
 
             {
+                struct SignatureStats
+                {
+                    std::uint64_t signature = 0;
+                    PassKind kind = PassKind::Draw;
+                    std::uint64_t count = 0;
+                    std::uint64_t firstPass = 0;
+                    std::uint64_t lastPass = 0;
+                    std::uint64_t firstFrame = 0;
+                    std::uint64_t lastFrame = 0;
+                };
+
+                std::map<
+                    std::uint64_t,
+                    SignatureStats>
+                        signatures;
+
+                for (const auto& pass :
+                     g_passes)
+                {
+                    const std::uint64_t signature =
+                        PassSignatureLocked(
+                            pass);
+
+                    auto& stats =
+                        signatures[signature];
+
+                    if (stats.count == 0)
+                    {
+                        stats.signature =
+                            signature;
+                        stats.kind =
+                            pass.kind;
+                        stats.firstPass =
+                            pass.id;
+                        stats.firstFrame =
+                            pass.frame;
+                    }
+
+                    ++stats.count;
+                    stats.lastPass =
+                        pass.id;
+                    stats.lastFrame =
+                        pass.frame;
+                }
+
+                std::ofstream out(
+                    file(
+                        L"pipeline_signatures",
+                        L".csv"),
+                    std::ios::out |
+                        std::ios::trunc);
+
+                if (out)
+                {
+                    out
+                        << "signature,kind,count,first_pass,last_pass,"
+                           "first_frame,last_frame\n";
+
+                    for (const auto& [key, stats] :
+                         signatures)
+                    {
+                        (void)key;
+
+                        out
+                            << Hex64(
+                                stats.signature)
+                            << ","
+                            << PassKindName(
+                                stats.kind)
+                            << ","
+                            << stats.count
+                            << ","
+                            << stats.firstPass
+                            << ","
+                            << stats.lastPass
+                            << ","
+                            << stats.firstFrame
+                            << ","
+                            << stats.lastFrame
+                            << "\n";
+                    }
+                }
+            }
+
+            {
                 std::ofstream out(
                     file(
                         L"pipeline_resources",
@@ -3623,10 +3859,16 @@ namespace gzfx::diagnostics::pipeline_cartography
                     std::uint64_t copyPasses = 0;
                     std::uint64_t clearPasses = 0;
                     std::uint64_t commandLists = 0;
+                    std::set<std::uint64_t>
+                        uniqueSignatures;
 
                     for (const auto& pass :
                          g_passes)
                     {
+                        uniqueSignatures.insert(
+                            PassSignatureLocked(
+                                pass));
+
                         if (pass.kind ==
                             PassKind::Draw)
                         {
@@ -3681,6 +3923,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                         << "\n"
                         << "passes="
                         << g_passes.size()
+                        << "\n"
+                        << "unique_pass_signatures="
+                        << uniqueSignatures.size()
                         << "\n"
                         << "draw_passes="
                         << drawPasses
@@ -3737,6 +3982,7 @@ namespace gzfx::diagnostics::pipeline_cartography
                         << "- blend/depth/raster state fingerprints, viewport and primitive topology\n"
                         << "- CopyResource, CopySubresourceRegion, ResolveSubresource, clears and GenerateMips\n"
                         << "- producer-to-consumer resource lineage edges\n"
+                        << "- stable pass signatures for cross-capture comparison\n"
                         << "- creation owner module for buffers/textures/shaders observed after device attach\n\n"
                         << "interpretation_rule:\n"
                         << "Candidate tags are hypotheses only. Use controlled day/night/water/interior/shadow captures and compare pass/resource lineage before promoting semantics.\n";
