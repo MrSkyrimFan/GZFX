@@ -1160,6 +1160,8 @@ float4 PSMain(VSOutput input) : SV_TARGET
                     context,
                     inputs);
 
+            (void)ambientDepthApplied;
+
             if (!EnsureRuntime(
                     device,
                     inputs.sceneColorDesc,
