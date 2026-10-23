@@ -34,6 +34,17 @@
                         float receiverFacing =
                             saturate(dot(normal, directionToSource));
 
+                        float3 sourceNormal =
+                            SurfaceNormal(
+                                positiveIndirectUv,
+                                positiveIndirectDepth);
+
+                        float sourceFacing =
+                            saturate(
+                                dot(
+                                    sourceNormal,
+                                    -directionToSource));
+
                         float distanceWeight = saturate(
                             1.0 - positiveDistance / indirectRadiusView);
 
@@ -55,6 +66,7 @@
 
                         float weight =
                             receiverFacing * receiverFacing *
+                            sourceFacing *
                             distanceWeight *
                             excess;
 
@@ -87,6 +99,17 @@
                         float receiverFacing =
                             saturate(dot(normal, directionToSource));
 
+                        float3 sourceNormal =
+                            SurfaceNormal(
+                                negativeIndirectUv,
+                                negativeIndirectDepth);
+
+                        float sourceFacing =
+                            saturate(
+                                dot(
+                                    sourceNormal,
+                                    -directionToSource));
+
                         float distanceWeight = saturate(
                             1.0 - negativeDistance / indirectRadiusView);
 
@@ -108,6 +131,7 @@
 
                         float weight =
                             receiverFacing * receiverFacing *
+                            sourceFacing *
                             distanceWeight *
                             excess;
 
