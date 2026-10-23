@@ -500,6 +500,10 @@ int wmain(
         diagnostics /
         L"pipeline_shaders.csv";
 
+    const auto pipelineSignatures =
+        diagnostics /
+        L"pipeline_signatures.csv";
+
     const auto pipelineEdges =
         diagnostics /
         L"pipeline_edges.csv";
@@ -517,6 +521,7 @@ int wmain(
         !ExistsNonEmpty(pipelineAccesses) ||
         !ExistsNonEmpty(pipelineResources) ||
         !ExistsNonEmpty(pipelineShaders) ||
+        !ExistsNonEmpty(pipelineSignatures) ||
         !ExistsNonEmpty(pipelineEdges) ||
         !ExistsNonEmpty(manualPipelineSummary))
     {
@@ -540,6 +545,9 @@ int wmain(
 
     const std::string pipelineShadersText =
         ReadAll(pipelineShaders);
+
+    const std::string pipelineSignaturesText =
+        ReadAll(pipelineSignatures);
 
     const std::string pipelineEdgesText =
         ReadAll(pipelineEdges);
@@ -576,11 +584,14 @@ int wmain(
         pipelineResourcesText.find(
             "texture2d") ==
             std::string::npos ||
-        pipelineResourcesText.find(
-            "GZFXSemanticProbeHarness.exe") ==
+        pipelineSummaryText.find(
+            "creation_interception_enabled=false") ==
             std::string::npos ||
         pipelineShadersText.find(
-            "GZFX.dll") ==
+            "shader,birth,stage") ==
+            std::string::npos ||
+        pipelineSignaturesText.find(
+            "signature,kind,count") ==
             std::string::npos ||
         pipelineEdgesText.find(
             "resource_lineage") ==
@@ -594,6 +605,8 @@ int wmain(
             << pipelineResourcesText
             << "\n"
             << pipelineShadersText
+            << "\n"
+            << pipelineSignaturesText
             << "\n"
             << pipelineEdgesText
             << "\n";
