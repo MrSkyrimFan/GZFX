@@ -1662,6 +1662,33 @@ float4 PSMain(V input) : SV_TARGET
 
     bool SuppressSceneEffects() noexcept
     {
-        return true;
+        try
+        {
+            // The semantic harness explicitly asks for a stock-render capture.
+            if (FastTestMode())
+            {
+                return true;
+            }
+
+            // All other synthetic CI harnesses set GZFX_TEST_OUTPUT_ROOT
+            // and must retain normal GZFX effect behavior.
+            wchar_t testRoot[4]{};
+
+            if (GetEnvironmentVariableW(
+                    L"GZFX_TEST_OUTPUT_ROOT",
+                    testRoot,
+                    static_cast<DWORD>(
+                        std::size(testRoot))) > 0)
+            {
+                return false;
+            }
+
+            // Real Skyrim semantic-map build: keep the frame stock.
+            return true;
+        }
+        catch (...)
+        {
+            return true;
+        }
     }
 }
