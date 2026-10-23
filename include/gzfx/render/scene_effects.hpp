@@ -8,6 +8,8 @@
 
 namespace gzfx::render::scene_effects
 {
+    bool WasInjectedFrame(std::uint64_t frame) noexcept;
+
     bool ApplyPreUi(
         std::uint64_t frame,
         std::uint64_t drawOrdinal,
