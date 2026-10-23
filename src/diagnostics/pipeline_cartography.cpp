@@ -196,6 +196,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             INT firstSlice = -1;
             INT sliceCount = -1;
             INT subresource = -1;
+            UINT flags = 0;
         };
 
         struct ViewBinding
@@ -243,6 +244,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::uint64_t depthHash = 0;
             UINT stencilRef = 0;
             bool depthWriteEnabled = true;
+            bool stencilWriteEnabled = false;
 
             std::uintptr_t rasterState = 0;
             std::uint64_t rasterHash = 0;
@@ -327,10 +329,52 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::vector<SamplerUse> samplers;
         };
 
+        struct MappedBuffer
+        {
+            std::uint64_t frame = 0;
+            std::uint64_t drawOrdinal = 0;
+            std::uintptr_t resource = 0;
+            UINT subresource = 0;
+            D3D11_MAP mapType = D3D11_MAP_READ;
+            UINT mapFlags = 0;
+            const void* data = nullptr;
+            std::size_t bytes = 0;
+        };
+
+        struct BufferUpdateRecord
+        {
+            std::uint64_t frame = 0;
+            std::uint64_t drawOrdinal = 0;
+            std::uintptr_t resource = 0;
+            UINT subresource = 0;
+            std::string source;
+            UINT mode = 0;
+            UINT flags = 0;
+            std::size_t bytes = 0;
+            std::uint64_t hash = 0;
+        };
+
         std::mutex g_mutex;
         std::unordered_map<std::uintptr_t, DeviceHookState> g_devices;
         std::unordered_map<std::uintptr_t, ResourceMeta> g_resources;
         std::unordered_map<std::uintptr_t, ShaderMeta> g_shaders;
+
+        std::map<std::uint64_t, D3D11_BLEND_DESC>
+            g_blendStates;
+        std::map<std::uint64_t, D3D11_DEPTH_STENCIL_DESC>
+            g_depthStates;
+        std::map<std::uint64_t, D3D11_RASTERIZER_DESC>
+            g_rasterStates;
+        std::map<std::uint64_t, D3D11_SAMPLER_DESC>
+            g_samplerStates;
+
+        std::map<
+            std::pair<std::uintptr_t, UINT>,
+            MappedBuffer>
+                g_mappedBuffers;
+
+        std::vector<BufferUpdateRecord>
+            g_bufferUpdates;
 
         std::uint64_t g_resourceBirth = 0;
         std::uint64_t g_shaderBirth = 0;
@@ -1105,6 +1149,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                     &description,
                     sizeof(description));
 
+            g_samplerStates[result.hash] =
+                description;
+
             return result;
         }
 
@@ -1393,6 +1440,8 @@ namespace gzfx::diagnostics::pipeline_cartography
             result.view.dimension =
                 static_cast<UINT>(
                     description.ViewDimension);
+            result.view.flags =
+                description.Flags;
 
             switch (description.ViewDimension)
             {
@@ -1925,24 +1974,24 @@ namespace gzfx::diagnostics::pipeline_cartography
                     g_state.rtvs[slot]);
             }
 
-            if (g_state.depthWriteEnabled)
-            {
-                AddAccess(
-                    pass,
-                    'W',
-                    'Z',
-                    0,
-                    g_state.dsv);
-            }
-            else
-            {
-                AddAccess(
-                    pass,
-                    'R',
-                    'Z',
-                    0,
-                    g_state.dsv);
-            }
+            const bool depthWritable =
+                g_state.depthWriteEnabled &&
+                (g_state.dsv.view.flags &
+                    D3D11_DSV_READ_ONLY_DEPTH) == 0;
+
+            const bool stencilWritable =
+                g_state.stencilWriteEnabled &&
+                (g_state.dsv.view.flags &
+                    D3D11_DSV_READ_ONLY_STENCIL) == 0;
+
+            AddAccess(
+                pass,
+                depthWritable || stencilWritable
+                    ? 'W'
+                    : 'R',
+                'Z',
+                0,
+                g_state.dsv);
 
             for (std::size_t slot = 0;
                  slot < kUavSlots;
@@ -4196,6 +4245,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                     endFrame;
                 g_passId = 0;
                 g_passes.clear();
+                g_bufferUpdates.clear();
+                g_mappedBuffers.clear();
                 g_state =
                     CurrentState{};
                 g_captureActive = true;
@@ -4615,6 +4666,16 @@ namespace gzfx::diagnostics::pipeline_cartography
                     D3D11_BLEND_DESC>(
                         state);
 
+            if (state != nullptr)
+            {
+                D3D11_BLEND_DESC description{};
+                state->GetDesc(&description);
+
+                g_blendStates[
+                    g_state.blendHash] =
+                    description;
+            }
+
             if (blendFactor != nullptr)
             {
                 std::copy(
@@ -4670,6 +4731,8 @@ namespace gzfx::diagnostics::pipeline_cartography
             {
                 g_state.depthWriteEnabled =
                     true;
+                g_state.stencilWriteEnabled =
+                    false;
             }
             else
             {
@@ -4679,10 +4742,18 @@ namespace gzfx::diagnostics::pipeline_cartography
                 state->GetDesc(
                     &description);
 
+                g_depthStates[
+                    g_state.depthHash] =
+                    description;
+
                 g_state.depthWriteEnabled =
                     description.DepthEnable &&
                     description.DepthWriteMask ==
                         D3D11_DEPTH_WRITE_MASK_ALL;
+
+                g_state.stencilWriteEnabled =
+                    description.StencilEnable &&
+                    description.StencilWriteMask != 0;
             }
         }
         catch (...)
@@ -4711,6 +4782,16 @@ namespace gzfx::diagnostics::pipeline_cartography
                     ID3D11RasterizerState,
                     D3D11_RASTERIZER_DESC>(
                         state);
+
+            if (state != nullptr)
+            {
+                D3D11_RASTERIZER_DESC description{};
+                state->GetDesc(&description);
+
+                g_rasterStates[
+                    g_state.rasterHash] =
+                    description;
+            }
         }
         catch (...)
         {
