@@ -84,6 +84,8 @@ namespace gzfx::render
         int g_worldActivityScore = 0;
         bool g_worldActive = false;
         bool g_captureRequested = false;
+        bool g_manualCaptureRequested = false;
+        std::uint64_t g_manualCaptureIndex = 0;
         std::uint64_t g_worldEntryFrame = 0;
         std::uint64_t g_drawIndexedThisFrame = 0;
 
@@ -202,7 +204,8 @@ namespace gzfx::render
                 << "controls=Shift+Numpad1 menu; "
                    "Shift+Numpad2 reload Settings.ini; "
                    "Shift+Numpad3 cycles Off/Split Contact/"
-                   "Full Contact/Depth/Pre-UI Color\n"
+                   "Full Contact/Depth/Pre-UI Color; "
+                   "Shift+Numpad4 saves frame+settings\n"
                 << "diagnostic_accessibility="
                 << (gzfx::settings::Get().accessibleDiagnostics
                     ? "monochrome_labels_and_pattern"
@@ -1393,6 +1396,79 @@ float4 PSMain(VSOutput input) : SV_TARGET
             }
         }
 
+        bool WriteManualCaptureSettings(
+            const fs::path& path,
+            const std::uint64_t frame)
+        {
+            std::ofstream out(
+                path,
+                std::ios::out |
+                    std::ios::trunc);
+
+            if (!out)
+            {
+                return false;
+            }
+
+            const auto& settings =
+                gzfx::settings::Get();
+
+            out
+                << "GZFX manual capture\n"
+                << "frame=" << frame << "\n"
+                << "mode="
+                << gzfx::render::state::
+                    GetDevelopmentMode()
+                << "\n"
+                << "world_active="
+                << (g_worldActive ? "true" : "false")
+                << "\n"
+                << "ambient_contact_strength="
+                << settings.ambientContactStrength
+                << "\n"
+                << "ambient_contact_radius="
+                << settings.ambientContactRadiusPixels
+                << "\n"
+                << "horizon_occlusion_enabled="
+                << (settings.horizonOcclusionEnabled ? 1 : 0)
+                << "\n"
+                << "horizon_occlusion_strength="
+                << settings.horizonOcclusionStrength
+                << "\n"
+                << "horizon_occlusion_radius="
+                << settings.horizonOcclusionRadiusPixels
+                << "\n"
+                << "horizon_occlusion_quality="
+                << settings.horizonOcclusionQuality
+                << "\n"
+                << "indirect_bounce_enabled="
+                << (settings.indirectBounceEnabled ? 1 : 0)
+                << "\n"
+                << "indirect_bounce_strength="
+                << settings.indirectBounceStrength
+                << "\n"
+                << "indirect_bounce_radius="
+                << settings.indirectBounceRadiusPixels
+                << "\n"
+                << "indirect_bounce_saturation="
+                << settings.indirectBounceSaturation
+                << "\n"
+                << "local_glow_enabled="
+                << (settings.localGlowEnabled ? 1 : 0)
+                << "\n"
+                << "local_glow_strength="
+                << settings.localGlowStrength
+                << "\n"
+                << "local_glow_threshold="
+                << settings.localGlowThreshold
+                << "\n"
+                << "local_glow_radius="
+                << settings.localGlowRadiusPixels
+                << "\n";
+
+            return static_cast<bool>(out);
+        }
+
         bool ExecutePass(
             const std::uint64_t frame,
             IDXGISwapChain* swapChain,
@@ -1734,8 +1810,48 @@ float4 PSMain(VSOutput input) : SV_TARGET
                         backDesc.Width,
                         backDesc.Height);
 
+                bool manualCapture = true;
+
+                if (g_manualCaptureRequested)
+                {
+                    ++g_manualCaptureIndex;
+
+                    std::wostringstream baseName;
+                    baseName
+                        << L"manual_capture_"
+                        << std::setw(4)
+                        << std::setfill(L'0')
+                        << g_manualCaptureIndex;
+
+                    manualCapture =
+                        WriteDownsampledBmp(
+                            root /
+                                (
+                                    baseName.str() +
+                                    L".bmp"
+                                ),
+                            g_runtime.staging,
+                            context,
+                            backDesc.Width,
+                            backDesc.Height) &&
+                        WriteManualCaptureSettings(
+                            root /
+                                (
+                                    baseName.str() +
+                                    L".txt"
+                                ),
+                            frame);
+
+                    if (manualCapture)
+                    {
+                        g_manualCaptureRequested = false;
+                    }
+                }
+
                 g_captureRequested =
-                    !(latest && modeCapture);
+                    !(latest &&
+                      modeCapture &&
+                      manualCapture);
             }
 
             if (commands) commands->Release();
@@ -1884,6 +2000,12 @@ float4 PSMain(VSOutput input) : SV_TARGET
 
             if (gzfx::ui::ConsumeCaptureRequest())
             {
+                g_captureRequested = true;
+            }
+
+            if (gzfx::ui::ConsumeManualCaptureRequest())
+            {
+                g_manualCaptureRequested = true;
                 g_captureRequested = true;
             }
 
