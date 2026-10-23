@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.16-native-surface-temporal-foundation";
+        "0.0.17-renderer-pipeline-cartography";
 }
 
 extern "C" __declspec(dllexport)
