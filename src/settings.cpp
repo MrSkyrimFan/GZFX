@@ -54,6 +54,30 @@ namespace gzfx::settings
                 path.c_str());
 
             WritePrivateProfileStringW(
+                L"LocalGlow",
+                L"Enabled",
+                L"1",
+                path.c_str());
+
+            WritePrivateProfileStringW(
+                L"LocalGlow",
+                L"Strength",
+                L"0.18",
+                path.c_str());
+
+            WritePrivateProfileStringW(
+                L"LocalGlow",
+                L"Threshold",
+                L"1.10",
+                path.c_str());
+
+            WritePrivateProfileStringW(
+                L"LocalGlow",
+                L"RadiusPixels",
+                L"8.0",
+                path.c_str());
+
+            WritePrivateProfileStringW(
                 L"Development",
                 L"DefaultMode",
                 L"1",
@@ -161,6 +185,62 @@ namespace gzfx::settings
 
             if (!WriteString(
                     path,
+                    L"LocalGlow",
+                    L"Enabled",
+                    g_values.localGlowEnabled
+                        ? L"1"
+                        : L"0"))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.3f",
+                static_cast<double>(
+                    g_values.localGlowStrength));
+
+            if (!WriteString(
+                    path,
+                    L"LocalGlow",
+                    L"Strength",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.3f",
+                static_cast<double>(
+                    g_values.localGlowThreshold));
+
+            if (!WriteString(
+                    path,
+                    L"LocalGlow",
+                    L"Threshold",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.2f",
+                static_cast<double>(
+                    g_values.localGlowRadiusPixels));
+
+            if (!WriteString(
+                    path,
+                    L"LocalGlow",
+                    L"RadiusPixels",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            if (!WriteString(
+                    path,
                     L"Development",
                     L"DefaultMode",
                     std::to_wstring(g_values.defaultMode)))
@@ -250,6 +330,43 @@ namespace gzfx::settings
                         L"4.0"),
                     1.0f,
                     24.0f);
+
+            next.localGlowEnabled =
+                GetPrivateProfileIntW(
+                    L"LocalGlow",
+                    L"Enabled",
+                    1,
+                    path.c_str()) != 0;
+
+            next.localGlowStrength =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"LocalGlow",
+                        L"Strength",
+                        L"0.18"),
+                    0.0f,
+                    1.5f);
+
+            next.localGlowThreshold =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"LocalGlow",
+                        L"Threshold",
+                        L"1.10"),
+                    0.25f,
+                    4.0f);
+
+            next.localGlowRadiusPixels =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"LocalGlow",
+                        L"RadiusPixels",
+                        L"8.0"),
+                    1.0f,
+                    32.0f);
 
             next.defaultMode =
                 static_cast<std::uint32_t>(
@@ -363,6 +480,38 @@ namespace gzfx::settings
                         24.0f);
                 break;
 
+            case Editable::LocalGlowEnabled:
+                g_values.localGlowEnabled =
+                    direction > 0;
+                break;
+
+            case Editable::LocalGlowStrength:
+                g_values.localGlowStrength =
+                    std::clamp(
+                        g_values.localGlowStrength +
+                            sign * 0.05f,
+                        0.0f,
+                        1.5f);
+                break;
+
+            case Editable::LocalGlowThreshold:
+                g_values.localGlowThreshold =
+                    std::clamp(
+                        g_values.localGlowThreshold +
+                            sign * 0.05f,
+                        0.25f,
+                        4.0f);
+                break;
+
+            case Editable::LocalGlowRadiusPixels:
+                g_values.localGlowRadiusPixels =
+                    std::clamp(
+                        g_values.localGlowRadiusPixels +
+                            sign * 0.5f,
+                        1.0f,
+                        32.0f);
+                break;
+
             case Editable::DefaultMode:
             {
                 int mode =
@@ -458,6 +607,24 @@ namespace gzfx::settings
                     1.0f + value * 23.0f;
                 break;
 
+            case Editable::LocalGlowStrength:
+                g_values.localGlowStrength =
+                    value * 1.5f;
+                break;
+
+            case Editable::LocalGlowThreshold:
+                g_values.localGlowThreshold =
+                    0.25f + value * 3.75f;
+                break;
+
+            case Editable::LocalGlowRadiusPixels:
+                g_values.localGlowRadiusPixels =
+                    1.0f + value * 31.0f;
+                break;
+
+            case Editable::LocalGlowEnabled:
+                return false;
+
             case Editable::DefaultMode:
                 g_values.defaultMode =
                     static_cast<std::uint32_t>(
@@ -518,6 +685,31 @@ namespace gzfx::settings
                     0.0f,
                     1.0f);
 
+            case Editable::LocalGlowEnabled:
+                return g_values.localGlowEnabled
+                    ? 1.0f
+                    : 0.0f;
+
+            case Editable::LocalGlowStrength:
+                return std::clamp(
+                    g_values.localGlowStrength / 1.5f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::LocalGlowThreshold:
+                return std::clamp(
+                    (g_values.localGlowThreshold - 0.25f) /
+                        3.75f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::LocalGlowRadiusPixels:
+                return std::clamp(
+                    (g_values.localGlowRadiusPixels - 1.0f) /
+                        31.0f,
+                    0.0f,
+                    1.0f);
+
             case Editable::DefaultMode:
                 return std::clamp(
                     static_cast<float>(g_values.defaultMode) /
@@ -566,6 +758,11 @@ namespace gzfx::settings
 
             switch (setting)
             {
+            case Editable::LocalGlowEnabled:
+                g_values.localGlowEnabled =
+                    !g_values.localGlowEnabled;
+                break;
+
             case Editable::AccessibleDiagnostics:
                 g_values.accessibleDiagnostics =
                     !g_values.accessibleDiagnostics;
