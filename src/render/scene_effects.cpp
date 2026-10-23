@@ -1080,6 +1080,20 @@ float4 PSMain(VSOutput input) : SV_TARGET
         }
     }
 
+    bool WasInjectedFrame(
+        const std::uint64_t frame) noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+            return g_lastFrame == frame;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
     bool ApplyPreUi(
         const std::uint64_t frame,
         const std::uint64_t drawOrdinal,
