@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.14-gtao-visibility-ssil-calibration";
+        "0.0.15-renderer-semantic-map";
 }
 
 extern "C" __declspec(dllexport)

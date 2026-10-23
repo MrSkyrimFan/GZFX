@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.14
+    VERSION 0.0.15
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -66,6 +66,7 @@ add_library(GZFX SHARED
     src/diagnostics/d3d11_lifecycle.cpp
     src/diagnostics/renderer_forensics.cpp
     src/diagnostics/resource_intelligence.cpp
+    src/diagnostics/semantic_probe.cpp
     src/render/runtime_state.cpp
     src/render/ambient_visibility_stack.cpp
     src/render/scene_effects.cpp
@@ -163,6 +164,18 @@ target_link_libraries(
 )
 gzfx_apply_common(GZFXAmbientVisibilityNeutralityHarness)
 
+add_executable(GZFXSemanticProbeHarness
+    tests/semantic_probe_harness.cpp
+)
+target_link_libraries(
+    GZFXSemanticProbeHarness
+    PRIVATE
+        d3d11
+        dxgi
+        user32
+)
+gzfx_apply_common(GZFXSemanticProbeHarness)
+
 enable_testing()
 
 add_test(
@@ -255,4 +268,13 @@ add_test(
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/ambient-visibility-uniform-ssil-output"
         "uniform_ssil"
+)
+
+
+add_test(
+    NAME renderer_semantic_probe
+    COMMAND
+        "$<TARGET_FILE:GZFXSemanticProbeHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/semantic-probe-output"
 )

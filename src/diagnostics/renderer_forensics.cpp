@@ -1,5 +1,6 @@
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/diagnostics/resource_intelligence.hpp"
+#include "gzfx/diagnostics/semantic_probe.hpp"
 #include "gzfx/render/scene_effects.hpp"
 #include "gzfx/render/visible_pass.hpp"
 
@@ -37,6 +38,7 @@ namespace gzfx::diagnostics
         constexpr std::uint64_t kMaxFrames = 7200;
 
         constexpr std::size_t kVSSetConstantBuffers = 7;
+        constexpr std::size_t kPSSetShaderResources = 8;
         constexpr std::size_t kPSSetShader = 9;
         constexpr std::size_t kVSSetShader = 11;
         constexpr std::size_t kDrawIndexed = 12;
@@ -51,6 +53,8 @@ namespace gzfx::diagnostics
         constexpr std::size_t kClearRenderTargetView = 50;
         constexpr std::size_t kClearDepthStencilView = 53;
         constexpr std::size_t kResolveSubresource = 57;
+        constexpr std::size_t kCSSetShaderResources = 67;
+        constexpr std::size_t kCSSetUnorderedAccessViews = 68;
         constexpr std::size_t kCSSetShader = 69;
         constexpr std::size_t kCSSetConstantBuffers = 71;
 
@@ -59,6 +63,7 @@ namespace gzfx::diagnostics
         using ResizeBuffersFn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT, UINT, DXGI_FORMAT, UINT);
 
         using VSSetConstantBuffersFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11Buffer* const*);
+        using PSSetShaderResourcesFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11ShaderResourceView* const*);
         using PSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11PixelShader*, ID3D11ClassInstance* const*, UINT);
         using VSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11VertexShader*, ID3D11ClassInstance* const*, UINT);
         using DrawIndexedFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, INT);
@@ -73,6 +78,8 @@ namespace gzfx::diagnostics
         using ClearRenderTargetViewFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11RenderTargetView*, const FLOAT[4]);
         using ClearDepthStencilViewFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11DepthStencilView*, UINT, FLOAT, UINT8);
         using ResolveSubresourceFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Resource*, UINT, ID3D11Resource*, UINT, DXGI_FORMAT);
+        using CSSetShaderResourcesFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11ShaderResourceView* const*);
+        using CSSetUnorderedAccessViewsFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11UnorderedAccessView* const*, const UINT*);
         using CSSetShaderFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11ComputeShader*, ID3D11ClassInstance* const*, UINT);
         using CSSetConstantBuffersFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11Buffer* const*);
 
@@ -81,6 +88,7 @@ namespace gzfx::diagnostics
         ResizeBuffersFn g_resizeBuffers = nullptr;
 
         VSSetConstantBuffersFn g_vsSetCB = nullptr;
+        PSSetShaderResourcesFn g_psSetResources = nullptr;
         PSSetShaderFn g_psSetShader = nullptr;
         VSSetShaderFn g_vsSetShader = nullptr;
         DrawIndexedFn g_drawIndexed = nullptr;
@@ -95,6 +103,8 @@ namespace gzfx::diagnostics
         ClearRenderTargetViewFn g_clearRTV = nullptr;
         ClearDepthStencilViewFn g_clearDSV = nullptr;
         ResolveSubresourceFn g_resolve = nullptr;
+        CSSetShaderResourcesFn g_csSetResources = nullptr;
+        CSSetUnorderedAccessViewsFn g_csSetUavs = nullptr;
         CSSetShaderFn g_csSetShader = nullptr;
         CSSetConstantBuffersFn g_csSetCB = nullptr;
 
@@ -526,14 +536,110 @@ namespace gzfx::diagnostics
             g_csSetCB(c, slot, count, b);
         }
 
+        void STDMETHODCALLTYPE HookPSSetResources(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11ShaderResourceView* const* resources)
+        {
+            if (context == g_primaryContext)
+            {
+                Safe([&]
+                {
+                    semantic_probe::ObservePixelResources(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load(),
+                        startSlot,
+                        count,
+                        resources);
+                });
+            }
+
+            g_psSetResources(
+                context,
+                startSlot,
+                count,
+                resources);
+        }
+
+        void STDMETHODCALLTYPE HookCSSetResources(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11ShaderResourceView* const* resources)
+        {
+            if (context == g_primaryContext)
+            {
+                Safe([&]
+                {
+                    semantic_probe::ObserveComputeResources(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load(),
+                        startSlot,
+                        count,
+                        resources);
+                });
+            }
+
+            g_csSetResources(
+                context,
+                startSlot,
+                count,
+                resources);
+        }
+
+        void STDMETHODCALLTYPE HookCSSetUavs(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11UnorderedAccessView* const* resources,
+            const UINT* initialCounts)
+        {
+            if (context == g_primaryContext)
+            {
+                Safe([&]
+                {
+                    semantic_probe::ObserveComputeUavs(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load(),
+                        startSlot,
+                        count,
+                        resources);
+                });
+            }
+
+            g_csSetUavs(
+                context,
+                startSlot,
+                count,
+                resources,
+                initialCounts);
+        }
+
         void STDMETHODCALLTYPE HookPSShader(ID3D11DeviceContext* c, ID3D11PixelShader* s, ID3D11ClassInstance* const* i, UINT n)
-        { if (c == g_primaryContext) ++g_psChanges; g_psSetShader(c, s, i, n); }
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_psChanges;
+                semantic_probe::SetPixelShader(s);
+            }
+
+            g_psSetShader(c, s, i, n);
+        }
 
         void STDMETHODCALLTYPE HookVSShader(ID3D11DeviceContext* c, ID3D11VertexShader* s, ID3D11ClassInstance* const* i, UINT n)
         { if (c == g_primaryContext) ++g_vsChanges; g_vsSetShader(c, s, i, n); }
 
         void STDMETHODCALLTYPE HookCSShader(ID3D11DeviceContext* c, ID3D11ComputeShader* s, ID3D11ClassInstance* const* i, UINT n)
-        { if (c == g_primaryContext) ++g_csChanges; g_csSetShader(c, s, i, n); }
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_csChanges;
+                semantic_probe::SetComputeShader(s);
+            }
+
+            g_csSetShader(c, s, i, n);
+        }
 
         void STDMETHODCALLTYPE HookDraw(ID3D11DeviceContext* c, UINT a, UINT b)
         {
@@ -623,6 +729,13 @@ namespace gzfx::diagnostics
                                 count,
                                 rtvs,
                                 dsv);
+
+                    semantic_probe::ObserveRenderTargets(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load(),
+                        count,
+                        rtvs,
+                        dsv);
                 });
             }
 
@@ -637,6 +750,7 @@ namespace gzfx::diagnostics
                 dsv);
 
             if (c == g_primaryContext &&
+                !semantic_probe::SuppressSceneEffects() &&
                 stageSignal ==
                     resource_intelligence::
                         StageSignal::PreUiSceneReady)
@@ -671,6 +785,11 @@ namespace gzfx::diagnostics
             if (c == g_primaryContext) Safe([&]
             {
                 ++g_viewportSets;
+
+                semantic_probe::SetViewport(
+                    count,
+                    v);
+
                 if (count && v)
                 {
                     std::scoped_lock l(g_mutex);
@@ -720,6 +839,7 @@ namespace gzfx::diagnostics
             std::memcpy(g_contextVtable, g_originalContextVtable, sizeof(std::uintptr_t) * kContextVtableCount);
 
             g_vsSetCB = Original<VSSetConstantBuffersFn>(kVSSetConstantBuffers);
+            g_psSetResources = Original<PSSetShaderResourcesFn>(kPSSetShaderResources);
             g_psSetShader = Original<PSSetShaderFn>(kPSSetShader);
             g_vsSetShader = Original<VSSetShaderFn>(kVSSetShader);
             g_drawIndexed = Original<DrawIndexedFn>(kDrawIndexed);
@@ -734,10 +854,13 @@ namespace gzfx::diagnostics
             g_clearRTV = Original<ClearRenderTargetViewFn>(kClearRenderTargetView);
             g_clearDSV = Original<ClearDepthStencilViewFn>(kClearDepthStencilView);
             g_resolve = Original<ResolveSubresourceFn>(kResolveSubresource);
+            g_csSetResources = Original<CSSetShaderResourcesFn>(kCSSetShaderResources);
+            g_csSetUavs = Original<CSSetUnorderedAccessViewsFn>(kCSSetUnorderedAccessViews);
             g_csSetShader = Original<CSSetShaderFn>(kCSSetShader);
             g_csSetCB = Original<CSSetConstantBuffersFn>(kCSSetConstantBuffers);
 
             g_contextVtable[kVSSetConstantBuffers] = reinterpret_cast<std::uintptr_t>(&HookVSSetCB);
+            g_contextVtable[kPSSetShaderResources] = reinterpret_cast<std::uintptr_t>(&HookPSSetResources);
             g_contextVtable[kPSSetShader] = reinterpret_cast<std::uintptr_t>(&HookPSShader);
             g_contextVtable[kVSSetShader] = reinterpret_cast<std::uintptr_t>(&HookVSShader);
             g_contextVtable[kDrawIndexed] = reinterpret_cast<std::uintptr_t>(&HookDrawIndexed);
@@ -752,6 +875,8 @@ namespace gzfx::diagnostics
             g_contextVtable[kClearRenderTargetView] = reinterpret_cast<std::uintptr_t>(&HookClearRTV);
             g_contextVtable[kClearDepthStencilView] = reinterpret_cast<std::uintptr_t>(&HookClearDSV);
             g_contextVtable[kResolveSubresource] = reinterpret_cast<std::uintptr_t>(&HookResolve);
+            g_contextVtable[kCSSetShaderResources] = reinterpret_cast<std::uintptr_t>(&HookCSSetResources);
+            g_contextVtable[kCSSetUnorderedAccessViews] = reinterpret_cast<std::uintptr_t>(&HookCSSetUavs);
             g_contextVtable[kCSSetShader] = reinterpret_cast<std::uintptr_t>(&HookCSShader);
             g_contextVtable[kCSSetConstantBuffers] = reinterpret_cast<std::uintptr_t>(&HookCSSetCB);
 
@@ -827,18 +952,28 @@ namespace gzfx::diagnostics
                     WriteRendererSummary();
                 }
 
+                semantic_probe::OnPresent(
+                    g_frame,
+                    drawIndexedActivity,
+                    g_primarySwap,
+                    g_primaryDevice,
+                    g_primaryContext);
+
                 resource_intelligence::OnPresent(
                     g_frame,
                     g_primarySwap,
                     g_primaryDevice,
                     g_primaryContext);
 
-                gzfx::render::RenderVisiblePass(
-                    g_frame,
-                    drawIndexedActivity,
-                    g_primarySwap,
-                    g_primaryDevice,
-                    g_primaryContext);
+                if (!semantic_probe::SuppressSceneEffects())
+                {
+                    gzfx::render::RenderVisiblePass(
+                        g_frame,
+                        drawIndexedActivity,
+                        g_primarySwap,
+                        g_primaryDevice,
+                        g_primaryContext);
+                }
 
                 g_drawOrdinalThisFrame.store(0);
                 ++g_frame;
