@@ -1761,7 +1761,8 @@ namespace gzfx::diagnostics::pipeline_cartography
             ID3D11ClassLinkage* linkage,
             ShaderT** shader,
             const std::size_t index,
-            const ShaderStage stage)
+            const ShaderStage stage,
+            const std::string& owner)
         {
             const auto original =
                 DeviceOriginal<Fn>(
@@ -1772,10 +1773,6 @@ namespace gzfx::diagnostics::pipeline_cartography
             {
                 return E_FAIL;
             }
-
-            const std::string owner =
-                CallerModuleName(
-                    _ReturnAddress());
 
             const HRESULT result =
                 original(
@@ -1815,7 +1812,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                     linkage,
                     shader,
                     kCreateVertexShader,
-                    ShaderStage::Vertex);
+                    ShaderStage::Vertex,
+                    CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateGeometryShader(
@@ -1833,7 +1831,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                     linkage,
                     shader,
                     kCreateGeometryShader,
-                    ShaderStage::Geometry);
+                    ShaderStage::Geometry,
+                    CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateGeometryShaderWithStreamOutput(
@@ -1906,7 +1905,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                     linkage,
                     shader,
                     kCreatePixelShader,
-                    ShaderStage::Pixel);
+                    ShaderStage::Pixel,
+                    CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateHullShader(
@@ -1924,7 +1924,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                     linkage,
                     shader,
                     kCreateHullShader,
-                    ShaderStage::Hull);
+                    ShaderStage::Hull,
+                    CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateDomainShader(
@@ -1942,7 +1943,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                     linkage,
                     shader,
                     kCreateDomainShader,
-                    ShaderStage::Domain);
+                    ShaderStage::Domain,
+                    CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateComputeShader(
@@ -1960,7 +1962,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                     linkage,
                     shader,
                     kCreateComputeShader,
-                    ShaderStage::Compute);
+                    ShaderStage::Compute,
+                    CallerModuleName(_ReturnAddress()));
         }
 
         void ReleaseViews(
