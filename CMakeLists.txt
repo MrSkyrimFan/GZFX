@@ -92,7 +92,12 @@ add_library(GZFXBootstrap SHARED
     bootstrap/dinput8_proxy.cpp
     bootstrap/dinput8.def
 )
-target_link_libraries(GZFXBootstrap PRIVATE minhook)
+target_link_libraries(
+    GZFXBootstrap
+    PRIVATE
+        minhook
+        dxguid
+)
 set_target_properties(GZFXBootstrap PROPERTIES OUTPUT_NAME "dinput8")
 gzfx_apply_common(GZFXBootstrap)
 
