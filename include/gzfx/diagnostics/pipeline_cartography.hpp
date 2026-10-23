@@ -110,6 +110,7 @@ namespace gzfx::diagnostics::pipeline_cartography
         std::uint64_t b,
         std::uint64_t c,
         std::uint64_t d,
+        std::uint64_t e,
         ID3D11Buffer* indirectArgs,
         UINT indirectOffset) noexcept;
 
