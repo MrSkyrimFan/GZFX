@@ -265,6 +265,9 @@
                 : 0u;
 
             parameters.temporalBlend = 0.18f;
+            parameters.frameIndex =
+                static_cast<std::uint32_t>(
+                    frame & 0xFFFFFFFFull);
 
             GpuTimerSlot* gpuTimer =
                 BeginGpuTimer(
