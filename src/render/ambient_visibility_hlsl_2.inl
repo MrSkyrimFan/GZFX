@@ -111,12 +111,23 @@
                         ReconstructView(positiveAoUv, positiveAoDepth);
                     float3 positiveDelta = positivePosition - center;
                     float positiveDistance = length(positiveDelta);
+                    float positivePlaneHeight = dot(positiveDelta, normal);
 
-                    if (positiveDistance > 1e-4)
+                    if (positiveDistance > 1e-4 &&
+                        positivePlaneHeight > receiverPlaneBias)
                     {
-                        float positiveWeight = saturate(
+                        float distanceWeight = saturate(
                             (aoRadiusView - positiveDistance) /
                             max(aoRadiusView * 0.35, 1e-4));
+
+                        float planeWeight = saturate(
+                            (positivePlaneHeight - receiverPlaneBias) /
+                            max(
+                                receiverPlaneBias * 4.0,
+                                viewUnitsPerPixel * 2.0));
+
+                        float positiveWeight =
+                            distanceWeight * planeWeight;
 
                         float positiveCosine = dot(
                             positiveDelta / positiveDistance,
@@ -134,12 +145,23 @@
                         ReconstructView(negativeAoUv, negativeAoDepth);
                     float3 negativeDelta = negativePosition - center;
                     float negativeDistance = length(negativeDelta);
+                    float negativePlaneHeight = dot(negativeDelta, normal);
 
-                    if (negativeDistance > 1e-4)
+                    if (negativeDistance > 1e-4 &&
+                        negativePlaneHeight > receiverPlaneBias)
                     {
-                        float negativeWeight = saturate(
+                        float distanceWeight = saturate(
                             (aoRadiusView - negativeDistance) /
                             max(aoRadiusView * 0.35, 1e-4));
+
+                        float planeWeight = saturate(
+                            (negativePlaneHeight - receiverPlaneBias) /
+                            max(
+                                receiverPlaneBias * 4.0,
+                                viewUnitsPerPixel * 2.0));
+
+                        float negativeWeight =
+                            distanceWeight * planeWeight;
 
                         float negativeCosine = dot(
                             negativeDelta / negativeDistance,
