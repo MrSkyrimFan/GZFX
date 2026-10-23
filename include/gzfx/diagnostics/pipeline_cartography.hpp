@@ -123,6 +123,31 @@ namespace gzfx::diagnostics::pipeline_cartography
         ID3D11Buffer* indirectArgs,
         UINT indirectOffset) noexcept;
 
+    void ObserveMap(
+        std::uint64_t frame,
+        std::uint64_t drawOrdinal,
+        ID3D11Resource* resource,
+        UINT subresource,
+        D3D11_MAP mapType,
+        UINT mapFlags,
+        const D3D11_MAPPED_SUBRESOURCE* mapped) noexcept;
+
+    void ObserveUnmap(
+        std::uint64_t frame,
+        std::uint64_t drawOrdinal,
+        ID3D11Resource* resource,
+        UINT subresource) noexcept;
+
+    void ObserveUpdateSubresource(
+        std::uint64_t frame,
+        std::uint64_t drawOrdinal,
+        ID3D11Resource* resource,
+        UINT destinationSubresource,
+        const D3D11_BOX* destinationBox,
+        const void* sourceData,
+        UINT sourceRowPitch,
+        UINT sourceDepthPitch) noexcept;
+
     void CopyResource(
         std::uint64_t frame,
         std::uint64_t drawOrdinal,
