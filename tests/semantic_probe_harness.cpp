@@ -82,6 +82,9 @@ int wmain(
             outputRoot.c_str()) ||
         !SetEnvironmentVariableW(
             L"GZFX_TEST_SEMANTIC_CAPTURE",
+            L"1") ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_SEMANTIC_MANUAL_CAPTURE",
             L"1"))
     {
         return 3;
@@ -363,7 +366,7 @@ int wmain(
     viewport.MaxDepth = 1.0f;
 
     for (int frame = 0;
-         frame < 5;
+         frame < 11;
          ++frame)
     {
         context->RSSetViewports(
@@ -448,14 +451,27 @@ int wmain(
         diagnostics /
         L"semantic_bindings.csv";
 
+    const auto manualSemantics =
+        diagnostics /
+        L"renderer_semantics_manual_0001.txt";
+
+    const auto manualBindings =
+        diagnostics /
+        L"semantic_bindings_manual_0001.csv";
+
     if (!ExistsNonEmpty(semantics) ||
-        !ExistsNonEmpty(bindings))
+        !ExistsNonEmpty(bindings) ||
+        !ExistsNonEmpty(manualSemantics) ||
+        !ExistsNonEmpty(manualBindings))
     {
         return 15;
     }
 
     const std::string semanticText =
         ReadAll(semantics);
+
+    const std::string manualSemanticText =
+        ReadAll(manualSemantics);
 
     if (semanticText.find(
             "format=28") ==
@@ -465,6 +481,9 @@ int wmain(
             std::string::npos ||
         semanticText.find(
             "format=41") ==
+            std::string::npos ||
+        manualSemanticText.find(
+            "trace_frames=") ==
             std::string::npos)
     {
         std::cerr
