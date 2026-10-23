@@ -78,6 +78,7 @@ namespace gzfx::ui
         bool g_manualCaptureRequested = false;
         std::uint32_t g_selected = 0;
         bool g_testAdjustmentApplied = false;
+        bool g_testManualCaptureApplied = false;
 
         HWND g_window = nullptr;
         WNDPROC g_originalWindowProc = nullptr;
@@ -1459,6 +1460,19 @@ namespace gzfx::ui
 
                 g_testAdjustmentApplied = true;
                 MarkChanged();
+            }
+
+            if (TestFlag(
+                    L"GZFX_TEST_MANUAL_CAPTURE") &&
+                !g_testManualCaptureApplied)
+            {
+                g_manualCaptureRequested = true;
+                g_captureRequested = true;
+                g_testManualCaptureApplied = true;
+
+                WriteState(
+                    frame,
+                    "manual_capture_requested");
             }
 
             const bool shiftDown =
