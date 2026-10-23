@@ -531,6 +531,34 @@ namespace gzfx::render::ambient_depth
             slot->pending = true;
         }
 
+        void AbortGpuTimer(
+            ID3D11DeviceContext* context,
+            GpuTimerSlot* slot,
+            const std::size_t firstUnwrittenTimestamp)
+        {
+            if (context == nullptr ||
+                slot == nullptr)
+            {
+                return;
+            }
+
+            for (std::size_t i =
+                    firstUnwrittenTimestamp;
+                 i < slot->timestamps.size();
+                 ++i)
+            {
+                if (slot->timestamps[i] != nullptr)
+                {
+                    context->End(
+                        slot->timestamps[i]);
+                }
+            }
+
+            FinishGpuTimer(
+                context,
+                slot);
+        }
+
         bool Compile(
             const char* source,
             const char* entry,
@@ -2339,14 +2367,10 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
-                StampGpuTimer(
+                AbortGpuTimer(
                     context,
                     gpuTimer,
                     1);
-
-                FinishGpuTimer(
-                    context,
-                    gpuTimer);
 
                 WriteLog(
                     frame,
@@ -2394,14 +2418,10 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
-                StampGpuTimer(
+                AbortGpuTimer(
                     context,
                     gpuTimer,
                     2);
-
-                FinishGpuTimer(
-                    context,
-                    gpuTimer);
 
                 WriteLog(
                     frame,
@@ -2450,14 +2470,10 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
-                StampGpuTimer(
+                AbortGpuTimer(
                     context,
                     gpuTimer,
                     3);
-
-                FinishGpuTimer(
-                    context,
-                    gpuTimer);
 
                 WriteLog(
                     frame,
@@ -2506,14 +2522,10 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
-                StampGpuTimer(
+                AbortGpuTimer(
                     context,
                     gpuTimer,
                     4);
-
-                FinishGpuTimer(
-                    context,
-                    gpuTimer);
 
                 WriteLog(
                     frame,
@@ -2558,14 +2570,10 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
-                StampGpuTimer(
+                AbortGpuTimer(
                     context,
                     gpuTimer,
                     5);
-
-                FinishGpuTimer(
-                    context,
-                    gpuTimer);
 
                 WriteLog(
                     frame,
