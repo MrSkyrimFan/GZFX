@@ -7,6 +7,12 @@
 
 namespace gzfx::diagnostics::resource_intelligence
 {
+    enum class StageSignal : std::uint32_t
+    {
+        None = 0,
+        PreUiSceneReady = 1
+    };
+
     struct LiveInputs
     {
         ID3D11Texture2D* depthTexture = nullptr;
@@ -18,7 +24,7 @@ namespace gzfx::diagnostics::resource_intelligence
 
     void SetStageTraceEnabled(bool enabled) noexcept;
 
-    void ObserveRenderTargets(
+    StageSignal ObserveRenderTargets(
         std::uint64_t frame,
         std::uint64_t drawOrdinal,
         UINT count,

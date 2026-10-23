@@ -64,6 +64,10 @@ namespace gzfx::diagnostics::resource_intelligence
         bool g_lastStageColorBound = false;
         bool g_lastStageDepthBound = false;
 
+        std::uint64_t g_scenePairBindEvents = 0;
+        std::uint64_t g_lastScenePairDraw = 0;
+        bool g_preUiSignalIssued = false;
+
         std::string Ptr(const void* pointer)
         {
             std::ostringstream stream;
@@ -1063,10 +1067,22 @@ namespace gzfx::diagnostics::resource_intelligence
                 g_stageTraceEvents = 0;
                 g_lastStageColorBound = false;
                 g_lastStageDepthBound = false;
+                g_scenePairBindEvents = 0;
+                g_lastScenePairDraw = 0;
+                g_preUiSignalIssued = false;
 
                 WriteText(
                     L"stage_trace.csv",
                     "");
+            }
+
+            if (!enabled)
+            {
+                g_lastStageColorBound = false;
+                g_lastStageDepthBound = false;
+                g_scenePairBindEvents = 0;
+                g_lastScenePairDraw = 0;
+                g_preUiSignalIssued = false;
             }
 
             g_stageTraceEnabled = enabled;
@@ -1076,7 +1092,7 @@ namespace gzfx::diagnostics::resource_intelligence
         }
     }
 
-    void ObserveRenderTargets(
+    StageSignal ObserveRenderTargets(
         const std::uint64_t frame,
         const std::uint64_t drawOrdinal,
         const UINT count,
@@ -1112,10 +1128,9 @@ namespace gzfx::diagnostics::resource_intelligence
 
             if (!g_stageTraceEnabled ||
                 g_swapWidth == 0 ||
-                g_swapHeight == 0 ||
-                g_stageTraceEvents >= 2048)
+                g_swapHeight == 0)
             {
-                return;
+                return StageSignal::None;
             }
 
             std::uintptr_t selectedDepthId = 0;
@@ -1127,7 +1142,7 @@ namespace gzfx::diagnostics::resource_intelligence
 
             if (selectedDepth == nullptr)
             {
-                return;
+                return StageSignal::None;
             }
 
             std::uintptr_t selectedColorId = 0;
@@ -1143,7 +1158,7 @@ namespace gzfx::diagnostics::resource_intelligence
 
             if (selectedColor == nullptr)
             {
-                return;
+                return StageSignal::None;
             }
 
             const bool depthBound =
@@ -1156,13 +1171,52 @@ namespace gzfx::diagnostics::resource_intelligence
                     selectedColorId) !=
                 colorIds.end();
 
-            const bool stateChanged =
-                depthBound != g_lastStageDepthBound ||
-                colorBound != g_lastStageColorBound;
+            const bool previousColorBound =
+                g_lastStageColorBound;
 
-            if (stateChanged ||
-                depthBound ||
-                colorBound)
+            const bool previousDepthBound =
+                g_lastStageDepthBound;
+
+            if (colorBound && depthBound)
+            {
+                ++g_scenePairBindEvents;
+                g_lastScenePairDraw = drawOrdinal;
+            }
+
+            bool preUiSignal = false;
+
+            if (!g_preUiSignalIssued &&
+                g_scenePairBindEvents >= 8 &&
+                previousColorBound &&
+                !previousDepthBound &&
+                !colorBound &&
+                drawOrdinal >= g_lastScenePairDraw)
+            {
+                const std::uint64_t drawsAfterPair =
+                    drawOrdinal - g_lastScenePairDraw;
+
+                // GZFX(6) gameplay trace: terminal HDR-color unbind
+                // followed the last paired HDR+depth scene use by
+                // 25-27 draws across normal frames. Keep a wider
+                // fail-soft admission window for scene complexity
+                // without relying on an absolute draw ordinal.
+                if (drawsAfterPair >= 16 &&
+                    drawsAfterPair <= 64)
+                {
+                    preUiSignal = true;
+                    g_preUiSignalIssued = true;
+                }
+            }
+
+            const bool stateChanged =
+                depthBound != previousDepthBound ||
+                colorBound != previousColorBound;
+
+            if ((stateChanged ||
+                 depthBound ||
+                 colorBound ||
+                 preUiSignal) &&
+                g_stageTraceEvents < 2048)
             {
                 std::ostringstream row;
 
@@ -1172,7 +1226,7 @@ namespace gzfx::diagnostics::resource_intelligence
                         << "event,frame,draw_ordinal,"
                            "color_bound,depth_bound,rt_count,"
                            "selected_color,selected_depth,"
-                           "pair_count\n";
+                           "pair_count,pre_ui_signal\n";
                 }
 
                 row
@@ -1187,6 +1241,7 @@ namespace gzfx::diagnostics::resource_intelligence
                     << ",0x" << selectedDepthId
                     << std::dec
                     << "," << pairCount
+                    << "," << (preUiSignal ? 1 : 0)
                     << "\n";
 
                 AppendText(
@@ -1198,9 +1253,14 @@ namespace gzfx::diagnostics::resource_intelligence
 
             g_lastStageDepthBound = depthBound;
             g_lastStageColorBound = colorBound;
+
+            return preUiSignal
+                ? StageSignal::PreUiSceneReady
+                : StageSignal::None;
         }
         catch (...)
         {
+            return StageSignal::None;
         }
     }
 
@@ -1256,6 +1316,9 @@ namespace gzfx::diagnostics::resource_intelligence
 
             g_lastStageColorBound = false;
             g_lastStageDepthBound = false;
+            g_scenePairBindEvents = 0;
+            g_lastScenePairDraw = 0;
+            g_preUiSignalIssued = false;
 
             if (IsSnapshotFrame(frame) &&
                 g_lastSnapshotFrame != frame)
