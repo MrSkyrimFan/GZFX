@@ -21,6 +21,7 @@ namespace gzfx::ui
 
     bool ConsumeCycleModeRequest() noexcept;
     bool ConsumeCaptureRequest() noexcept;
+    bool ConsumeManualCaptureRequest() noexcept;
 
     bool IsMenuVisible() noexcept;
 
