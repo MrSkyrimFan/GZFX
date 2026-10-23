@@ -37,10 +37,21 @@ namespace gzfx::ui
         {
             bool previous = false;
 
-            bool Pressed(const int virtualKey)
+            bool Pressed(
+                const int primaryVirtualKey,
+                const int aliasVirtualKey = 0)
             {
+                const bool primaryDown =
+                    (GetAsyncKeyState(
+                        primaryVirtualKey) & 0x8000) != 0;
+
+                const bool aliasDown =
+                    aliasVirtualKey != 0 &&
+                    (GetAsyncKeyState(
+                        aliasVirtualKey) & 0x8000) != 0;
+
                 const bool down =
-                    (GetAsyncKeyState(virtualKey) & 0x8000) != 0;
+                    primaryDown || aliasDown;
 
                 const bool pressed =
                     down && !previous;
@@ -692,25 +703,39 @@ namespace gzfx::ui
                 (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
 
             const bool num1 =
-                g_numpad1.Pressed(VK_NUMPAD1);
+                g_numpad1.Pressed(
+                    VK_NUMPAD1,
+                    VK_END);
 
             const bool num2 =
-                g_numpad2.Pressed(VK_NUMPAD2);
+                g_numpad2.Pressed(
+                    VK_NUMPAD2,
+                    VK_DOWN);
 
             const bool num3 =
-                g_numpad3.Pressed(VK_NUMPAD3);
+                g_numpad3.Pressed(
+                    VK_NUMPAD3,
+                    VK_NEXT);
 
             const bool num4 =
-                g_numpad4.Pressed(VK_NUMPAD4);
+                g_numpad4.Pressed(
+                    VK_NUMPAD4,
+                    VK_LEFT);
 
             const bool num5 =
-                g_numpad5.Pressed(VK_NUMPAD5);
+                g_numpad5.Pressed(
+                    VK_NUMPAD5,
+                    VK_CLEAR);
 
             const bool num6 =
-                g_numpad6.Pressed(VK_NUMPAD6);
+                g_numpad6.Pressed(
+                    VK_NUMPAD6,
+                    VK_RIGHT);
 
             const bool num8 =
-                g_numpad8.Pressed(VK_NUMPAD8);
+                g_numpad8.Pressed(
+                    VK_NUMPAD8,
+                    VK_UP);
 
             if (shiftDown && num1)
             {
