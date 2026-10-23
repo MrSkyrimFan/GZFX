@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.9-directinput-menu";
+        "0.0.10-pre-ui-effect-stack";
 }
 
 extern "C" __declspec(dllexport)
