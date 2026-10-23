@@ -10,6 +10,172 @@
     return output;
 }
 
+struct TemporalOutput
+{
+    float ao : SV_TARGET0;
+    float4 indirect : SV_TARGET1;
+    float4 geometry : SV_TARGET2;
+};
+
+TemporalOutput TemporalPS(VSOutput input)
+{
+    TemporalOutput output;
+
+    float currentAo =
+        AoInput.SampleLevel(
+            PointSampler,
+            input.uv,
+            0);
+
+    float4 currentIndirect =
+        IndirectInput.SampleLevel(
+            PointSampler,
+            input.uv,
+            0);
+
+    float currentDepth = DepthAt(input.uv);
+    float currentViewDepth =
+        currentDepth >= 0.99999
+        ? 1e6
+        : abs(
+            ReconstructView(
+                input.uv,
+                currentDepth).z);
+
+    float3 currentNormal =
+        currentDepth >= 0.99999
+        ? float3(0.0, 0.0, 1.0)
+        : SurfaceNormal(
+            input.uv,
+            currentDepth);
+
+    output.ao = currentAo;
+    output.indirect = currentIndirect;
+    output.geometry =
+        float4(
+            currentViewDepth,
+            currentNormal);
+
+    if (TemporalEnabled == 0 ||
+        HistoryValid == 0 ||
+        currentDepth >= 0.99999)
+    {
+        return output;
+    }
+
+    float2 motion =
+        MotionVectors.SampleLevel(
+            PointSampler,
+            input.uv,
+            0).xy;
+
+    float2 previousUv =
+        input.uv +
+        motion;
+
+    if (any(previousUv < 0.0) ||
+        any(previousUv > 1.0))
+    {
+        return output;
+    }
+
+    float4 previousGeometry =
+        HistoryGeometry.SampleLevel(
+            PointSampler,
+            previousUv,
+            0);
+
+    float previousDepth =
+        previousGeometry.x;
+
+    float relativeDepth =
+        abs(
+            previousDepth -
+            currentViewDepth) /
+        max(
+            currentViewDepth,
+            1.0);
+
+    float3 previousNormal =
+        normalize(
+            previousGeometry.yzw);
+
+    float normalAgreement =
+        dot(
+            previousNormal,
+            currentNormal);
+
+    float motionLength =
+        length(motion);
+
+    if (relativeDepth > 0.018 ||
+        normalAgreement < 0.88 ||
+        motionLength > 0.25)
+    {
+        return output;
+    }
+
+    float previousAo =
+        HistoryAo.SampleLevel(
+            LinearSampler,
+            previousUv,
+            0);
+
+    float3 previousIndirect =
+        HistoryIndirect.SampleLevel(
+            LinearSampler,
+            previousUv,
+            0).rgb;
+
+    previousAo =
+        clamp(
+            previousAo,
+            max(0.0, currentAo - 0.10),
+            min(1.0, currentAo + 0.10));
+
+    float3 indirectAllowance =
+        max(
+            abs(currentIndirect.rgb) * 0.50,
+            0.035.xxx);
+
+    previousIndirect =
+        clamp(
+            previousIndirect,
+            currentIndirect.rgb -
+                indirectAllowance,
+            currentIndirect.rgb +
+                indirectAllowance);
+
+    float motionResponse =
+        saturate(
+            motionLength * 80.0);
+
+    float currentWeight =
+        max(
+            TemporalBlend,
+            lerp(
+                0.18,
+                0.70,
+                motionResponse));
+
+    output.ao =
+        lerp(
+            previousAo,
+            currentAo,
+            currentWeight);
+
+    output.indirect.rgb =
+        lerp(
+            previousIndirect,
+            currentIndirect.rgb,
+            currentWeight);
+
+    output.indirect.a =
+        currentIndirect.a;
+
+    return output;
+}
+
 struct FilterOutput
 {
     float ao : SV_TARGET0;
