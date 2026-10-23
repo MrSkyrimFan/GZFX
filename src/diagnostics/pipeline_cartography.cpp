@@ -42,7 +42,9 @@ namespace gzfx::diagnostics::pipeline_cartography
         constexpr std::size_t kMaxPasses = 32000;
 
         constexpr std::size_t kCreateBuffer = 3;
+        constexpr std::size_t kCreateTexture1D = 4;
         constexpr std::size_t kCreateTexture2D = 5;
+        constexpr std::size_t kCreateTexture3D = 6;
         constexpr std::size_t kCreateVertexShader = 12;
         constexpr std::size_t kCreateGeometryShader = 13;
         constexpr std::size_t kCreateGeometryShaderWithStreamOutput = 14;
@@ -50,6 +52,7 @@ namespace gzfx::diagnostics::pipeline_cartography
         constexpr std::size_t kCreateHullShader = 16;
         constexpr std::size_t kCreateDomainShader = 17;
         constexpr std::size_t kCreateComputeShader = 18;
+        constexpr std::size_t kCreateDeferredContext = 27;
 
         using CreateBufferFn = HRESULT(STDMETHODCALLTYPE*)(
             ID3D11Device*,
@@ -57,11 +60,23 @@ namespace gzfx::diagnostics::pipeline_cartography
             const D3D11_SUBRESOURCE_DATA*,
             ID3D11Buffer**);
 
+        using CreateTexture1DFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*,
+            const D3D11_TEXTURE1D_DESC*,
+            const D3D11_SUBRESOURCE_DATA*,
+            ID3D11Texture1D**);
+
         using CreateTexture2DFn = HRESULT(STDMETHODCALLTYPE*)(
             ID3D11Device*,
             const D3D11_TEXTURE2D_DESC*,
             const D3D11_SUBRESOURCE_DATA*,
             ID3D11Texture2D**);
+
+        using CreateTexture3DFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*,
+            const D3D11_TEXTURE3D_DESC*,
+            const D3D11_SUBRESOURCE_DATA*,
+            ID3D11Texture3D**);
 
         using CreateVertexShaderFn = HRESULT(STDMETHODCALLTYPE*)(
             ID3D11Device*,
@@ -116,6 +131,11 @@ namespace gzfx::diagnostics::pipeline_cartography
             SIZE_T,
             ID3D11ClassLinkage*,
             ID3D11ComputeShader**);
+
+        using CreateDeferredContextFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*,
+            UINT,
+            ID3D11DeviceContext**);
 
         enum class ResourceType : std::uint32_t
         {
@@ -315,6 +335,7 @@ namespace gzfx::diagnostics::pipeline_cartography
         std::uint64_t g_resourceBirth = 0;
         std::uint64_t g_shaderBirth = 0;
         std::uint64_t g_passId = 0;
+        std::uint64_t g_deferredContextsCreated = 0;
 
         bool g_captureActive = false;
         std::uint64_t g_startFrame = 0;
@@ -883,8 +904,40 @@ namespace gzfx::diagnostics::pipeline_cartography
                 &owner);
         }
 
+        void RegisterTexture1DCreated(
+            ID3D11Texture1D* texture,
+            const std::string& owner)
+        {
+            if (texture == nullptr)
+            {
+                return;
+            }
+
+            std::scoped_lock lock(g_mutex);
+
+            RegisterResourceLocked(
+                texture,
+                &owner);
+        }
+
         void RegisterTexture2DCreated(
             ID3D11Texture2D* texture,
+            const std::string& owner)
+        {
+            if (texture == nullptr)
+            {
+                return;
+            }
+
+            std::scoped_lock lock(g_mutex);
+
+            RegisterResourceLocked(
+                texture,
+                &owner);
+        }
+
+        void RegisterTexture3DCreated(
+            ID3D11Texture3D* texture,
             const std::string& owner)
         {
             if (texture == nullptr)
@@ -1983,6 +2036,45 @@ namespace gzfx::diagnostics::pipeline_cartography
             return result;
         }
 
+        HRESULT STDMETHODCALLTYPE HookCreateTexture1D(
+            ID3D11Device* device,
+            const D3D11_TEXTURE1D_DESC* description,
+            const D3D11_SUBRESOURCE_DATA* data,
+            ID3D11Texture1D** texture)
+        {
+            const auto original =
+                DeviceOriginal<CreateTexture1DFn>(
+                    device,
+                    kCreateTexture1D);
+
+            if (original == nullptr)
+            {
+                return E_FAIL;
+            }
+
+            const std::string owner =
+                CallerModuleName(
+                    _ReturnAddress());
+
+            const HRESULT result =
+                original(
+                    device,
+                    description,
+                    data,
+                    texture);
+
+            if (SUCCEEDED(result) &&
+                texture != nullptr &&
+                *texture != nullptr)
+            {
+                RegisterTexture1DCreated(
+                    *texture,
+                    owner);
+            }
+
+            return result;
+        }
+
         HRESULT STDMETHODCALLTYPE HookCreateTexture2D(
             ID3D11Device* device,
             const D3D11_TEXTURE2D_DESC* description,
@@ -2015,6 +2107,45 @@ namespace gzfx::diagnostics::pipeline_cartography
                 *texture != nullptr)
             {
                 RegisterTexture2DCreated(
+                    *texture,
+                    owner);
+            }
+
+            return result;
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateTexture3D(
+            ID3D11Device* device,
+            const D3D11_TEXTURE3D_DESC* description,
+            const D3D11_SUBRESOURCE_DATA* data,
+            ID3D11Texture3D** texture)
+        {
+            const auto original =
+                DeviceOriginal<CreateTexture3DFn>(
+                    device,
+                    kCreateTexture3D);
+
+            if (original == nullptr)
+            {
+                return E_FAIL;
+            }
+
+            const std::string owner =
+                CallerModuleName(
+                    _ReturnAddress());
+
+            const HRESULT result =
+                original(
+                    device,
+                    description,
+                    data,
+                    texture);
+
+            if (SUCCEEDED(result) &&
+                texture != nullptr &&
+                *texture != nullptr)
+            {
+                RegisterTexture3DCreated(
                     *texture,
                     owner);
             }
@@ -2233,6 +2364,38 @@ namespace gzfx::diagnostics::pipeline_cartography
                     kCreateComputeShader,
                     ShaderStage::Compute,
                     CallerModuleName(_ReturnAddress()));
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateDeferredContext(
+            ID3D11Device* device,
+            UINT flags,
+            ID3D11DeviceContext** context)
+        {
+            const auto original =
+                DeviceOriginal<CreateDeferredContextFn>(
+                    device,
+                    kCreateDeferredContext);
+
+            if (original == nullptr)
+            {
+                return E_FAIL;
+            }
+
+            const HRESULT result =
+                original(
+                    device,
+                    flags,
+                    context);
+
+            if (SUCCEEDED(result) &&
+                context != nullptr &&
+                *context != nullptr)
+            {
+                std::scoped_lock lock(g_mutex);
+                ++g_deferredContextsCreated;
+            }
+
+            return result;
         }
 
         void ReleaseViews(
@@ -2779,6 +2942,20 @@ namespace gzfx::diagnostics::pipeline_cartography
                     tags.emplace_back(
                         "reduced_lighting_candidate");
                 }
+            }
+
+            if (resource.type ==
+                    ResourceType::Texture3D &&
+                resource.width > 0 &&
+                resource.height > 0 &&
+                resource.depth > 1)
+            {
+                tags.emplace_back(
+                    resource.width <= 64 &&
+                    resource.height <= 64 &&
+                    resource.depth <= 64
+                    ? "volume_or_color_lut_candidate"
+                    : "volume_texture_candidate");
             }
 
             if (resource.width > 0 &&
@@ -3526,6 +3703,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                         << "shaders_seen="
                         << g_shaders.size()
                         << "\n"
+                        << "deferred_contexts_created="
+                        << g_deferredContextsCreated
+                        << "\n"
                         << "known_scene_color="
                         << PointerString(
                             g_knownSceneColor)
@@ -3629,10 +3809,20 @@ namespace gzfx::diagnostics::pipeline_cartography
                     std::uintptr_t>(
                         &HookCreateBuffer);
 
+            replacement[kCreateTexture1D] =
+                reinterpret_cast<
+                    std::uintptr_t>(
+                        &HookCreateTexture1D);
+
             replacement[kCreateTexture2D] =
                 reinterpret_cast<
                     std::uintptr_t>(
                         &HookCreateTexture2D);
+
+            replacement[kCreateTexture3D] =
+                reinterpret_cast<
+                    std::uintptr_t>(
+                        &HookCreateTexture3D);
 
             replacement[kCreateVertexShader] =
                 reinterpret_cast<
@@ -3669,6 +3859,11 @@ namespace gzfx::diagnostics::pipeline_cartography
                 reinterpret_cast<
                     std::uintptr_t>(
                         &HookCreateComputeShader);
+
+            replacement[kCreateDeferredContext] =
+                reinterpret_cast<
+                    std::uintptr_t>(
+                        &HookCreateDeferredContext);
 
             DeviceHookState state{};
             state.originalVtable = original;
