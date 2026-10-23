@@ -1881,47 +1881,325 @@ namespace gzfx::diagnostics
 
             std::memcpy(g_contextVtable, g_originalContextVtable, sizeof(std::uintptr_t) * kContextVtableCount);
 
-            g_vsSetCB = Original<VSSetConstantBuffersFn>(kVSSetConstantBuffers);
-            g_psSetResources = Original<PSSetShaderResourcesFn>(kPSSetShaderResources);
-            g_psSetShader = Original<PSSetShaderFn>(kPSSetShader);
-            g_vsSetShader = Original<VSSetShaderFn>(kVSSetShader);
-            g_drawIndexed = Original<DrawIndexedFn>(kDrawIndexed);
-            g_draw = Original<DrawFn>(kDraw);
-            g_psSetCB = Original<PSSetConstantBuffersFn>(kPSSetConstantBuffers);
-            g_drawIndexedInstanced = Original<DrawIndexedInstancedFn>(kDrawIndexedInstanced);
-            g_drawInstanced = Original<DrawInstancedFn>(kDrawInstanced);
-            g_omSetRT = Original<OMSetRenderTargetsFn>(kOMSetRenderTargets);
-            g_dispatch = Original<DispatchFn>(kDispatch);
-            g_setViewports = Original<RSSetViewportsFn>(kRSSetViewports);
-            g_copyResource = Original<CopyResourceFn>(kCopyResource);
-            g_clearRTV = Original<ClearRenderTargetViewFn>(kClearRenderTargetView);
-            g_clearDSV = Original<ClearDepthStencilViewFn>(kClearDepthStencilView);
-            g_resolve = Original<ResolveSubresourceFn>(kResolveSubresource);
-            g_csSetResources = Original<CSSetShaderResourcesFn>(kCSSetShaderResources);
-            g_csSetUavs = Original<CSSetUnorderedAccessViewsFn>(kCSSetUnorderedAccessViews);
-            g_csSetShader = Original<CSSetShaderFn>(kCSSetShader);
-            g_csSetCB = Original<CSSetConstantBuffersFn>(kCSSetConstantBuffers);
+            g_vsSetCB =
+                Original<SetConstantBuffersFn>(
+                    kVSSetConstantBuffers);
+            g_hsSetCB =
+                Original<SetConstantBuffersFn>(
+                    kHSSetConstantBuffers);
+            g_dsSetCB =
+                Original<SetConstantBuffersFn>(
+                    kDSSetConstantBuffers);
+            g_gsSetCB =
+                Original<SetConstantBuffersFn>(
+                    kGSSetConstantBuffers);
+            g_psSetCB =
+                Original<SetConstantBuffersFn>(
+                    kPSSetConstantBuffers);
+            g_csSetCB =
+                Original<SetConstantBuffersFn>(
+                    kCSSetConstantBuffers);
 
-            g_contextVtable[kVSSetConstantBuffers] = reinterpret_cast<std::uintptr_t>(&HookVSSetCB);
-            g_contextVtable[kPSSetShaderResources] = reinterpret_cast<std::uintptr_t>(&HookPSSetResources);
-            g_contextVtable[kPSSetShader] = reinterpret_cast<std::uintptr_t>(&HookPSShader);
-            g_contextVtable[kVSSetShader] = reinterpret_cast<std::uintptr_t>(&HookVSShader);
-            g_contextVtable[kDrawIndexed] = reinterpret_cast<std::uintptr_t>(&HookDrawIndexed);
-            g_contextVtable[kDraw] = reinterpret_cast<std::uintptr_t>(&HookDraw);
-            g_contextVtable[kPSSetConstantBuffers] = reinterpret_cast<std::uintptr_t>(&HookPSSetCB);
-            g_contextVtable[kDrawIndexedInstanced] = reinterpret_cast<std::uintptr_t>(&HookDrawIndexedInstanced);
-            g_contextVtable[kDrawInstanced] = reinterpret_cast<std::uintptr_t>(&HookDrawInstanced);
-            g_contextVtable[kOMSetRenderTargets] = reinterpret_cast<std::uintptr_t>(&HookOMSetRT);
-            g_contextVtable[kDispatch] = reinterpret_cast<std::uintptr_t>(&HookDispatch);
-            g_contextVtable[kRSSetViewports] = reinterpret_cast<std::uintptr_t>(&HookViewports);
-            g_contextVtable[kCopyResource] = reinterpret_cast<std::uintptr_t>(&HookCopy);
-            g_contextVtable[kClearRenderTargetView] = reinterpret_cast<std::uintptr_t>(&HookClearRTV);
-            g_contextVtable[kClearDepthStencilView] = reinterpret_cast<std::uintptr_t>(&HookClearDSV);
-            g_contextVtable[kResolveSubresource] = reinterpret_cast<std::uintptr_t>(&HookResolve);
-            g_contextVtable[kCSSetShaderResources] = reinterpret_cast<std::uintptr_t>(&HookCSSetResources);
-            g_contextVtable[kCSSetUnorderedAccessViews] = reinterpret_cast<std::uintptr_t>(&HookCSSetUavs);
-            g_contextVtable[kCSSetShader] = reinterpret_cast<std::uintptr_t>(&HookCSShader);
-            g_contextVtable[kCSSetConstantBuffers] = reinterpret_cast<std::uintptr_t>(&HookCSSetCB);
+            g_vsSetResources =
+                Original<SetShaderResourcesFn>(
+                    kVSSetShaderResources);
+            g_hsSetResources =
+                Original<SetShaderResourcesFn>(
+                    kHSSetShaderResources);
+            g_dsSetResources =
+                Original<SetShaderResourcesFn>(
+                    kDSSetShaderResources);
+            g_gsSetResources =
+                Original<SetShaderResourcesFn>(
+                    kGSSetShaderResources);
+            g_psSetResources =
+                Original<SetShaderResourcesFn>(
+                    kPSSetShaderResources);
+            g_csSetResources =
+                Original<SetShaderResourcesFn>(
+                    kCSSetShaderResources);
+
+            g_vsSetSamplers =
+                Original<SetSamplersFn>(
+                    kVSSetSamplers);
+            g_hsSetSamplers =
+                Original<SetSamplersFn>(
+                    kHSSetSamplers);
+            g_dsSetSamplers =
+                Original<SetSamplersFn>(
+                    kDSSetSamplers);
+            g_gsSetSamplers =
+                Original<SetSamplersFn>(
+                    kGSSetSamplers);
+            g_psSetSamplers =
+                Original<SetSamplersFn>(
+                    kPSSetSamplers);
+            g_csSetSamplers =
+                Original<SetSamplersFn>(
+                    kCSSetSamplers);
+
+            g_vsSetShader =
+                Original<VSSetShaderFn>(
+                    kVSSetShader);
+            g_hsSetShader =
+                Original<HSSetShaderFn>(
+                    kHSSetShader);
+            g_dsSetShader =
+                Original<DSSetShaderFn>(
+                    kDSSetShader);
+            g_gsSetShader =
+                Original<GSSetShaderFn>(
+                    kGSSetShader);
+            g_psSetShader =
+                Original<PSSetShaderFn>(
+                    kPSSetShader);
+            g_csSetShader =
+                Original<CSSetShaderFn>(
+                    kCSSetShader);
+
+            g_drawIndexed =
+                Original<DrawIndexedFn>(
+                    kDrawIndexed);
+            g_draw =
+                Original<DrawFn>(
+                    kDraw);
+            g_drawIndexedInstanced =
+                Original<DrawIndexedInstancedFn>(
+                    kDrawIndexedInstanced);
+            g_drawInstanced =
+                Original<DrawInstancedFn>(
+                    kDrawInstanced);
+            g_drawIndexedInstancedIndirect =
+                Original<DrawIndexedInstancedIndirectFn>(
+                    kDrawIndexedInstancedIndirect);
+            g_drawInstancedIndirect =
+                Original<DrawInstancedIndirectFn>(
+                    kDrawInstancedIndirect);
+
+            g_setTopology =
+                Original<IASetPrimitiveTopologyFn>(
+                    kIASetPrimitiveTopology);
+            g_omSetRT =
+                Original<OMSetRenderTargetsFn>(
+                    kOMSetRenderTargets);
+            g_omSetRTUavs =
+                Original<OMSetRenderTargetsAndUavsFn>(
+                    kOMSetRenderTargetsAndUavs);
+            g_omSetBlend =
+                Original<OMSetBlendStateFn>(
+                    kOMSetBlendState);
+            g_omSetDepth =
+                Original<OMSetDepthStencilStateFn>(
+                    kOMSetDepthStencilState);
+
+            g_dispatch =
+                Original<DispatchFn>(
+                    kDispatch);
+            g_dispatchIndirect =
+                Original<DispatchIndirectFn>(
+                    kDispatchIndirect);
+
+            g_setRaster =
+                Original<RSSetStateFn>(
+                    kRSSetState);
+            g_setViewports =
+                Original<RSSetViewportsFn>(
+                    kRSSetViewports);
+
+            g_copySubresource =
+                Original<CopySubresourceRegionFn>(
+                    kCopySubresourceRegion);
+            g_copyResource =
+                Original<CopyResourceFn>(
+                    kCopyResource);
+            g_clearRTV =
+                Original<ClearRenderTargetViewFn>(
+                    kClearRenderTargetView);
+            g_clearUavUint =
+                Original<ClearUnorderedAccessViewUintFn>(
+                    kClearUnorderedAccessViewUint);
+            g_clearUavFloat =
+                Original<ClearUnorderedAccessViewFloatFn>(
+                    kClearUnorderedAccessViewFloat);
+            g_clearDSV =
+                Original<ClearDepthStencilViewFn>(
+                    kClearDepthStencilView);
+            g_generateMips =
+                Original<GenerateMipsFn>(
+                    kGenerateMips);
+            g_resolve =
+                Original<ResolveSubresourceFn>(
+                    kResolveSubresource);
+            g_executeCommandList =
+                Original<ExecuteCommandListFn>(
+                    kExecuteCommandList);
+
+            g_csSetUavs =
+                Original<CSSetUnorderedAccessViewsFn>(
+                    kCSSetUnorderedAccessViews);
+            g_clearState =
+                Original<ClearStateFn>(
+                    kClearState);
+
+            g_contextVtable[kVSSetConstantBuffers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookVSSetCB);
+            g_contextVtable[kHSSetConstantBuffers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookHSSetCB);
+            g_contextVtable[kDSSetConstantBuffers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDSSetCB);
+            g_contextVtable[kGSSetConstantBuffers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookGSSetCB);
+            g_contextVtable[kPSSetConstantBuffers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookPSSetCB);
+            g_contextVtable[kCSSetConstantBuffers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookCSSetCB);
+
+            g_contextVtable[kVSSetShaderResources] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookVSSetResources);
+            g_contextVtable[kHSSetShaderResources] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookHSSetResources);
+            g_contextVtable[kDSSetShaderResources] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDSSetResources);
+            g_contextVtable[kGSSetShaderResources] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookGSSetResources);
+            g_contextVtable[kPSSetShaderResources] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookPSSetResources);
+            g_contextVtable[kCSSetShaderResources] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookCSSetResources);
+
+            g_contextVtable[kVSSetSamplers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookVSSetSamplers);
+            g_contextVtable[kHSSetSamplers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookHSSetSamplers);
+            g_contextVtable[kDSSetSamplers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDSSetSamplers);
+            g_contextVtable[kGSSetSamplers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookGSSetSamplers);
+            g_contextVtable[kPSSetSamplers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookPSSetSamplers);
+            g_contextVtable[kCSSetSamplers] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookCSSetSamplers);
+
+            g_contextVtable[kVSSetShader] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookVSShader);
+            g_contextVtable[kHSSetShader] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookHSShader);
+            g_contextVtable[kDSSetShader] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDSShader);
+            g_contextVtable[kGSSetShader] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookGSShader);
+            g_contextVtable[kPSSetShader] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookPSShader);
+            g_contextVtable[kCSSetShader] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookCSShader);
+
+            g_contextVtable[kDrawIndexed] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDrawIndexed);
+            g_contextVtable[kDraw] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDraw);
+            g_contextVtable[kDrawIndexedInstanced] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDrawIndexedInstanced);
+            g_contextVtable[kDrawInstanced] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDrawInstanced);
+            g_contextVtable[kDrawIndexedInstancedIndirect] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDrawIndexedInstancedIndirect);
+            g_contextVtable[kDrawInstancedIndirect] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDrawInstancedIndirect);
+
+            g_contextVtable[kIASetPrimitiveTopology] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookTopology);
+            g_contextVtable[kOMSetRenderTargets] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookOMSetRT);
+            g_contextVtable[kOMSetRenderTargetsAndUavs] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookOMSetRTUavs);
+            g_contextVtable[kOMSetBlendState] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookBlendState);
+            g_contextVtable[kOMSetDepthStencilState] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDepthState);
+
+            g_contextVtable[kDispatch] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDispatch);
+            g_contextVtable[kDispatchIndirect] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookDispatchIndirect);
+
+            g_contextVtable[kRSSetState] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookRasterState);
+            g_contextVtable[kRSSetViewports] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookViewports);
+
+            g_contextVtable[kCopySubresourceRegion] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookCopySubresource);
+            g_contextVtable[kCopyResource] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookCopy);
+            g_contextVtable[kClearRenderTargetView] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookClearRTV);
+            g_contextVtable[kClearUnorderedAccessViewUint] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookClearUavUint);
+            g_contextVtable[kClearUnorderedAccessViewFloat] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookClearUavFloat);
+            g_contextVtable[kClearDepthStencilView] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookClearDSV);
+            g_contextVtable[kGenerateMips] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookGenerateMips);
+            g_contextVtable[kResolveSubresource] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookResolve);
+            g_contextVtable[kExecuteCommandList] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookExecuteCommandList);
+
+            g_contextVtable[kCSSetUnorderedAccessViews] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookCSSetUavs);
+            g_contextVtable[kClearState] =
+                reinterpret_cast<std::uintptr_t>(
+                    &HookClearState);
 
             InterlockedExchangePointer(reinterpret_cast<PVOID volatile*>(context), g_contextVtable);
             g_contextArmed = true;
