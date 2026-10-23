@@ -14,6 +14,20 @@ namespace gzfx::settings
         bool captureOnModeChange = true;
     };
 
+    enum class Editable : std::uint32_t
+    {
+        AmbientContactStrength = 0,
+        AmbientContactRadiusPixels,
+        DefaultMode,
+        ActivationDrawIndexedThreshold,
+        AccessibleDiagnostics,
+        CaptureOnModeChange,
+        Count
+    };
+
     const Values& Get() noexcept;
     bool Reload() noexcept;
+
+    bool Adjust(Editable setting, int direction) noexcept;
+    bool Toggle(Editable setting) noexcept;
 }
