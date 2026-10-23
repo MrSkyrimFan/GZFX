@@ -586,49 +586,251 @@ namespace gzfx::diagnostics
             return reinterpret_cast<T>(g_originalContextVtable[index]);
         }
 
-        void STDMETHODCALLTYPE HookVSSetCB(ID3D11DeviceContext* c, UINT slot, UINT count, ID3D11Buffer* const* b)
+        void STDMETHODCALLTYPE HookVSSetCB(
+            ID3D11DeviceContext* c,
+            UINT slot,
+            UINT count,
+            ID3D11Buffer* const* b)
         {
-            if (c == g_primaryContext) Safe([&]
+            if (c == g_primaryContext)
             {
-                g_vsCBBinds += count;
+                Safe([&]
                 {
-                    std::scoped_lock l(g_mutex);
-                    TrackBuffers('V', slot, count, b);
-                }
-                resource_intelligence::ObserveConstantBuffers(
-                    g_frame, 'V', slot, count, b);
-            });
+                    g_vsCBBinds += count;
+
+                    {
+                        std::scoped_lock l(g_mutex);
+                        TrackBuffers('V', slot, count, b);
+                    }
+
+                    resource_intelligence::ObserveConstantBuffers(
+                        g_frame,
+                        'V',
+                        slot,
+                        count,
+                        b);
+
+                    pipeline_cartography::SetConstantBuffers(
+                        pipeline_cartography::ShaderStage::Vertex,
+                        slot,
+                        count,
+                        b);
+                });
+            }
+
             g_vsSetCB(c, slot, count, b);
         }
 
-        void STDMETHODCALLTYPE HookPSSetCB(ID3D11DeviceContext* c, UINT slot, UINT count, ID3D11Buffer* const* b)
+        void STDMETHODCALLTYPE HookHSSetCB(
+            ID3D11DeviceContext* c,
+            UINT slot,
+            UINT count,
+            ID3D11Buffer* const* b)
         {
-            if (c == g_primaryContext) Safe([&]
+            if (c == g_primaryContext)
             {
-                g_psCBBinds += count;
+                pipeline_cartography::SetConstantBuffers(
+                    pipeline_cartography::ShaderStage::Hull,
+                    slot,
+                    count,
+                    b);
+            }
+
+            g_hsSetCB(c, slot, count, b);
+        }
+
+        void STDMETHODCALLTYPE HookDSSetCB(
+            ID3D11DeviceContext* c,
+            UINT slot,
+            UINT count,
+            ID3D11Buffer* const* b)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::SetConstantBuffers(
+                    pipeline_cartography::ShaderStage::Domain,
+                    slot,
+                    count,
+                    b);
+            }
+
+            g_dsSetCB(c, slot, count, b);
+        }
+
+        void STDMETHODCALLTYPE HookGSSetCB(
+            ID3D11DeviceContext* c,
+            UINT slot,
+            UINT count,
+            ID3D11Buffer* const* b)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::SetConstantBuffers(
+                    pipeline_cartography::ShaderStage::Geometry,
+                    slot,
+                    count,
+                    b);
+            }
+
+            g_gsSetCB(c, slot, count, b);
+        }
+
+        void STDMETHODCALLTYPE HookPSSetCB(
+            ID3D11DeviceContext* c,
+            UINT slot,
+            UINT count,
+            ID3D11Buffer* const* b)
+        {
+            if (c == g_primaryContext)
+            {
+                Safe([&]
                 {
-                    std::scoped_lock l(g_mutex);
-                    TrackBuffers('P', slot, count, b);
-                }
-                resource_intelligence::ObserveConstantBuffers(
-                    g_frame, 'P', slot, count, b);
-            });
+                    g_psCBBinds += count;
+
+                    {
+                        std::scoped_lock l(g_mutex);
+                        TrackBuffers('P', slot, count, b);
+                    }
+
+                    resource_intelligence::ObserveConstantBuffers(
+                        g_frame,
+                        'P',
+                        slot,
+                        count,
+                        b);
+
+                    pipeline_cartography::SetConstantBuffers(
+                        pipeline_cartography::ShaderStage::Pixel,
+                        slot,
+                        count,
+                        b);
+                });
+            }
+
             g_psSetCB(c, slot, count, b);
         }
 
-        void STDMETHODCALLTYPE HookCSSetCB(ID3D11DeviceContext* c, UINT slot, UINT count, ID3D11Buffer* const* b)
+        void STDMETHODCALLTYPE HookCSSetCB(
+            ID3D11DeviceContext* c,
+            UINT slot,
+            UINT count,
+            ID3D11Buffer* const* b)
         {
-            if (c == g_primaryContext) Safe([&]
+            if (c == g_primaryContext)
             {
-                g_csCBBinds += count;
+                Safe([&]
                 {
-                    std::scoped_lock l(g_mutex);
-                    TrackBuffers('C', slot, count, b);
-                }
-                resource_intelligence::ObserveConstantBuffers(
-                    g_frame, 'C', slot, count, b);
-            });
+                    g_csCBBinds += count;
+
+                    {
+                        std::scoped_lock l(g_mutex);
+                        TrackBuffers('C', slot, count, b);
+                    }
+
+                    resource_intelligence::ObserveConstantBuffers(
+                        g_frame,
+                        'C',
+                        slot,
+                        count,
+                        b);
+
+                    pipeline_cartography::SetConstantBuffers(
+                        pipeline_cartography::ShaderStage::Compute,
+                        slot,
+                        count,
+                        b);
+                });
+            }
+
             g_csSetCB(c, slot, count, b);
+        }
+
+        void STDMETHODCALLTYPE HookVSSetResources(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11ShaderResourceView* const* resources)
+        {
+            if (context == g_primaryContext)
+            {
+                pipeline_cartography::SetShaderResources(
+                    pipeline_cartography::ShaderStage::Vertex,
+                    startSlot,
+                    count,
+                    resources);
+            }
+
+            g_vsSetResources(
+                context,
+                startSlot,
+                count,
+                resources);
+        }
+
+        void STDMETHODCALLTYPE HookHSSetResources(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11ShaderResourceView* const* resources)
+        {
+            if (context == g_primaryContext)
+            {
+                pipeline_cartography::SetShaderResources(
+                    pipeline_cartography::ShaderStage::Hull,
+                    startSlot,
+                    count,
+                    resources);
+            }
+
+            g_hsSetResources(
+                context,
+                startSlot,
+                count,
+                resources);
+        }
+
+        void STDMETHODCALLTYPE HookDSSetResources(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11ShaderResourceView* const* resources)
+        {
+            if (context == g_primaryContext)
+            {
+                pipeline_cartography::SetShaderResources(
+                    pipeline_cartography::ShaderStage::Domain,
+                    startSlot,
+                    count,
+                    resources);
+            }
+
+            g_dsSetResources(
+                context,
+                startSlot,
+                count,
+                resources);
+        }
+
+        void STDMETHODCALLTYPE HookGSSetResources(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11ShaderResourceView* const* resources)
+        {
+            if (context == g_primaryContext)
+            {
+                pipeline_cartography::SetShaderResources(
+                    pipeline_cartography::ShaderStage::Geometry,
+                    startSlot,
+                    count,
+                    resources);
+            }
+
+            g_gsSetResources(
+                context,
+                startSlot,
+                count,
+                resources);
         }
 
         void STDMETHODCALLTYPE HookPSSetResources(
@@ -644,6 +846,12 @@ namespace gzfx::diagnostics
                     semantic_probe::ObservePixelResources(
                         g_frame,
                         g_drawOrdinalThisFrame.load(),
+                        startSlot,
+                        count,
+                        resources);
+
+                    pipeline_cartography::SetShaderResources(
+                        pipeline_cartography::ShaderStage::Pixel,
                         startSlot,
                         count,
                         resources);
@@ -673,6 +881,12 @@ namespace gzfx::diagnostics
                         startSlot,
                         count,
                         resources);
+
+                    pipeline_cartography::SetShaderResources(
+                        pipeline_cartography::ShaderStage::Compute,
+                        startSlot,
+                        count,
+                        resources);
                 });
             }
 
@@ -681,6 +895,114 @@ namespace gzfx::diagnostics
                 startSlot,
                 count,
                 resources);
+        }
+
+        void STDMETHODCALLTYPE HookVSSetSamplers(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11SamplerState* const* samplers)
+        {
+            if (context == g_primaryContext)
+            {
+                pipeline_cartography::SetSamplers(
+                    pipeline_cartography::ShaderStage::Vertex,
+                    startSlot,
+                    count,
+                    samplers);
+            }
+
+            g_vsSetSamplers(context, startSlot, count, samplers);
+        }
+
+        void STDMETHODCALLTYPE HookHSSetSamplers(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11SamplerState* const* samplers)
+        {
+            if (context == g_primaryContext)
+            {
+                pipeline_cartography::SetSamplers(
+                    pipeline_cartography::ShaderStage::Hull,
+                    startSlot,
+                    count,
+                    samplers);
+            }
+
+            g_hsSetSamplers(context, startSlot, count, samplers);
+        }
+
+        void STDMETHODCALLTYPE HookDSSetSamplers(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11SamplerState* const* samplers)
+        {
+            if (context == g_primaryContext)
+            {
+                pipeline_cartography::SetSamplers(
+                    pipeline_cartography::ShaderStage::Domain,
+                    startSlot,
+                    count,
+                    samplers);
+            }
+
+            g_dsSetSamplers(context, startSlot, count, samplers);
+        }
+
+        void STDMETHODCALLTYPE HookGSSetSamplers(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11SamplerState* const* samplers)
+        {
+            if (context == g_primaryContext)
+            {
+                pipeline_cartography::SetSamplers(
+                    pipeline_cartography::ShaderStage::Geometry,
+                    startSlot,
+                    count,
+                    samplers);
+            }
+
+            g_gsSetSamplers(context, startSlot, count, samplers);
+        }
+
+        void STDMETHODCALLTYPE HookPSSetSamplers(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11SamplerState* const* samplers)
+        {
+            if (context == g_primaryContext)
+            {
+                pipeline_cartography::SetSamplers(
+                    pipeline_cartography::ShaderStage::Pixel,
+                    startSlot,
+                    count,
+                    samplers);
+            }
+
+            g_psSetSamplers(context, startSlot, count, samplers);
+        }
+
+        void STDMETHODCALLTYPE HookCSSetSamplers(
+            ID3D11DeviceContext* context,
+            UINT startSlot,
+            UINT count,
+            ID3D11SamplerState* const* samplers)
+        {
+            if (context == g_primaryContext)
+            {
+                pipeline_cartography::SetSamplers(
+                    pipeline_cartography::ShaderStage::Compute,
+                    startSlot,
+                    count,
+                    samplers);
+            }
+
+            g_csSetSamplers(context, startSlot, count, samplers);
         }
 
         void STDMETHODCALLTYPE HookCSSetUavs(
@@ -700,6 +1022,11 @@ namespace gzfx::diagnostics
                         startSlot,
                         count,
                         resources);
+
+                    pipeline_cartography::SetComputeUavs(
+                        startSlot,
+                        count,
+                        resources);
                 });
             }
 
@@ -711,74 +1038,418 @@ namespace gzfx::diagnostics
                 initialCounts);
         }
 
-        void STDMETHODCALLTYPE HookPSShader(ID3D11DeviceContext* c, ID3D11PixelShader* s, ID3D11ClassInstance* const* i, UINT n)
+        void STDMETHODCALLTYPE HookVSShader(
+            ID3D11DeviceContext* c,
+            ID3D11VertexShader* shader,
+            ID3D11ClassInstance* const* instances,
+            UINT count)
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_vsChanges;
+
+                pipeline_cartography::SetShader(
+                    pipeline_cartography::ShaderStage::Vertex,
+                    shader);
+            }
+
+            g_vsSetShader(c, shader, instances, count);
+        }
+
+        void STDMETHODCALLTYPE HookHSShader(
+            ID3D11DeviceContext* c,
+            ID3D11HullShader* shader,
+            ID3D11ClassInstance* const* instances,
+            UINT count)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::SetShader(
+                    pipeline_cartography::ShaderStage::Hull,
+                    shader);
+            }
+
+            g_hsSetShader(c, shader, instances, count);
+        }
+
+        void STDMETHODCALLTYPE HookDSShader(
+            ID3D11DeviceContext* c,
+            ID3D11DomainShader* shader,
+            ID3D11ClassInstance* const* instances,
+            UINT count)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::SetShader(
+                    pipeline_cartography::ShaderStage::Domain,
+                    shader);
+            }
+
+            g_dsSetShader(c, shader, instances, count);
+        }
+
+        void STDMETHODCALLTYPE HookGSShader(
+            ID3D11DeviceContext* c,
+            ID3D11GeometryShader* shader,
+            ID3D11ClassInstance* const* instances,
+            UINT count)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::SetShader(
+                    pipeline_cartography::ShaderStage::Geometry,
+                    shader);
+            }
+
+            g_gsSetShader(c, shader, instances, count);
+        }
+
+        void STDMETHODCALLTYPE HookPSShader(
+            ID3D11DeviceContext* c,
+            ID3D11PixelShader* shader,
+            ID3D11ClassInstance* const* instances,
+            UINT count)
         {
             if (c == g_primaryContext)
             {
                 ++g_psChanges;
-                semantic_probe::SetPixelShader(s);
+                semantic_probe::SetPixelShader(shader);
+
+                pipeline_cartography::SetShader(
+                    pipeline_cartography::ShaderStage::Pixel,
+                    shader);
             }
 
-            g_psSetShader(c, s, i, n);
+            g_psSetShader(c, shader, instances, count);
         }
 
-        void STDMETHODCALLTYPE HookVSShader(ID3D11DeviceContext* c, ID3D11VertexShader* s, ID3D11ClassInstance* const* i, UINT n)
-        { if (c == g_primaryContext) ++g_vsChanges; g_vsSetShader(c, s, i, n); }
-
-        void STDMETHODCALLTYPE HookCSShader(ID3D11DeviceContext* c, ID3D11ComputeShader* s, ID3D11ClassInstance* const* i, UINT n)
+        void STDMETHODCALLTYPE HookCSShader(
+            ID3D11DeviceContext* c,
+            ID3D11ComputeShader* shader,
+            ID3D11ClassInstance* const* instances,
+            UINT count)
         {
             if (c == g_primaryContext)
             {
                 ++g_csChanges;
-                semantic_probe::SetComputeShader(s);
+                semantic_probe::SetComputeShader(shader);
+
+                pipeline_cartography::SetShader(
+                    pipeline_cartography::ShaderStage::Compute,
+                    shader);
             }
 
-            g_csSetShader(c, s, i, n);
+            g_csSetShader(c, shader, instances, count);
         }
 
-        void STDMETHODCALLTYPE HookDraw(ID3D11DeviceContext* c, UINT a, UINT b)
+        void STDMETHODCALLTYPE HookDraw(
+            ID3D11DeviceContext* c,
+            UINT vertexCount,
+            UINT startVertex)
         {
             if (c == g_primaryContext)
             {
-                ++g_drawOrdinalThisFrame;
+                const std::uint64_t ordinal =
+                    ++g_drawOrdinalThisFrame;
+
                 ++g_draws;
+
+                pipeline_cartography::ExecuteDraw(
+                    g_frame,
+                    ordinal,
+                    pipeline_cartography::DrawKind::Draw,
+                    vertexCount,
+                    startVertex,
+                    0,
+                    0,
+                    0,
+                    nullptr,
+                    0);
             }
-            g_draw(c, a, b);
+
+            g_draw(c, vertexCount, startVertex);
         }
 
-        void STDMETHODCALLTYPE HookDrawIndexed(ID3D11DeviceContext* c, UINT a, UINT b, INT d)
+        void STDMETHODCALLTYPE HookDrawIndexed(
+            ID3D11DeviceContext* c,
+            UINT indexCount,
+            UINT startIndex,
+            INT baseVertex)
         {
             if (c == g_primaryContext)
             {
-                ++g_drawOrdinalThisFrame;
+                const std::uint64_t ordinal =
+                    ++g_drawOrdinalThisFrame;
+
                 ++g_drawIndexedCalls;
                 ++g_drawIndexedActivityThisFrame;
+
+                pipeline_cartography::ExecuteDraw(
+                    g_frame,
+                    ordinal,
+                    pipeline_cartography::DrawKind::DrawIndexed,
+                    indexCount,
+                    startIndex,
+                    static_cast<std::uint64_t>(
+                        static_cast<std::int64_t>(
+                            baseVertex)),
+                    0,
+                    0,
+                    nullptr,
+                    0);
             }
-            g_drawIndexed(c, a, b, d);
+
+            g_drawIndexed(
+                c,
+                indexCount,
+                startIndex,
+                baseVertex);
         }
 
-        void STDMETHODCALLTYPE HookDrawInstanced(ID3D11DeviceContext* c, UINT a, UINT b, UINT d, UINT e)
+        void STDMETHODCALLTYPE HookDrawInstanced(
+            ID3D11DeviceContext* c,
+            UINT vertexCountPerInstance,
+            UINT instanceCount,
+            UINT startVertex,
+            UINT startInstance)
         {
             if (c == g_primaryContext)
             {
-                ++g_drawOrdinalThisFrame;
+                const std::uint64_t ordinal =
+                    ++g_drawOrdinalThisFrame;
+
                 ++g_drawInstancedCalls;
+
+                pipeline_cartography::ExecuteDraw(
+                    g_frame,
+                    ordinal,
+                    pipeline_cartography::DrawKind::DrawInstanced,
+                    vertexCountPerInstance,
+                    instanceCount,
+                    startVertex,
+                    startInstance,
+                    0,
+                    nullptr,
+                    0);
             }
-            g_drawInstanced(c, a, b, d, e);
+
+            g_drawInstanced(
+                c,
+                vertexCountPerInstance,
+                instanceCount,
+                startVertex,
+                startInstance);
         }
 
-        void STDMETHODCALLTYPE HookDrawIndexedInstanced(ID3D11DeviceContext* c, UINT a, UINT b, UINT d, INT e, UINT f)
+        void STDMETHODCALLTYPE HookDrawIndexedInstanced(
+            ID3D11DeviceContext* c,
+            UINT indexCountPerInstance,
+            UINT instanceCount,
+            UINT startIndex,
+            INT baseVertex,
+            UINT startInstance)
         {
             if (c == g_primaryContext)
             {
-                ++g_drawOrdinalThisFrame;
+                const std::uint64_t ordinal =
+                    ++g_drawOrdinalThisFrame;
+
                 ++g_drawIndexedInstancedCalls;
+
+                pipeline_cartography::ExecuteDraw(
+                    g_frame,
+                    ordinal,
+                    pipeline_cartography::DrawKind::DrawIndexedInstanced,
+                    indexCountPerInstance,
+                    instanceCount,
+                    startIndex,
+                    static_cast<std::uint64_t>(
+                        static_cast<std::int64_t>(
+                            baseVertex)),
+                    startInstance,
+                    nullptr,
+                    0);
             }
-            g_drawIndexedInstanced(c, a, b, d, e, f);
+
+            g_drawIndexedInstanced(
+                c,
+                indexCountPerInstance,
+                instanceCount,
+                startIndex,
+                baseVertex,
+                startInstance);
         }
 
-        void STDMETHODCALLTYPE HookDispatch(ID3D11DeviceContext* c, UINT a, UINT b, UINT d)
-        { if (c == g_primaryContext) ++g_dispatchCalls; g_dispatch(c, a, b, d); }
+        void STDMETHODCALLTYPE HookDrawIndexedInstancedIndirect(
+            ID3D11DeviceContext* c,
+            ID3D11Buffer* args,
+            UINT offset)
+        {
+            if (c == g_primaryContext)
+            {
+                const std::uint64_t ordinal =
+                    ++g_drawOrdinalThisFrame;
+
+                pipeline_cartography::ExecuteDraw(
+                    g_frame,
+                    ordinal,
+                    pipeline_cartography::DrawKind::DrawIndexedInstancedIndirect,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    args,
+                    offset);
+            }
+
+            g_drawIndexedInstancedIndirect(
+                c,
+                args,
+                offset);
+        }
+
+        void STDMETHODCALLTYPE HookDrawInstancedIndirect(
+            ID3D11DeviceContext* c,
+            ID3D11Buffer* args,
+            UINT offset)
+        {
+            if (c == g_primaryContext)
+            {
+                const std::uint64_t ordinal =
+                    ++g_drawOrdinalThisFrame;
+
+                pipeline_cartography::ExecuteDraw(
+                    g_frame,
+                    ordinal,
+                    pipeline_cartography::DrawKind::DrawInstancedIndirect,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    args,
+                    offset);
+            }
+
+            g_drawInstancedIndirect(
+                c,
+                args,
+                offset);
+        }
+
+        void STDMETHODCALLTYPE HookDispatch(
+            ID3D11DeviceContext* c,
+            UINT x,
+            UINT y,
+            UINT z)
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_dispatchCalls;
+
+                pipeline_cartography::ExecuteDispatch(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    x,
+                    y,
+                    z,
+                    nullptr,
+                    0);
+            }
+
+            g_dispatch(c, x, y, z);
+        }
+
+        void STDMETHODCALLTYPE HookDispatchIndirect(
+            ID3D11DeviceContext* c,
+            ID3D11Buffer* args,
+            UINT offset)
+        {
+            if (c == g_primaryContext)
+            {
+                ++g_dispatchCalls;
+
+                pipeline_cartography::ExecuteDispatch(
+                    g_frame,
+                    g_drawOrdinalThisFrame.load(),
+                    0,
+                    0,
+                    0,
+                    args,
+                    offset);
+            }
+
+            g_dispatchIndirect(
+                c,
+                args,
+                offset);
+        }
+
+        void STDMETHODCALLTYPE HookTopology(
+            ID3D11DeviceContext* c,
+            D3D11_PRIMITIVE_TOPOLOGY topology)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::SetPrimitiveTopology(
+                    topology);
+            }
+
+            g_setTopology(c, topology);
+        }
+
+        void STDMETHODCALLTYPE HookBlendState(
+            ID3D11DeviceContext* c,
+            ID3D11BlendState* state,
+            const FLOAT blendFactor[4],
+            UINT sampleMask)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::SetBlendState(
+                    state,
+                    blendFactor,
+                    sampleMask);
+            }
+
+            g_omSetBlend(
+                c,
+                state,
+                blendFactor,
+                sampleMask);
+        }
+
+        void STDMETHODCALLTYPE HookDepthState(
+            ID3D11DeviceContext* c,
+            ID3D11DepthStencilState* state,
+            UINT stencilRef)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::SetDepthStencilState(
+                    state,
+                    stencilRef);
+            }
+
+            g_omSetDepth(
+                c,
+                state,
+                stencilRef);
+        }
+
+        void STDMETHODCALLTYPE HookRasterState(
+            ID3D11DeviceContext* c,
+            ID3D11RasterizerState* state)
+        {
+            if (c == g_primaryContext)
+            {
+                pipeline_cartography::SetRasterizerState(
+                    state);
+            }
+
+            g_setRaster(c, state);
+        }
 
         void STDMETHODCALLTYPE HookOMSetRT(
             ID3D11DeviceContext* c,
