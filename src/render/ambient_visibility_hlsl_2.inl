@@ -1,4 +1,8 @@
             source += R"GZFX(    float aoRadiusView = max(viewUnitsPerPixel * max(AoRadius, 1.0), 0.001);
+    float aoOccluderRange = max(
+        aoRadiusView * 4.0,
+        viewUnitsPerPixel * 8.0);
+
     float indirectRadiusView = max(
         viewUnitsPerPixel * max(IndirectRadius, 1.0),
         0.001);
@@ -115,8 +119,8 @@
                         positivePlaneHeight > receiverPlaneBias)
                     {
                         float distanceWeight = saturate(
-                            (aoRadiusView - positiveDistance) /
-                            max(aoRadiusView * 0.35, 1e-4));
+                            (aoOccluderRange - positiveDistance) /
+                            max(aoOccluderRange * 0.50, 1e-4));
 
                         float planeWeight = saturate(
                             (positivePlaneHeight - receiverPlaneBias) /
@@ -149,8 +153,8 @@
                         negativePlaneHeight > receiverPlaneBias)
                     {
                         float distanceWeight = saturate(
-                            (aoRadiusView - negativeDistance) /
-                            max(aoRadiusView * 0.35, 1e-4));
+                            (aoOccluderRange - negativeDistance) /
+                            max(aoOccluderRange * 0.50, 1e-4));
 
                         float planeWeight = saturate(
                             (negativePlaneHeight - receiverPlaneBias) /
