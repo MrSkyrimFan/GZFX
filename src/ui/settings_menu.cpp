@@ -87,6 +87,7 @@ namespace gzfx::ui
         };
 
         bool g_leftDown = false;
+        bool g_directInputSeen = false;
 
         KeyEdge g_numpad1{};
         KeyEdge g_numpad2{};
@@ -1072,31 +1073,42 @@ namespace gzfx::ui
                     switch (message)
                     {
                     case WM_MOUSEMOVE:
-                        UpdateCursorFromClient(
-                            lParam);
-
-                        if (g_leftDown)
+                        if (!g_directInputSeen)
                         {
-                            ApplyMouse(false);
+                            UpdateCursorFromClient(
+                                lParam);
+
+                            if (g_leftDown)
+                            {
+                                ApplyMouse(false);
+                            }
                         }
 
                         return 0;
 
                     case WM_LBUTTONDOWN:
-                        UpdateCursorFromClient(
-                            lParam);
+                        if (!g_directInputSeen)
+                        {
+                            UpdateCursorFromClient(
+                                lParam);
 
-                        g_leftDown = true;
-                        ApplyMouse(true);
-                        SetCapture(window);
+                            g_leftDown = true;
+                            ApplyMouse(true);
+                            SetCapture(window);
+                        }
+
                         return 0;
 
                     case WM_LBUTTONUP:
-                        UpdateCursorFromClient(
-                            lParam);
+                        if (!g_directInputSeen)
+                        {
+                            UpdateCursorFromClient(
+                                lParam);
 
-                        g_leftDown = false;
-                        ReleaseCapture();
+                            g_leftDown = false;
+                            ReleaseCapture();
+                        }
+
                         return 0;
 
                     case WM_INPUT:
@@ -1132,7 +1144,8 @@ namespace gzfx::ui
                                             bytes.data());
 
                                 if (input->header.dwType ==
-                                    RIM_TYPEMOUSE)
+                                        RIM_TYPEMOUSE &&
+                                    !g_directInputSeen)
                                 {
                                     g_cursor.x +=
                                         input->data.mouse
@@ -1339,6 +1352,72 @@ namespace gzfx::ui
                     frame,
                     "cycle_view_requested");
             }
+        }
+        catch (...)
+        {
+        }
+    }
+
+    bool IsMenuVisible() noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+            return g_visible;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    void SubmitDirectInputMouse(
+        const LONG deltaX,
+        const LONG deltaY,
+        const LONG,
+        const std::uint32_t buttonMask) noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+
+            if (!g_visible)
+            {
+                return;
+            }
+
+            g_directInputSeen = true;
+
+            g_cursor.x += deltaX;
+            g_cursor.y += deltaY;
+            ClampCursor();
+
+            const int row =
+                RowFromCursor();
+
+            if (row >= 0)
+            {
+                g_selected =
+                    static_cast<std::uint32_t>(row);
+            }
+
+            const bool leftDown =
+                (buttonMask & 0x1u) != 0u;
+
+            const bool leftPressed =
+                leftDown && !g_leftDown;
+
+            if (leftDown)
+            {
+                ApplyMouse(leftPressed);
+            }
+            else
+            {
+                g_dirty = true;
+            }
+
+            g_leftDown = leftDown;
+            g_dirty = true;
         }
         catch (...)
         {
