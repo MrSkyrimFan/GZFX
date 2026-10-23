@@ -965,12 +965,15 @@ namespace gzfx::diagnostics
                     g_primaryDevice,
                     g_primaryContext);
 
-                gzfx::render::RenderVisiblePass(
-                    g_frame,
-                    drawIndexedActivity,
-                    g_primarySwap,
-                    g_primaryDevice,
-                    g_primaryContext);
+                if (!semantic_probe::SuppressSceneEffects())
+                {
+                    gzfx::render::RenderVisiblePass(
+                        g_frame,
+                        drawIndexedActivity,
+                        g_primarySwap,
+                        g_primaryDevice,
+                        g_primaryContext);
+                }
 
                 g_drawOrdinalThisFrame.store(0);
                 ++g_frame;
