@@ -3406,7 +3406,7 @@ namespace gzfx::diagnostics::pipeline_cartography
                     out
                         << "pass_id,frame,mode,stage,slot,resource,"
                            "view_format,view_dimension,first_mip,mip_count,"
-                           "first_slice,slice_count,subresource\n";
+                           "first_slice,slice_count,subresource,view_flags\n";
 
                     for (const auto& pass :
                          g_passes)
@@ -3438,6 +3438,10 @@ namespace gzfx::diagnostics::pipeline_cartography
                                 << access.binding.view.sliceCount
                                 << ","
                                 << access.binding.view.subresource
+                                << ",0x"
+                                << std::hex
+                                << access.binding.view.flags
+                                << std::dec
                                 << "\n";
                         }
                     }
@@ -3529,6 +3533,233 @@ namespace gzfx::diagnostics::pipeline_cartography
                                     use.sampler.hash)
                                 << "\n";
                         }
+                    }
+                }
+            }
+
+            {
+                std::ofstream out(
+                    file(
+                        L"pipeline_blend_states",
+                        L".csv"),
+                    std::ios::out |
+                        std::ios::trunc);
+
+                if (out)
+                {
+                    out
+                        << "hash,alpha_to_coverage,independent_blend";
+
+                    for (UINT i = 0; i < 8; ++i)
+                    {
+                        out
+                            << ",rt"
+                            << i;
+                    }
+
+                    out << "\n";
+
+                    for (const auto& [hash, description] :
+                         g_blendStates)
+                    {
+                        out
+                            << Hex64(hash)
+                            << ","
+                            << (description.AlphaToCoverageEnable ? 1 : 0)
+                            << ","
+                            << (description.IndependentBlendEnable ? 1 : 0);
+
+                        for (const auto& target :
+                             description.RenderTarget)
+                        {
+                            out
+                                << ","
+                                << (target.BlendEnable ? 1 : 0)
+                                << ":"
+                                << static_cast<UINT>(
+                                    target.SrcBlend)
+                                << ":"
+                                << static_cast<UINT>(
+                                    target.DestBlend)
+                                << ":"
+                                << static_cast<UINT>(
+                                    target.BlendOp)
+                                << ":"
+                                << static_cast<UINT>(
+                                    target.SrcBlendAlpha)
+                                << ":"
+                                << static_cast<UINT>(
+                                    target.DestBlendAlpha)
+                                << ":"
+                                << static_cast<UINT>(
+                                    target.BlendOpAlpha)
+                                << ":"
+                                << static_cast<UINT>(
+                                    target.RenderTargetWriteMask);
+                        }
+
+                        out << "\n";
+                    }
+                }
+            }
+
+            {
+                std::ofstream out(
+                    file(
+                        L"pipeline_depth_states",
+                        L".csv"),
+                    std::ios::out |
+                        std::ios::trunc);
+
+                if (out)
+                {
+                    out
+                        << "hash,depth_enable,depth_write_mask,depth_func,"
+                           "stencil_enable,stencil_read_mask,stencil_write_mask,"
+                           "front_fail,front_depth_fail,front_pass,front_func,"
+                           "back_fail,back_depth_fail,back_pass,back_func\n";
+
+                    for (const auto& [hash, description] :
+                         g_depthStates)
+                    {
+                        out
+                            << Hex64(hash)
+                            << ","
+                            << (description.DepthEnable ? 1 : 0)
+                            << ","
+                            << static_cast<UINT>(
+                                description.DepthWriteMask)
+                            << ","
+                            << static_cast<UINT>(
+                                description.DepthFunc)
+                            << ","
+                            << (description.StencilEnable ? 1 : 0)
+                            << ","
+                            << static_cast<UINT>(
+                                description.StencilReadMask)
+                            << ","
+                            << static_cast<UINT>(
+                                description.StencilWriteMask)
+                            << ","
+                            << static_cast<UINT>(
+                                description.FrontFace.StencilFailOp)
+                            << ","
+                            << static_cast<UINT>(
+                                description.FrontFace.StencilDepthFailOp)
+                            << ","
+                            << static_cast<UINT>(
+                                description.FrontFace.StencilPassOp)
+                            << ","
+                            << static_cast<UINT>(
+                                description.FrontFace.StencilFunc)
+                            << ","
+                            << static_cast<UINT>(
+                                description.BackFace.StencilFailOp)
+                            << ","
+                            << static_cast<UINT>(
+                                description.BackFace.StencilDepthFailOp)
+                            << ","
+                            << static_cast<UINT>(
+                                description.BackFace.StencilPassOp)
+                            << ","
+                            << static_cast<UINT>(
+                                description.BackFace.StencilFunc)
+                            << "\n";
+                    }
+                }
+            }
+
+            {
+                std::ofstream out(
+                    file(
+                        L"pipeline_raster_states",
+                        L".csv"),
+                    std::ios::out |
+                        std::ios::trunc);
+
+                if (out)
+                {
+                    out
+                        << "hash,fill_mode,cull_mode,front_ccw,depth_bias,"
+                           "depth_bias_clamp,slope_scaled_depth_bias,depth_clip,"
+                           "scissor,multisample,antialiased_line\n";
+
+                    for (const auto& [hash, description] :
+                         g_rasterStates)
+                    {
+                        out
+                            << Hex64(hash)
+                            << ","
+                            << static_cast<UINT>(
+                                description.FillMode)
+                            << ","
+                            << static_cast<UINT>(
+                                description.CullMode)
+                            << ","
+                            << (description.FrontCounterClockwise ? 1 : 0)
+                            << ","
+                            << description.DepthBias
+                            << ","
+                            << description.DepthBiasClamp
+                            << ","
+                            << description.SlopeScaledDepthBias
+                            << ","
+                            << (description.DepthClipEnable ? 1 : 0)
+                            << ","
+                            << (description.ScissorEnable ? 1 : 0)
+                            << ","
+                            << (description.MultisampleEnable ? 1 : 0)
+                            << ","
+                            << (description.AntialiasedLineEnable ? 1 : 0)
+                            << "\n";
+                    }
+                }
+            }
+
+            {
+                std::ofstream out(
+                    file(
+                        L"pipeline_sampler_states",
+                        L".csv"),
+                    std::ios::out |
+                        std::ios::trunc);
+
+                if (out)
+                {
+                    out
+                        << "hash,filter,address_u,address_v,address_w,"
+                           "mip_lod_bias,max_anisotropy,comparison_func,"
+                           "min_lod,max_lod\n";
+
+                    for (const auto& [hash, description] :
+                         g_samplerStates)
+                    {
+                        out
+                            << Hex64(hash)
+                            << ","
+                            << static_cast<UINT>(
+                                description.Filter)
+                            << ","
+                            << static_cast<UINT>(
+                                description.AddressU)
+                            << ","
+                            << static_cast<UINT>(
+                                description.AddressV)
+                            << ","
+                            << static_cast<UINT>(
+                                description.AddressW)
+                            << ","
+                            << description.MipLODBias
+                            << ","
+                            << description.MaxAnisotropy
+                            << ","
+                            << static_cast<UINT>(
+                                description.ComparisonFunc)
+                            << ","
+                            << description.MinLOD
+                            << ","
+                            << description.MaxLOD
+                            << "\n";
                     }
                 }
             }
@@ -3807,6 +4038,50 @@ namespace gzfx::diagnostics::pipeline_cartography
             {
                 std::ofstream out(
                     file(
+                        L"pipeline_buffer_updates",
+                        L".csv"),
+                    std::ios::out |
+                        std::ios::trunc);
+
+                if (out)
+                {
+                    out
+                        << "frame,draw_ordinal,resource,subresource,source,"
+                           "mode,flags,bytes,hash\n";
+
+                    for (const auto& update :
+                         g_bufferUpdates)
+                    {
+                        out
+                            << update.frame
+                            << ","
+                            << update.drawOrdinal
+                            << ","
+                            << PointerString(
+                                update.resource)
+                            << ","
+                            << update.subresource
+                            << ","
+                            << update.source
+                            << ","
+                            << update.mode
+                            << ",0x"
+                            << std::hex
+                            << update.flags
+                            << std::dec
+                            << ","
+                            << update.bytes
+                            << ","
+                            << Hex64(
+                                update.hash)
+                            << "\n";
+                    }
+                }
+            }
+
+            {
+                std::ofstream out(
+                    file(
                         L"pipeline_edges",
                         L".csv"),
                     std::ios::out |
@@ -4001,8 +4276,31 @@ namespace gzfx::diagnostics::pipeline_cartography
                         << "shaders_seen="
                         << g_shaders.size()
                         << "\n"
+                        << "buffer_updates_seen="
+                        << g_bufferUpdates.size()
+                        << "\n"
+                        << "blend_states_seen="
+                        << g_blendStates.size()
+                        << "\n"
+                        << "depth_states_seen="
+                        << g_depthStates.size()
+                        << "\n"
+                        << "raster_states_seen="
+                        << g_rasterStates.size()
+                        << "\n"
+                        << "sampler_states_seen="
+                        << g_samplerStates.size()
+                        << "\n"
+                        << "deferred_context_creation_observation="
+                        << (g_creationInterceptionEnabled
+                            ? "enabled"
+                            : "unavailable_safe_mode")
+                        << "\n"
                         << "deferred_contexts_created="
-                        << g_deferredContextsCreated
+                        << (g_creationInterceptionEnabled
+                            ? std::to_string(
+                                g_deferredContextsCreated)
+                            : std::string("unknown"))
                         << "\n"
                         << "device_attach_seen="
                         << (g_deviceAttachSeen ? "true" : "false")
@@ -4040,14 +4338,15 @@ namespace gzfx::diagnostics::pipeline_cartography
                         << "- stable FNV-1a shader bytecode fingerprint when creation was observed\n"
                         << "- SRV reads for all six shader stages\n"
                         << "- constant-buffer bindings for all six shader stages\n"
+                        << "- CPU-visible small-buffer update fingerprints from Map/Unmap and UpdateSubresource\n"
                         << "- sampler-state fingerprints for all six shader stages\n"
                         << "- RTV/DSV/graphics-UAV/compute-UAV writes at actual draw/dispatch execution\n"
                         << "- subresource-aware SRV/RTV/DSV/UAV view ranges\n"
-                        << "- blend/depth/raster state fingerprints, viewport and primitive topology\n"
+                        << "- decoded blend/depth/raster/sampler states, viewport and primitive topology\n"
                         << "- CopyResource, CopySubresourceRegion, ResolveSubresource, clears and GenerateMips\n"
                         << "- producer-to-consumer resource lineage edges\n"
                         << "- stable pass signatures for cross-capture comparison\n"
-                        << "- creation owner module for buffers/textures/shaders observed after device attach\n\n"
+                        << "- optional experimental creation ownership/bytecode fingerprints are disabled in safe field mode\n\n"
                         << "interpretation_rule:\n"
                         << "Candidate tags are hypotheses only. Use controlled day/night/water/interior/shadow captures and compare pass/resource lineage before promoting semantics.\n";
 
