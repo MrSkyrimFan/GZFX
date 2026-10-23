@@ -3979,6 +3979,7 @@ namespace gzfx::diagnostics::pipeline_cartography
         const std::uint64_t b,
         const std::uint64_t c,
         const std::uint64_t d,
+        const std::uint64_t e,
         ID3D11Buffer* indirectArgs,
         const UINT indirectOffset) noexcept
     {
@@ -4003,11 +4004,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             pass.arg1 = b;
             pass.arg2 = c;
             pass.arg3 = d;
-            pass.arg4 =
-                indirectArgs
-                    ? RegisterResourceLocked(
-                        indirectArgs)
-                    : 0;
+            pass.arg4 = e;
             pass.arg5 =
                 indirectOffset;
 
