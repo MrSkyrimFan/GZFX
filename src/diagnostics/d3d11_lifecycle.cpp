@@ -1,4 +1,5 @@
 #include "gzfx/diagnostics/d3d11_lifecycle.hpp"
+#include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/paths.hpp"
 
 #include <Windows.h>
@@ -316,6 +317,20 @@ namespace gzfx::diagnostics
                             : static_cast<D3D_FEATURE_LEVEL>(0)));
 
             WriteDiagnostic(stream.str());
+
+            if (SUCCEEDED(result) &&
+                device != nullptr &&
+                *device != nullptr)
+            {
+                const bool cartography =
+                    pipeline_cartography::AttachDevice(
+                        *device);
+
+                WriteDiagnostic(
+                    std::string("pipeline_cartography_device=") +
+                    (cartography ? "armed" : "failed"));
+            }
+
             return result;
         }
 
@@ -372,6 +387,19 @@ namespace gzfx::diagnostics
             if (SUCCEEDED(result) && swapChain != nullptr)
             {
                 LogSwapChainDescription(*swapChain);
+            }
+
+            if (SUCCEEDED(result) &&
+                device != nullptr &&
+                *device != nullptr)
+            {
+                const bool cartography =
+                    pipeline_cartography::AttachDevice(
+                        *device);
+
+                WriteDiagnostic(
+                    std::string("pipeline_cartography_device=") +
+                    (cartography ? "armed" : "failed"));
             }
 
             return result;
