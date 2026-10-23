@@ -1,6 +1,17 @@
-            source += R"GZFX(    float3 bounce = indirectSum;
-    bounce *= saturate(indirectNormalizer * 5.0);
-    bounce = ApplySaturation(bounce, IndirectSaturation);
+            source += R"GZFX(    float confidence =
+        saturate(
+            indirectNormalizer * 4.0);
+
+    float3 bounce =
+        indirectNormalizer > 1e-5
+        ? indirectSum /
+            indirectNormalizer
+        : 0.0;
+
+    bounce *= confidence;
+    bounce = ApplySaturation(
+        bounce,
+        IndirectSaturation);
 
     output.ao = AoEnabled != 0 ? occlusion : 0.0;
     output.indirect = float4(
