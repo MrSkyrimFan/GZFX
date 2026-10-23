@@ -52,6 +52,11 @@ namespace gzfx::render::ambient_depth
             float aoPower = 1.35f;
             float indirectEnergyLimit = 0.22f;
 
+            std::uint32_t nativeNormalEnabled = 0;
+            std::uint32_t temporalEnabled = 0;
+            std::uint32_t historyValid = 0;
+            float temporalBlend = 0.18f;
+
             float axisX = 0.0f;
             float axisY = 0.0f;
             float padding0 = 0.0f;
@@ -69,8 +74,18 @@ namespace gzfx::render::ambient_depth
             ID3D11ShaderResourceView* indirectSrv = nullptr;
         };
 
+        struct HistorySurface
+        {
+            SurfacePair signals{};
+
+            ID3D11Texture2D* geometry = nullptr;
+            ID3D11RenderTargetView* geometryRtv = nullptr;
+            ID3D11ShaderResourceView* geometrySrv = nullptr;
+        };
+
+
         constexpr std::size_t kGpuTimerSlots = 4;
-        constexpr std::size_t kGpuTimestampCount = 5;
+        constexpr std::size_t kGpuTimestampCount = 6;
 
         struct GpuTimerSlot
         {
@@ -85,6 +100,7 @@ namespace gzfx::render::ambient_depth
             bool valid = false;
             std::uint64_t frame = 0;
             double analyzeMs = 0.0;
+            double temporalMs = 0.0;
             double denoiseHorizontalMs = 0.0;
             double denoiseVerticalMs = 0.0;
             double compositeMs = 0.0;
@@ -98,6 +114,7 @@ namespace gzfx::render::ambient_depth
 
             ID3D11VertexShader* vertexShader = nullptr;
             ID3D11PixelShader* analyzeShader = nullptr;
+            ID3D11PixelShader* temporalShader = nullptr;
             ID3D11PixelShader* denoiseShader = nullptr;
             ID3D11PixelShader* compositeShader = nullptr;
 
@@ -110,6 +127,9 @@ namespace gzfx::render::ambient_depth
 
             SurfacePair first{};
             SurfacePair second{};
+            std::array<HistorySurface, 2> history{};
+            std::size_t historyWriteIndex = 0;
+            bool historyValid = false;
 
             ID3D11Texture2D* composite = nullptr;
             ID3D11RenderTargetView* compositeRtv = nullptr;
@@ -216,6 +236,8 @@ namespace gzfx::render::ambient_depth
                     << g_runtime.latestGpuTiming.frame << "\n"
                     << "gpu_analyze_ms="
                     << g_runtime.latestGpuTiming.analyzeMs << "\n"
+                    << "gpu_temporal_ms="
+                    << g_runtime.latestGpuTiming.temporalMs << "\n"
                     << "gpu_denoise_horizontal_ms="
                     << g_runtime.latestGpuTiming.denoiseHorizontalMs << "\n"
                     << "gpu_denoise_vertical_ms="
@@ -267,6 +289,15 @@ namespace gzfx::render::ambient_depth
 
             if (g_runtime.compositeRtv) g_runtime.compositeRtv->Release();
             if (g_runtime.composite) g_runtime.composite->Release();
+
+            for (auto& history : g_runtime.history)
+            {
+                if (history.geometrySrv) history.geometrySrv->Release();
+                if (history.geometryRtv) history.geometryRtv->Release();
+                if (history.geometry) history.geometry->Release();
+                ReleaseSurface(history.signals);
+            }
+
             ReleaseSurface(g_runtime.second);
             ReleaseSurface(g_runtime.first);
             if (g_runtime.sceneCopySrv) g_runtime.sceneCopySrv->Release();
@@ -276,6 +307,7 @@ namespace gzfx::render::ambient_depth
             if (g_runtime.linearSampler) g_runtime.linearSampler->Release();
             if (g_runtime.compositeShader) g_runtime.compositeShader->Release();
             if (g_runtime.denoiseShader) g_runtime.denoiseShader->Release();
+            if (g_runtime.temporalShader) g_runtime.temporalShader->Release();
             if (g_runtime.analyzeShader) g_runtime.analyzeShader->Release();
             if (g_runtime.vertexShader) g_runtime.vertexShader->Release();
             if (g_runtime.deferred) g_runtime.deferred->Release();
