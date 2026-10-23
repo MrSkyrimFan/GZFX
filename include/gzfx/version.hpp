@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.13-ambient-depth-functional-recovery";
+        "0.0.14-gtao-visibility-ssil-calibration";
 }
 
 extern "C" __declspec(dllexport)
