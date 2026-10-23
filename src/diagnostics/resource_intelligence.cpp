@@ -68,6 +68,11 @@ namespace gzfx::diagnostics::resource_intelligence
         std::uint64_t g_lastScenePairDraw = 0;
         bool g_preUiSignalIssued = false;
 
+        std::uintptr_t g_nativeMotionId = 0;
+        std::uintptr_t g_nativeNormalId = 0;
+        std::uintptr_t g_nativeAuxId = 0;
+        std::uint64_t g_nativeSurfaceFrame = 0;
+
         std::string Ptr(const void* pointer)
         {
             std::ostringstream stream;
@@ -1025,6 +1030,48 @@ namespace gzfx::diagnostics::resource_intelligence
                 inputs.sceneColorDesc = color->desc;
             }
 
+            const auto acquireNative =
+                [&](const std::uintptr_t id,
+                    ID3D11Texture2D*& textureOut,
+                    D3D11_TEXTURE2D_DESC& descOut)
+                {
+                    if (id == 0)
+                    {
+                        return;
+                    }
+
+                    const auto found =
+                        g_textures.find(id);
+
+                    if (found == g_textures.end() ||
+                        found->second.texture == nullptr)
+                    {
+                        return;
+                    }
+
+                    found->second.texture->AddRef();
+                    textureOut = found->second.texture;
+                    descOut = found->second.desc;
+                };
+
+            acquireNative(
+                g_nativeMotionId,
+                inputs.motionVectorTexture,
+                inputs.motionVectorDesc);
+
+            acquireNative(
+                g_nativeNormalId,
+                inputs.nativeNormalTexture,
+                inputs.nativeNormalDesc);
+
+            acquireNative(
+                g_nativeAuxId,
+                inputs.nativeAuxTexture,
+                inputs.nativeAuxDesc);
+
+            inputs.nativeSurfaceFrame =
+                g_nativeSurfaceFrame;
+
             return true;
         }
         catch (...)
@@ -1039,6 +1086,21 @@ namespace gzfx::diagnostics::resource_intelligence
         if (inputs.cameraBuffer != nullptr)
         {
             inputs.cameraBuffer->Release();
+        }
+
+        if (inputs.nativeAuxTexture != nullptr)
+        {
+            inputs.nativeAuxTexture->Release();
+        }
+
+        if (inputs.nativeNormalTexture != nullptr)
+        {
+            inputs.nativeNormalTexture->Release();
+        }
+
+        if (inputs.motionVectorTexture != nullptr)
+        {
+            inputs.motionVectorTexture->Release();
         }
 
         if (inputs.sceneColorTexture != nullptr)
@@ -1123,6 +1185,108 @@ namespace gzfx::diagnostics::resource_intelligence
                 if (depthId != 0 && colorId != 0)
                 {
                     ++g_pairs[{ depthId, colorId }];
+                }
+            }
+
+            if (g_swapWidth != 0 &&
+                g_swapHeight != 0 &&
+                count >= 3 &&
+                depthId != 0)
+            {
+                std::uintptr_t selectedDepthId = 0;
+                TextureInfo* selectedDepth =
+                    SelectDepth(
+                        g_swapWidth,
+                        g_swapHeight,
+                        selectedDepthId);
+
+                std::uintptr_t selectedColorId = 0;
+                std::uint64_t selectedPairCount = 0;
+                TextureInfo* selectedColor =
+                    selectedDepth != nullptr
+                    ? SelectColor(
+                        g_swapWidth,
+                        g_swapHeight,
+                        selectedDepthId,
+                        selectedColorId,
+                        selectedPairCount)
+                    : nullptr;
+
+                if (selectedDepth != nullptr &&
+                    selectedColor != nullptr &&
+                    depthId == selectedDepthId &&
+                    !colorIds.empty() &&
+                    colorIds[0] == selectedColorId)
+                {
+                    const auto inspectSlot =
+                        [&](const UINT slot,
+                            const DXGI_FORMAT expectedFormat,
+                            std::uintptr_t& idOut)
+                        {
+                            if (slot >= colorIds.size())
+                            {
+                                return;
+                            }
+
+                            const std::uintptr_t id =
+                                colorIds[slot];
+
+                            const auto found =
+                                g_textures.find(id);
+
+                            if (found == g_textures.end())
+                            {
+                                return;
+                            }
+
+                            const auto& desc =
+                                found->second.desc;
+
+                            if (desc.Width ==
+                                    g_swapWidth &&
+                                desc.Height ==
+                                    g_swapHeight &&
+                                desc.Format ==
+                                    expectedFormat)
+                            {
+                                idOut = id;
+                            }
+                        };
+
+                    inspectSlot(
+                        1,
+                        DXGI_FORMAT_R16G16_FLOAT,
+                        g_nativeMotionId);
+
+                    inspectSlot(
+                        2,
+                        DXGI_FORMAT_R8G8B8A8_UNORM,
+                        g_nativeNormalId);
+
+                    if (colorIds.size() >= 4)
+                    {
+                        const auto found =
+                            g_textures.find(
+                                colorIds[3]);
+
+                        if (found !=
+                                g_textures.end() &&
+                            found->second.desc.Width ==
+                                g_swapWidth &&
+                            found->second.desc.Height ==
+                                g_swapHeight)
+                        {
+                            g_nativeAuxId =
+                                colorIds[3];
+                        }
+                    }
+
+                    if (g_nativeMotionId != 0 &&
+                        g_nativeNormalId != 0)
+                    {
+                        g_nativeSurfaceFrame =
+                            frame;
+                    }
                 }
             }
 
@@ -1334,6 +1498,34 @@ namespace gzfx::diagnostics::resource_intelligence
                 swapChain,
                 device,
                 context);
+
+            if (g_nativeMotionId != 0 ||
+                g_nativeNormalId != 0)
+            {
+                std::ostringstream native;
+
+                native
+                    << "GZFX native surface inputs\n"
+                    << "frame=" << frame << "\n"
+                    << "native_surface_frame="
+                    << g_nativeSurfaceFrame << "\n"
+                    << "motion=0x"
+                    << std::hex
+                    << std::uppercase
+                    << g_nativeMotionId
+                    << "\n"
+                    << "normal=0x"
+                    << g_nativeNormalId
+                    << "\n"
+                    << "aux=0x"
+                    << g_nativeAuxId
+                    << std::dec
+                    << "\n";
+
+                WriteText(
+                    L"native_surface_inputs.txt",
+                    native.str());
+            }
         }
         catch (...)
         {
