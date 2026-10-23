@@ -113,6 +113,7 @@ namespace gzfx::diagnostics
         std::atomic<std::uint64_t> g_drawOrdinalThisFrame{0};
         std::atomic<std::uint64_t> g_draws{0};
         std::atomic<std::uint64_t> g_drawIndexedCalls{0};
+        std::atomic<std::uint64_t> g_drawIndexedActivityThisFrame{0};
         std::atomic<std::uint64_t> g_drawInstancedCalls{0};
         std::atomic<std::uint64_t> g_drawIndexedInstancedCalls{0};
         std::atomic<std::uint64_t> g_dispatchCalls{0};
@@ -549,6 +550,7 @@ namespace gzfx::diagnostics
             {
                 ++g_drawOrdinalThisFrame;
                 ++g_drawIndexedCalls;
+                ++g_drawIndexedActivityThisFrame;
             }
             g_drawIndexed(c, a, b, d);
         }
@@ -757,7 +759,7 @@ namespace gzfx::diagnostics
             if (swap == g_primarySwap && g_contextArmed)
             {
                 const std::uint64_t drawIndexedActivity =
-                    g_drawIndexedCalls.load();
+                    g_drawIndexedActivityThisFrame.exchange(0);
 
                 WriteFrameSummary();
 
