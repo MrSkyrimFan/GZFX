@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.12-ao-artifact-performance-hardening";
+        "0.0.13-ambient-depth-functional-recovery";
 }
 
 extern "C" __declspec(dllexport)
