@@ -606,9 +606,11 @@ namespace gzfx::render::ambient_depth
             return SUCCEEDED(result);
         }
 
-        const char* ShaderSource()
+        std::string ShaderSource()
         {
-            return R"(
+            std::string source;
+            source.reserve(18523);
+            source += R"GZFX(
 struct VSOutput
 {
     float4 position : SV_POSITION;
@@ -1143,7 +1145,8 @@ AnalyzeOutput AnalyzePS(
                 maxHorizon =
                     max(
                         maxHorizon,
-                        horizon *
+)GZFX";
+            source += R"GZFX(                        horizon *
                         facingDistance);
             }
 
@@ -1508,8 +1511,9 @@ float4 CompositePS(
             color,
             original.a);
 }
-
-)";
+)GZFX";
+            return source;
+        }
         }
 
         DXGI_FORMAT DepthSrvFormat(
@@ -1669,9 +1673,12 @@ float4 CompositePS(
             ID3DBlob* denoiseBlob = nullptr;
             ID3DBlob* compositeBlob = nullptr;
 
+            const std::string shaderSource =
+                ShaderSource();
+
             if (SUCCEEDED(result) &&
                 !Compile(
-                    ShaderSource(),
+                    shaderSource.c_str(),
                     "VSMain",
                     "vs_5_0",
                     &vertexBlob,
@@ -1682,7 +1689,7 @@ float4 CompositePS(
 
             if (SUCCEEDED(result) &&
                 !Compile(
-                    ShaderSource(),
+                    shaderSource.c_str(),
                     "DownsamplePS",
                     "ps_5_0",
                     &downsampleBlob,
@@ -1693,7 +1700,7 @@ float4 CompositePS(
 
             if (SUCCEEDED(result) &&
                 !Compile(
-                    ShaderSource(),
+                    shaderSource.c_str(),
                     "AnalyzePS",
                     "ps_5_0",
                     &analyzeBlob,
@@ -1704,7 +1711,7 @@ float4 CompositePS(
 
             if (SUCCEEDED(result) &&
                 !Compile(
-                    ShaderSource(),
+                    shaderSource.c_str(),
                     "DenoisePS",
                     "ps_5_0",
                     &denoiseBlob,
@@ -1715,7 +1722,7 @@ float4 CompositePS(
 
             if (SUCCEEDED(result) &&
                 !Compile(
-                    ShaderSource(),
+                    shaderSource.c_str(),
                     "CompositePS",
                     "ps_5_0",
                     &compositeBlob,
