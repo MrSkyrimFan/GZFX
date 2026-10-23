@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.7-accessibility-stage-foundation";
+        "0.0.8-live-settings-menu";
 }
 
 extern "C" __declspec(dllexport)
