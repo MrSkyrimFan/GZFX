@@ -115,6 +115,11 @@ namespace gzfx::diagnostics::semantic_probe
         std::uint64_t g_traceEndFrame = 0;
         bool g_complete = false;
 
+        bool g_manualCaptureRequested = false;
+        bool g_manualTrace = false;
+        std::uint32_t g_manualCaptureIndex = 0;
+        bool g_manualTestTriggered = false;
+
         PreviewRuntime g_preview{};
 
         bool FastTestMode()
@@ -124,6 +129,18 @@ namespace gzfx::diagnostics::semantic_probe
             return
                 GetEnvironmentVariableW(
                     L"GZFX_TEST_SEMANTIC_CAPTURE",
+                    value,
+                    static_cast<DWORD>(
+                        std::size(value))) > 0;
+        }
+
+        bool ManualTestMode()
+        {
+            wchar_t value[8]{};
+
+            return
+                GetEnvironmentVariableW(
+                    L"GZFX_TEST_SEMANTIC_MANUAL_CAPTURE",
                     value,
                     static_cast<DWORD>(
                         std::size(value))) > 0;
@@ -925,7 +942,8 @@ float4 PSMain(V input) : SV_TARGET
             return SUCCEEDED(result);
         }
 
-        void WriteBindings()
+        void WriteBindings(
+            const std::wstring& suffix)
         {
             const fs::path root =
                 gzfx::paths::DiagnosticsRoot();
@@ -936,7 +954,13 @@ float4 PSMain(V input) : SV_TARGET
             }
 
             std::ofstream out(
-                root / L"semantic_bindings.csv",
+                root /
+                    (
+                        std::wstring(
+                            L"semantic_bindings") +
+                        suffix +
+                        L".csv"
+                    ),
                 std::ios::out |
                     std::ios::trunc);
 
@@ -1003,7 +1027,8 @@ float4 PSMain(V input) : SV_TARGET
 
         void CaptureCandidates(
             ID3D11Device* device,
-            ID3D11DeviceContext* context)
+            ID3D11DeviceContext* context,
+            const std::wstring& suffix)
         {
             const fs::path root =
                 gzfx::paths::DiagnosticsRoot();
@@ -1079,7 +1104,12 @@ float4 PSMain(V input) : SV_TARGET
 
             std::ofstream report(
                 root /
-                    L"renderer_semantics.txt",
+                    (
+                        std::wstring(
+                            L"renderer_semantics") +
+                        suffix +
+                        L".txt"
+                    ),
                 std::ios::out |
                     std::ios::trunc);
 
@@ -1175,7 +1205,9 @@ float4 PSMain(V input) : SV_TARGET
 
                 std::wostringstream base;
                 base
-                    << L"semantic_candidate_"
+                    << L"semantic"
+                    << suffix
+                    << L"_candidate_"
                     << std::setw(2)
                     << std::setfill(L'0')
                     << (captured + 1)
@@ -1594,8 +1626,7 @@ float4 PSMain(V input) : SV_TARGET
             std::scoped_lock lock(
                 g_mutex);
 
-            if (g_complete ||
-                swapChain == nullptr ||
+            if (swapChain == nullptr ||
                 device == nullptr ||
                 context == nullptr)
             {
@@ -1628,12 +1659,38 @@ float4 PSMain(V input) : SV_TARGET
                 g_stableGameplay = 0;
             }
 
-            if (!g_traceActive &&
+            if (g_complete &&
+                ManualTestMode() &&
+                !g_manualTestTriggered &&
+                !g_traceActive)
+            {
+                g_manualCaptureRequested = true;
+                g_manualTestTriggered = true;
+            }
+
+            if (g_manualCaptureRequested &&
+                !g_traceActive &&
+                gameplay)
+            {
+                g_manualCaptureRequested = false;
+                g_manualTrace = true;
+
+                BeginTrace(
+                    frame,
+                    swapChain);
+
+                return;
+            }
+
+            if (!g_complete &&
+                !g_traceActive &&
                 g_stableGameplay >=
                     (FastTestMode()
                         ? 1
                         : kStableGameplayFrames))
             {
+                g_manualTrace = false;
+
                 BeginTrace(
                     frame,
                     swapChain);
@@ -1647,12 +1704,56 @@ float4 PSMain(V input) : SV_TARGET
             {
                 g_traceActive = false;
 
-                WriteBindings();
+                std::wstring suffix;
+
+                if (g_manualTrace)
+                {
+                    ++g_manualCaptureIndex;
+
+                    std::wostringstream stream;
+                    stream
+                        << L"_manual_"
+                        << std::setw(4)
+                        << std::setfill(L'0')
+                        << g_manualCaptureIndex;
+
+                    suffix =
+                        stream.str();
+                }
+
+                WriteBindings(
+                    suffix);
+
                 CaptureCandidates(
                     device,
-                    context);
+                    context,
+                    suffix);
 
-                g_complete = true;
+                if (g_manualTrace)
+                {
+                    g_manualTrace = false;
+                }
+                else
+                {
+                    g_complete = true;
+                }
+            }
+        }
+        catch (...)
+        {
+        }
+    }
+
+    void RequestManualCapture() noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(
+                g_mutex);
+
+            if (!FastTestMode())
+            {
+                g_manualCaptureRequested = true;
             }
         }
         catch (...)
@@ -1682,10 +1783,11 @@ float4 PSMain(V input) : SV_TARGET
                 return false;
             }
 
-            // In real Skyrim keep the renderer stock only until the
-            // first semantic capture is complete. Once mapped, release
-            // the frame back to the normal GZFX lighting stack.
-            return !g_complete;
+            // Real Skyrim is stock only during the initial mapping window
+            // or an explicitly requested manual semantic window.
+            return
+                !g_complete ||
+                g_traceActive;
         }
         catch (...)
         {
