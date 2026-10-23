@@ -489,54 +489,75 @@ namespace
                 g_bufferedButtonMask.load(
                     std::memory_order_relaxed);
 
-            for (DWORD i = 0;
-                 i < count;
-                 ++i)
+            if (objectDataSize >=
+                sizeof(DWORD) * 2)
             {
-                const auto& event =
-                    objectData[i];
+                const auto* bytes =
+                    reinterpret_cast<
+                        const std::uint8_t*>(
+                            objectData);
 
-                if (event.dwOfs ==
-                    DIMOFS_X)
+                for (DWORD i = 0;
+                     i < count;
+                     ++i)
                 {
-                    x +=
-                        static_cast<LONG>(
-                            event.dwData);
-                }
-                else if (event.dwOfs ==
-                         DIMOFS_Y)
-                {
-                    y +=
-                        static_cast<LONG>(
-                            event.dwData);
-                }
-                else if (event.dwOfs ==
-                         DIMOFS_Z)
-                {
-                    wheel +=
-                        static_cast<LONG>(
-                            event.dwData);
-                }
-                else if (event.dwOfs >=
-                             DIMOFS_BUTTON0 &&
-                         event.dwOfs <=
-                             DIMOFS_BUTTON7)
-                {
-                    const std::uint32_t index =
-                        static_cast<std::uint32_t>(
-                            event.dwOfs -
-                            DIMOFS_BUTTON0);
+                    const auto* eventBytes =
+                        bytes +
+                        static_cast<std::size_t>(i) *
+                        objectDataSize;
 
-                    const std::uint32_t bit =
-                        1u << index;
+                    DWORD offset = 0;
+                    DWORD value = 0;
 
-                    if ((event.dwData & 0x80u) != 0u)
+                    std::memcpy(
+                        &offset,
+                        eventBytes,
+                        sizeof(offset));
+
+                    std::memcpy(
+                        &value,
+                        eventBytes + sizeof(DWORD),
+                        sizeof(value));
+
+                    if (offset == DIMOFS_X)
                     {
-                        buttons |= bit;
+                        x +=
+                            static_cast<LONG>(
+                                value);
                     }
-                    else
+                    else if (offset == DIMOFS_Y)
                     {
-                        buttons &= ~bit;
+                        y +=
+                            static_cast<LONG>(
+                                value);
+                    }
+                    else if (offset == DIMOFS_Z)
+                    {
+                        wheel +=
+                            static_cast<LONG>(
+                                value);
+                    }
+                    else if (offset >=
+                                 DIMOFS_BUTTON0 &&
+                             offset <=
+                                 DIMOFS_BUTTON7)
+                    {
+                        const std::uint32_t index =
+                            static_cast<std::uint32_t>(
+                                offset -
+                                DIMOFS_BUTTON0);
+
+                        const std::uint32_t bit =
+                            1u << index;
+
+                        if ((value & 0x80u) != 0u)
+                        {
+                            buttons |= bit;
+                        }
+                        else
+                        {
+                            buttons &= ~bit;
+                        }
                     }
                 }
             }
