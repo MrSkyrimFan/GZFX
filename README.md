@@ -24,13 +24,19 @@ Current authoritative branch:
 main
 ```
 
-Current authoritative code/package baseline immediately before this README-only handoff update:
+Current authoritative source rule:
+
+```text
+current main
+```
+
+Do not pin future work to the old PR18 package-refresh SHA. The historical PR18 package baseline was:
 
 ```text
 c9de1705082f7efd740d709c1f916bf1dff2f381
 ```
 
-That commit is the automatic package refresh immediately after PR #18 merged. Later README-only handoff commits do not change the runtime code baseline described here.
+After PR #19 merges, its 0.0.17 renderer-cartography source and the subsequent automatic package refresh on `main` supersede that historical hash.
 
 Current runtime version:
 
@@ -53,19 +59,19 @@ Map Skyrim renderer pipeline before further lighting tuning
 
 PR #19 supersedes PR18 as the active engineering frontier after merge. PR18 remains the historical native-normal/motion/temporal foundation.
 
-PR #18 merge commit:
+Historical PR #18 merge commit:
 
 ```text
 b8596c0d2dd69dc22663fa6326463e8a8debfa1d
 ```
 
-PR #18 tested head:
+Historical PR #18 tested head:
 
 ```text
 5da67a6fffb1d176cc84e4bba24d34f6ec1b1b04
 ```
 
-PR #18 CI:
+Historical PR #18 CI:
 
 ```text
 Windows x64 run #80
@@ -75,7 +81,7 @@ run id: 39930954463
 0 failed
 ```
 
-PR #18 artifact:
+Historical PR #18 artifact:
 
 ```text
 GZFX-SkyrimSE-x64
