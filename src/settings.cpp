@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cwchar>
+#include <cmath>
 #include <filesystem>
 #include <iterator>
 #include <mutex>
@@ -425,6 +426,128 @@ namespace gzfx::settings
         catch (...)
         {
             return false;
+        }
+    }
+
+    bool SetNormalized(
+        const Editable setting,
+        const float normalized) noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+
+            if (!g_loaded &&
+                !LoadUnlocked())
+            {
+                return false;
+            }
+
+            const float value =
+                std::clamp(normalized, 0.0f, 1.0f);
+
+            switch (setting)
+            {
+            case Editable::AmbientContactStrength:
+                g_values.ambientContactStrength =
+                    value * 2.0f;
+                break;
+
+            case Editable::AmbientContactRadiusPixels:
+                g_values.ambientContactRadiusPixels =
+                    1.0f + value * 23.0f;
+                break;
+
+            case Editable::DefaultMode:
+                g_values.defaultMode =
+                    static_cast<std::uint32_t>(
+                        std::clamp(
+                            static_cast<int>(
+                                std::lround(value * 4.0f)),
+                            0,
+                            4));
+                break;
+
+            case Editable::ActivationDrawIndexedThreshold:
+                g_values.activationDrawIndexedThreshold =
+                    static_cast<std::uint64_t>(
+                        std::llround(
+                            static_cast<double>(value) *
+                            20000.0));
+                break;
+
+            case Editable::AccessibleDiagnostics:
+            case Editable::CaptureOnModeChange:
+            case Editable::Count:
+                return false;
+            }
+
+            return PersistUnlocked();
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    float GetNormalized(
+        const Editable setting) noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+
+            if (!g_loaded &&
+                !LoadUnlocked())
+            {
+                return 0.0f;
+            }
+
+            switch (setting)
+            {
+            case Editable::AmbientContactStrength:
+                return std::clamp(
+                    g_values.ambientContactStrength / 2.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::AmbientContactRadiusPixels:
+                return std::clamp(
+                    (g_values.ambientContactRadiusPixels - 1.0f) /
+                        23.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::DefaultMode:
+                return std::clamp(
+                    static_cast<float>(g_values.defaultMode) /
+                        4.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::ActivationDrawIndexedThreshold:
+                return std::clamp(
+                    static_cast<float>(
+                        g_values.activationDrawIndexedThreshold) /
+                        20000.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::AccessibleDiagnostics:
+                return g_values.accessibleDiagnostics ? 1.0f : 0.0f;
+
+            case Editable::CaptureOnModeChange:
+                return g_values.captureOnModeChange ? 1.0f : 0.0f;
+
+            case Editable::Count:
+                return 0.0f;
+            }
+
+            return 0.0f;
+        }
+        catch (...)
+        {
+            return 0.0f;
         }
     }
 
