@@ -437,7 +437,7 @@ namespace gzfx::settings
                         path,
                         L"HorizonOcclusion",
                         L"Strength",
-                        L"0.90"),
+                        L"0.25"),
                     0.0f,
                     1.0f);
 
@@ -475,7 +475,7 @@ namespace gzfx::settings
                         path,
                         L"IndirectBounce",
                         L"Strength",
-                        L"0.20"),
+                        L"0.12"),
                     0.0f,
                     0.60f);
 
@@ -495,7 +495,7 @@ namespace gzfx::settings
                         path,
                         L"IndirectBounce",
                         L"Saturation",
-                        L"0.85"),
+                        L"1.00"),
                     0.0f,
                     1.50f);
 
