@@ -54,6 +54,54 @@ namespace gzfx::settings
                 path.c_str());
 
             WritePrivateProfileStringW(
+                L"HorizonOcclusion",
+                L"Enabled",
+                L"1",
+                path.c_str());
+
+            WritePrivateProfileStringW(
+                L"HorizonOcclusion",
+                L"Strength",
+                L"0.90",
+                path.c_str());
+
+            WritePrivateProfileStringW(
+                L"HorizonOcclusion",
+                L"RadiusPixels",
+                L"28.0",
+                path.c_str());
+
+            WritePrivateProfileStringW(
+                L"HorizonOcclusion",
+                L"Quality",
+                L"2",
+                path.c_str());
+
+            WritePrivateProfileStringW(
+                L"IndirectBounce",
+                L"Enabled",
+                L"1",
+                path.c_str());
+
+            WritePrivateProfileStringW(
+                L"IndirectBounce",
+                L"Strength",
+                L"0.20",
+                path.c_str());
+
+            WritePrivateProfileStringW(
+                L"IndirectBounce",
+                L"RadiusPixels",
+                L"36.0",
+                path.c_str());
+
+            WritePrivateProfileStringW(
+                L"IndirectBounce",
+                L"Saturation",
+                L"0.85",
+                path.c_str());
+
+            WritePrivateProfileStringW(
                 L"LocalGlow",
                 L"Enabled",
                 L"1",
@@ -178,6 +226,113 @@ namespace gzfx::settings
                     path,
                     L"AmbientContact",
                     L"RadiusPixels",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            if (!WriteString(
+                    path,
+                    L"HorizonOcclusion",
+                    L"Enabled",
+                    g_values.horizonOcclusionEnabled
+                        ? L"1"
+                        : L"0"))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.3f",
+                static_cast<double>(
+                    g_values.horizonOcclusionStrength));
+
+            if (!WriteString(
+                    path,
+                    L"HorizonOcclusion",
+                    L"Strength",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.2f",
+                static_cast<double>(
+                    g_values.horizonOcclusionRadiusPixels));
+
+            if (!WriteString(
+                    path,
+                    L"HorizonOcclusion",
+                    L"RadiusPixels",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            if (!WriteString(
+                    path,
+                    L"HorizonOcclusion",
+                    L"Quality",
+                    std::to_wstring(
+                        g_values.horizonOcclusionQuality)))
+            {
+                return false;
+            }
+
+            if (!WriteString(
+                    path,
+                    L"IndirectBounce",
+                    L"Enabled",
+                    g_values.indirectBounceEnabled
+                        ? L"1"
+                        : L"0"))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.3f",
+                static_cast<double>(
+                    g_values.indirectBounceStrength));
+
+            if (!WriteString(
+                    path,
+                    L"IndirectBounce",
+                    L"Strength",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.2f",
+                static_cast<double>(
+                    g_values.indirectBounceRadiusPixels));
+
+            if (!WriteString(
+                    path,
+                    L"IndirectBounce",
+                    L"RadiusPixels",
+                    floatBuffer))
+            {
+                return false;
+            }
+
+            swprintf_s(
+                floatBuffer,
+                L"%.3f",
+                static_cast<double>(
+                    g_values.indirectBounceSaturation));
+
+            if (!WriteString(
+                    path,
+                    L"IndirectBounce",
+                    L"Saturation",
                     floatBuffer))
             {
                 return false;
@@ -331,6 +486,81 @@ namespace gzfx::settings
                     1.0f,
                     24.0f);
 
+            next.horizonOcclusionEnabled =
+                GetPrivateProfileIntW(
+                    L"HorizonOcclusion",
+                    L"Enabled",
+                    1,
+                    path.c_str()) != 0;
+
+            next.horizonOcclusionStrength =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"HorizonOcclusion",
+                        L"Strength",
+                        L"0.90"),
+                    0.0f,
+                    2.0f);
+
+            next.horizonOcclusionRadiusPixels =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"HorizonOcclusion",
+                        L"RadiusPixels",
+                        L"28.0"),
+                    4.0f,
+                    96.0f);
+
+            next.horizonOcclusionQuality =
+                static_cast<std::uint32_t>(
+                    std::clamp(
+                        GetPrivateProfileIntW(
+                            L"HorizonOcclusion",
+                            L"Quality",
+                            2,
+                            path.c_str()),
+                        0u,
+                        3u));
+
+            next.indirectBounceEnabled =
+                GetPrivateProfileIntW(
+                    L"IndirectBounce",
+                    L"Enabled",
+                    1,
+                    path.c_str()) != 0;
+
+            next.indirectBounceStrength =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"IndirectBounce",
+                        L"Strength",
+                        L"0.20"),
+                    0.0f,
+                    1.5f);
+
+            next.indirectBounceRadiusPixels =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"IndirectBounce",
+                        L"RadiusPixels",
+                        L"36.0"),
+                    4.0f,
+                    128.0f);
+
+            next.indirectBounceSaturation =
+                std::clamp(
+                    ReadFloat(
+                        path,
+                        L"IndirectBounce",
+                        L"Saturation",
+                        L"0.85"),
+                    0.0f,
+                    2.0f);
+
             next.localGlowEnabled =
                 GetPrivateProfileIntW(
                     L"LocalGlow",
@@ -480,10 +710,131 @@ namespace gzfx::settings
                         24.0f);
                 break;
 
+            case Editable::HorizonOcclusionEnabled:
+                g_values.horizonOcclusionEnabled =
+                    direction > 0;
+                break;
+
+            case Editable::HorizonOcclusionStrength:
+                g_values.horizonOcclusionStrength =
+                    std::clamp(
+                        g_values.horizonOcclusionStrength +
+                            sign * 0.05f,
+                        0.0f,
+                        2.0f);
+                break;
+
+            case Editable::HorizonOcclusionRadiusPixels:
+                g_values.horizonOcclusionRadiusPixels =
+                    std::clamp(
+                        g_values.horizonOcclusionRadiusPixels +
+                            sign * 2.0f,
+                        4.0f,
+                        96.0f);
+                break;
+
+            case Editable::HorizonOcclusionQuality:
+            {
+                int quality =
+                    static_cast<int>(
+                        g_values.horizonOcclusionQuality) +
+                    (direction > 0 ? 1 : -1);
+
+                g_values.horizonOcclusionQuality =
+                    static_cast<std::uint32_t>(
+                        std::clamp(
+                            quality,
+                            0,
+                            3));
+                break;
+            }
+
+            case Editable::IndirectBounceEnabled:
+                g_values.indirectBounceEnabled =
+                    direction > 0;
+                break;
+
+            case Editable::IndirectBounceStrength:
+                g_values.indirectBounceStrength =
+                    std::clamp(
+                        g_values.indirectBounceStrength +
+                            sign * 0.05f,
+                        0.0f,
+                        1.5f);
+                break;
+
+            case Editable::IndirectBounceRadiusPixels:
+                g_values.indirectBounceRadiusPixels =
+                    std::clamp(
+                        g_values.indirectBounceRadiusPixels +
+                            sign * 2.0f,
+                        4.0f,
+                        128.0f);
+                break;
+
+            case Editable::IndirectBounceSaturation:
+                g_values.indirectBounceSaturation =
+                    std::clamp(
+                        g_values.indirectBounceSaturation +
+                            sign * 0.05f,
+                        0.0f,
+                        2.0f);
+                break;
+
+            case Editable::HorizonOcclusionEnabled:
+                g_values.horizonOcclusionEnabled =
+                    !g_values.horizonOcclusionEnabled;
+                break;
+
+            case Editable::IndirectBounceEnabled:
+                g_values.indirectBounceEnabled =
+                    !g_values.indirectBounceEnabled;
+                break;
+
             case Editable::LocalGlowEnabled:
                 g_values.localGlowEnabled =
                     direction > 0;
                 break;
+
+            case Editable::HorizonOcclusionStrength:
+                g_values.horizonOcclusionStrength =
+                    value * 2.0f;
+                break;
+
+            case Editable::HorizonOcclusionRadiusPixels:
+                g_values.horizonOcclusionRadiusPixels =
+                    4.0f + value * 92.0f;
+                break;
+
+            case Editable::HorizonOcclusionQuality:
+                g_values.horizonOcclusionQuality =
+                    static_cast<std::uint32_t>(
+                        std::clamp(
+                            static_cast<int>(
+                                std::lround(
+                                    value * 3.0f)),
+                            0,
+                            3));
+                break;
+
+            case Editable::IndirectBounceStrength:
+                g_values.indirectBounceStrength =
+                    value * 1.5f;
+                break;
+
+            case Editable::IndirectBounceRadiusPixels:
+                g_values.indirectBounceRadiusPixels =
+                    4.0f + value * 124.0f;
+                break;
+
+            case Editable::IndirectBounceSaturation:
+                g_values.indirectBounceSaturation =
+                    value * 2.0f;
+                break;
+
+            case Editable::HorizonOcclusionEnabled:
+            case Editable::IndirectBounceEnabled:
+                return false;
 
             case Editable::LocalGlowStrength:
                 g_values.localGlowStrength =
@@ -682,6 +1033,56 @@ namespace gzfx::settings
                 return std::clamp(
                     (g_values.ambientContactRadiusPixels - 1.0f) /
                         23.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::HorizonOcclusionEnabled:
+                return g_values.horizonOcclusionEnabled
+                    ? 1.0f
+                    : 0.0f;
+
+            case Editable::HorizonOcclusionStrength:
+                return std::clamp(
+                    g_values.horizonOcclusionStrength / 2.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::HorizonOcclusionRadiusPixels:
+                return std::clamp(
+                    (g_values.horizonOcclusionRadiusPixels - 4.0f) /
+                        92.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::HorizonOcclusionQuality:
+                return std::clamp(
+                    static_cast<float>(
+                        g_values.horizonOcclusionQuality) /
+                        3.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::IndirectBounceEnabled:
+                return g_values.indirectBounceEnabled
+                    ? 1.0f
+                    : 0.0f;
+
+            case Editable::IndirectBounceStrength:
+                return std::clamp(
+                    g_values.indirectBounceStrength / 1.5f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::IndirectBounceRadiusPixels:
+                return std::clamp(
+                    (g_values.indirectBounceRadiusPixels - 4.0f) /
+                        124.0f,
+                    0.0f,
+                    1.0f);
+
+            case Editable::IndirectBounceSaturation:
+                return std::clamp(
+                    g_values.indirectBounceSaturation / 2.0f,
                     0.0f,
                     1.0f);
 
