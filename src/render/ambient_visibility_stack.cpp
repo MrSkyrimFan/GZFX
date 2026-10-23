@@ -402,10 +402,11 @@ namespace gzfx::render::ambient_depth
                 g_runtime.latestGpuTiming.valid = true;
                 g_runtime.latestGpuTiming.frame = slot.frame;
                 g_runtime.latestGpuTiming.analyzeMs = deltaMs(0, 1);
-                g_runtime.latestGpuTiming.denoiseHorizontalMs = deltaMs(1, 2);
-                g_runtime.latestGpuTiming.denoiseVerticalMs = deltaMs(2, 3);
-                g_runtime.latestGpuTiming.compositeMs = deltaMs(3, 4);
-                g_runtime.latestGpuTiming.totalMs = deltaMs(0, 4);
+                g_runtime.latestGpuTiming.temporalMs = deltaMs(1, 2);
+                g_runtime.latestGpuTiming.denoiseHorizontalMs = deltaMs(2, 3);
+                g_runtime.latestGpuTiming.denoiseVerticalMs = deltaMs(3, 4);
+                g_runtime.latestGpuTiming.compositeMs = deltaMs(4, 5);
+                g_runtime.latestGpuTiming.totalMs = deltaMs(0, 5);
             }
         }
 
