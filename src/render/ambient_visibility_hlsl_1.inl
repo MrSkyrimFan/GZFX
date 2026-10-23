@@ -162,7 +162,6 @@ uint StepCount()
     return 4;
 }
 
-
 struct AnalyzeOutput
 {
     float ao : SV_TARGET0;
@@ -197,14 +196,18 @@ AnalyzeOutput AnalyzePS(VSOutput input)
         SceneColor.SampleLevel(LinearSampler, input.uv, 0).rgb,
         0.0);
 
-    // Move the receiver slightly toward the camera. This prevents depth
-    // quantization and same-surface samples from becoming fake occluders.
-    center += viewVector * max(abs(center.z) * 0.00020, 0.01);
-
     float3 pixelRight = PositionAt(input.uv + float2(FullInvSize.x, 0.0));
     float3 pixelDown = PositionAt(input.uv + float2(0.0, FullInvSize.y));
     float viewUnitsPerPixel = max(
         length(pixelRight - center),
         length(pixelDown - center));
+
+    // A neighboring sample must rise measurably above the receiver's
+    // tangent plane before it may contribute to the horizon. This rejects
+    // constant-depth planes and prevents smooth terrain slopes from being
+    // treated as universal ambient occluders.
+    float receiverPlaneBias = max(
+        viewUnitsPerPixel * 0.75,
+        abs(center.z) * 0.00015);
 
 )GZFX";
