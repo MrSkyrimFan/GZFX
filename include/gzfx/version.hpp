@@ -2,7 +2,9 @@
 
 namespace gzfx
 {
-    inline constexpr char kVersion[] = "0.0.6-visible-pass";
+    inline constexpr char kVersion[] =
+        "0.0.7-accessibility-stage-foundation";
 }
 
-extern "C" __declspec(dllexport) const char* GZFX_GetVersion() noexcept;
+extern "C" __declspec(dllexport)
+const char* GZFX_GetVersion() noexcept;

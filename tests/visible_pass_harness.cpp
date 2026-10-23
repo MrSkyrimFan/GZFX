@@ -49,12 +49,15 @@ namespace
         matrix[15] = 1.0f;
     }
 
-    bool CenterPixelIsMagenta(const std::filesystem::path& path)
+    std::array<std::uint8_t, 4> ReadBmpPixel(
+        const std::filesystem::path& path,
+        const int x,
+        const int yFromTop)
     {
         std::ifstream in(path, std::ios::binary);
         if (!in)
         {
-            return false;
+            return {};
         }
 
         BITMAPFILEHEADER fileHeader{};
@@ -74,11 +77,9 @@ namespace
             infoHeader.biHeight != 360 ||
             infoHeader.biBitCount != 32)
         {
-            return false;
+            return {};
         }
 
-        constexpr int x = 320;
-        constexpr int yFromTop = 180;
         constexpr int width = 640;
         constexpr int height = 360;
 
@@ -97,18 +98,29 @@ namespace
             reinterpret_cast<char*>(pixel.data()),
             static_cast<std::streamsize>(pixel.size()));
 
-        if (!in)
-        {
-            return false;
-        }
+        return in ? pixel : std::array<std::uint8_t, 4>{};
+    }
 
-        const std::uint8_t blue = pixel[0];
-        const std::uint8_t green = pixel[1];
-        const std::uint8_t red = pixel[2];
+    bool CenterSeparatorIsAccessiblePattern(
+        const std::filesystem::path& path)
+    {
+        const auto white =
+            ReadBmpPixel(path, 320, 180);
 
-        return red > 220 &&
-               blue > 220 &&
-               green < 40;
+        const auto black =
+            ReadBmpPixel(path, 320, 188);
+
+        const bool firstIsWhite =
+            white[0] > 240 &&
+            white[1] > 240 &&
+            white[2] > 240;
+
+        const bool secondIsBlack =
+            black[0] < 15 &&
+            black[1] < 15 &&
+            black[2] < 15;
+
+        return firstIsWhite && secondIsBlack;
     }
 }
 
@@ -447,13 +459,26 @@ int wmain(int argc, wchar_t** argv)
         diagnostics /
         L"visible_pass.bmp";
 
+    const auto stageTrace =
+        diagnostics /
+        L"stage_trace.csv";
+
+    const auto settingsFile =
+        outputRoot /
+        L"GZFX" /
+        L"Settings.ini";
+
     const bool hasVisible = ExistsNonEmpty(visible);
     const bool hasValidation = ExistsNonEmpty(validation);
     const bool hasCapture = ExistsNonEmpty(capture);
+    const bool hasStageTrace = ExistsNonEmpty(stageTrace);
+    const bool hasSettings = ExistsNonEmpty(settingsFile);
 
     if (!hasVisible ||
         !hasValidation ||
-        !hasCapture)
+        !hasCapture ||
+        !hasStageTrace ||
+        !hasSettings)
     {
         std::wcerr
             << L"visible-pass evidence missing: visible="
@@ -462,6 +487,10 @@ int wmain(int argc, wchar_t** argv)
             << hasValidation
             << L" capture="
             << hasCapture
+            << L" stage_trace="
+            << hasStageTrace
+            << L" settings="
+            << hasSettings
             << L"\n";
 
         if (hasVisible)
@@ -495,13 +524,13 @@ int wmain(int argc, wchar_t** argv)
         validationText.find("status=validated") !=
         std::string::npos;
 
-    const bool magenta =
-        CenterPixelIsMagenta(capture);
+    const bool accessibleSeparator =
+        CenterSeparatorIsAccessiblePattern(capture);
 
     if (!active ||
         !splitMode ||
         !validated ||
-        !magenta)
+        !accessibleSeparator)
     {
         std::cerr
             << "visible_pass.txt:\n"
@@ -514,8 +543,8 @@ int wmain(int argc, wchar_t** argv)
             << splitMode
             << " validated="
             << validated
-            << " magenta="
-            << magenta
+            << " accessible_separator="
+            << accessibleSeparator
             << "\n";
 
         return 15;

@@ -18,6 +18,7 @@ namespace gzfx::diagnostics::resource_intelligence
 
     void ObserveRenderTargets(
         std::uint64_t frame,
+        std::uint64_t drawOrdinal,
         UINT count,
         ID3D11RenderTargetView* const* renderTargets,
         ID3D11DepthStencilView* depthTarget) noexcept;

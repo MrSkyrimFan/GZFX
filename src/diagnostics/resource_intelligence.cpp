@@ -57,6 +57,12 @@ namespace gzfx::diagnostics::resource_intelligence
         bool g_previewsCaptured = false;
         std::uint64_t g_lastSnapshotFrame = 0;
 
+        UINT g_swapWidth = 0;
+        UINT g_swapHeight = 0;
+        std::uint64_t g_stageTraceEvents = 0;
+        bool g_lastStageColorBound = false;
+        bool g_lastStageDepthBound = false;
+
         std::string Ptr(const void* pointer)
         {
             std::ostringstream stream;
@@ -108,6 +114,33 @@ namespace gzfx::diagnostics::resource_intelligence
             }
 
             std::ofstream out(root / name, std::ios::out | std::ios::trunc);
+            if (out)
+            {
+                out << text;
+            }
+        }
+
+        void AppendText(
+            const wchar_t* name,
+            const std::string& text)
+        {
+            const fs::path root = paths::DiagnosticsRoot();
+            if (root.empty())
+            {
+                return;
+            }
+
+            std::error_code error;
+            fs::create_directories(root, error);
+            if (error)
+            {
+                return;
+            }
+
+            std::ofstream out(
+                root / name,
+                std::ios::out | std::ios::app);
+
             if (out)
             {
                 out << text;
@@ -1018,6 +1051,7 @@ namespace gzfx::diagnostics::resource_intelligence
 
     void ObserveRenderTargets(
         const std::uint64_t frame,
+        const std::uint64_t drawOrdinal,
         const UINT count,
         ID3D11RenderTargetView* const* renderTargets,
         ID3D11DepthStencilView* depthTarget) noexcept
@@ -1029,6 +1063,9 @@ namespace gzfx::diagnostics::resource_intelligence
             const std::uintptr_t depthId =
                 TrackView(depthTarget, frame, false, true);
 
+            std::vector<std::uintptr_t> colorIds;
+            colorIds.reserve(count);
+
             for (UINT i = 0; i < count; ++i)
             {
                 const std::uintptr_t colorId =
@@ -1038,11 +1075,101 @@ namespace gzfx::diagnostics::resource_intelligence
                         true,
                         false);
 
+                colorIds.push_back(colorId);
+
                 if (depthId != 0 && colorId != 0)
                 {
                     ++g_pairs[{ depthId, colorId }];
                 }
             }
+
+            if (g_swapWidth == 0 ||
+                g_swapHeight == 0 ||
+                g_stageTraceEvents >= 2048)
+            {
+                return;
+            }
+
+            std::uintptr_t selectedDepthId = 0;
+            TextureInfo* selectedDepth =
+                SelectDepth(
+                    g_swapWidth,
+                    g_swapHeight,
+                    selectedDepthId);
+
+            if (selectedDepth == nullptr)
+            {
+                return;
+            }
+
+            std::uintptr_t selectedColorId = 0;
+            std::uint64_t pairCount = 0;
+
+            TextureInfo* selectedColor =
+                SelectColor(
+                    g_swapWidth,
+                    g_swapHeight,
+                    selectedDepthId,
+                    selectedColorId,
+                    pairCount);
+
+            if (selectedColor == nullptr)
+            {
+                return;
+            }
+
+            const bool depthBound =
+                depthId == selectedDepthId;
+
+            const bool colorBound =
+                std::find(
+                    colorIds.begin(),
+                    colorIds.end(),
+                    selectedColorId) !=
+                colorIds.end();
+
+            const bool stateChanged =
+                depthBound != g_lastStageDepthBound ||
+                colorBound != g_lastStageColorBound;
+
+            if (stateChanged ||
+                depthBound ||
+                colorBound)
+            {
+                std::ostringstream row;
+
+                if (g_stageTraceEvents == 0)
+                {
+                    row
+                        << "event,frame,draw_ordinal,"
+                           "color_bound,depth_bound,rt_count,"
+                           "selected_color,selected_depth,"
+                           "pair_count\n";
+                }
+
+                row
+                    << g_stageTraceEvents
+                    << "," << frame
+                    << "," << drawOrdinal
+                    << "," << (colorBound ? 1 : 0)
+                    << "," << (depthBound ? 1 : 0)
+                    << "," << count
+                    << ",0x" << std::hex
+                    << selectedColorId
+                    << ",0x" << selectedDepthId
+                    << std::dec
+                    << "," << pairCount
+                    << "\n";
+
+                AppendText(
+                    L"stage_trace.csv",
+                    row.str());
+
+                ++g_stageTraceEvents;
+            }
+
+            g_lastStageDepthBound = depthBound;
+            g_lastStageColorBound = colorBound;
         }
         catch (...)
         {
@@ -1088,6 +1215,19 @@ namespace gzfx::diagnostics::resource_intelligence
         try
         {
             std::scoped_lock lock(g_mutex);
+
+            if (swapChain != nullptr)
+            {
+                DXGI_SWAP_CHAIN_DESC description{};
+                if (SUCCEEDED(swapChain->GetDesc(&description)))
+                {
+                    g_swapWidth = description.BufferDesc.Width;
+                    g_swapHeight = description.BufferDesc.Height;
+                }
+            }
+
+            g_lastStageColorBound = false;
+            g_lastStageDepthBound = false;
 
             if (IsSnapshotFrame(frame) &&
                 g_lastSnapshotFrame != frame)
