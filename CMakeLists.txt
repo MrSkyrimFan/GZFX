@@ -88,6 +88,7 @@ target_link_libraries(
         user32
         gdi32
         d3dcompiler
+        dxguid
         minhook
 )
 set_target_properties(GZFX PROPERTIES OUTPUT_NAME "GZFX")
