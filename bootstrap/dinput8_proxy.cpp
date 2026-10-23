@@ -4,10 +4,12 @@
 #include <dinput.h>
 #include <MinHook.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <iterator>
 #include <mutex>
 #include <string>
 #include <system_error>
