@@ -1,0 +1,24 @@
+#pragma once
+
+#include <d3d11.h>
+
+#include <cstdint>
+
+namespace gzfx::ui
+{
+    struct MenuOverlay
+    {
+        ID3D11ShaderResourceView* srv = nullptr;
+        UINT width = 0;
+        UINT height = 0;
+        bool visible = false;
+    };
+
+    void ProcessInput(std::uint64_t frame) noexcept;
+    bool ConsumeCycleModeRequest() noexcept;
+
+    bool GetMenuOverlay(
+        ID3D11Device* device,
+        ID3D11DeviceContext* context,
+        MenuOverlay& overlay) noexcept;
+}
