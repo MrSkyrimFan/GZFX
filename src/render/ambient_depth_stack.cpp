@@ -9,7 +9,9 @@
 #include <d3dcompiler.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
+#include <iomanip>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -57,6 +59,29 @@ namespace gzfx::render::ambient_depth
             ID3D11ShaderResourceView* indirectSrv = nullptr;
         };
 
+        constexpr std::size_t kGpuTimerSlots = 4;
+        constexpr std::size_t kGpuTimestampCount = 6;
+
+        struct GpuTimerSlot
+        {
+            ID3D11Query* disjoint = nullptr;
+            std::array<ID3D11Query*, kGpuTimestampCount> timestamps{};
+            bool pending = false;
+            std::uint64_t frame = 0;
+        };
+
+        struct GpuTiming
+        {
+            bool valid = false;
+            std::uint64_t frame = 0;
+            double downsampleMs = 0.0;
+            double analyzeMs = 0.0;
+            double denoiseHorizontalMs = 0.0;
+            double denoiseVerticalMs = 0.0;
+            double compositeMs = 0.0;
+            double totalMs = 0.0;
+        };
+
         struct Runtime
         {
             ID3D11Device* device = nullptr;
@@ -88,6 +113,10 @@ namespace gzfx::render::ambient_depth
 
             ID3D11Texture2D* composite = nullptr;
             ID3D11RenderTargetView* compositeRtv = nullptr;
+
+            std::array<GpuTimerSlot, kGpuTimerSlots> gpuTimers{};
+            std::size_t gpuTimerCursor = 0;
+            GpuTiming latestGpuTiming{};
 
             UINT fullWidth = 0;
             UINT fullHeight = 0;
@@ -176,7 +205,40 @@ namespace gzfx::render::ambient_depth
                 << "\n"
                 << "indirect_saturation="
                 << settings.indirectBounceSaturation
+                << "\n"
+                << "gpu_timing_valid="
+                << (g_runtime.latestGpuTiming.valid
+                    ? "true"
+                    : "false")
                 << "\n";
+
+            if (g_runtime.latestGpuTiming.valid)
+            {
+                out
+                    << std::fixed
+                    << std::setprecision(4)
+                    << "gpu_timing_frame="
+                    << g_runtime.latestGpuTiming.frame
+                    << "\n"
+                    << "gpu_downsample_ms="
+                    << g_runtime.latestGpuTiming.downsampleMs
+                    << "\n"
+                    << "gpu_analyze_ms="
+                    << g_runtime.latestGpuTiming.analyzeMs
+                    << "\n"
+                    << "gpu_denoise_horizontal_ms="
+                    << g_runtime.latestGpuTiming.denoiseHorizontalMs
+                    << "\n"
+                    << "gpu_denoise_vertical_ms="
+                    << g_runtime.latestGpuTiming.denoiseVerticalMs
+                    << "\n"
+                    << "gpu_composite_ms="
+                    << g_runtime.latestGpuTiming.compositeMs
+                    << "\n"
+                    << "gpu_total_ms="
+                    << g_runtime.latestGpuTiming.totalMs
+                    << "\n";
+            }
 
             if (!detail.empty())
             {
@@ -203,6 +265,26 @@ namespace gzfx::render::ambient_depth
 
         void ReleaseRuntime()
         {
+            for (auto& timer : g_runtime.gpuTimers)
+            {
+                for (auto*& timestamp : timer.timestamps)
+                {
+                    if (timestamp)
+                    {
+                        timestamp->Release();
+                        timestamp = nullptr;
+                    }
+                }
+
+                if (timer.disjoint)
+                {
+                    timer.disjoint->Release();
+                    timer.disjoint = nullptr;
+                }
+
+                timer.pending = false;
+            }
+
             if (g_runtime.compositeRtv) g_runtime.compositeRtv->Release();
             if (g_runtime.composite) g_runtime.composite->Release();
 
@@ -234,6 +316,219 @@ namespace gzfx::render::ambient_depth
             if (g_runtime.device) g_runtime.device->Release();
 
             g_runtime = {};
+        }
+
+        bool CreateGpuTimers(
+            ID3D11Device* device)
+        {
+            if (device == nullptr)
+            {
+                return false;
+            }
+
+            D3D11_QUERY_DESC disjointDesc{};
+            disjointDesc.Query =
+                D3D11_QUERY_TIMESTAMP_DISJOINT;
+
+            D3D11_QUERY_DESC timestampDesc{};
+            timestampDesc.Query =
+                D3D11_QUERY_TIMESTAMP;
+
+            for (auto& slot : g_runtime.gpuTimers)
+            {
+                if (FAILED(
+                        device->CreateQuery(
+                            &disjointDesc,
+                            &slot.disjoint)))
+                {
+                    return false;
+                }
+
+                for (auto*& timestamp : slot.timestamps)
+                {
+                    if (FAILED(
+                            device->CreateQuery(
+                                &timestampDesc,
+                                &timestamp)))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        void ResolveGpuTimers(
+            ID3D11DeviceContext* context)
+        {
+            if (context == nullptr)
+            {
+                return;
+            }
+
+            for (auto& slot : g_runtime.gpuTimers)
+            {
+                if (!slot.pending ||
+                    slot.disjoint == nullptr)
+                {
+                    continue;
+                }
+
+                D3D11_QUERY_DATA_TIMESTAMP_DISJOINT
+                    disjoint{};
+
+                const HRESULT disjointResult =
+                    context->GetData(
+                        slot.disjoint,
+                        &disjoint,
+                        sizeof(disjoint),
+                        D3D11_ASYNC_GETDATA_DONOTFLUSH);
+
+                if (disjointResult != S_OK)
+                {
+                    continue;
+                }
+
+                std::array<UINT64, kGpuTimestampCount>
+                    timestamps{};
+
+                bool ready = true;
+
+                for (std::size_t i = 0;
+                     i < timestamps.size();
+                     ++i)
+                {
+                    if (context->GetData(
+                            slot.timestamps[i],
+                            &timestamps[i],
+                            sizeof(timestamps[i]),
+                            D3D11_ASYNC_GETDATA_DONOTFLUSH) !=
+                        S_OK)
+                    {
+                        ready = false;
+                        break;
+                    }
+                }
+
+                if (!ready)
+                {
+                    continue;
+                }
+
+                slot.pending = false;
+
+                if (disjoint.Disjoint ||
+                    disjoint.Frequency == 0)
+                {
+                    continue;
+                }
+
+                const double tickToMs =
+                    1000.0 /
+                    static_cast<double>(
+                        disjoint.Frequency);
+
+                auto deltaMs =
+                    [&](const std::size_t from,
+                        const std::size_t to)
+                    {
+                        return
+                            static_cast<double>(
+                                timestamps[to] -
+                                timestamps[from]) *
+                            tickToMs;
+                    };
+
+                g_runtime.latestGpuTiming.valid = true;
+                g_runtime.latestGpuTiming.frame =
+                    slot.frame;
+
+                g_runtime.latestGpuTiming.downsampleMs =
+                    deltaMs(0, 1);
+
+                g_runtime.latestGpuTiming.analyzeMs =
+                    deltaMs(1, 2);
+
+                g_runtime.latestGpuTiming.denoiseHorizontalMs =
+                    deltaMs(2, 3);
+
+                g_runtime.latestGpuTiming.denoiseVerticalMs =
+                    deltaMs(3, 4);
+
+                g_runtime.latestGpuTiming.compositeMs =
+                    deltaMs(4, 5);
+
+                g_runtime.latestGpuTiming.totalMs =
+                    deltaMs(0, 5);
+            }
+        }
+
+        GpuTimerSlot* BeginGpuTimer(
+            ID3D11DeviceContext* context,
+            const std::uint64_t frame)
+        {
+            ResolveGpuTimers(context);
+
+            auto& slot =
+                g_runtime.gpuTimers[
+                    g_runtime.gpuTimerCursor];
+
+            g_runtime.gpuTimerCursor =
+                (
+                    g_runtime.gpuTimerCursor +
+                    1
+                ) %
+                kGpuTimerSlots;
+
+            if (slot.pending ||
+                slot.disjoint == nullptr ||
+                slot.timestamps[0] == nullptr)
+            {
+                return nullptr;
+            }
+
+            slot.frame = frame;
+
+            context->Begin(
+                slot.disjoint);
+
+            context->End(
+                slot.timestamps[0]);
+
+            return &slot;
+        }
+
+        void StampGpuTimer(
+            ID3D11DeviceContext* context,
+            GpuTimerSlot* slot,
+            const std::size_t index)
+        {
+            if (context != nullptr &&
+                slot != nullptr &&
+                index < slot->timestamps.size() &&
+                slot->timestamps[index] != nullptr)
+            {
+                context->End(
+                    slot->timestamps[index]);
+            }
+        }
+
+        void FinishGpuTimer(
+            ID3D11DeviceContext* context,
+            GpuTimerSlot* slot)
+        {
+            if (context == nullptr ||
+                slot == nullptr ||
+                slot->disjoint == nullptr)
+            {
+                return;
+            }
+
+            context->End(
+                slot->disjoint);
+
+            slot->pending = true;
         }
 
         bool Compile(
@@ -1670,6 +1965,15 @@ float4 CompositePS(
                 return false;
             }
 
+            if (!CreateGpuTimers(device))
+            {
+                error =
+                    "GPU timestamp query allocation failed";
+
+                ReleaseRuntime();
+                return false;
+            }
+
             g_runtime.fullWidth =
                 sceneDesc.Width;
 
@@ -2001,6 +2305,11 @@ float4 CompositePS(
                 ? 1u
                 : 0u;
 
+            GpuTimerSlot* gpuTimer =
+                BeginGpuTimer(
+                    context,
+                    frame);
+
             ID3D11RenderTargetView*
                 downsampleTargets[2] =
             {
@@ -2030,6 +2339,10 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
+                FinishGpuTimer(
+                    context,
+                    gpuTimer);
+
                 WriteLog(
                     frame,
                     "failed_downsample",
@@ -2037,6 +2350,11 @@ float4 CompositePS(
 
                 return false;
             }
+
+            StampGpuTimer(
+                context,
+                gpuTimer,
+                1);
 
             ID3D11RenderTargetView*
                 analyzeTargets[2] =
@@ -2071,6 +2389,10 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
+                FinishGpuTimer(
+                    context,
+                    gpuTimer);
+
                 WriteLog(
                     frame,
                     "failed_analyze",
@@ -2078,6 +2400,11 @@ float4 CompositePS(
 
                 return false;
             }
+
+            StampGpuTimer(
+                context,
+                gpuTimer,
+                2);
 
             parameters.axisX = 1.0f;
             parameters.axisY = 0.0f;
@@ -2113,6 +2440,10 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
+                FinishGpuTimer(
+                    context,
+                    gpuTimer);
+
                 WriteLog(
                     frame,
                     "failed_denoise_horizontal",
@@ -2120,6 +2451,11 @@ float4 CompositePS(
 
                 return false;
             }
+
+            StampGpuTimer(
+                context,
+                gpuTimer,
+                3);
 
             parameters.axisX = 0.0f;
             parameters.axisY = 1.0f;
@@ -2155,6 +2491,10 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
+                FinishGpuTimer(
+                    context,
+                    gpuTimer);
+
                 WriteLog(
                     frame,
                     "failed_denoise_vertical",
@@ -2162,6 +2502,11 @@ float4 CompositePS(
 
                 return false;
             }
+
+            StampGpuTimer(
+                context,
+                gpuTimer,
+                4);
 
             ID3D11RenderTargetView*
                 compositeTargets[1] =
@@ -2193,6 +2538,10 @@ float4 CompositePS(
             {
                 depthSrv->Release();
 
+                FinishGpuTimer(
+                    context,
+                    gpuTimer);
+
                 WriteLog(
                     frame,
                     "failed_composite",
@@ -2200,6 +2549,15 @@ float4 CompositePS(
 
                 return false;
             }
+
+            StampGpuTimer(
+                context,
+                gpuTimer,
+                5);
+
+            FinishGpuTimer(
+                context,
+                gpuTimer);
 
             context->CopyResource(
                 inputs.sceneColorTexture,
