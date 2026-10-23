@@ -10,14 +10,14 @@ namespace gzfx::settings
         float ambientContactRadiusPixels = 4.0f;
 
         bool horizonOcclusionEnabled = true;
-        float horizonOcclusionStrength = 0.90f;
+        float horizonOcclusionStrength = 0.25f;
         float horizonOcclusionRadiusPixels = 28.0f;
         std::uint32_t horizonOcclusionQuality = 2;
 
         bool indirectBounceEnabled = true;
-        float indirectBounceStrength = 0.20f;
+        float indirectBounceStrength = 0.12f;
         float indirectBounceRadiusPixels = 36.0f;
-        float indirectBounceSaturation = 0.85f;
+        float indirectBounceSaturation = 1.00f;
 
         bool localGlowEnabled = true;
         float localGlowStrength = 0.18f;
