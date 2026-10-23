@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -55,6 +56,7 @@ namespace gzfx::ui
         bool g_visible = false;
         bool g_dirty = true;
         bool g_cycleModeRequested = false;
+        bool g_captureRequested = false;
         std::uint32_t g_selected = 0;
         bool g_testAdjustmentApplied = false;
 
@@ -714,6 +716,7 @@ namespace gzfx::ui
             {
                 g_visible = !g_visible;
                 g_dirty = true;
+                g_captureRequested = true;
 
                 WriteState(
                     frame,
@@ -726,6 +729,7 @@ namespace gzfx::ui
             {
                 settings::Reload();
                 g_dirty = true;
+                g_captureRequested = true;
 
                 WriteState(
                     frame,
@@ -758,6 +762,7 @@ namespace gzfx::ui
                         : g_selected - 1;
 
                 g_dirty = true;
+                g_captureRequested = true;
             }
 
             if (num2)
@@ -767,16 +772,19 @@ namespace gzfx::ui
                     count;
 
                 g_dirty = true;
+                g_captureRequested = true;
             }
 
             if (num4)
             {
                 ApplyAdjustment(-1);
+                g_captureRequested = true;
             }
 
             if (num6)
             {
                 ApplyAdjustment(1);
+                g_captureRequested = true;
             }
 
             if (num5)
@@ -789,6 +797,7 @@ namespace gzfx::ui
                 {
                     settings::Toggle(item);
                     g_dirty = true;
+                    g_captureRequested = true;
                 }
             }
 
@@ -818,6 +827,24 @@ namespace gzfx::ui
                 g_cycleModeRequested;
 
             g_cycleModeRequested = false;
+            return requested;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    bool ConsumeCaptureRequest() noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+
+            const bool requested =
+                g_captureRequested;
+
+            g_captureRequested = false;
             return requested;
         }
         catch (...)
