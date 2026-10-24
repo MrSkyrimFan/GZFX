@@ -36,28 +36,29 @@ Do not pin future work to the old PR18 package-refresh SHA. The historical PR18 
 c9de1705082f7efd740d709c1f916bf1dff2f381
 ```
 
-After PR #19 merges, its 0.0.17 renderer-cartography source and the subsequent automatic package refresh on `main` supersede that historical hash.
+PR #19 established the 0.0.17 execution-level renderer cartographer and superseded that historical PR18 package baseline.
 
 Current runtime version:
 
 ```text
-0.0.17-renderer-pipeline-cartography
+0.0.18-cartography-semantic-atlas
 ```
 
 Current engineering phase:
 
 ```text
-RENDERER CARTOGRAPHY
+RENDERER CARTOGRAPHY — SEMANTIC ATLAS
 pipeline understanding first
-effect tuning later
+effect redesign/tuning later
 ```
 
-PR #19:
+Current cartography advancement:
+
 ```text
-Map Skyrim renderer pipeline before further lighting tuning
+PR #21 — Promote field cartography and expand semantic atlas
 ```
 
-PR #19 supersedes PR18 as the active engineering frontier after merge. PR18 remains the historical native-normal/motion/temporal foundation.
+PR #19 remains the execution-cartography foundation. PR #21 incorporates the first real 0.0.17 field graph, fixes probe defects exposed by that graph, and expands targeted visual semantic evidence.
 
 Historical PR #18 merge commit:
 
@@ -802,7 +803,7 @@ Current CMake registers 13 tests:
 13 native_surface_temporal
 ```
 
-PR18 head passed all 13.
+The merged 0.0.17 cartography baseline passed all 13. The 0.0.18 atlas branch must also pass the full 13-test Windows x64 gate before merge.
 
 ---
 
@@ -883,165 +884,246 @@ Keep using the same scene when comparing builds.
 
 ---
 
-# 16. Current phase — renderer pipeline cartography
+# 16. Current phase — renderer semantic atlas
 
 **DO NOT tune AO/SSIL yet.**
 
-GZFX 0.0.17 adds a broad execution-level D3D11 cartographer that runs only inside the existing short STOCK semantic windows.
+The latest authoritative field bundle is:
 
-A Shift+Numpad5 capture now records:
+```text
+GZFXfrfreded.zip
+```
 
-- VS / HS / DS / GS / PS / CS shader identity;
-- SRV reads across all six shader stages;
-- RTV / DSV / OM-UAV / CS-UAV writes at actual draw/dispatch execution;
-- subresource mip/slice/view metadata;
-- DSV read-only depth/stencil flags;
-- all-stage constant-buffer bindings;
-- all-stage sampler bindings;
-- decoded sampler state;
-- decoded blend state;
-- decoded depth/stencil state;
-- decoded rasterizer state;
-- viewport and primitive topology;
-- direct and indirect draw/dispatch;
-- CopyResource;
-- CopySubresourceRegion;
-- ResolveSubresource;
-- GenerateMips;
-- RTV / DSV / UAV clears;
-- ExecuteCommandList coverage-boundary evidence;
-- small CPU-updated buffer fingerprints from Map/Unmap and UpdateSubresource;
-- resource descriptors and debug names when available;
-- producer -> consumer resource-lineage edges;
-- same-session pass signatures for comparing controlled captures.
+It was produced by GZFX 0.0.17 and contains the automatic stock capture plus manual cartography captures `0001` through `0007`.
 
-Evidence is written as numbered `pipeline_*_manual_####` files matching each manual semantic capture.
+The field graph promoted several renderer systems from guesses to evidence-backed semantics.
 
-The experimental ID3D11Device creation-interception lane is intentionally DISABLED in the field build. CI proved that lane could destabilize D3D11 WARP harnesses. Do not enable `GZFX_EXPERIMENTAL_DEVICE_CREATION_HOOKS` for normal field work.
+## Identified / promoted from the 0.0.17 field run
 
-Same-session shader identities are sufficient for the controlled day/night/water/shadow/interior comparison campaign.
+### Main depth + depth chronology
+
+Main depth:
+
+```text
+2560x1440
+R24G8_TYPELESS
+```
+
+The graph proves at least two distinct copies:
+
+- an early/pre-opaque depth copy before the four-target opaque MRT;
+- a later depth copy after substantially more scene rendering.
+
+Do not treat “the depth buffer” as one semantically timeless input.
+
+### Main opaque MRT
+
+The stock four-target world MRT is confirmed:
+
+```text
+RT0  R16G16B16A16_FLOAT  main HDR scene
+RT1  R16G16_FLOAT        motion vectors
+RT2  R8G8B8A8_UNORM      encoded native normal target
+RT3  R8G8_UNORM          auxiliary target, channels still unresolved
+DSV  R24G8_TYPELESS      main depth
+```
+
+The normal target ping-pongs frame-to-frame.
+
+Do **not** call RT2 B/A “TAA/SSR masks” without direct proof.
+
+### Exterior volumetric lighting
+
+The exterior path is structurally identified:
+
+- 4096x4096 shadow-map array;
+- 512x512 secondary shadow-map array;
+- 4096x1 R32_FLOAT lookup;
+- 32x32x32 R8 3D noise;
+- two 320x192x90 R16_FLOAT 3D density volumes;
+- 90-slice per-frame ping-pong blur;
+- later full-resolution R16_FLOAT projection/depth-aware blur.
+
+This entire compute family disappears in the interior-class capture while ordinary scene rendering/AO/post remains alive.
+
+### Stock CameraZ / SAO depth hierarchy
+
+A full-resolution R32_FLOAT resource with 12 mips is built as:
+
+```text
+2560x1440
+1280x720
+640x360
+320x180
+160x90
+80x45
+40x22
+20x11
+10x5
+5x2
+2x1
+1x1
+```
+
+This is the stock CameraZ / SAO depth pyramid.
+
+### Stock temporal RawAO family
+
+The live graph proves:
+
+- CameraZ input;
+- current native normal input;
+- motion-vector input;
+- two full-resolution RGBA8 AO/history resources that alternate read/write every frame.
+
+That is real temporal AO history behavior.
+
+A two-pass RGBA8 filter immediately follows the raw temporal AO result.
+
+### Stock raw-indirect / lighting composition boundary
+
+A full-resolution R11G11B10_FLOAT surface is generated from CameraZ + HDR scene + the RT3 auxiliary surface.
+
+A later full-resolution composite reads that indirect surface together with filtered AO, depth, normal, auxiliary/mask-like inputs, and a half-resolution HDR lighting/reflection surface, then writes back into main HDR.
+
+The family is strongly mapped. Exact individual Bethesda image-space class names remain provisional until the visual atlas confirms contents.
+
+### Half-resolution reflection / reduced-lighting family
+
+A separate half-resolution branch uses normal + motion + HDR + depth/history-like inputs, produces half-resolution HDR intermediates, and runs a depth-aware two-pass compute blur before the main lighting composite consumes it.
+
+This is a strong stock reflection/reduced-lighting match, but exact substage labels remain provisional.
+
+### HDR luminance / exposure family
+
+The graph exposes the later reduction chain down to tiny luminance/adaptation surfaces. This is the stock HDR downsample / luminance / light-adaptation family.
+
+## Interior control
+
+Manual `0007` is the interior-class capture with high confidence:
+
+- thousands of real scene draws still occur;
+- CameraZ/SAO/indirect/post remain present;
+- the exterior 3D volumetric compute family disappears.
+
+Manual `0006` remains “extra exterior / exact scene unknown” unless the user supplies a more exact label.
+
+The complete pass/resource IDs and confidence levels are preserved in:
+
+```text
+docs/FIELD_CARTOGRAPHY_2026-10-23.md
+```
 
 ---
 
-# 17. Immediate field evidence campaign
+# 17. Probe defects exposed by the field run and fixed in 0.0.18
 
-Use Shift+Numpad5 for controlled STOCK renderer captures.
+The first cartographer was useful enough to expose flaws in itself.
 
-Keep captures in ONE Skyrim launch/session so pass signatures and live shader identities remain directly comparable.
+## Known-resource identity mismatch
 
-Capture these states in order:
+Known scene/depth/motion/normal/aux pointers were not canonicalized the same way as the resource table.
 
-1. exterior daylight, still camera;
-2. exterior daylight, slowly moving camera;
-3. exterior night, approximately same view;
-4. water/reflection-heavy view;
-5. strong directional-shadow view;
-6. normal interior cell.
+Effect:
 
-Do not tune Horizon, Bounce, Local Glow, temporal weights, or other artistic controls during this campaign.
+- resources were present;
+- `known_*` tags could still be absent.
 
-After upload, analyze the `pipeline_*` evidence as a resource/pass graph first.
+0.0.18 canonicalizes those anchors and CI explicitly checks all five tags.
 
-Priority questions:
+## Cumulative resource/shader inventories
 
-- where the final opaque depth is produced/copied;
-- which passes create and consume stock SAO/raw-AO/history resources;
-- which passes create and consume stock indirect-light/history resources;
-- exact motion/normal/aux target consumers;
-- shadow-map families and cascade/local-light behavior;
-- water/reflection/refraction/TAA chain;
-- volumetric 1D/2D-array/3D resource chain;
-- HDR downsample/luminance/exposure/adaptation chain;
-- bloom/blur chain;
-- temporal AA/image-space stages;
-- sky/fog/cloud/sun/moon composition;
-- where ambient/directional/indirect lighting is actually composed;
-- whether ExecuteCommandList exposes an immediate-context coverage boundary.
+The 0.0.17 manual reports accumulated resources discovered earlier in the same process.
 
-Do not promote candidate tags to facts merely because a resource format looks familiar.
+Effect:
 
----
+- later captures could report hundreds of resources that were not active in that specific three-frame window.
 
-# 18. Renderer semantics still NOT finished
+0.0.18 outputs capture-local resource/shader inventories while retaining stable global identity internally.
 
-PR17 was a major breakthrough, not the end.
+## Stale irrelevant shader attribution
 
-Still unresolved / worth probing:
+D3D11 can leave a CS bound while graphics draws execute and graphics shaders bound while compute dispatch executes.
 
-- exact semantics of `SV_Target3 R8G8_UNORM`;
-- exact B/A semantics of the native-normal RGBA8 target — do NOT keep calling them TAA/SSR masks without field proof;
-- stock Skyrim SSAO intermediate resources and raw AO;
-- finalized opaque depth used by later image-space passes;
-- shadow-map taxonomy and day/night differences;
-- water/reflection resources;
-- exposure / bloom reduction chain;
-- exact ambient/sky lighting integration;
-- material/albedo/specular/roughness-like semantics available from stock forward passes.
+That state is legal, but reporting every bound stage as if it executed is misleading.
 
-The user’s intuition was correct:
+0.0.18:
 
-> Some AO/SSIL quality problems may come from not understanding enough of the rest of Skyrim’s graphics pipeline.
+- strips CS identity from draw records;
+- strips graphics-shader identity from dispatch records;
+- strips shader attribution from copy/clear/resolve/mip operations.
 
-Treat that as an active architecture concern.
+CI deliberately binds stale opposite-stage shaders and verifies the report does not lie about execution ownership.
 
-Do not assume AO/GI can reach ENB-class integration by operating only on final depth + scene color.
+## Semantic-preview coverage
+
+The first run found important AO/indirect surfaces around semantic candidate ranks ~28–34, but only 14 previews were saved.
+
+0.0.18:
+
+- resets semantic counters per capture;
+- raises the preview budget;
+- includes reduced-resolution RTV/UAV intermediates;
+- prioritizes independently known scene/depth/motion/normal/aux anchors;
+- uses smaller previews to keep evidence size bounded;
+- normal-decodes only the independently identified normal resource;
+- motion-visualizes only the independently identified motion resource;
+- emits grayscale per-channel planes for the known normal/aux resources and a bounded group of high-value RGBA8 intermediates;
+- emits selected mip previews for mipped scalar resources such as CameraZ.
+
+Accessibility remains mandatory: channel evidence is grayscale/textual, never hue-only.
 
 ---
 
-# 19. Strategic direction after PR18
+# 18. Next field campaign — targeted semantic atlas
 
-If PR18 real-field stability is materially improved:
+The next run is **not** another six-state broad survey.
 
-Next serious renderer phase should consider:
+The broad graph already answered that layer.
 
-1. Native normal/mask semantics:
-   - understand B/A mask channels;
-   - exploit TAA/SSR-related information if useful.
+The purpose of 0.0.18 is to visually/structurally lock the remaining high-value resources:
 
-2. Temporal AO/SSIL refinement:
-   - stronger disocclusion rejection;
-   - neighborhood clipping;
-   - history confidence;
-   - per-effect temporal response.
+1. temporal RawAO ping-pong surfaces;
+2. AO two-pass filter surfaces;
+3. R11G11B10 raw-indirect surface;
+4. half-resolution reflection/reprojection surface;
+5. half-resolution HDR reflection/reduced-lighting blur surfaces;
+6. exterior volumetric full-resolution R16_FLOAT projection/blur;
+7. CameraZ mip 0 plus coarse mips;
+8. RT3 R8G8 auxiliary R/G channels;
+9. native-normal R/G/B/A channel evidence without assuming B/A semantics;
+10. HDR luminance/adaptation reduction surfaces.
 
-3. Map vanilla SSAO:
-   - identify raw SSAO output;
-   - identify its exact normal/depth inputs;
-   - determine whether GZFX should consume, replace, or inject near that stage.
+Keep captures in **one Skyrim launch/session** so same-session shader/pass identity remains comparable.
 
-4. Lighting integration:
-   - avoid treating AO only as final HDR multiplication;
-   - investigate ambient/sky/diffuse composition stage.
+Do not alter Horizon, Bounce, Local Glow, temporal weights, or artistic controls during this campaign.
 
-5. Better indirect lighting:
-   - source and receiver normals;
-   - radiance confidence;
-   - temporal accumulation;
-   - screen-space visibility;
-   - multi-scale / hierarchical depth;
-   - eventually bent-normal / specular-occlusion concepts.
+---
 
-6. Continue semantic mapping across controlled states using `Shift+Numpad5`:
-   - day;
-   - night;
-   - interior;
-   - water;
-   - weather;
-   - strong shadows.
+# 19. Architectural rule before effect redesign
 
-If PR18 field stability is still poor:
+Do not rebuild GZFX AO/SSIL merely because stock resources now have names.
 
-Do not keep adding artistic controls.
+First determine the correct integration boundary:
 
-Use the native semantic evidence to identify whether the remaining instability originates in:
+- which depth state is appropriate for the effect;
+- whether stock AO/indirect should be consumed, replaced, disabled, or intercepted;
+- where ambient/directional/indirect lighting is actually combined;
+- where temporal history belongs relative to Skyrim TAA;
+- which stock resource already carries information GZFX is currently reconstructing badly;
+- whether current HDR multiplicative visibility is fundamentally the wrong stage.
 
-- motion-vector decode/convention;
-- normal target ping-pong timing;
-- mask usage;
-- history rejection;
-- injection timing;
-- half-res reconstruction;
-- underlying visibility formulation.
+Only after that map is locked should GZFX redesign:
+
+- AO;
+- indirect/bounce;
+- temporal rejection;
+- local glow;
+- menu controls;
+- slider ranges;
+- presets.
+
+The current flicker and dead bounce remain intentionally unfixed while the integration architecture is under investigation.
 
 ---
 
@@ -1091,6 +1173,6 @@ Never treat the stale `render/native-surface-temporal-foundation` branch as acti
 
 The exact current frontier is:
 
-> **GZFX 0.0.17 renderer-pipeline cartography is the active frontier. PR18 was field-tested: native normals, motion and temporal history were active, but flicker remained and SSIL/bounce was effectively dead. Effect tuning is intentionally paused. PR19 adds execution-level renderer cartography so the next field run maps Skyrim's stock pipeline across controlled day/night/motion/water/shadow/interior captures.**
+> **GZFX 0.0.18 semantic-atlas work is the active frontier. The latest field evidence is `GZFXfrfreded.zip`, generated by 0.0.17. It identified the main depth chronology, four-target opaque MRT, exterior volumetric 3D chain, CameraZ mip hierarchy, temporal stock RawAO ping-pong/filter path, raw-indirect/composite boundary, half-resolution reflection/reduced-lighting branch, HDR luminance/adaptation family, and an interior-vs-exterior split. Effect tuning remains intentionally paused. PR #21 fixes cartographer correctness defects and expands targeted grayscale/channel/mip previews so the next field run can lock the remaining resource semantics before AO/SSIL is redesigned.**
 
 That is where the next agent starts.
