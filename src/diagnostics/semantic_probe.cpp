@@ -6,6 +6,7 @@
 #include "gzfx/version.hpp"
 
 #include <Windows.h>
+#include <TlHelp32.h>
 #include <d3dcompiler.h>
 
 #include <algorithm>
@@ -1130,6 +1131,110 @@ float4 PSMain(V input) : SV_TARGET
                         format);
 
             return stream.str();
+        }
+
+        void CaptureModuleInventory(
+            const std::wstring& suffix)
+        {
+            const fs::path root =
+                gzfx::paths::DiagnosticsRoot();
+
+            if (root.empty())
+            {
+                return;
+            }
+
+            std::ofstream out(
+                root /
+                    (
+                        std::wstring(
+                            L"loaded_modules") +
+                        suffix +
+                        L".txt"
+                    ),
+                std::ios::out |
+                    std::ios::trunc);
+
+            if (!out)
+            {
+                return;
+            }
+
+            out
+                << "GZFX capture-time loaded modules\n"
+                << "version="
+                << gzfx::kVersion
+                << "\n"
+                << "trace_frames="
+                << g_traceStartFrame
+                << "-"
+                << g_traceEndFrame
+                << "\n";
+
+            const HANDLE snapshot =
+                CreateToolhelp32Snapshot(
+                    TH32CS_SNAPMODULE |
+                        TH32CS_SNAPMODULE32,
+                    GetCurrentProcessId());
+
+            if (snapshot ==
+                INVALID_HANDLE_VALUE)
+            {
+                out
+                    << "status=snapshot_failed\n";
+                return;
+            }
+
+            MODULEENTRY32W entry{};
+            entry.dwSize =
+                sizeof(entry);
+
+            std::uint64_t count = 0;
+
+            if (Module32FirstW(
+                    snapshot,
+                    &entry))
+            {
+                do
+                {
+                    char path[4096]{};
+
+                    WideCharToMultiByte(
+                        CP_UTF8,
+                        0,
+                        entry.szExePath,
+                        -1,
+                        path,
+                        static_cast<int>(
+                            std::size(path)),
+                        nullptr,
+                        nullptr);
+
+                    out
+                        << "base="
+                        << Ptr(
+                            reinterpret_cast<
+                                std::uintptr_t>(
+                                    entry.modBaseAddr))
+                        << " size="
+                        << entry.modBaseSize
+                        << " path="
+                        << path
+                        << "\n";
+
+                    ++count;
+                }
+                while (Module32NextW(
+                    snapshot,
+                    &entry));
+            }
+
+            CloseHandle(snapshot);
+
+            out
+                << "module_count="
+                << count
+                << "\n";
         }
 
         void CaptureKnownSurfaces(
@@ -2490,6 +2595,9 @@ float4 PSMain(V input) : SV_TARGET
                 }
 
                 WriteBindings(
+                    suffix);
+
+                CaptureModuleInventory(
                     suffix);
 
                 CaptureCandidates(
