@@ -41,23 +41,25 @@ After PR #19 merges, its 0.0.17 renderer-cartography source and the subsequent a
 Current runtime version:
 
 ```text
-0.0.17-renderer-pipeline-cartography
+0.0.18-renderer-semantic-atlas
 ```
 
 Current engineering phase:
 
 ```text
-RENDERER CARTOGRAPHY
+RENDERER SEMANTIC ATLAS
 pipeline understanding first
 effect tuning later
 ```
 
-PR #19:
+PR #19 established execution-level renderer cartography.
+
+PR #20:
 ```text
-Map Skyrim renderer pipeline before further lighting tuning
+Build renderer semantic atlas from field cartography
 ```
 
-PR #19 supersedes PR18 as the active engineering frontier after merge. PR18 remains the historical native-normal/motion/temporal foundation.
+PR #20 is the current engineering frontier. PR18 remains the historical native-normal/motion/temporal foundation; PR19 remains the first renderer-cartography foundation.
 
 Historical PR #18 merge commit:
 
@@ -883,82 +885,99 @@ Keep using the same scene when comparing builds.
 
 ---
 
-# 16. Current phase — renderer pipeline cartography
+# 16. Current phase — renderer semantic atlas
 
 **DO NOT tune AO/SSIL yet.**
 
-GZFX 0.0.17 adds a broad execution-level D3D11 cartographer that runs only inside the existing short STOCK semantic windows.
+The first 0.0.17 cartography campaign is complete and preserved in:
 
-A Shift+Numpad5 capture now records:
+```text
+docs/FIELD_CARTOGRAPHY_001.md
+```
 
-- VS / HS / DS / GS / PS / CS shader identity;
-- SRV reads across all six shader stages;
-- RTV / DSV / OM-UAV / CS-UAV writes at actual draw/dispatch execution;
-- subresource mip/slice/view metadata;
-- DSV read-only depth/stencil flags;
-- all-stage constant-buffer bindings;
-- all-stage sampler bindings;
-- decoded sampler state;
-- decoded blend state;
-- decoded depth/stencil state;
-- decoded rasterizer state;
-- viewport and primitive topology;
-- direct and indirect draw/dispatch;
-- CopyResource;
-- CopySubresourceRegion;
-- ResolveSubresource;
-- GenerateMips;
-- RTV / DSV / UAV clears;
-- ExecuteCommandList coverage-boundary evidence;
-- small CPU-updated buffer fingerprints from Map/Unmap and UpdateSubresource;
-- resource descriptors and debug names when available;
-- producer -> consumer resource-lineage edges;
-- same-session pass signatures for comparing controlled captures.
+It established an evidence-backed stock frame skeleton.
 
-Evidence is written as numbered `pipeline_*_manual_####` files matching each manual semantic capture.
+## Hard / promoted findings
 
-The experimental ID3D11Device creation-interception lane is intentionally DISABLED in the field build. CI proved that lane could destabilize D3D11 WARP harnesses. Do not enable `GZFX_EXPERIMENTAL_DEVICE_CREATION_HOOKS` for normal field work.
+- stock four-target opaque MRT + main depth;
+- early and late main-depth copy chronology;
+- exterior 3D volumetric-light generation and slice blur;
+- stock Camera-Z / depth-pyramid family;
+- AO / indirect / shadow / reflection composite boundary writing into main HDR;
+- clean exterior-vs-interior volumetric split.
 
-Same-session shader identities are sufficient for the controlled day/night/water/shadow/interior comparison campaign.
+## Strong findings awaiting one more direct surface proof
+
+- stock shadow-mask target;
+- reflection mask/color/blur chain;
+- temporal RawAO;
+- AO blur chain;
+- raw indirect light;
+- exterior volumetric temporal screen resolve / blur;
+- HDR luminance/exposure/light-adaptation reduction family.
+
+The most important architecture result is:
+
+> Skyrim already combines AO, indirect light, depth, normals, shadow information and blurred reflections at a dedicated full-resolution HDR lighting-composite boundary before later image-space/HDR stages.
+
+That means the old mental model — “depth + normals + final HDR is enough; bolt GZFX lighting on later” — is incomplete.
+
+This supports the user's pipeline-first hypothesis. It does **not** yet prove every current GZFX shader equation is wrong.
+
+## 0.0.18 diagnostic upgrades
+
+0.0.18 does not change effect behavior.
+
+It adds:
+
+- COM-canonical resource identities so semantic/cartography evidence crosswalks;
+- capture-local semantic counters;
+- capture-local resource/shader reporting;
+- structural landmark classification independent of one-launch pointer constants;
+- `pipeline_landmarks*.csv`;
+- direct surface snapshots for important 2D landmarks;
+- raw R/G/B/A views for mask-like surfaces;
+- known normal B/A channel evidence;
+- known auxiliary R/G channel evidence;
+- objective channel means/nonzero/min/max;
+- constant-buffer use correlated with latest CPU update hash;
+- corrected real-device attachment evidence.
+
+The experimental ID3D11Device creation-interception lane remains disabled in field builds.
 
 ---
 
-# 17. Immediate field evidence campaign
+# 17. Immediate 0.0.18 field evidence campaign
 
-Use Shift+Numpad5 for controlled STOCK renderer captures.
+Keep all captures in **one Skyrim process/session**.
 
-Keep captures in ONE Skyrim launch/session so pass signatures and live shader identities remain directly comparable.
+Use Shift+Numpad5 in this order:
 
-Capture these states in order:
-
-1. exterior daylight, still camera;
-2. exterior daylight, slowly moving camera;
+1. exterior daylight, still;
+2. exterior daylight, slow camera movement;
 3. exterior night, approximately same view;
 4. water/reflection-heavy view;
-5. strong directional-shadow view;
+5. strong direct-sun shadow view;
 6. normal interior cell.
 
-Do not tune Horizon, Bounce, Local Glow, temporal weights, or other artistic controls during this campaign.
+Do not tune Horizon, Bounce, Local Glow, temporal weights, or other artistic controls.
 
-After upload, analyze the `pipeline_*` evidence as a resource/pass graph first.
+The next analysis should prioritize:
 
-Priority questions:
+- normal B/A semantics;
+- auxiliary MRT R/G semantics;
+- shadow-mask channels;
+- RawAO channels and temporal ping-pong behavior;
+- AO blur contents;
+- raw-indirect radiance contents;
+- reflection mask/color/blur contents;
+- exact relationship between early/late depth copies and later consumers;
+- volumetric temporal inputs/history;
+- HDR reduction/exposure chain;
+- constant-buffer parameter clustering by landmark pass;
+- water-specific additions/removals relative to the same-session baseline.
 
-- where the final opaque depth is produced/copied;
-- which passes create and consume stock SAO/raw-AO/history resources;
-- which passes create and consume stock indirect-light/history resources;
-- exact motion/normal/aux target consumers;
-- shadow-map families and cascade/local-light behavior;
-- water/reflection/refraction/TAA chain;
-- volumetric 1D/2D-array/3D resource chain;
-- HDR downsample/luminance/exposure/adaptation chain;
-- bloom/blur chain;
-- temporal AA/image-space stages;
-- sky/fog/cloud/sun/moon composition;
-- where ambient/directional/indirect lighting is actually composed;
-- whether ExecuteCommandList exposes an immediate-context coverage boundary.
-
-Do not promote candidate tags to facts merely because a resource format looks familiar.
+Only after this atlas is sufficiently mature should GZFX choose where to rebuild AO/GI and how the final UI/slider model should behave.
 
 ---
 
@@ -970,11 +989,11 @@ Still unresolved / worth probing:
 
 - exact semantics of `SV_Target3 R8G8_UNORM`;
 - exact B/A semantics of the native-normal RGBA8 target — do NOT keep calling them TAA/SSR masks without field proof;
-- stock Skyrim SSAO intermediate resources and raw AO;
-- finalized opaque depth used by later image-space passes;
-- shadow-map taxonomy and day/night differences;
-- water/reflection resources;
-- exposure / bloom reduction chain;
+- exact RawAO channel semantics and history encoding;
+- exact early-vs-late depth-copy Bethesda semantics;
+- shadow-mask channel semantics and shadow-map taxonomy;
+- water/reflection resource semantics beyond the now-mapped reflection blur chain;
+- exact exposure / bloom reduction subpass semantics;
 - exact ambient/sky lighting integration;
 - material/albedo/specular/roughness-like semantics available from stock forward passes.
 
@@ -1091,6 +1110,6 @@ Never treat the stale `render/native-surface-temporal-foundation` branch as acti
 
 The exact current frontier is:
 
-> **GZFX 0.0.17 renderer-pipeline cartography is the active frontier. PR18 was field-tested: native normals, motion and temporal history were active, but flicker remained and SSIL/bounce was effectively dead. Effect tuning is intentionally paused. PR19 adds execution-level renderer cartography so the next field run maps Skyrim's stock pipeline across controlled day/night/motion/water/shadow/interior captures.**
+> **GZFX 0.0.18 renderer-semantic-atlas is the active frontier. The first 0.0.17 cartography field run mapped Skyrim's stock Camera-Z/RawAO/AO-blur/raw-indirect/HDR-composite structure, exterior volumetric generation/temporal blur, depth-copy chronology and reflection chain. Effect tuning remains intentionally paused. PR20 converts those findings into structural landmark classification, per-channel surface evidence, canonical resource IDs and constant-buffer update correlation for the next controlled field campaign.**
 
 That is where the next agent starts.
