@@ -111,22 +111,24 @@ namespace gzfx::render::stage_scheduler
             return "after_shadow_production";
         case Boundary::AfterDepthPrepass:
             return "after_depth_prepass";
-        case Boundary::AfterOpaqueGeometryFinalDepth:
-            return "after_opaque_geometry_final_depth";
+        case Boundary::AfterOpaqueWorldMRT:
+            return "after_opaque_world_mrt";
         case Boundary::AfterCameraZ:
             return "after_cameraz";
         case Boundary::AfterStockAO:
             return "after_stock_ao";
-        case Boundary::BeforeIndirectLightingComposite:
-            return "before_indirect_lighting_composite";
-        case Boundary::AtLightingComposite:
-            return "at_lighting_composite";
-        case Boundary::AfterLightingComposite:
-            return "after_lighting_composite";
-        case Boundary::BeforeVolumetricComposite:
-            return "before_volumetric_composite";
-        case Boundary::AfterVolumetricComposite:
-            return "after_volumetric_composite";
+        case Boundary::BeforeAmbientScreenSpaceComposite:
+            return "before_ambient_screen_space_composite";
+        case Boundary::AtAmbientScreenSpaceComposite:
+            return "at_ambient_screen_space_composite";
+        case Boundary::AfterAmbientScreenSpaceComposite:
+            return "after_ambient_screen_space_composite";
+        case Boundary::BeforeVolumetricApply:
+            return "before_volumetric_apply";
+        case Boundary::AfterVolumetricApply:
+            return "after_volumetric_apply";
+        case Boundary::PublishPreWaterDepth:
+            return "publish_pre_water_depth";
         case Boundary::WaterDomain:
             return "water_domain";
         case Boundary::BeforeGlobalTAA:
