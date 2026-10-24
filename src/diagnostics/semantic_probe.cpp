@@ -16,10 +16,12 @@
 #include <fstream>
 #include <iomanip>
 #include <iterator>
+#include <map>
 #include <mutex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace gzfx::diagnostics::semantic_probe
