@@ -1,0 +1,601 @@
+Yep. **This is the kind of fucking run we needed.** 😆
+
+I followed the new workflow exactly for this pass:
+
+**`GZFX77676.zip` only → forensic review → cross-check → triple-check → report.**
+
+I **did not touch the repo**, did **not change code**, and did **not start outside research yet**. That comes after this review, then we build the blueprint, then and only then do we go back into GitHub.
+
+# Overall verdict
+
+**The run is excellent and usable.**
+
+You gave me **24 manual captures plus the automatic baseline**, and the dataset is complete enough that I **do not recommend another Skyrim capture run before we research and blueprint the next engineering phase.**
+
+The ZIP contains about **1,481 files / ~1.3 GB extracted**. All 24 manual captures contain the expected pipeline/resource/pass/access/state/signature/semantic evidence. Every manual semantic capture generated **42 previews**, with **zero preview failures**.
+
+No crash evidence. No D3D device removal. No opaque command-list problem. No obvious truncated capture.
+
+And importantly, you correctly ran the game in:
+
+**Mode 0 = OFF / native Skyrim**
+
+So this is clean stock-renderer evidence with GZFX acting as the observer.
+
+---
+
+# The 24 captures gave us much better classification than the previous run
+
+I did **not** just assume the capture numbers meant what we originally planned. I checked the actual scene-color previews, motion fields, renderer topology, compute activity, shadow behavior, resource usage and pass signatures.
+
+The real session looks like this:
+
+| Captures | Actual renderer/environment class |
+|---|---|
+| **0001–0009** | Exterior Skyrim scenes, including terrain, rocks, trees, shoreline/water and various viewpoints |
+| **0010–0018** | Interior tavern/inn-like environment from multiple angles |
+| **0019–0024** | Strong blue/cyan exterior/water-like environment. Exact gameplay state is not proven, so I am **not** calling it underwater yet |
+
+Motion was nicely scattered through all three groups rather than confined to one block.
+
+Strong camera/player motion occurred in approximately:
+
+`0004, 0009, 0012, 0016, 0017, 0018, 0022, 0023`
+
+That accidentally gives us a better temporal-control experiment than the tidy little laboratory run I originally suggested. Humans occasionally improve experiments by ignoring the spreadsheet. Disturbing, but useful.
+
+---
+
+# 1. The 0.0.18 cartographer fixes actually worked
+
+This needed to be verified before trusting anything else.
+
+### Known resource anchors: **FIELD-PROVEN FIXED**
+
+Every single capture correctly tags exactly one:
+
+`known_scene_color`  
+`known_main_depth`  
+`known_motion`  
+`known_normal`  
+`known_aux`
+
+The canonical COM-identity bug from 0.0.17 is fixed **inside the pipeline cartographer**.
+
+### Capture-local inventories: **FIELD-PROVEN FIXED**
+
+0.0.17's resource inventory kept accumulating junk from earlier captures.
+
+That is gone.
+
+Resources now vary naturally per scene, roughly from the mid-200s to 500+, depending on renderer workload. They are no longer monotonically marching toward 1,000 because yesterday's texture happened to exist.
+
+### Stale shader ownership: **FIELD-PROVEN FIXED**
+
+Across all 24 captures:
+
+- graphics draws have `CS = 0`
+- compute dispatches have graphics stages zeroed
+- copies/clears/resolves/mip operations have no bogus shader ownership
+
+That is a **major correctness improvement**.
+
+So the pipeline graph from this run is substantially more trustworthy than the 0.0.17 graph.
+
+---
+
+# 2. Exterior vs interior renderer split is now undeniable
+
+This was suggested by the previous run.
+
+Now we have repeated proof.
+
+Exterior-like captures have:
+
+**294 compute dispatches per 3-frame capture**
+
+Interior captures have:
+
+**15**
+
+Not roughly. Not occasionally. It is an extremely clean division.
+
+Pass-signature comparison independently agrees. Interior-vs-exterior signature overlap is only about:
+
+**0.7%**
+
+Meanwhile the blue/water-like 0019–0024 group is vastly closer to exterior topology than interior.
+
+So Skyrim genuinely switches major renderer subsystems between those environments.
+
+That matters enormously for future GZFX architecture.
+
+---
+
+# 3. Exterior volumetric lighting is now a mature identification
+
+The exterior volumetric family is no longer a speculative interpretation.
+
+A compute shader in this session, same-process identity:
+
+`0x278CBAA9590`
+
+reads the now-familiar combination:
+
+- 4096×4096 R16 depth array, 2 slices
+- 512×512 R16 depth array, 2 slices
+- 4096×1 R32_FLOAT lookup
+- 32×32×32 3D noise
+
+and writes the pair of:
+
+**320×192×90 R16_FLOAT 3D volumes**
+
+Then:
+
+`0x278CBAA9720`
+
+does **270 dispatches per three-frame capture**, exactly **90 per frame**, ping-ponging those volume slices.
+
+Later full-resolution R16_FLOAT depth-aware processing is performed by:
+
+`0x278CB7BE080`  
+`0x278CB7BE850`
+
+And the entire family:
+
+**exists in 0001–0009 and 0019–0024**  
+**completely disappears in 0010–0018 interiors**
+
+That is excellent evidence.
+
+### Verdict
+
+**Exterior volumetric 3D lighting family: FIELD IDENTIFIED.**
+
+Individual Bethesda shader/class labels can still be researched later, but the subsystem itself is no longer in doubt.
+
+---
+
+# 4. Shadow-map architecture is now extremely clear
+
+This is one of the strongest results in the whole ZIP.
+
+### Exterior
+
+The **4096² R16 array-2** resource receives **thousands of depth writes** and is read by the exterior lighting/volumetric system.
+
+The **512² R16 array-2** resource also receives hundreds to over a thousand writes and feeds that exterior path.
+
+The **4096² R16 array-8** resource barely participates outdoors.
+
+### Interior
+
+It flips dramatically.
+
+The two array-2 exterior families go to:
+
+**0 reads / 0 writes**
+
+Meanwhile the **4096² array-8** resource jumps to roughly:
+
+**4,170–4,287 depth writes per three-frame capture**
+
+That is a beautiful controlled distinction.
+
+### Verdict
+
+The evidence strongly supports:
+
+**array-2 families = exterior directional/volumetric shadow architecture**
+
+**array-8 family = local-light shadow architecture dominating interiors**
+
+This is repeated across many scenes now. It is not one lucky observation from Standing Stones.
+
+---
+
+# 5. CameraZ is completely solid
+
+The stock resource remains:
+
+**2560×1440 R32_FLOAT, 12 mips**
+
+with the full hierarchy:
+
+2560×1440 → 1280×720 → 640×360 → 320×180 → ... → 1×1
+
+Every capture exhibits the same structural behavior.
+
+0.0.18 also successfully captured targeted previews of:
+
+- mip 0
+- mip 3
+- mip 6
+- mip 9
+- mip 11
+
+with no failures.
+
+### Verdict
+
+**Stock CameraZ / SAO hierarchical depth pyramid: FIELD IDENTIFIED.**
+
+There is no rational reason for GZFX to go back to pretending Skyrim gives us only a lonely flat depth buffer.
+
+---
+
+# 6. Stock temporal AO is now much more strongly proven
+
+This is one of my favorite findings from the saturation run.
+
+The stock RawAO stage reads:
+
+- CameraZ
+- current native normal
+- motion vectors
+- previous AO/history
+
+and alternates two full-resolution RGBA8 targets frame-to-frame.
+
+Then two more full-resolution RGBA8 filtering passes follow it.
+
+So the sequence is structurally:
+
+**CameraZ + normal + motion + previous AO → new RawAO/history → filter 1 → filter 2**
+
+And because we now have many moving and stationary captures, we can test whether that "history" behavior actually reacts to motion.
+
+It does.
+
+The amount the two RawAO history surfaces differ correlates strongly with motion activity.
+
+Approximate correlations:
+
+| Comparison | Correlation |
+|---|---:|
+| Raw-history difference magnitude vs motion magnitude | **~0.73** |
+| Raw-history changed-area vs motion-active area | **~0.89** |
+| Raw-history changed-area vs its own overall difference | **~0.99** |
+
+That is **very strong field evidence** that these are genuine temporally reprojected/history-bearing AO surfaces, rather than two random scratch buffers that happen to alternate.
+
+### Verdict
+
+**Stock temporal RawAO family: FIELD IDENTIFIED.**
+
+**Two-pass AO filtering immediately afterward: VERY STRONG / essentially locked at family level.**
+
+This is especially important when we later redesign GZFX temporal AO. Skyrim already has infrastructure doing a lot of the things we tried to reinvent poorly.
+
+---
+
+# 7. Raw indirect and the main lighting composite are now very strong
+
+A full-resolution:
+
+**R11G11B10_FLOAT**
+
+surface is generated from:
+
+- CameraZ
+- HDR scene
+- RT3 auxiliary
+
+Then a later full-resolution composite consumes together:
+
+- that R11G11B10 result
+- final filtered AO
+- depth
+- native normals
+- RT3 aux
+- full-resolution shadow/mask information
+- half-resolution HDR lighting/reflection information
+
+and writes back into:
+
+**main HDR scene color**
+
+That sequence appears consistently across the entire 24-capture dataset, including interiors.
+
+### Verdict
+
+The **raw-indirect/radiance family** and **AO/indirect/lighting composition boundary** are now extremely well established.
+
+I still want research before assigning every exact Bethesda enum/class name, but architecturally this is a hugely important boundary.
+
+This is likely much closer to where future GZFX ambient/indirect work belongs than our current "grab HDR later and multiply some visibility into it" approach.
+
+That is not a blueprint decision yet. It is simply what the evidence is pointing toward.
+
+---
+
+# 8. We caught one of our previous conclusions being too strong
+
+This is exactly why you wanted XForge-style discipline.
+
+PR21 documentation promoted the **640×360 RGBA16F temporal ping-pong** as belonging to the volumetric temporal/projection chain.
+
+That interpretation is now **too narrow**.
+
+The compute shader:
+
+`0x278CB7C26D0`
+
+runs **three times in every capture**, including every interior.
+
+But the actual exterior 3D volumetric system is completely absent indoors.
+
+So this temporal pair **cannot be exclusively the exterior volumetric temporal system**.
+
+It reads:
+
+**main HDR + previous 640×360 history + motion**
+
+and writes the alternate 640×360 history target.
+
+Then another graphics pass consumes the new temporal surface.
+
+Outdoors that consumer also sees the volumetric 3D resources.
+
+Indoors the same broad stage survives **without those volumetric resources** and consumes a different reduced-lighting/environment set.
+
+### Corrected verdict
+
+It is a:
+
+**cross-environment temporal reduced-lighting / image-space history stage**
+
+Its **exact semantic purpose remains unresolved**.
+
+And importantly:
+
+It is **also not proven to be global scene TAA**. At 640×360 on a 2560×1440 render, the evidence does not support casually calling it Skyrim's main TAA history.
+
+So:
+
+**old "volumetric temporal" label gets demoted.**
+
+**global Skyrim TAA remains unresolved.**
+
+That is a real correction we need to carry into research and eventually the docs, but not yet. Repo stays untouched.
+
+---
+
+# 9. Native normal B/A channels just became VERY interesting
+
+We already knew:
+
+**RT2 R/G = encoded normal information**
+
+The question was B/A.
+
+The new grayscale channel evidence is decisive about one thing:
+
+### B and A are NOT simply unused zero channels in this live main MRT.
+
+**B channel:**
+
+Outdoors, B contains large structured scene/material information.
+
+Inside all tested interiors:
+
+**B = exactly zero**
+
+Not "nearly black."
+
+Zero.
+
+**A channel:**
+
+A remains strongly structured in both interior and exterior scenes. It looks substantially mask/material-like and often has near-binary spatial patterns.
+
+So our live Skyrim main MRT behaves differently from public shader paths where normal Z/W may simply be zero.
+
+### Verdict
+
+RT2 is:
+
+**RG = encoded native normal**
+
+**B = independent environment-sensitive structured data**
+
+**A = independent structured mask/material-like data**
+
+Exact B/A semantics:
+
+**UNKNOWN**
+
+And I am specifically **not** resurrecting the old "TAA/SSR masks" guess. We finally have enough evidence to know they're meaningful without making up what they mean.
+
+---
+
+# 10. RT3 auxiliary R8G8 gave us another major clue
+
+The mysterious two-channel auxiliary target behaves fascinatingly.
+
+Outdoors:
+
+- R is generally sparse
+- G tends to carry more activity
+- both follow localized geometry/environment regions
+
+In every tested interior:
+
+**R = 0**  
+**G = 0**
+
+Completely black.
+
+Yet stock:
+
+- AO
+- CameraZ
+- raw indirect
+- lighting composition
+
+continue running normally inside.
+
+So RT3 is clearly **not required as some universal scene-normal/depth representation**.
+
+It looks like a strongly **exterior/environment-dependent auxiliary mask/data field**.
+
+Some water/motion-heavy captures make it substantially more active. Capture 0009, for example, shows far more G activity than typical exterior captures.
+
+### Verdict
+
+**RT3 R8G8 = real sparse exterior/environment-sensitive auxiliary data.**
+
+Exact R and G meanings:
+
+**still unresolved.**
+
+This is now one of our highest-value research questions.
+
+---
+
+# 11. There is another persistent reduced-lighting/reflection family
+
+A 1280×720 RGBA16F branch exists across exterior and interior.
+
+It gets produced by a graphics stage, then passes through a pair of depth-aware compute filters with horizontal/vertical dispatch geometry.
+
+The final half-resolution HDR result is consumed by the main lighting composite.
+
+That family does **not** disappear indoors.
+
+So it is not just the exterior volumetric chain.
+
+### Verdict
+
+**Half-resolution reduced-lighting/reflection family: STRONG MATCH.**
+
+Exact subdivision into reflection, reprojection, lighting or shared resources still needs research.
+
+There is also a separate **640×360 RGBA8 depth-aware chain** that persists in all scene types and eventually contributes back into a full-resolution stage. Its exact role is likewise unresolved.
+
+---
+
+# 12. Main depth chronology is reconfirmed
+
+Every frame still shows multiple meaningful snapshots from the main depth target.
+
+We repeatedly see:
+
+**early depth copy**
+
+then substantial world rendering
+
+then:
+
+**later depth copy**
+
+This is consistent across the saturation run.
+
+### Verdict
+
+"The depth buffer" is **not one timeless semantic object**.
+
+Its meaning changes with renderer stage.
+
+That is now one of the most important architectural rules for GZFX.
+
+Using the wrong depth copy/timing can absolutely produce screen-space failures even when the pixels technically look like a valid depth buffer.
+
+---
+
+# 13. One probe defect remains
+
+0.0.18 fixed canonical IDs in the **pipeline graph**.
+
+But the semantic preview system still has an identity seam.
+
+For example, capture 0001 has canonical pipeline identities like:
+
+`scene = 0x2787CE5BC40`
+
+while semantic-candidate output reports the underlying resource through a different interface pointer such as:
+
+`scene = 0x2787CE5BD20`
+
+They are the same underlying COM object reached through different interfaces, but the outputs don't currently provide a clean explicit crosswalk.
+
+So:
+
+**pipeline graph IDs and semantic-preview candidate IDs cannot always be directly joined by pointer string.**
+
+I compensated during this review by using descriptors, known anchors, pass chronology, shader ownership and producer/consumer structure separately.
+
+But this is a real probe-design defect.
+
+There is a second issue:
+
+**candidate rank is not semantic identity.**
+
+"candidate 8" can be one AO surface outdoors and a different resource indoors because ranking changes.
+
+Future diagnostic work should name previews by **structural landmark**, not merely "candidate 08."
+
+Again: I have **not fixed either issue yet**, because that would violate the new workflow.
+
+---
+
+# Where the renderer map stands now
+
+| System | Current confidence |
+|---|---|
+| Main HDR scene | **Identified** |
+| Main depth | **Identified** |
+| Early vs later depth chronology | **Identified** |
+| Motion vectors | **Identified** |
+| Native normal RG | **Identified** |
+| Normal B/A carry real data | **Identified fact, semantics unknown** |
+| RT3 R8G8 carries exterior-sensitive data | **Identified fact, semantics unknown** |
+| CameraZ hierarchy | **Identified** |
+| Temporal RawAO/history | **Identified** |
+| AO filter chain | **Very strong** |
+| Raw indirect/radiance family | **Very strong** |
+| AO/indirect/lighting HDR composite | **Very strong** |
+| Full-res shadowmask | **Very strong / essentially identified** |
+| Exterior shadow families | **Very strong** |
+| Interior local-light shadow family | **Very strong** |
+| Exterior 3D volumetric lighting | **Identified family** |
+| Half-res reduced-light/reflection system | **Strong** |
+| 640×360 RGBA8 image-space family | **Unresolved exact role** |
+| 640×360 RGBA16F temporal system | **Real temporal system, exact role unresolved** |
+| HDR luminance/adaptation reduction | **Identified family level** |
+| Global Skyrim TAA | **Still unresolved** |
+
+## The biggest result
+
+We are no longer asking:
+
+> "What random texture might Skyrim be using?"
+
+We now have a reasonably mature map of the **ambient/depth/shadow/indirect/volumetric/reduced-lighting spine of an actual Skyrim frame**.
+
+The remaining questions are increasingly about **meaning and integration boundaries**, not basic discovery.
+
+That is exactly where I wanted us before touching AO/SSIL architecture again.
+
+---
+
+# My recommendation at this checkpoint
+
+**Do not run another Skyrim capture campaign yet.**
+
+We have enough evidence.
+
+Another 24 captures right now would mostly produce more examples of structures we already know exist.
+
+The useful next phase is exactly what you specified:
+
+**research the unresolved semantics and Skyrim stage architecture against authoritative/public reverse-engineering and graphics sources, then turn the combined field evidence + research into a formal GZFX renderer blueprint.**
+
+Only after you and I have that blueprint nailed down do we touch the repo.
+
+So this is the hard stop for Phase 1.
+
+**`GZFX77676.zip` forensic review: complete. Repo unchanged. Research not started. Blueprint not started.** ✅
+
+And yes, this XForge-style workflow is a much better fit for GZFX now. We have officially outgrown "add shader, launch Skyrim, stare at rock, pray."
