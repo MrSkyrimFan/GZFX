@@ -270,6 +270,11 @@ namespace gzfx::diagnostics::pipeline_cartography
             char stage = '-';
             UINT slot = 0;
             BufferBinding buffer{};
+            bool updateKnown = false;
+            std::uint64_t updateFrame = 0;
+            std::uint64_t updateOrdinal = 0;
+            std::size_t updateBytes = 0;
+            std::uint64_t updateHash = 0;
         };
 
         struct SamplerUse
@@ -375,6 +380,11 @@ namespace gzfx::diagnostics::pipeline_cartography
 
         std::vector<BufferUpdateRecord>
             g_bufferUpdates;
+
+        std::unordered_map<
+            std::uintptr_t,
+            BufferUpdateRecord>
+                g_lastBufferUpdates;
 
         std::uint64_t g_resourceBirth = 0;
         std::uint64_t g_shaderBirth = 0;
@@ -1888,6 +1898,24 @@ namespace gzfx::diagnostics::pipeline_cartography
                     use.slot =
                         static_cast<UINT>(slot);
                     use.buffer = buffer;
+
+                    const auto update =
+                        g_lastBufferUpdates.find(
+                            buffer.id);
+
+                    if (update !=
+                        g_lastBufferUpdates.end())
+                    {
+                        use.updateKnown = true;
+                        use.updateFrame =
+                            update->second.frame;
+                        use.updateOrdinal =
+                            update->second.drawOrdinal;
+                        use.updateBytes =
+                            update->second.bytes;
+                        use.updateHash =
+                            update->second.hash;
+                    }
 
                     pass.constantBuffers.push_back(
                         use);
@@ -3459,7 +3487,8 @@ namespace gzfx::diagnostics::pipeline_cartography
                 if (out)
                 {
                     out
-                        << "pass_id,frame,stage,slot,buffer,bytes,birth,owner\n";
+                        << "pass_id,frame,stage,slot,buffer,bytes,birth,owner,"
+                           "update_known,update_frame,update_ordinal,update_bytes,update_hash\n";
 
                     for (const auto& pass :
                          g_passes)
@@ -3496,7 +3525,19 @@ namespace gzfx::diagnostics::pipeline_cartography
                                     << "0,unknown";
                             }
 
-                            out << "\n";
+                            out
+                                << ","
+                                << (use.updateKnown ? 1 : 0)
+                                << ","
+                                << use.updateFrame
+                                << ","
+                                << use.updateOrdinal
+                                << ","
+                                << use.updateBytes
+                                << ","
+                                << Hex64(
+                                    use.updateHash)
+                                << "\n";
                         }
                     }
                 }
@@ -4545,6 +4586,7 @@ namespace gzfx::diagnostics::pipeline_cartography
                 g_passId = 0;
                 g_passes.clear();
                 g_bufferUpdates.clear();
+                g_lastBufferUpdates.clear();
                 g_mappedBuffers.clear();
                 g_blendStates.clear();
                 g_depthStates.clear();
@@ -5435,6 +5477,10 @@ namespace gzfx::diagnostics::pipeline_cartography
 
                 g_bufferUpdates.push_back(
                     update);
+
+                g_lastBufferUpdates[
+                    update.resource] =
+                    update;
             }
 
             g_mappedBuffers.erase(
@@ -5529,6 +5575,10 @@ namespace gzfx::diagnostics::pipeline_cartography
 
             g_bufferUpdates.push_back(
                 update);
+
+            g_lastBufferUpdates[
+                update.resource] =
+                update;
         }
         catch (...)
         {
