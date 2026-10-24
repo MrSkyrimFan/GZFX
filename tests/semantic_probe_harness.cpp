@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -53,6 +54,42 @@ namespace
         return std::string(
             std::istreambuf_iterator<char>(in),
             std::istreambuf_iterator<char>());
+    }
+
+    bool CsvHasValueAtColumn(
+        const std::string& text,
+        const std::size_t column,
+        const std::string& expected)
+    {
+        std::istringstream input(text);
+        std::string line;
+        bool first = true;
+
+        while (std::getline(input, line))
+        {
+            if (first)
+            {
+                first = false;
+                continue;
+            }
+
+            std::vector<std::string> cells;
+            std::istringstream row(line);
+            std::string cell;
+
+            while (std::getline(row, cell, ','))
+            {
+                cells.push_back(cell);
+            }
+
+            if (column < cells.size() &&
+                cells[column] == expected)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 
@@ -725,6 +762,30 @@ int wmain(
         diagnostics /
         L"pipeline_summary_manual_0001.txt";
 
+    const auto manualPipelineResources =
+        diagnostics /
+        L"pipeline_resources_manual_0001.csv";
+
+    const auto pipelineLandmarks =
+        diagnostics /
+        L"pipeline_landmarks.csv";
+
+    const auto manualPipelineLandmarks =
+        diagnostics /
+        L"pipeline_landmarks_manual_0001.csv";
+
+    const auto knownSurfaces =
+        diagnostics /
+        L"known_surfaces_manual_0001.txt";
+
+    const auto atlasSurfaces =
+        diagnostics /
+        L"atlas_surfaces.txt";
+
+    const auto pipelineConstantBuffers =
+        diagnostics /
+        L"pipeline_constant_buffers.csv";
+
     if (!ExistsNonEmpty(semantics) ||
         !ExistsNonEmpty(bindings) ||
         !ExistsNonEmpty(manualSemantics) ||
@@ -741,7 +802,13 @@ int wmain(
         !ExistsNonEmpty(pipelineBlendStates) ||
         !ExistsNonEmpty(pipelineRasterStates) ||
         !ExistsNonEmpty(pipelineSamplerStates) ||
-        !ExistsNonEmpty(manualPipelineSummary))
+        !ExistsNonEmpty(manualPipelineSummary) ||
+        !ExistsNonEmpty(manualPipelineResources) ||
+        !ExistsNonEmpty(pipelineLandmarks) ||
+        !ExistsNonEmpty(manualPipelineLandmarks) ||
+        !ExistsNonEmpty(knownSurfaces) ||
+        !ExistsNonEmpty(atlasSurfaces) ||
+        !ExistsNonEmpty(pipelineConstantBuffers))
     {
         return 15;
     }
@@ -772,6 +839,21 @@ int wmain(
 
     const std::string pipelineBufferUpdatesText =
         ReadAll(pipelineBufferUpdates);
+
+    const std::string manualPipelineResourcesText =
+        ReadAll(manualPipelineResources);
+
+    const std::string pipelineLandmarksText =
+        ReadAll(pipelineLandmarks);
+
+    const std::string knownSurfacesText =
+        ReadAll(knownSurfaces);
+
+    const std::string atlasSurfacesText =
+        ReadAll(atlasSurfaces);
+
+    const std::string pipelineConstantBuffersText =
+        ReadAll(pipelineConstantBuffers);
 
     if (semanticText.find(
             "format=28") ==
@@ -822,7 +904,41 @@ int wmain(
             std::string::npos ||
         pipelineBufferUpdatesText.find(
             "update_subresource") ==
-            std::string::npos)
+            std::string::npos ||
+        pipelineLandmarksText.find(
+            "sao_camera_z") ==
+            std::string::npos ||
+        manualPipelineResourcesText.find(
+            "known_scene_color") ==
+            std::string::npos ||
+        manualPipelineResourcesText.find(
+            "known_main_depth") ==
+            std::string::npos ||
+        manualPipelineResourcesText.find(
+            "known_motion") ==
+            std::string::npos ||
+        manualPipelineResourcesText.find(
+            "known_normal") ==
+            std::string::npos ||
+        manualPipelineResourcesText.find(
+            "known_aux") ==
+            std::string::npos ||
+        knownSurfacesText.find(
+            "surface=normal_b") ==
+            std::string::npos ||
+        knownSurfacesText.find(
+            "surface=aux_r") ==
+            std::string::npos ||
+        atlasSurfacesText.find(
+            "sao_camera_z") ==
+            std::string::npos ||
+        pipelineConstantBuffersText.find(
+            "update_known") ==
+            std::string::npos ||
+        !CsvHasValueAtColumn(
+            pipelineConstantBuffersText,
+            8,
+            "1"))
     {
         std::cerr
             << pipelineSummaryText
@@ -838,6 +954,16 @@ int wmain(
             << pipelineEdgesText
             << "\n"
             << pipelineBufferUpdatesText
+            << "\n"
+            << pipelineLandmarksText
+            << "\n"
+            << manualPipelineResourcesText
+            << "\n"
+            << knownSurfacesText
+            << "\n"
+            << atlasSurfacesText
+            << "\n"
+            << pipelineConstantBuffersText
             << "\n";
 
         return 19;
