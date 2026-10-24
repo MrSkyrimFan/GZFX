@@ -639,6 +639,24 @@ int wmain(
         return 21;
     }
 
+    D3D11_BUFFER_DESC cameraBufferDesc{};
+    cameraBufferDesc.ByteWidth = 720;
+    cameraBufferDesc.Usage =
+        D3D11_USAGE_DEFAULT;
+    cameraBufferDesc.BindFlags =
+        D3D11_BIND_CONSTANT_BUFFER;
+
+    ID3D11Buffer* cameraBuffer = nullptr;
+
+    if (FAILED(
+            device->CreateBuffer(
+                &cameraBufferDesc,
+                nullptr,
+                &cameraBuffer)))
+    {
+        return 28;
+    }
+
     const char* vertexSource =
         "float4 main(uint id : SV_VertexID) : SV_POSITION {"
         "float2 p = float2((id << 1) & 2, id & 2);"
@@ -729,6 +747,16 @@ int wmain(
         context->RSSetViewports(
             1,
             &viewport);
+
+        context->VSSetConstantBuffers(
+            12,
+            1,
+            &cameraBuffer);
+
+        context->PSSetConstantBuffers(
+            12,
+            1,
+            &cameraBuffer);
 
         std::array<std::uint32_t, 64>
             mappedValues{};
@@ -904,6 +932,21 @@ int wmain(
             0,
             6,
             nullResources);
+
+        context->VSSetShader(
+            nullptr,
+            nullptr,
+            0);
+
+        context->PSSetShader(
+            nullptr,
+            nullptr,
+            0);
+
+        context->CSSetShader(
+            nullptr,
+            nullptr,
+            0);
 
         swapChain->Present(
             0,
@@ -1214,6 +1257,7 @@ int wmain(
     if (pixelShader) pixelShader->Release();
     if (vertexShader) vertexShader->Release();
 
+    if (cameraBuffer) cameraBuffer->Release();
     if (defaultBuffer) defaultBuffer->Release();
     if (dynamicBuffer) dynamicBuffer->Release();
 
