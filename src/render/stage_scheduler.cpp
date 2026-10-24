@@ -321,11 +321,6 @@ namespace gzfx::render::stage_scheduler
         {
             std::scoped_lock lock(g_mutex);
 
-            for (auto& callbacks : g_callbacks)
-            {
-                callbacks.clear();
-            }
-
             g_counts.fill(0);
             g_captureEvents.clear();
             g_sequence = 0;
