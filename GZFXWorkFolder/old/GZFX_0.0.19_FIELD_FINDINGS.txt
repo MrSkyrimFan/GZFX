@@ -1,0 +1,1486 @@
+GZFX 0.0.19 FIELD FORENSIC FINDINGS
+Semantic Authority + Stage Scheduler Real-Skyrim Gate
+Evidence bundle: GZFX23222111.zip
+Date: October 23, 2026
+
+STATUS:
+FIELD DATA QUALITY = GOOD
+WAVE 1 / WAVE 2 FIELD CREDIT = NOT YET CLOSED
+RESEARCH REQUIRED BEFORE NEXT BLUEPRINT / IMPLEMENTATION
+
+======================================================================
+1. SCOPE AND WORKFLOW CONTROL
+======================================================================
+
+This document is the FIELD FINDINGS phase only.
+
+No external renderer research was performed for this report.
+No GitHub/repository changes were made during this report.
+No blueprint revision was made during this report.
+
+Authority used:
+- GZFX23222111.zip
+- prior GZFX field evidence only where explicitly used for cross-session comparison
+- the already-approved 0.0.19 field-gate questions
+
+The next required workflow step is:
+1. Research
+2. Research report TXT
+3. Blueprint
+4. Blueprint TXT
+5. Implementation
+6. Engineering-result TXT
+7. In-game instructions remain in chat, not in TXT files
+
+======================================================================
+2. BUNDLE / SESSION INTEGRITY
+======================================================================
+
+Archive:
+GZFX23222111.zip
+
+Archive contents:
+1,253 ZIP entries
+1,251 extracted files
+approximately 985.6 MB uncompressed evidence
+
+Runtime:
+0.0.19-semantic-authority-foundation
+
+GZFX runtime log:
+status=initialized
+d3d11_loaded=true
+dxgi_loaded=true
+d3d11_lifecycle_probe=armed
+renderer_forensics=armed
+
+The evidence comes from one Skyrim process/session.
+
+Capture frame chronology is monotonic from the first manual semantic capture
+through the last.
+
+Manual semantic captures present:
+0001 through 0019
+
+Expected campaign count was 18.
+Actual campaign count is 19.
+
+The additional capture is useful rather than harmful.
+
+Every manual capture contains the new foundation evidence:
+
+semantic_authority_manual_XXXX.txt
+stage_schedule_manual_XXXX.csv
+
+and the existing cartography/semantic evidence set.
+
+No opaque deferred-command-list blind spot was reported:
+
+opaque_command_lists=0
+
+in every manual pipeline summary.
+
+No device-removed, crash, fatal, or equivalent renderer failure evidence was
+found in the bundle.
+
+Semantic preview evidence:
+
+42 preview writes per manual capture
+19 manual captures
+798 preview results total
+0 preview failures
+
+This is a clean evidence bundle.
+
+======================================================================
+3. LIVE DEVELOPMENT MODE / CONTAMINATION CONTROL
+======================================================================
+
+Settings.ini still contains:
+
+DefaultMode=1
+
+This is only the configured startup default.
+
+The real runtime was switched to:
+
+mode=0 (off)
+
+The final visible-pass evidence reports:
+
+mode=0 (off)
+world_active=true
+
+The available manual-capture metadata also repeatedly reports:
+
+mode=0
+
+throughout the session.
+
+The final pre-UI effect report is:
+
+status=skipped_mode
+mode=0
+
+Therefore the field campaign successfully ran with GZFX visual-effect
+presentation disabled.
+
+The evidence is suitable for stock-renderer semantic validation.
+
+======================================================================
+4. ACTUAL CAPTURE GROUPS
+======================================================================
+
+The semantic scene-color previews make the real capture order unambiguous.
+
+CAPTURES 0001-0006:
+DAYLIGHT EXTERIOR
+
+The views are around the Guardian Standing Stones / nearby outdoor terrain.
+
+Visible variation includes:
+- water / shoreline
+- bridge / stone geometry
+- trees
+- terrain
+- rocks
+- near and far depth
+- multiple viewpoints
+
+CAPTURES 0007-0013:
+INTERIOR
+
+Seven interior captures were taken, not six.
+
+The scene is a normal inn/tavern-like interior with:
+- local lights
+- walls / stone
+- furniture
+- NPCs
+- clutter
+- close and wider views
+
+CAPTURES 0014-0019:
+NIGHTTIME EXTERIOR RIVERWOOD
+
+These are the intended Riverwood nighttime control views near:
+- Alvor's blacksmith area
+- small bridge
+- logging / wood-chopping area
+- large trees
+- exterior structures
+- nighttime local/environment lighting
+
+This is a very useful three-class campaign:
+
+DAY EXTERIOR
+INTERIOR
+NIGHT EXTERIOR
+
+The extra nineteenth capture simply gives one additional sample.
+
+======================================================================
+5. EXTERIOR / INTERIOR CLASSIFIER
+======================================================================
+
+The new environment classifier performed very well.
+
+Semantic Authority classifications:
+
+0001 exterior
+0002 exterior
+0003 exterior
+0004 exterior
+0005 exterior
+0006 exterior
+
+0007 interior
+0008 interior
+0009 interior
+0010 interior
+0011 interior
+0012 interior
+0013 interior
+
+0014 exterior
+0015 exterior
+0016 exterior
+0017 exterior
+0018 exterior
+0019 exterior
+
+Result:
+
+19 / 19 environment classifications agree with the actual scene previews.
+
+This includes both:
+
+day exterior -> exterior
+night exterior -> exterior
+
+Therefore the classifier is correctly distinguishing the major
+exterior/interior renderer architecture rather than merely brightness,
+daylight, or color.
+
+The underlying compute topology independently agrees.
+
+Every exterior capture:
+294 dispatches per 3-frame capture
+
+Every interior capture:
+15 dispatches per 3-frame capture
+
+The exterior 3D volumetric family is therefore an excellent environment-class
+signal.
+
+FIELD VERDICT:
+ENVIRONMENT CLASSIFICATION = PASS
+
+======================================================================
+6. CROSS-SESSION STRUCTURAL REACQUISITION
+======================================================================
+
+One of the most important Wave 1 questions was whether 0.0.19 could reacquire
+the renderer without relying on pointer values from the prior Skyrim launch.
+
+The previous 0.0.18 field campaign used canonical identities including:
+
+MAIN HDR:
+0x2787CE5BC40
+
+MAIN DEPTH:
+0x2787CEC89D0
+
+MOTION:
+0x2787CEAA090
+
+NORMAL:
+0x2787CEA8860
+
+AUX:
+0x2787CEA3170
+
+
+The new 0.0.19 session independently reacquired:
+
+MAIN HDR:
+0x1FEE0D95670
+
+MAIN DEPTH:
+0x1FEE0DC6E90
+
+MOTION:
+0x1FEE0DA06B0
+
+NORMAL:
+0x1FEE0D9D460 / frame-ping-pong partner
+
+AUX:
+0x1FEE0D9AAA0
+
+
+The addresses are completely different between sessions.
+
+The descriptors and structural roles remain the same:
+
+MAIN HDR
+2560x1440
+R16G16B16A16_FLOAT
+
+MAIN DEPTH
+2560x1440
+R24G8_TYPELESS
+
+MOTION
+2560x1440
+R16G16_FLOAT
+
+NORMAL
+2560x1440
+R8G8B8A8_UNORM
+
+AUX
+2560x1440
+R8G8_UNORM
+
+
+The main semantic set was structurally reacquired in every capture.
+
+This is strong field proof that the new authority is not simply replaying old
+session addresses.
+
+FIELD VERDICT:
+CORE STRUCTURAL REACQUISITION = PASS
+
+======================================================================
+7. FOUR-TARGET MAIN MRT
+======================================================================
+
+All 19 captures reacquired the expected core world-render structure:
+
+MAIN_HDR
+MAIN_DEPTH
+MOTION
+NORMAL_MASK_CURRENT
+AUXILIARY_RT3
+
+The authority identifies these from the four-target MRT structure and matching
+depth target.
+
+The normal target continues to ping-pong frame-to-frame.
+
+The authority promotions show the normal identity alternating on consecutive
+frames, as expected.
+
+No evidence suggests that the core MRT recognition broke between:
+- daylight exterior
+- interior
+- nighttime exterior
+
+FIELD VERDICT:
+MAIN MRT AUTHORITY = PASS
+
+======================================================================
+8. TEMPORAL RAW AO
+======================================================================
+
+The RawAO system reacquired cleanly in all environment classes.
+
+The authority repeatedly observes:
+
+CameraZ
++ native normal
++ motion
++ previous full-resolution RGBA8 history
+-> current RawAO target
+
+The two RawAO identities alternate read/write frame-to-frame.
+
+Across capture windows, the authority emits repeated promotions of:
+
+SAO_RAWAO_PREVIOUS
+SAO_RAWAO_CURRENT
+
+The resource pair remains structurally coherent across:
+- daylight exterior
+- interior
+- nighttime exterior
+
+This is exactly what the Wave 1 authority was expected to do.
+
+FIELD VERDICT:
+TEMPORAL RAW AO REACQUISITION = PASS
+
+======================================================================
+9. AO FILTER CHAIN
+======================================================================
+
+The two-pass AO filtering chain is reacquired across every manual capture.
+
+The authority retains:
+
+SAO_FILTER_TEMP
+SAO_FILTERED
+
+The scheduler emits:
+
+after_stock_ao
+
+exactly once per captured frame.
+
+19 captures x 3 frames each:
+
+57 after_stock_ao events
+
+This stage appears in:
+- all day exterior frames
+- all interior frames
+- all night exterior frames
+
+FIELD VERDICT:
+STOCK AO FILTER / AFTER_STOCK_AO BOUNDARY = PASS
+
+======================================================================
+10. RAW INDIRECT
+======================================================================
+
+RAW_INDIRECT is reacquired in all 19 captures.
+
+The structural identity remains:
+
+full-resolution R11G11B10_FLOAT
+
+with the field-supported dependency family involving:
+- CameraZ
+- main HDR
+- RT3 auxiliary
+
+RAW_INDIRECT survives indoors, as expected from the previous renderer map.
+
+FIELD VERDICT:
+RAW INDIRECT AUTHORITY = PASS
+
+======================================================================
+11. LIGHTING COMPOSITE SCHEDULER
+======================================================================
+
+The scheduler consistently identifies the composite that:
+
+reads:
+RAW_INDIRECT
+SAO_FILTERED
+
+and writes:
+MAIN_HDR
+
+For every captured frame it emits:
+
+before_indirect_lighting_composite
+at_lighting_composite
+after_lighting_composite
+
+Counts across the 57 captured frames:
+
+before_indirect_lighting_composite = 57
+at_lighting_composite = 57
+after_lighting_composite = 57
+
+The before/after execution ownership is internally coherent.
+
+The stage occurs in:
+- day exterior
+- interior
+- night exterior
+
+The scheduler order is stable:
+
+after_depth_prepass
+<
+after_stock_ao
+<
+before / at / after lighting composite
+
+No ordering violation was found in the 57 captured frames.
+
+FIELD VERDICT:
+LIGHTING COMPOSITE BOUNDARY = PASS
+
+======================================================================
+12. EXTERIOR 3D VOLUMETRIC FAMILY
+======================================================================
+
+The exterior volumetric signal is exceptionally clean.
+
+Exterior captures:
+0001-0006
+0014-0019
+
+all show:
+
+294 dispatches per 3-frame capture
+
+and active current-frame 3D volumetric density processing.
+
+Interior captures:
+0007-0013
+
+all show:
+
+15 dispatches per 3-frame capture
+
+and no current-frame 3D volumetric density activity.
+
+The Semantic Authority classifier correctly uses this difference.
+
+The nighttime Riverwood group behaves architecturally like the daylight
+exterior group.
+
+This reconfirms that the large volumetric system is tied to exterior renderer
+architecture, not simply daylight brightness.
+
+FIELD VERDICT:
+EXTERIOR VOLUMETRIC DOMAIN = PASS
+
+======================================================================
+13. MAJOR FINDING #1:
+AFTER_CAMERAZ SCHEDULER EVENT DOES NOT FIRE
+======================================================================
+
+This is a real Wave 2 defect.
+
+The CameraZ resource itself is healthy.
+
+Every manual capture shows:
+
+CAMERAZ
+verified
+2560x1440
+R32_FLOAT
+12 mip levels
+
+The raw pipeline independently proves that Skyrim rebuilds all twelve CameraZ
+mips every frame.
+
+Each 3-frame manual capture therefore contains:
+
+36 CameraZ mip writes
+
+12 mips x 3 frames
+
+This is true in all 19 captures.
+
+Total CameraZ hierarchy writes across the manual campaign:
+
+684
+
+However:
+
+stage_schedule_manual_0001.csv
+through
+stage_schedule_manual_0019.csv
+
+contain:
+
+0 after_cameraz events
+
+The automatic stage_schedule.csv also contains:
+
+0 after_cameraz events
+
+This is not because CameraZ failed.
+
+It is because the scheduler event is currently coupled to first semantic
+promotion rather than to completion of the hierarchy every frame.
+
+CameraZ was already promoted before the manual evidence windows.
+
+Once the identity was known, later full mip-hierarchy completions updated
+CameraZ state but did not produce a new promotion, so the stage signal never
+fired.
+
+Architectural consequence:
+
+A future production callback registered at:
+
+AfterCameraZ
+
+would not have a reliable per-frame execution boundary.
+
+This is a foundation blocker for Wave 2.
+
+FIELD VERDICT:
+CAMERAZ RESOURCE = PASS
+AFTER_CAMERAZ SCHEDULER BOUNDARY = FAIL
+
+Required later engineering direction:
+
+Separate:
+"resource was newly promoted"
+
+from:
+"the verified CameraZ hierarchy completed this frame"
+
+The latter must be a per-frame semantic stage event.
+
+No code change is authorized by this findings document.
+This belongs in the upcoming research / blueprint / implementation cycle.
+
+======================================================================
+14. MAJOR FINDING #2:
+THE CURRENT "OPAQUE_FINAL_DEPTH" NAME / BOUNDARY IS NOT SAFE
+======================================================================
+
+This campaign exposed a deeper depth-chronology problem.
+
+The authority currently classifies:
+
+the first same-shape MAIN_DEPTH CopyResource occurring after opaque MRT activity
+
+as:
+
+OPAQUE_FINAL_DEPTH
+
+and emits:
+
+after_opaque_geometry_final_depth
+
+The field data does NOT support keeping that semantic name without further
+research.
+
+DAY / NIGHT EXTERIOR:
+
+There are three MAIN_DEPTH copies per frame family:
+
+1. MAIN_DEPTH -> early depth copy
+2. MAIN_HDR -> HDR copy
+3. MAIN_DEPTH -> second/later depth copy
+
+The scheduler order is consistently:
+
+after_depth_prepass
+then
+after_stock_ao
+then
+lighting composite
+then
+after_opaque_geometry_final_depth
+
+Example, daylight capture 0001 frame 2483:
+
+after_depth_prepass:
+ordinal 3252
+
+after_stock_ao:
+ordinal 4792
+
+lighting composite:
+ordinal 4794
+
+current "after_opaque_geometry_final_depth":
+ordinal 4980
+
+
+Night exterior capture 0014 shows the same architecture:
+
+after_depth_prepass:
+ordinal 4452
+
+after_stock_ao:
+ordinal 6988
+
+lighting composite:
+ordinal 6990
+
+current "after_opaque_geometry_final_depth":
+ordinal 7207
+
+
+Therefore the resource currently called OPAQUE_FINAL_DEPTH is copied:
+
+AFTER stock AO
+AFTER raw-indirect / lighting composition
+
+not before those stages.
+
+That chronology is incompatible with casually treating it as the depth source
+that enabled CameraZ / AO / indirect composition earlier in the frame.
+
+INTERIORS MAKE THIS EVEN MORE IMPORTANT.
+
+Every interior frame contains:
+
+MAIN_DEPTH -> early depth copy
+
+but does NOT contain the second/later MAIN_DEPTH copy at all.
+
+Interior copy count:
+6 CopyResource events per 3-frame capture
+
+Exterior copy count:
+9 CopyResource events per 3-frame capture
+
+The missing interior copy is exactly the later MAIN_DEPTH copy.
+
+Yet CameraZ, RawAO, AO filtering, RawIndirect and lighting composite all
+continue to run normally indoors.
+
+Therefore:
+
+the second/later exterior depth copy is NOT a universal prerequisite for the
+core AO/indirect lighting path.
+
+Current field-safe conclusions:
+
+DEPTH_EARLY_COPY:
+real, per-frame, cross-environment
+
+second/later exterior depth copy:
+real, but exact semantic role unresolved
+
+Current label:
+OPAQUE_FINAL_DEPTH
+
+is now too confident.
+
+Current scheduler boundary:
+AfterOpaqueGeometryFinalDepth
+
+is now too confident.
+
+This is not merely naming pedantry.
+
+If production AO/GI were later attached assuming this is the universal
+finished opaque depth boundary, interior rendering would immediately violate
+the assumption.
+
+FIELD VERDICT:
+EARLY DEPTH COPY = PASS
+CURRENT OPAQUE_FINAL_DEPTH SEMANTIC = NOT ACCEPTED
+CURRENT AFTER_OPAQUE_GEOMETRY_FINAL_DEPTH BOUNDARY = RESEARCH REQUIRED
+
+This must be a priority target for Research Pass 2.
+
+======================================================================
+15. CURRENT DEPTH COPY BEHAVIOR
+======================================================================
+
+DAYLIGHT EXTERIOR example:
+
+MAIN_DEPTH:
+0x1FEE0DC6E90
+
+Early depth destination:
+0x1FEE0DC3790
+
+Later exterior depth destination:
+0x1FEE0DC4D90
+
+HDR copy destination:
+0x1FEE0D9A090
+
+
+Exterior per-frame pattern:
+
+MAIN_DEPTH -> 0x1FEE0DC3790
+MAIN_HDR   -> 0x1FEE0D9A090
+MAIN_DEPTH -> 0x1FEE0DC4D90
+
+
+Interior per-frame pattern:
+
+MAIN_DEPTH -> 0x1FEE0DC3790
+MAIN_HDR   -> 0x1FEE0D9A090
+
+No MAIN_DEPTH -> 0x1FEE0DC4D90 copy occurs.
+
+
+This repeated exactly across all tested interior frames.
+
+The later depth copy is therefore environment/path dependent.
+
+======================================================================
+16. CAMERA-Z CHRONOLOGY
+======================================================================
+
+Although AfterCameraZ signaling failed, raw cartography gives us a clean
+chronology.
+
+Daylight capture 0001, frame 2483:
+
+CameraZ mip 0 begins:
+ordinal 4778
+
+CameraZ mip 11 completes:
+ordinal 4789
+
+after_stock_ao:
+ordinal 4792
+
+lighting composite:
+ordinal 4794
+
+later exterior depth copy:
+ordinal 4980
+
+
+Interior capture 0007, frame 4266:
+
+CameraZ mip 0:
+ordinal 1939
+
+CameraZ mip 11:
+ordinal 1950
+
+after_stock_ao:
+ordinal 1953
+
+lighting composite:
+ordinal 1955
+
+no later depth copy occurs.
+
+
+This confirms:
+
+CameraZ is built before stock AO.
+CameraZ is built before lighting composite.
+The later exterior depth copy occurs too late to have generated that CameraZ
+hierarchy in the same frame.
+
+This sharply narrows the depth research problem.
+
+======================================================================
+17. SEMANTIC REGISTRY FRESHNESS PROBLEM
+======================================================================
+
+The authority correctly classifies interiors even though the exterior
+volumetric resources are not touched indoors.
+
+However, the semantic-authority snapshot table retains old session identities
+after those resources stop being current.
+
+Example:
+
+interior capture 0007
+capture frames 4266-4268
+
+VOLUMETRIC_DENSITY_A last_seen_frame:
+4073
+
+VOLUMETRIC_DENSITY_B last_seen_frame:
+4073
+
+current OPAQUE_FINAL_DEPTH last_seen_frame:
+4073
+
+
+The same stale last-seen values persist throughout interior captures
+0007-0013.
+
+Freshness results across 19 captures:
+
+MAIN_HDR:
+fresh 19 / 19
+
+MAIN_DEPTH:
+fresh 19 / 19
+
+MOTION:
+fresh 19 / 19
+
+NORMAL_MASK_CURRENT:
+fresh 19 / 19
+
+AUXILIARY_RT3:
+fresh 19 / 19
+
+DEPTH_EARLY_COPY:
+fresh 19 / 19
+
+CAMERAZ:
+fresh 19 / 19
+
+SAO_RAWAO_CURRENT:
+fresh 19 / 19
+
+SAO_RAWAO_PREVIOUS:
+fresh 19 / 19
+
+SAO_FILTER_TEMP:
+fresh 19 / 19
+
+SAO_FILTERED:
+fresh 19 / 19
+
+RAW_INDIRECT:
+fresh 19 / 19
+
+SHADOW_MASK:
+fresh 19 / 19
+
+current OPAQUE_FINAL_DEPTH:
+fresh 12 / 19
+stale in all 7 interiors
+
+VOLUMETRIC_DENSITY_A:
+fresh 12 / 19
+stale in all 7 interiors
+
+VOLUMETRIC_DENSITY_B:
+fresh 12 / 19
+stale in all 7 interiors
+
+
+The environment classifier is safe because it uses current-frame observation
+flags rather than simply checking whether a semantic slot contains an old
+identity.
+
+But a future Native Semantic Broker must not blindly hand out any semantic
+slot merely because identity != 0.
+
+This is directly relevant to the Blueprint rule:
+
+"rejection of stale semantic anchors"
+
+Current authority storage does not yet fully enforce that rule.
+
+Required future architecture:
+
+Every semantic query needs explicit availability/freshness semantics, such as:
+
+available_this_frame
+last_seen_frame
+frame_generation
+environment validity
+or an equivalent fail-closed mechanism.
+
+FIELD VERDICT:
+SEMANTIC HISTORY RETENTION = USEFUL
+FAIL-CLOSED CURRENT-FRAME AVAILABILITY = INCOMPLETE
+
+This is a Wave 1 field gap.
+
+======================================================================
+18. SEMANTIC AUTHORITY EVIDENCE SNAPSHOT TIMING
+======================================================================
+
+Another diagnostic detail surfaced.
+
+The manual authority files define capture windows such as:
+
+capture_start=4816
+capture_end=4818
+
+but several semantic-table rows can report:
+
+last_seen_frame=4819
+
+The authority is always running, and the snapshot is written after the
+three-frame evidence window finishes.
+
+Therefore the top semantic table represents the authority's current
+session-registry state at write time, which can include the following frame.
+
+By contrast:
+
+capture_promotions:
+
+is correctly bounded to the requested capture frames.
+
+This is not evidence corruption, but the distinction should be explicit.
+
+For future machine analysis, the report should ideally separate:
+
+SESSION AUTHORITY SNAPSHOT
+
+from:
+
+CAPTURE-LOCAL AUTHORITY SNAPSHOT
+
+rather than presenting one table in a way that can be mistaken for strictly
+capture-bounded state.
+
+FIELD VERDICT:
+CAPTURE PROMOTION LOG = GOOD
+TOP AUTHORITY SNAPSHOT = USEFUL BUT NOT STRICTLY CAPTURE-LOCAL
+
+======================================================================
+19. STAGE-SCHEDULER COUNTS
+======================================================================
+
+Total manually captured frames:
+
+19 captures x 3 frames
+= 57 frames
+
+Observed scheduler events:
+
+after_depth_prepass:
+57
+
+after_stock_ao:
+57
+
+before_indirect_lighting_composite:
+57
+
+at_lighting_composite:
+57
+
+after_lighting_composite:
+57
+
+ui_present:
+57
+
+after_opaque_geometry_final_depth:
+36
+
+after_cameraz:
+0
+
+The 36 late-depth events correspond exactly to:
+
+12 exterior captures x 3 frames
+
+The 7 interior captures contribute:
+
+0 late-depth events
+
+The stage scheduler therefore cleanly reveals the environment-dependent depth
+branch, even though its current semantic name is questionable.
+
+======================================================================
+20. CORE STAGE ORDER
+======================================================================
+
+No core ordering violation was found.
+
+For every captured frame:
+
+after_depth_prepass
+<
+after_stock_ao
+<
+before_indirect_lighting_composite
+
+and:
+
+before_indirect_lighting_composite
+at_lighting_composite
+after_lighting_composite
+
+all belong to the same draw ordinal with correct before/after execution phase.
+
+Where the later exterior depth copy exists:
+
+after_lighting_composite
+<
+after_opaque_geometry_final_depth
+
+This order is consistent across all tested exteriors.
+
+Again, the scheduler is functioning deterministically.
+
+The problem is semantic interpretation of one boundary, not random ordering.
+
+======================================================================
+21. RESOURCE / PIPELINE LOAD DIFFERENCE
+======================================================================
+
+The saturation campaign reinforces the environment split.
+
+Manual capture pass counts ranged from:
+
+5,286
+to
+24,150
+
+Interior captures are much smaller renderer workloads.
+
+Exterior:
+294 compute dispatches / 3 frames
+
+Interior:
+15 compute dispatches / 3 frames
+
+Capture-local resources ranged from:
+
+223
+to
+521
+
+Capture-local shaders ranged from:
+
+128
+to
+225
+
+No manual capture reported an opaque command-list blind spot.
+
+This gives the semantic/stage observations a strong execution context.
+
+======================================================================
+22. FIELD-GATE ACCEPTANCE MATRIX
+======================================================================
+
+Original question 1:
+Does MAIN_HDR reacquire in all three environment classes?
+
+PASS
+
+Original question 2:
+Does MAIN_DEPTH reacquire?
+
+PASS
+
+Original question 3:
+Do MOTION, NORMAL_MASK_CURRENT and AUXILIARY_RT3 reacquire structurally?
+
+PASS
+
+Original question 4:
+Is early depth consistently distinct from final opaque depth?
+
+PARTIAL / RESEARCH REQUIRED
+
+The early depth copy is consistent.
+The second copy is exterior-only and occurs after lighting composition.
+Its current "final opaque" label is not field-safe.
+
+Original question 5:
+Is CAMERAZ reacquired without pointer assumptions?
+
+RESOURCE PASS
+
+The 12-mip CameraZ resource is reacquired and rebuilt every frame.
+
+SCHEDULER FAIL
+
+AfterCameraZ never fires in evidence windows.
+
+Original question 6:
+Does temporal RawAO current/previous reacquire?
+
+PASS
+
+Original question 7:
+Does SAO_FILTERED reacquire?
+
+PASS
+
+Original question 8:
+Does RAW_INDIRECT reacquire?
+
+PASS
+
+Original question 9:
+Do stage events occur in correct order:
+final opaque depth -> CameraZ -> stock AO -> lighting composite?
+
+FAIL AS WRITTEN
+
+The observed order is not that order.
+
+Actual observed exterior order includes:
+
+early depth copy
+CameraZ
+stock AO
+lighting composite
+later depth copy
+
+Interior:
+
+early depth copy
+CameraZ
+stock AO
+lighting composite
+
+with no later depth copy.
+
+The blueprint's depth-stage model needs research/revision.
+
+Original question 10:
+Does exterior volumetric density appear in both day and night exterior?
+
+PASS
+
+Original question 11:
+Does exterior volumetric density disappear indoors?
+
+CURRENT-FRAME ACTIVITY PASS
+
+But stale semantic registry entries remain available in the authority table.
+Broker freshness must be addressed.
+
+Original question 12:
+Does the environment classifier report day exterior / night exterior /
+interior correctly?
+
+PASS
+19 / 19
+
+Original question 13:
+Are any semantics falsely promoted in interiors?
+
+NO NEW CAPTURE-LOCAL false volumetric promotions were observed.
+
+However:
+stale exterior-only semantic slots remain stored and visible in the
+session authority table.
+
+Therefore:
+PARTIAL
+
+Original question 14:
+Do canonical identities remain coherent while changing between sessions?
+
+PASS
+
+The 0.0.18 and 0.0.19 pointer identities differ substantially while the same
+structural semantics were reacquired.
+
+Original question 15:
+Does the authority cause gameplay instability, device failure or obvious
+performance regression?
+
+No crash/device-removal evidence was found.
+No opaque-command-list problem was found.
+The session completed through all nineteen captures.
+
+STABILITY EVIDENCE:
+PASS
+
+PERFORMANCE REGRESSION:
+NOT PROVEN EITHER WAY
+
+This field bundle does not provide a controlled before/after cost measurement
+for the new always-on authority.
+
+Do not claim zero performance regression from this evidence alone.
+
+======================================================================
+23. WAVE 1 VERDICT
+======================================================================
+
+Wave 1:
+Semantic Authority Layer
+
+Major successes:
+
+- core MRT reacquisition works
+- identities are structural rather than old-pointer dependent
+- CameraZ resource identification works
+- RawAO pair works
+- AO filter identities work
+- RawIndirect works
+- environment classification works
+- semantic naming is much more useful than anonymous candidates
+- new session proves reacquisition against different COM addresses
+
+Remaining blocker:
+
+The registry currently retains stale environment-specific semantic resources
+without a fail-closed "available this frame" contract.
+
+This is particularly visible for:
+
+current OPAQUE_FINAL_DEPTH
+VOLUMETRIC_DENSITY_A
+VOLUMETRIC_DENSITY_B
+
+Also:
+
+the exact semantic identity of the resource currently named
+OPAQUE_FINAL_DEPTH is now in doubt.
+
+WAVE 1 FIELD CREDIT:
+PARTIAL
+NOT CLOSED
+
+======================================================================
+24. WAVE 2 VERDICT
+======================================================================
+
+Wave 2:
+Stage Scheduler / No-Op Integration
+
+Major successes:
+
+- real before/after execution stage events work
+- AfterDepthPrepass works every frame
+- AfterStockAO works every frame
+- Before/At/After LightingComposite works every frame
+- UiPresent works every frame
+- ordering is deterministic
+- environment-dependent late-depth stage is cleanly observed
+
+Blockers:
+
+1. AfterCameraZ does not fire per frame.
+
+This is a direct scheduler bug.
+
+2. AfterOpaqueGeometryFinalDepth is not yet semantically trustworthy.
+
+The observed resource is:
+- exterior-only
+- copied after lighting composite
+- absent from interiors
+
+The stage name and intended architectural role require research.
+
+WAVE 2 FIELD CREDIT:
+PARTIAL
+NOT CLOSED
+
+======================================================================
+25. IMPORTANT POSITIVE CONCLUSION
+======================================================================
+
+This field test did NOT show that the 0.0.19 foundation was a failed design.
+
+Quite the opposite.
+
+The foundation worked well enough to reveal two deeper architectural facts
+that the synthetic harness could not expose:
+
+1. CameraZ resource promotion and CameraZ stage completion are different
+   concepts and must be represented separately.
+
+2. Skyrim's depth-copy chronology is environment-dependent and the current
+   "first post-MRT depth copy = finished opaque depth" heuristic is too simple.
+
+That is exactly why this XForge-style workflow is valuable.
+
+The right response is NOT to patch immediately.
+
+The right response is:
+
+FIELD FINDINGS
+-> RESEARCH
+-> BLUEPRINT REVISION
+-> IMPLEMENTATION
+
+======================================================================
+26. REQUIRED RESEARCH TARGETS
+======================================================================
+
+The next research pass should focus tightly on the field blockers.
+
+PRIORITY 1:
+DEPTH COPY SEMANTICS
+
+Determine the public Skyrim renderer identities/roles corresponding to:
+
+- MAIN_DEPTH -> 0x1FEE0DC3790
+  early, cross-environment copy
+
+- MAIN_DEPTH -> 0x1FEE0DC4D90
+  later, exterior-only copy
+
+Questions:
+
+- Which corresponds to MAIN_COPY?
+- Which corresponds to POST_ZPREPASS_COPY?
+- Which corresponds to POST_WATER_COPY or another later scene-depth target?
+- Why is the later copy absent in interiors?
+- Which depth source actually feeds CameraZ in vanilla Skyrim?
+- Which depth state is the correct production AO/GI input?
+
+PRIORITY 2:
+CAMERAZ STAGE CONTRACT
+
+Research should confirm the exact semantic meaning of:
+
+CameraZ hierarchy completion
+
+and define the correct scheduler contract:
+
+resource identity discovered once
+vs
+hierarchy completed this frame
+
+The implementation must signal the latter every frame.
+
+PRIORITY 3:
+SEMANTIC FRESHNESS
+
+Define the correct fail-closed availability model for semantic resources.
+
+Questions:
+
+- should environment-specific semantics clear immediately when not observed?
+- should a registry preserve identity but mark current availability false?
+- should consumers require semanticFrame == currentFrame?
+- what happens across loading screens / interior transitions / resize?
+- should stage-specific validity windows be narrower than one frame?
+
+PRIORITY 4:
+INTERIOR DEPTH ARCHITECTURE
+
+The next research must explicitly determine why:
+
+CameraZ
+RawAO
+RawIndirect
+lighting composite
+
+continue indoors without the later exterior depth copy.
+
+This is likely architecturally important for the future Native Input Broker.
+
+======================================================================
+27. RECOMMENDED NEXT PROJECT STATE
+======================================================================
+
+Do NOT advance to:
+
+Wave 3 Native Input Broker + Temporal Core
+
+yet.
+
+Do NOT begin:
+
+Ambient Visibility v2
+
+yet.
+
+Do NOT tune old AO/SSIL.
+
+Do NOT patch the repository directly from this findings report.
+
+Next state:
+
+RESEARCH PASS 2
+
+based on:
+
+- GZFX23222111.zip
+- this findings report
+- public Skyrim renderer evidence
+
+Then create:
+
+UPDATED FOUNDATION BLUEPRINT
+
+Then implement the corrections.
+
+======================================================================
+28. FINAL VERDICT
+======================================================================
+
+GZFX23222111.zip is GOOD DATA.
+
+It successfully validates most of the new 0.0.19 foundation.
+
+Strong field passes:
+
+- Mode 0 / clean stock observation
+- core MRT reacquisition
+- pointer-independent cross-session reacquisition
+- CameraZ resource identity
+- RawAO temporal pair
+- AO filtering
+- RawIndirect
+- lighting composite before/after scheduling
+- day/night exterior classification
+- interior classification
+- exterior volumetric activity
+- interior volumetric absence
+- stable stage ordering
+- clean evidence generation
+
+Field blockers discovered:
+
+1. AFTER_CAMERAZ DOES NOT SIGNAL PER FRAME.
+
+2. THE CURRENT OPAQUE_FINAL_DEPTH / AFTER_OPAQUE_GEOMETRY_FINAL_DEPTH
+   SEMANTIC IS NOT TRUSTWORTHY.
+   The observed later copy is exterior-only and occurs after lighting
+   composition.
+
+3. SESSION SEMANTIC REGISTRY RETAINS STALE ENVIRONMENT-SPECIFIC RESOURCES.
+   Current-frame availability must become fail-closed before the Native
+   Semantic Broker depends on it.
+
+4. THE AUTHORITY TOP SNAPSHOT IS NOT STRICTLY CAPTURE-LOCAL.
+   Capture promotions are bounded correctly, but session-table last_seen can
+   advance one frame beyond capture_end.
+
+These are exactly the issues the next research and blueprint phases should
+resolve.
+
+OVERALL FIELD GATE:
+
+WAVE 1 = PARTIAL PASS / NOT CLOSED
+WAVE 2 = PARTIAL PASS / NOT CLOSED
+
+REPOSITORY:
+UNTOUCHED DURING THIS REVIEW
+
+NEXT AUTHORIZED PHASE:
+RESEARCH PASS 2
+
+END OF FINDINGS
