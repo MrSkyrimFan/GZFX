@@ -3817,8 +3817,7 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                  ++i)
             {
                 ok = CaptureDepthMip(
-                    lease.device,
-                    lease.immediate,
+                    lease,
                     mips[i],
                     g_capture.directory / names[i],
                     i == 0 ? &g_capture.gzfxDepth : nullptr) &&
@@ -4100,8 +4099,8 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 return false;
             }
 
-            std::vector<std::uint8_t> stockPreview;
-            DepthPreview(stockValues, stockPreview);
+            const auto stockPreview =
+                DepthPreview(stockValues);
             WriteBmp(
                 g_capture.directory / L"stock_cameraz.bmp",
                 g_capture.width,
