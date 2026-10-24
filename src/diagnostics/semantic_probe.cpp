@@ -1334,6 +1334,22 @@ float4 PSMain(V input) : SV_TARGET
                                 1ull << 55);
                     }
 
+                    if (fullResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R8G8B8A8_UNORM &&
+                        stats->psReads >= 100 &&
+                        stats->rtvWrites > 0)
+                    {
+                        // High-read/low-write full-resolution mask surfaces
+                        // include the field-proven stock shadowmask family.
+                        // This is only a preview-priority rule, not a semantic
+                        // promotion by itself.
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 54);
+                    }
+
                     if (halfResolution &&
                         stats->desc.Format ==
                             DXGI_FORMAT_R16G16B16A16_FLOAT)
