@@ -395,9 +395,33 @@ namespace
         const std::string& semantic,
         const bool expected)
     {
+        const std::string marker =
+            "[current_frame_semantic_views]\n";
+
+        const auto section =
+            authority.find(marker);
+
+        if (section == std::string::npos)
+        {
+            return false;
+        }
+
+        const auto next =
+            authority.find(
+                "\n[",
+                section + marker.size());
+
+        const std::string body =
+            authority.substr(
+                section + marker.size(),
+                next == std::string::npos
+                    ? std::string::npos
+                    : next -
+                        (section + marker.size()));
+
         const std::string line =
             FindLineStartingWith(
-                authority,
+                body,
                 semantic + ",");
 
         if (line.empty())
