@@ -806,6 +806,66 @@ namespace gzfx::render::semantic_authority
                     .identity;
         }
 
+        bool ConflictsWithOutputsLocked(
+            const std::uintptr_t identity)
+        {
+            if (identity == 0)
+            {
+                return false;
+            }
+
+            for (const auto& binding : g_state.rtvs)
+            {
+                if (binding.identity == identity)
+                {
+                    return true;
+                }
+            }
+
+            if (g_state.dsv.identity == identity)
+            {
+                return true;
+            }
+
+            for (const auto& binding : g_state.omUavs)
+            {
+                if (binding.identity == identity)
+                {
+                    return true;
+                }
+            }
+
+            for (const auto& binding : g_state.csUavs)
+            {
+                if (binding.identity == identity)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        void UnbindReadsForOutputLocked(
+            const ViewBinding& output)
+        {
+            if (output.identity == 0)
+            {
+                return;
+            }
+
+            for (auto& stage : g_state.srvs)
+            {
+                for (auto& binding : stage)
+                {
+                    if (binding.identity == output.identity)
+                    {
+                        binding = {};
+                    }
+                }
+            }
+        }
+
         bool ReadsLocked(
             const std::uintptr_t identity)
         {
@@ -1771,11 +1831,17 @@ namespace gzfx::render::semantic_authority
                     slots.size();
                  ++i)
             {
-                slots[startSlot + i] =
+                const auto binding =
                     DescribeSrv(
                         resources != nullptr
                             ? resources[i]
                             : nullptr);
+
+                slots[startSlot + i] =
+                    ConflictsWithOutputsLocked(
+                        binding.identity)
+                        ? ViewBinding{}
+                        : binding;
             }
         }
         catch (...)
@@ -1810,6 +1876,13 @@ namespace gzfx::render::semantic_authority
             g_state.dsv =
                 DescribeDsv(
                     depthTarget);
+
+            for (const auto& output : g_state.rtvs)
+            {
+                UnbindReadsForOutputLocked(output);
+            }
+
+            UnbindReadsForOutputLocked(g_state.dsv);
         }
         catch (...)
         {
@@ -1848,6 +1921,13 @@ namespace gzfx::render::semantic_authority
                 g_state.dsv =
                     DescribeDsv(
                         depthTarget);
+
+                for (const auto& output : g_state.rtvs)
+                {
+                    UnbindReadsForOutputLocked(output);
+                }
+
+                UnbindReadsForOutputLocked(g_state.dsv);
             }
 
             if (uavStartSlot !=
@@ -1865,6 +1945,10 @@ namespace gzfx::render::semantic_authority
                             uavs != nullptr
                                 ? uavs[i]
                                 : nullptr);
+
+                    UnbindReadsForOutputLocked(
+                        g_state.omUavs[
+                            uavStartSlot + i]);
                 }
             }
         }
@@ -1894,6 +1978,10 @@ namespace gzfx::render::semantic_authority
                         uavs != nullptr
                             ? uavs[i]
                             : nullptr);
+
+                UnbindReadsForOutputLocked(
+                    g_state.csUavs[
+                        startSlot + i]);
             }
         }
         catch (...)
