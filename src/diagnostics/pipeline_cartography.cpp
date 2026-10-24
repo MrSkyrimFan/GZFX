@@ -3329,6 +3329,24 @@ namespace gzfx::diagnostics::pipeline_cartography
             if (screenWidth == 0 ||
                 screenHeight == 0)
             {
+                for (const auto& pass :
+                     g_passes)
+                {
+                    screenWidth =
+                        (std::max)(
+                            screenWidth,
+                            pass.viewportWidth);
+
+                    screenHeight =
+                        (std::max)(
+                            screenHeight,
+                            pass.viewportHeight);
+                }
+            }
+
+            if (screenWidth == 0 ||
+                screenHeight == 0)
+            {
                 return landmarks;
             }
 
