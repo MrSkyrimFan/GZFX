@@ -164,6 +164,41 @@ namespace
         return sawDraw && sawDispatch;
     }
 
+    bool DeviceAlive(
+        ID3D11Device* device,
+        ID3D11DeviceContext* context,
+        const char* stage)
+    {
+        if (device == nullptr ||
+            context == nullptr)
+        {
+            return false;
+        }
+
+        context->Flush();
+
+        const HRESULT reason =
+            device->GetDeviceRemovedReason();
+
+        if (FAILED(reason))
+        {
+            std::cerr
+                << "device_removed_stage="
+                << stage
+                << " reason=0x"
+                << std::hex
+                << std::uppercase
+                << static_cast<std::uint32_t>(
+                    reason)
+                << std::dec
+                << "\n";
+
+            return false;
+        }
+
+        return true;
+    }
+
     bool CompileShader(
         const char* source,
         const char* entry,
@@ -734,6 +769,14 @@ int wmain(
         return 26;
     }
 
+    if (!DeviceAlive(
+            device,
+            context,
+            "setup"))
+    {
+        return 29;
+    }
+
     D3D11_VIEWPORT viewport{};
     viewport.Width = 640.0f;
     viewport.Height = 360.0f;
@@ -823,6 +866,14 @@ int wmain(
             1,
             &defaultBuffer);
 
+        if (!DeviceAlive(
+                device,
+                context,
+                "buffer_updates"))
+        {
+            return 30;
+        }
+
         context->VSSetShader(
             vertexShader,
             nullptr,
@@ -861,6 +912,14 @@ int wmain(
                 0);
         }
 
+        if (!DeviceAlive(
+                device,
+                context,
+                "mrt_draws"))
+        {
+            return 31;
+        }
+
         context->OMSetRenderTargets(
             1,
             &scalarRtv,
@@ -882,6 +941,14 @@ int wmain(
                 0);
         }
 
+        if (!DeviceAlive(
+                device,
+                context,
+                "scalar_draws"))
+        {
+            return 32;
+        }
+
         context->OMSetRenderTargets(
             0,
             nullptr,
@@ -892,9 +959,25 @@ int wmain(
             1,
             1);
 
+        if (!DeviceAlive(
+                device,
+                context,
+                "dispatch"))
+        {
+            return 33;
+        }
+
         context->CopyResource(
             scalarCopy,
             scalar);
+
+        if (!DeviceAlive(
+                device,
+                context,
+                "copy_resource"))
+        {
+            return 34;
+        }
 
         ID3D11ShaderResourceView*
             pixelResources[6] =
@@ -915,6 +998,14 @@ int wmain(
         context->Draw(
             3,
             0);
+
+        if (!DeviceAlive(
+                device,
+                context,
+                "srv_draw"))
+        {
+            return 35;
+        }
 
         ID3D11ShaderResourceView*
             nullResources[6] =
@@ -950,6 +1041,14 @@ int wmain(
         swapChain->Present(
             0,
             0);
+
+        if (!DeviceAlive(
+                device,
+                context,
+                "present"))
+        {
+            return 36;
+        }
     }
 
     const std::filesystem::path diagnostics =
