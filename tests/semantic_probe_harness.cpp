@@ -214,6 +214,64 @@ int wmain(
         D3D11_BIND_RENDER_TARGET |
         D3D11_BIND_SHADER_RESOURCE;
 
+    D3D11_TEXTURE2D_DESC sceneDesc =
+        normalDesc;
+
+    sceneDesc.Format =
+        DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+    ID3D11Texture2D* scene = nullptr;
+    ID3D11RenderTargetView* sceneRtv = nullptr;
+    ID3D11ShaderResourceView* sceneSrv = nullptr;
+
+    if (FAILED(
+            device->CreateTexture2D(
+                &sceneDesc,
+                nullptr,
+                &scene)) ||
+        FAILED(
+            device->CreateRenderTargetView(
+                scene,
+                nullptr,
+                &sceneRtv)) ||
+        FAILED(
+            device->CreateShaderResourceView(
+                scene,
+                nullptr,
+                &sceneSrv)))
+    {
+        return 22;
+    }
+
+    D3D11_TEXTURE2D_DESC auxDesc =
+        normalDesc;
+
+    auxDesc.Format =
+        DXGI_FORMAT_R8G8_UNORM;
+
+    ID3D11Texture2D* aux = nullptr;
+    ID3D11RenderTargetView* auxRtv = nullptr;
+    ID3D11ShaderResourceView* auxSrv = nullptr;
+
+    if (FAILED(
+            device->CreateTexture2D(
+                &auxDesc,
+                nullptr,
+                &aux)) ||
+        FAILED(
+            device->CreateRenderTargetView(
+                aux,
+                nullptr,
+                &auxRtv)) ||
+        FAILED(
+            device->CreateShaderResourceView(
+                aux,
+                nullptr,
+                &auxSrv)))
+    {
+        return 23;
+    }
+
     ID3D11Texture2D* normal = nullptr;
     ID3D11RenderTargetView* normalRtv = nullptr;
     ID3D11ShaderResourceView* normalSrv = nullptr;
@@ -271,6 +329,7 @@ int wmain(
 
     scalarDesc.Format =
         DXGI_FORMAT_R32_FLOAT;
+    scalarDesc.MipLevels = 4;
 
     ID3D11Texture2D* scalar = nullptr;
     ID3D11RenderTargetView* scalarRtv = nullptr;
@@ -497,15 +556,16 @@ int wmain(
             &defaultBuffer);
 
         ID3D11RenderTargetView*
-            targets[3] =
+            targets[4] =
         {
-            normalRtv,
+            sceneRtv,
             motionRtv,
-            scalarRtv
+            normalRtv,
+            auxRtv
         };
 
         context->OMSetRenderTargets(
-            3,
+            4,
             targets,
             depthView);
 
@@ -523,6 +583,33 @@ int wmain(
             0,
             nullptr,
             nullptr);
+
+        context->PSSetShaderResources(
+            0,
+            1,
+            &depthSrv);
+
+        context->OMSetRenderTargets(
+            1,
+            &scalarRtv,
+            nullptr);
+
+        context->Draw(
+            3,
+            0);
+
+        context->OMSetRenderTargets(
+            0,
+            nullptr,
+            nullptr);
+
+        ID3D11ShaderResourceView*
+            nullDepthSrv = nullptr;
+
+        context->PSSetShaderResources(
+            0,
+            1,
+            &nullDepthSrv);
 
         context->CopyResource(
             scalarCopy,
@@ -796,6 +883,14 @@ int wmain(
     if (motionSrv) motionSrv->Release();
     if (motionRtv) motionRtv->Release();
     if (motion) motion->Release();
+
+    if (auxSrv) auxSrv->Release();
+    if (auxRtv) auxRtv->Release();
+    if (aux) aux->Release();
+
+    if (sceneSrv) sceneSrv->Release();
+    if (sceneRtv) sceneRtv->Release();
+    if (scene) scene->Release();
 
     if (normalSrv) normalSrv->Release();
     if (normalRtv) normalRtv->Release();
