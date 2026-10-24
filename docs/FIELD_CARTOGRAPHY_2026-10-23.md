@@ -381,6 +381,33 @@ Public Skyrim renderer research uses an array-sliced `kSHADOWMAPS` target for sh
 
 The live interior/exterior behavior makes this a strong local-light shadow-map-array match.
 
+## Full-resolution stock shadowmask — IDENTIFIED
+
+Resource:
+
+`0x22CCE6D0CC0`
+
+Descriptor:
+
+- 2560x1440
+- R8G8B8A8_UNORM
+
+A representative exterior shadowmask pass reads together:
+
+- main depth;
+- the 4096x4096 two-slice directional-shadow family at PS slot 4;
+- the 4096x4096 eight-slice local-light-shadow family at PS slot 6;
+
+and writes `0x22CCE6D0CC0`.
+
+Later world/lighting geometry consumes this surface thousands of times, overwhelmingly at PS slot 14.
+
+That producer/consumer pattern identifies this resource as the stock full-resolution shadowmask/lighting-mask surface.
+
+It remains active indoors; the balance shifts toward the local-light shadow array rather than the exterior directional/volumetric family.
+
+---
+
 ## Remaining 512x512 depth target — UNKNOWN exact role
 
 Resource:
