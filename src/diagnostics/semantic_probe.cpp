@@ -564,14 +564,23 @@ float4 PSMain(V input) : SV_TARGET
                     shaderSource,
                     "VSMain",
                     "vs_5_0",
-                    &vsBlob) ||
-                !Compile(
+                    &vsBlob))
+            {
+                g_lastPreviewError =
+                    "compile_vs_failed";
+                if (vsBlob) vsBlob->Release();
+                return false;
+            }
+
+            if (!Compile(
                     device,
                     shaderSource,
                     "PSMain",
                     "ps_5_0",
                     &psBlob))
             {
+                g_lastPreviewError =
+                    "compile_ps_failed";
                 if (vsBlob) vsBlob->Release();
                 if (psBlob) psBlob->Release();
                 return false;
@@ -582,6 +591,13 @@ float4 PSMain(V input) : SV_TARGET
                     0,
                     &g_preview.deferred);
 
+            if (FAILED(result))
+            {
+                g_lastPreviewError =
+                    "CreateDeferredContext=" +
+                    HResultText(result);
+            }
+
             if (SUCCEEDED(result))
             {
                 result =
@@ -590,6 +606,13 @@ float4 PSMain(V input) : SV_TARGET
                         vsBlob->GetBufferSize(),
                         nullptr,
                         &g_preview.vertexShader);
+
+                if (FAILED(result))
+                {
+                    g_lastPreviewError =
+                        "CreateVertexShader=" +
+                        HResultText(result);
+                }
             }
 
             if (SUCCEEDED(result))
@@ -600,6 +623,13 @@ float4 PSMain(V input) : SV_TARGET
                         psBlob->GetBufferSize(),
                         nullptr,
                         &g_preview.pixelShader);
+
+                if (FAILED(result))
+                {
+                    g_lastPreviewError =
+                        "CreatePixelShader=" +
+                        HResultText(result);
+                }
             }
 
             D3D11_SAMPLER_DESC sampler{};
@@ -620,6 +650,13 @@ float4 PSMain(V input) : SV_TARGET
                     device->CreateSamplerState(
                         &sampler,
                         &g_preview.sampler);
+
+                if (FAILED(result))
+                {
+                    g_lastPreviewError =
+                        "CreateSamplerState=" +
+                        HResultText(result);
+                }
             }
 
             D3D11_BUFFER_DESC buffer{};
@@ -637,6 +674,13 @@ float4 PSMain(V input) : SV_TARGET
                         &buffer,
                         nullptr,
                         &g_preview.parameters);
+
+                if (FAILED(result))
+                {
+                    g_lastPreviewError =
+                        "CreateParameterBuffer=" +
+                        HResultText(result);
+                }
             }
 
             vsBlob->Release();
@@ -644,6 +688,13 @@ float4 PSMain(V input) : SV_TARGET
 
             if (FAILED(result))
             {
+                if (g_lastPreviewError.empty())
+                {
+                    g_lastPreviewError =
+                        "preview_runtime_unknown=" +
+                        HResultText(result);
+                }
+
                 return false;
             }
 
@@ -798,8 +849,12 @@ float4 PSMain(V input) : SV_TARGET
 
             if (!EnsurePreviewRuntime(device))
             {
-                g_lastPreviewError =
-                    "ensure_preview_runtime_failed";
+                if (g_lastPreviewError.empty())
+                {
+                    g_lastPreviewError =
+                        "ensure_preview_runtime_failed";
+                }
+
                 return false;
             }
 
