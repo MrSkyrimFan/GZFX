@@ -3088,6 +3088,1173 @@ namespace gzfx::diagnostics::pipeline_cartography
             return stream.str();
         }
 
+        const char* LandmarkNameInternal(
+            const LandmarkKind kind)
+        {
+            switch (kind)
+            {
+            case LandmarkKind::MainDepthCopyEarly:
+                return "main_depth_copy_early";
+            case LandmarkKind::MainDepthCopyLate:
+                return "main_depth_copy_late";
+            case LandmarkKind::HdrSceneCopy:
+                return "hdr_scene_copy";
+            case LandmarkKind::ShadowMask:
+                return "shadowmask";
+            case LandmarkKind::ReflectionMask:
+                return "reflection_mask";
+            case LandmarkKind::ReflectionColor:
+                return "reflection_color";
+            case LandmarkKind::ReflectionBlurIntermediate:
+                return "reflection_blur_intermediate";
+            case LandmarkKind::ReflectionBlurred:
+                return "reflection_blurred";
+            case LandmarkKind::SaoCameraZ:
+                return "sao_camera_z";
+            case LandmarkKind::SaoRawAo:
+                return "sao_raw_ao";
+            case LandmarkKind::SaoBlurIntermediate:
+                return "sao_blur_intermediate";
+            case LandmarkKind::SaoBlurred:
+                return "sao_blurred";
+            case LandmarkKind::SilRawIndirect:
+                return "sil_raw_indirect";
+            case LandmarkKind::LightingCompositeHdr:
+                return "lighting_composite_hdr";
+            case LandmarkKind::VolumetricVolume:
+                return "volumetric_volume";
+            case LandmarkKind::VolumetricTemporal:
+                return "volumetric_temporal";
+            case LandmarkKind::VolumetricBlurIntermediate:
+                return "volumetric_blur_intermediate";
+            case LandmarkKind::VolumetricBlurred:
+                return "volumetric_blurred";
+            }
+
+            return "unknown";
+        }
+
+        const ResourceMeta* ResourceMetaLocked(
+            const std::uintptr_t id)
+        {
+            const auto found =
+                g_resources.find(id);
+
+            return
+                found != g_resources.end()
+                ? &found->second
+                : nullptr;
+        }
+
+        bool IsTexture2DLocked(
+            const std::uintptr_t id,
+            const UINT width,
+            const UINT height,
+            const DXGI_FORMAT format)
+        {
+            const auto* meta =
+                ResourceMetaLocked(id);
+
+            return
+                meta != nullptr &&
+                meta->type ==
+                    ResourceType::Texture2D &&
+                meta->width == width &&
+                meta->height == height &&
+                meta->format == format;
+        }
+
+        bool IsTexture3DLocked(
+            const std::uintptr_t id,
+            const DXGI_FORMAT format)
+        {
+            const auto* meta =
+                ResourceMetaLocked(id);
+
+            return
+                meta != nullptr &&
+                meta->type ==
+                    ResourceType::Texture3D &&
+                meta->depth > 1 &&
+                meta->format == format;
+        }
+
+        bool PassReads(
+            const PassRecord& pass,
+            const std::uintptr_t id)
+        {
+            if (id == 0)
+            {
+                return false;
+            }
+
+            return
+                std::any_of(
+                    pass.accesses.begin(),
+                    pass.accesses.end(),
+                    [&](const Access& access)
+                    {
+                        return
+                            access.mode == 'R' &&
+                            access.binding.resource ==
+                                id;
+                    });
+        }
+
+        bool PassWrites(
+            const PassRecord& pass,
+            const std::uintptr_t id)
+        {
+            if (id == 0)
+            {
+                return false;
+            }
+
+            return
+                std::any_of(
+                    pass.accesses.begin(),
+                    pass.accesses.end(),
+                    [&](const Access& access)
+                    {
+                        return
+                            access.mode == 'W' &&
+                            access.binding.resource ==
+                                id;
+                    });
+        }
+
+        std::vector<std::uintptr_t>
+        PassResources(
+            const PassRecord& pass,
+            const char mode)
+        {
+            std::vector<std::uintptr_t> result;
+
+            for (const auto& access :
+                 pass.accesses)
+            {
+                if (access.mode != mode ||
+                    access.binding.resource == 0)
+                {
+                    continue;
+                }
+
+                if (std::find(
+                        result.begin(),
+                        result.end(),
+                        access.binding.resource) ==
+                    result.end())
+                {
+                    result.push_back(
+                        access.binding.resource);
+                }
+            }
+
+            return result;
+        }
+
+        const PassRecord* LastWriterBeforeLocked(
+            const std::uintptr_t resource,
+            const std::uint64_t beforePass)
+        {
+            for (auto it =
+                    g_passes.rbegin();
+                 it != g_passes.rend();
+                 ++it)
+            {
+                if (it->id >= beforePass)
+                {
+                    continue;
+                }
+
+                if (PassWrites(*it, resource))
+                {
+                    return &*it;
+                }
+            }
+
+            return nullptr;
+        }
+
+        std::vector<Landmark>
+        IdentifyLandmarksLocked()
+        {
+            std::vector<Landmark> landmarks;
+
+            std::set<
+                std::pair<
+                    LandmarkKind,
+                    std::uintptr_t>>
+                        emitted;
+
+            const auto add =
+                [&](const LandmarkKind kind,
+                    const std::uint32_t confidence,
+                    const std::uint64_t passId,
+                    const std::uintptr_t resource)
+                {
+                    if (resource == 0 ||
+                        !emitted.insert(
+                            {kind, resource}).second)
+                    {
+                        return;
+                    }
+
+                    Landmark landmark{};
+                    landmark.kind = kind;
+                    landmark.confidence =
+                        confidence;
+                    landmark.passId =
+                        passId;
+                    landmark.resource =
+                        resource;
+
+                    landmarks.push_back(
+                        landmark);
+                };
+
+            UINT screenWidth = 0;
+            UINT screenHeight = 0;
+
+            if (const auto* scene =
+                    ResourceMetaLocked(
+                        g_knownSceneColor))
+            {
+                screenWidth =
+                    scene->width;
+                screenHeight =
+                    scene->height;
+            }
+
+            if (screenWidth == 0 ||
+                screenHeight == 0)
+            {
+                return landmarks;
+            }
+
+            const UINT halfWidth =
+                (std::max)(
+                    1u,
+                    screenWidth / 2);
+
+            const UINT halfHeight =
+                (std::max)(
+                    1u,
+                    screenHeight / 2);
+
+            std::set<std::uintptr_t>
+                normalResources;
+
+            // Identify the RGBA8 member of the already-proven four-target
+            // opaque MRT structurally rather than trusting whichever half of
+            // Skyrim's normal ping-pong happened to be current at trace arm.
+            for (const auto& pass :
+                 g_passes)
+            {
+                if (pass.kind !=
+                        PassKind::Draw ||
+                    !PassWrites(
+                        pass,
+                        g_knownSceneColor) ||
+                    !PassWrites(
+                        pass,
+                        g_knownMotion) ||
+                    !PassWrites(
+                        pass,
+                        g_knownAux))
+                {
+                    continue;
+                }
+
+                for (const auto output :
+                     PassResources(pass, 'W'))
+                {
+                    if (IsTexture2DLocked(
+                            output,
+                            screenWidth,
+                            screenHeight,
+                            DXGI_FORMAT_R8G8B8A8_UNORM))
+                    {
+                        normalResources.insert(
+                            output);
+                    }
+                }
+            }
+
+            // Chronological main-depth and HDR copies are hard D3D evidence.
+            std::map<
+                std::uint64_t,
+                std::vector<
+                    std::pair<
+                        std::uint64_t,
+                        std::uintptr_t>>>
+                            depthCopies;
+
+            for (const auto& pass :
+                 g_passes)
+            {
+                if (pass.kind !=
+                    PassKind::CopyResource)
+                {
+                    continue;
+                }
+
+                const auto reads =
+                    PassResources(pass, 'R');
+
+                const auto writes =
+                    PassResources(pass, 'W');
+
+                if (reads.size() != 1 ||
+                    writes.size() != 1)
+                {
+                    continue;
+                }
+
+                if (reads[0] ==
+                    g_knownDepth)
+                {
+                    depthCopies[
+                        pass.frame].push_back(
+                            {pass.id, writes[0]});
+                }
+
+                if (reads[0] ==
+                    g_knownSceneColor)
+                {
+                    add(
+                        LandmarkKind::HdrSceneCopy,
+                        100,
+                        pass.id,
+                        writes[0]);
+                }
+            }
+
+            for (auto& [frame, copies] :
+                 depthCopies)
+            {
+                (void)frame;
+
+                std::sort(
+                    copies.begin(),
+                    copies.end());
+
+                if (!copies.empty())
+                {
+                    add(
+                        LandmarkKind::MainDepthCopyEarly,
+                        100,
+                        copies.front().first,
+                        copies.front().second);
+                }
+
+                if (copies.size() > 1)
+                {
+                    add(
+                        LandmarkKind::MainDepthCopyLate,
+                        100,
+                        copies.back().first,
+                        copies.back().second);
+                }
+            }
+
+            std::set<std::uintptr_t>
+                volumetricVolumes;
+
+            // Skyrim's exterior volumetric generator is unusually distinct:
+            // shadow arrays + 4096x1 R32 lookup + 3D noise -> two R16 3D UAVs.
+            for (const auto& pass :
+                 g_passes)
+            {
+                if (pass.kind !=
+                    PassKind::Dispatch)
+                {
+                    continue;
+                }
+
+                const auto inputs =
+                    PassResources(pass, 'R');
+
+                const auto outputs =
+                    PassResources(pass, 'W');
+
+                std::size_t r16Volumes = 0;
+                bool has3DNoise = false;
+                bool has1DLookup = false;
+                bool hasLargeDepth = false;
+
+                for (const auto output :
+                     outputs)
+                {
+                    if (IsTexture3DLocked(
+                            output,
+                            DXGI_FORMAT_R16_FLOAT))
+                    {
+                        ++r16Volumes;
+                    }
+                }
+
+                for (const auto input :
+                     inputs)
+                {
+                    const auto* meta =
+                        ResourceMetaLocked(input);
+
+                    if (meta == nullptr)
+                    {
+                        continue;
+                    }
+
+                    if (meta->type ==
+                            ResourceType::Texture3D &&
+                        meta->depth > 1 &&
+                        meta->format ==
+                            DXGI_FORMAT_R8_UNORM)
+                    {
+                        has3DNoise = true;
+                    }
+
+                    if (meta->type ==
+                            ResourceType::Texture1D &&
+                        meta->width >= 1024 &&
+                        meta->format ==
+                            DXGI_FORMAT_R32_FLOAT)
+                    {
+                        has1DLookup = true;
+                    }
+
+                    if (meta->type ==
+                            ResourceType::Texture2D &&
+                        meta->width >= 512 &&
+                        meta->height >= 512 &&
+                        (
+                            meta->format ==
+                                DXGI_FORMAT_R16_TYPELESS ||
+                            meta->format ==
+                                DXGI_FORMAT_R24G8_TYPELESS ||
+                            meta->format ==
+                                DXGI_FORMAT_R32_TYPELESS
+                        ))
+                    {
+                        hasLargeDepth = true;
+                    }
+                }
+
+                if (r16Volumes >= 2 &&
+                    has3DNoise &&
+                    has1DLookup &&
+                    hasLargeDepth)
+                {
+                    for (const auto output :
+                         outputs)
+                    {
+                        if (IsTexture3DLocked(
+                                output,
+                                DXGI_FORMAT_R16_FLOAT))
+                        {
+                            volumetricVolumes.insert(
+                                output);
+
+                            add(
+                                LandmarkKind::VolumetricVolume,
+                                100,
+                                pass.id,
+                                output);
+                        }
+                    }
+                }
+            }
+
+            std::set<std::uintptr_t>
+                cameraZResources;
+
+            // Camera-Z: full-resolution mipmapped R32 produced from depth and
+            // then rendered into progressively smaller mip viewports.
+            for (const auto& pass :
+                 g_passes)
+            {
+                if (pass.kind !=
+                    PassKind::Draw)
+                {
+                    continue;
+                }
+
+                for (const auto output :
+                     PassResources(pass, 'W'))
+                {
+                    const auto* meta =
+                        ResourceMetaLocked(output);
+
+                    if (meta == nullptr ||
+                        meta->type !=
+                            ResourceType::Texture2D ||
+                        meta->width !=
+                            screenWidth ||
+                        meta->height !=
+                            screenHeight ||
+                        meta->format !=
+                            DXGI_FORMAT_R32_FLOAT ||
+                        meta->mipLevels <= 1)
+                    {
+                        continue;
+                    }
+
+                    bool readsDepth = false;
+
+                    for (const auto input :
+                         PassResources(pass, 'R'))
+                    {
+                        const auto* in =
+                            ResourceMetaLocked(input);
+
+                        if (in != nullptr &&
+                            in->type ==
+                                ResourceType::Texture2D &&
+                            in->width ==
+                                screenWidth &&
+                            in->height ==
+                                screenHeight &&
+                            (
+                                in->format ==
+                                    DXGI_FORMAT_R24G8_TYPELESS ||
+                                in->format ==
+                                    DXGI_FORMAT_R32_TYPELESS ||
+                                in->format ==
+                                    DXGI_FORMAT_D24_UNORM_S8_UINT ||
+                                in->format ==
+                                    DXGI_FORMAT_D32_FLOAT
+                            ))
+                        {
+                            readsDepth = true;
+                            break;
+                        }
+                    }
+
+                    if (readsDepth)
+                    {
+                        cameraZResources.insert(
+                            output);
+
+                        add(
+                            LandmarkKind::SaoCameraZ,
+                            100,
+                            pass.id,
+                            output);
+                    }
+                }
+            }
+
+            std::set<std::uintptr_t>
+                rawAoResources;
+
+            for (const auto& pass :
+                 g_passes)
+            {
+                if (pass.kind !=
+                    PassKind::Draw)
+                {
+                    continue;
+                }
+
+                bool readsCameraZ = false;
+                bool readsMotion = false;
+                bool readsNormal = false;
+
+                for (const auto input :
+                     PassResources(pass, 'R'))
+                {
+                    readsCameraZ =
+                        readsCameraZ ||
+                        cameraZResources.find(input) !=
+                            cameraZResources.end();
+
+                    readsMotion =
+                        readsMotion ||
+                        input == g_knownMotion;
+
+                    readsNormal =
+                        readsNormal ||
+                        normalResources.find(input) !=
+                            normalResources.end();
+                }
+
+                if (!readsCameraZ ||
+                    !readsMotion ||
+                    !readsNormal)
+                {
+                    continue;
+                }
+
+                for (const auto output :
+                     PassResources(pass, 'W'))
+                {
+                    if (IsTexture2DLocked(
+                            output,
+                            screenWidth,
+                            screenHeight,
+                            DXGI_FORMAT_R8G8B8A8_UNORM))
+                    {
+                        rawAoResources.insert(
+                            output);
+
+                        add(
+                            LandmarkKind::SaoRawAo,
+                            98,
+                            pass.id,
+                            output);
+                    }
+                }
+            }
+
+            const auto firstFullResRgba8Consumer =
+                [&](const std::set<std::uintptr_t>& sources,
+                    const std::uint64_t afterPass)
+                    -> const PassRecord*
+                {
+                    for (const auto& pass :
+                         g_passes)
+                    {
+                        if (pass.id <= afterPass ||
+                            pass.kind !=
+                                PassKind::Draw)
+                        {
+                            continue;
+                        }
+
+                        bool readsSource = false;
+
+                        for (const auto source :
+                             sources)
+                        {
+                            if (PassReads(
+                                    pass,
+                                    source))
+                            {
+                                readsSource = true;
+                                break;
+                            }
+                        }
+
+                        if (!readsSource)
+                        {
+                            continue;
+                        }
+
+                        for (const auto output :
+                             PassResources(pass, 'W'))
+                        {
+                            if (IsTexture2DLocked(
+                                    output,
+                                    screenWidth,
+                                    screenHeight,
+                                    DXGI_FORMAT_R8G8B8A8_UNORM))
+                            {
+                                return &pass;
+                            }
+                        }
+                    }
+
+                    return nullptr;
+                };
+
+            std::set<std::uintptr_t>
+                aoIntermediate;
+
+            std::set<std::uintptr_t>
+                aoBlurred;
+
+            if (!rawAoResources.empty())
+            {
+                std::uint64_t firstRawPass =
+                    UINT64_MAX;
+
+                for (const auto& landmark :
+                     landmarks)
+                {
+                    if (landmark.kind ==
+                        LandmarkKind::SaoRawAo)
+                    {
+                        firstRawPass =
+                            (std::min)(
+                                firstRawPass,
+                                landmark.passId);
+                    }
+                }
+
+                if (const auto* pass =
+                        firstFullResRgba8Consumer(
+                            rawAoResources,
+                            firstRawPass))
+                {
+                    for (const auto output :
+                         PassResources(*pass, 'W'))
+                    {
+                        if (IsTexture2DLocked(
+                                output,
+                                screenWidth,
+                                screenHeight,
+                                DXGI_FORMAT_R8G8B8A8_UNORM))
+                        {
+                            aoIntermediate.insert(
+                                output);
+
+                            add(
+                                LandmarkKind::SaoBlurIntermediate,
+                                96,
+                                pass->id,
+                                output);
+                        }
+                    }
+
+                    if (const auto* second =
+                            firstFullResRgba8Consumer(
+                                aoIntermediate,
+                                pass->id))
+                    {
+                        for (const auto output :
+                             PassResources(
+                                 *second,
+                                 'W'))
+                        {
+                            if (IsTexture2DLocked(
+                                    output,
+                                    screenWidth,
+                                    screenHeight,
+                                    DXGI_FORMAT_R8G8B8A8_UNORM))
+                            {
+                                aoBlurred.insert(
+                                    output);
+
+                                add(
+                                    LandmarkKind::SaoBlurred,
+                                    96,
+                                    second->id,
+                                    output);
+                            }
+                        }
+                    }
+                }
+            }
+
+            std::set<std::uintptr_t>
+                rawIndirect;
+
+            for (const auto& pass :
+                 g_passes)
+            {
+                if (pass.kind !=
+                    PassKind::Draw)
+                {
+                    continue;
+                }
+
+                bool readsCameraZ = false;
+
+                for (const auto source :
+                     cameraZResources)
+                {
+                    readsCameraZ =
+                        readsCameraZ ||
+                        PassReads(pass, source);
+                }
+
+                if (!readsCameraZ ||
+                    !PassReads(
+                        pass,
+                        g_knownSceneColor) ||
+                    !PassReads(
+                        pass,
+                        g_knownAux))
+                {
+                    continue;
+                }
+
+                for (const auto output :
+                     PassResources(pass, 'W'))
+                {
+                    if (IsTexture2DLocked(
+                            output,
+                            screenWidth,
+                            screenHeight,
+                            DXGI_FORMAT_R11G11B10_FLOAT))
+                    {
+                        rawIndirect.insert(
+                            output);
+
+                        add(
+                            LandmarkKind::SilRawIndirect,
+                            98,
+                            pass.id,
+                            output);
+                    }
+                }
+            }
+
+            // Locate the AO/indirect lighting composite into Skyrim's HDR
+            // scene, then backtrack the half-res reflection chain and isolate
+            // the remaining full-res RGBA8 shadow mask input.
+            for (const auto& pass :
+                 g_passes)
+            {
+                if (pass.kind !=
+                        PassKind::Draw ||
+                    !PassWrites(
+                        pass,
+                        g_knownSceneColor))
+                {
+                    continue;
+                }
+
+                bool readsIndirect = false;
+                bool readsAo = false;
+
+                for (const auto input :
+                     PassResources(pass, 'R'))
+                {
+                    readsIndirect =
+                        readsIndirect ||
+                        rawIndirect.find(input) !=
+                            rawIndirect.end();
+
+                    readsAo =
+                        readsAo ||
+                        aoBlurred.find(input) !=
+                            aoBlurred.end();
+                }
+
+                if (!readsIndirect ||
+                    !readsAo)
+                {
+                    continue;
+                }
+
+                add(
+                    LandmarkKind::LightingCompositeHdr,
+                    100,
+                    pass.id,
+                    g_knownSceneColor);
+
+                std::uintptr_t reflection = 0;
+
+                for (const auto input :
+                     PassResources(pass, 'R'))
+                {
+                    if (IsTexture2DLocked(
+                            input,
+                            halfWidth,
+                            halfHeight,
+                            DXGI_FORMAT_R16G16B16A16_FLOAT))
+                    {
+                        reflection = input;
+
+                        add(
+                            LandmarkKind::ReflectionBlurred,
+                            94,
+                            pass.id,
+                            input);
+
+                        break;
+                    }
+                }
+
+                if (reflection != 0)
+                {
+                    const auto* vertical =
+                        LastWriterBeforeLocked(
+                            reflection,
+                            pass.id);
+
+                    if (vertical != nullptr)
+                    {
+                        for (const auto input :
+                             PassResources(
+                                 *vertical,
+                                 'R'))
+                        {
+                            if (IsTexture2DLocked(
+                                    input,
+                                    halfWidth,
+                                    halfHeight,
+                                    DXGI_FORMAT_R16G16B16A16_FLOAT))
+                            {
+                                add(
+                                    LandmarkKind::ReflectionBlurIntermediate,
+                                    94,
+                                    vertical->id,
+                                    input);
+
+                                const auto* horizontal =
+                                    LastWriterBeforeLocked(
+                                        input,
+                                        vertical->id);
+
+                                if (horizontal !=
+                                    nullptr)
+                                {
+                                    for (const auto color :
+                                         PassResources(
+                                             *horizontal,
+                                             'R'))
+                                    {
+                                        if (!IsTexture2DLocked(
+                                                color,
+                                                halfWidth,
+                                                halfHeight,
+                                                DXGI_FORMAT_R16G16B16A16_FLOAT))
+                                        {
+                                            continue;
+                                        }
+
+                                        add(
+                                            LandmarkKind::ReflectionColor,
+                                            92,
+                                            horizontal->id,
+                                            color);
+
+                                        const auto* colorWriter =
+                                            LastWriterBeforeLocked(
+                                                color,
+                                                horizontal->id);
+
+                                        if (colorWriter !=
+                                            nullptr)
+                                        {
+                                            for (const auto mask :
+                                                 PassResources(
+                                                     *colorWriter,
+                                                     'R'))
+                                            {
+                                                if (IsTexture2DLocked(
+                                                        mask,
+                                                        halfWidth,
+                                                        halfHeight,
+                                                        DXGI_FORMAT_R8G8B8A8_UNORM))
+                                                {
+                                                    add(
+                                                        LandmarkKind::ReflectionMask,
+                                                        90,
+                                                        colorWriter->id,
+                                                        mask);
+
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        break;
+                                    }
+                                }
+
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                for (const auto input :
+                     PassResources(pass, 'R'))
+                {
+                    if (!IsTexture2DLocked(
+                            input,
+                            screenWidth,
+                            screenHeight,
+                            DXGI_FORMAT_R8G8B8A8_UNORM) ||
+                        aoBlurred.find(input) !=
+                            aoBlurred.end() ||
+                        rawAoResources.find(input) !=
+                            rawAoResources.end() ||
+                        aoIntermediate.find(input) !=
+                            aoIntermediate.end() ||
+                        normalResources.find(input) !=
+                            normalResources.end())
+                    {
+                        continue;
+                    }
+
+                    add(
+                        LandmarkKind::ShadowMask,
+                        90,
+                        pass.id,
+                        input);
+                }
+            }
+
+            std::set<std::uintptr_t>
+                volumetricTemporal;
+
+            // Temporal screen-space resolve of the 3D volume: full-res R16
+            // output that reads a known volume, motion and main depth.
+            for (const auto& pass :
+                 g_passes)
+            {
+                if (pass.kind !=
+                    PassKind::Draw)
+                {
+                    continue;
+                }
+
+                bool readsVolume = false;
+
+                for (const auto volume :
+                     volumetricVolumes)
+                {
+                    readsVolume =
+                        readsVolume ||
+                        PassReads(pass, volume);
+                }
+
+                if (!readsVolume ||
+                    !PassReads(
+                        pass,
+                        g_knownMotion) ||
+                    !PassReads(
+                        pass,
+                        g_knownDepth))
+                {
+                    continue;
+                }
+
+                for (const auto output :
+                     PassResources(pass, 'W'))
+                {
+                    if (IsTexture2DLocked(
+                            output,
+                            screenWidth,
+                            screenHeight,
+                            DXGI_FORMAT_R16_FLOAT))
+                    {
+                        volumetricTemporal.insert(
+                            output);
+
+                        add(
+                            LandmarkKind::VolumetricTemporal,
+                            98,
+                            pass.id,
+                            output);
+                    }
+                }
+            }
+
+            std::set<std::uintptr_t>
+                volumetricBlurIntermediate;
+
+            for (const auto& pass :
+                 g_passes)
+            {
+                if (pass.kind !=
+                    PassKind::Dispatch)
+                {
+                    continue;
+                }
+
+                bool readsTemporal = false;
+
+                for (const auto source :
+                     volumetricTemporal)
+                {
+                    readsTemporal =
+                        readsTemporal ||
+                        PassReads(pass, source);
+                }
+
+                if (!readsTemporal ||
+                    !PassReads(
+                        pass,
+                        g_knownDepth))
+                {
+                    continue;
+                }
+
+                for (const auto output :
+                     PassResources(pass, 'W'))
+                {
+                    if (IsTexture2DLocked(
+                            output,
+                            screenWidth,
+                            screenHeight,
+                            DXGI_FORMAT_R16_FLOAT))
+                    {
+                        volumetricBlurIntermediate.insert(
+                            output);
+
+                        add(
+                            LandmarkKind::VolumetricBlurIntermediate,
+                            98,
+                            pass.id,
+                            output);
+                    }
+                }
+            }
+
+            for (const auto& pass :
+                 g_passes)
+            {
+                if (pass.kind !=
+                    PassKind::Dispatch ||
+                    !PassReads(
+                        pass,
+                        g_knownDepth))
+                {
+                    continue;
+                }
+
+                bool readsIntermediate = false;
+
+                for (const auto source :
+                     volumetricBlurIntermediate)
+                {
+                    readsIntermediate =
+                        readsIntermediate ||
+                        PassReads(pass, source);
+                }
+
+                if (!readsIntermediate)
+                {
+                    continue;
+                }
+
+                for (const auto output :
+                     PassResources(pass, 'W'))
+                {
+                    if (IsTexture2DLocked(
+                            output,
+                            screenWidth,
+                            screenHeight,
+                            DXGI_FORMAT_R16_FLOAT))
+                    {
+                        add(
+                            LandmarkKind::VolumetricBlurred,
+                            98,
+                            pass.id,
+                            output);
+                    }
+                }
+            }
+
+            std::sort(
+                landmarks.begin(),
+                landmarks.end(),
+                [](const Landmark& left,
+                   const Landmark& right)
+                {
+                    if (left.passId !=
+                        right.passId)
+                    {
+                        return
+                            left.passId <
+                            right.passId;
+                    }
+
+                    return
+                        static_cast<std::uint32_t>(
+                            left.kind) <
+                        static_cast<std::uint32_t>(
+                            right.kind);
+                });
+
+            return landmarks;
+        }
+
         std::uint64_t PassSignatureLocked(
             const PassRecord& pass)
         {
