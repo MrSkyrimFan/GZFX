@@ -1,0 +1,1184 @@
+GZFX ENGINEERING REPORT
+0.0.20 FOUNDATION EPOCHS + STAGE CORRECTNESS
+Date: October 23/24, 2026
+Status: MERGED / CI GREEN / PACKAGE READY / FIELD CREDIT PENDING
+
+======================================================================
+1. AUTHORITY USED
+======================================================================
+
+Engineering was performed from the complete authority folder supplied by Lance:
+
+GZFXWorkFolder12.zip
+
+Controlling current authority stack:
+
+1. GZFX23222111.zip real-Skyrim field evidence
+2. GZFX_0.0.19_FIELD_FINDINGS.txt
+3. GZFX_RESEARCH_PASS_2_FOUNDATION_CORRECTIONS.txt
+4. GZFX_FOUNDATION_BLUEPRINT_REVISION_2.txt
+5. GZFX Renderer Blueprint v1.0 where not superseded
+
+This engineering pass followed Foundation Blueprint Revision 2.
+
+Authorized scope:
+
+- correct Wave 1 Semantic Authority
+- correct Wave 2 Stage Scheduler / no-op integration
+- expand synthetic evidence to cover the corrected semantics
+- update takeover documentation
+- publish a new Skyrim test package
+
+Not authorized:
+
+- Ambient Visibility v2
+- production AO redesign
+- production GI / Indirect Radiance
+- Local Glow redesign
+- Horizon tuning
+- reflection replacement
+- water replacement
+- global TAA replacement/mapping
+- HDR redesign
+- RT2.B semantic assignment
+- RT3 R/G channel assignment
+- final production GZFX depth hierarchy
+
+Those remain later waves.
+
+======================================================================
+2. RELEASE / REPOSITORY STATE
+======================================================================
+
+Repository:
+
+MrSkyrimFan/GZFX
+
+Runtime version:
+
+0.0.20-foundation-epochs-stage-correctness
+
+Engineering branch:
+
+render/foundation-epochs-stage-correctness
+
+Pull request:
+
+#23
+Correct semantic epochs freshness and renderer stage boundaries
+
+PR #23 status:
+
+MERGED
+
+Final tested PR head:
+
+b8a1c03c47a4a78db47a6b00a8179773de332618
+
+Squash merge commit:
+
+981b4a020566238c550a01083d920d39a8f6ca39
+
+Automatic package-refresh commit:
+
+08d1159d55729137431a70b50ab900e98b7e8bb7
+
+Current main:
+
+08d1159d55729137431a70b50ab900e98b7e8bb7
+
+Open PRs after completion:
+
+NONE
+
+NO MANUAL MERGE IS REQUIRED.
+
+======================================================================
+3. CURRENT LANCE TEST PACKAGE
+======================================================================
+
+Repository path:
+
+LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Current package Git blob:
+
+03dbe0b3ec7afa4060f2431883816bc318c9ebb1
+
+Current package size:
+
+244,703 bytes
+
+Package generation log confirms the normal root DLL pair:
+
+dinput8.dll
+GZFX.dll
+
+The automatic package-refresh commit was independently compared against the
+source merge.
+
+Difference from:
+
+981b4a020566238c550a01083d920d39a8f6ca39
+
+to:
+
+08d1159d55729137431a70b50ab900e98b7e8bb7
+
+contains exactly one modified file:
+
+LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+No source file changed in the post-merge package refresh.
+
+======================================================================
+4. FINAL CI ACCEPTANCE
+======================================================================
+
+FINAL PR-HEAD RUN
+
+Workflow:
+
+Windows x64
+
+Run ID:
+
+40068660561
+
+Job ID:
+
+120797157691
+
+Head:
+
+b8a1c03c47a4a78db47a6b00a8179773de332618
+
+Result:
+
+SUCCESS
+
+Build:
+
+SUCCESS
+
+Runtime smoke test:
+
+SUCCESS
+
+Package generation:
+
+SUCCESS
+
+Artifact upload:
+
+SUCCESS
+
+
+FINAL MERGED-MAIN RUN
+
+Workflow:
+
+Windows x64
+
+Run ID:
+
+40068823647
+
+Job ID:
+
+120797641540
+
+Head:
+
+981b4a020566238c550a01083d920d39a8f6ca39
+
+Result:
+
+SUCCESS
+
+Build:
+
+SUCCESS
+
+Runtime smoke test:
+
+SUCCESS
+
+Package generation:
+
+SUCCESS
+
+Artifact upload:
+
+SUCCESS
+
+Publish Lance test ZIP on main:
+
+SUCCESS
+
+
+FINAL TEST GATE
+
+14 / 14 PASS
+0 failures
+
+Relevant final lines:
+
+10/14 ambient_visibility_flat_ao ........ Passed
+11/14 ambient_visibility_uniform_ssil ... Passed
+12/14 renderer_semantic_probe ........... Passed
+13/14 semantic_authority_foundation ..... Passed
+14/14 native_surface_temporal ........... Passed
+
+100% tests passed, 0 tests failed out of 14
+
+This is CI proof.
+
+Real-Skyrim field credit for corrected Wave 1 / Wave 2 is still pending.
+
+======================================================================
+5. WHY 0.0.20 EXISTS
+======================================================================
+
+0.0.19 successfully proved the concept of a runtime Semantic Authority and
+Stage Scheduler, but the real-Skyrim campaign exposed three architectural
+mistakes.
+
+A. AfterCameraZ was tied to first semantic promotion.
+
+Result:
+
+CameraZ was rebuilt every frame, but the scheduler did not emit a per-frame
+AfterCameraZ event once the resource identity was already known.
+
+B. The late exterior depth resource was assigned the timeless semantic:
+
+OPAQUE_FINAL_DEPTH
+
+Research Pass 2 proved this was wrong.
+
+The same physical resource has multiple content epochs.
+
+Before the per-frame MAIN_DEPTH copy it is consumed by Skyrim's exterior
+volumetric temporal pass as:
+
+VOLUMETRIC_PREVIOUS_DEPTH
+
+After MAIN_DEPTH is copied into the same physical texture it becomes:
+
+PRE_WATER_DEPTH_CURRENT
+
+C. Persistent identity was too easy to confuse with current semantic
+availability.
+
+Exterior volumetric resources could remain known in the registry after
+entering an interior even though they were not valid current-frame inputs.
+
+0.0.20 corrects all three.
+
+======================================================================
+6. SEMANTIC AUTHORITY — CORRECTED DATA MODEL
+======================================================================
+
+Primary files:
+
+include/gzfx/render/semantic_authority.hpp
+src/render/semantic_authority.cpp
+
+The semantic model is no longer:
+
+one physical resource
+=
+one permanent semantic
+
+The model is now:
+
+physical identity
++
+frame
++
+stage
++
+environment
++
+content epoch
+=
+semantic view
+
+This is the central architectural correction.
+
+======================================================================
+7. PERSISTENT RESOURCE IDENTITY
+======================================================================
+
+The authority retains persistent structural information for known resources.
+
+ResourceInfo tracks:
+
+- semantic family
+- confidence
+- canonical IUnknown identity
+- generation
+- first seen frame
+- last seen frame
+- D3D resource dimension
+- width
+- height
+- depth
+- mip count
+- array size
+- DXGI format
+- bind flags
+
+Persistent identity is useful for:
+
+- structural reacquisition
+- diagnostics
+- continuity
+- recognizing a resource across frames
+
+Persistent identity does NOT imply that a production effect may consume that
+resource in the current frame.
+
+======================================================================
+8. CURRENT-FRAME AVAILABILITY
+======================================================================
+
+0.0.20 adds AvailabilityInfo.
+
+It tracks:
+
+- observedThisFrame
+- producedThisFrame
+- consumedThisFrame
+- currentFrameAvailable
+- previousFrameAvailable
+- frame
+- lastObservedFrame
+- lastProducedFrame
+- lastConsumedFrame
+- contentEpoch
+- epochKind
+- environmentScope
+- validFromStage
+- validUntilStage
+
+At frame transition:
+
+current availability is reset
+
+while:
+
+persistent resource identity is retained.
+
+This directly fixes the stale exterior-resource problem found in 0.0.19.
+
+======================================================================
+9. QUERY MODES
+======================================================================
+
+The authority now defines explicit semantic query intent.
+
+Query modes:
+
+CurrentFrame
+PreviousFrameHistory
+PersistentIdentity
+DiagnosticAnyKnown
+
+The new public query contract is stage-aware:
+
+QuerySemantic(
+    semantic,
+    mode,
+    frame,
+    atStage,
+    outView
+)
+
+CurrentFrame lookups fail closed unless:
+
+- physical identity exists
+- the semantic is valid for the requested frame
+- currentFrameAvailable is true
+- the requested stage lies inside the validity window
+- environment scope is compatible when environment is known
+
+PreviousFrameHistory uses a separate availability contract.
+
+This prevents a stale resource from being accidentally treated as a current
+rendering input merely because its pointer still exists in the session
+registry.
+
+======================================================================
+10. CONTENT EPOCHS
+======================================================================
+
+0.0.20 introduces explicit content-epoch modeling.
+
+ContentEpochKind:
+
+Unknown
+CurrentFrame
+PreviousFrameHistory
+PreWaterCurrent
+
+A physical resource can change semantic meaning without changing its COM
+identity.
+
+This is required by the real Skyrim depth behavior discovered in Research
+Pass 2.
+
+======================================================================
+11. RETIRED SEMANTIC: OPAQUE_FINAL_DEPTH
+======================================================================
+
+The static semantic:
+
+OPAQUE_FINAL_DEPTH
+
+is removed.
+
+It is not emitted by the corrected authority.
+
+It is rejected by the corrected synthetic harness.
+
+It is no longer part of the production architecture.
+
+======================================================================
+12. CORRECTED DEPTH SEMANTICS
+======================================================================
+
+Current corrected semantic vocabulary includes:
+
+MAIN_DEPTH_CURRENT
+
+live current Skyrim main depth.
+
+
+DEPTH_EARLY_COPY
+
+early depth publication used by the stock CameraZ path.
+
+Strong public match:
+kMAIN_COPY
+
+
+STOCK_CAMERAZ
+
+stock hierarchical R32_FLOAT screen-space depth.
+
+Generated from the early depth path.
+
+
+VOLUMETRIC_PREVIOUS_DEPTH
+
+the exterior temporal previous-depth semantic consumed before the late copy.
+
+This is a PreviousFrameHistory semantic.
+
+
+PRE_WATER_DEPTH_CURRENT
+
+the semantic exposed after MAIN_DEPTH is copied into the same physical
+resource.
+
+Very strong public engine-target match:
+kPOST_ZPREPASS_COPY
+
+The physical resource identity may be identical to VOLUMETRIC_PREVIOUS_DEPTH.
+
+The content epoch is different.
+
+======================================================================
+13. VOLUMETRIC APPLY STRUCTURAL RECOGNITION
+======================================================================
+
+0.0.20 recognizes the field/research-proven volumetric temporal apply
+structure rather than guessing from one texture.
+
+The recognition requires a graphics pass with:
+
+t0:
+current MAIN_DEPTH
+
+t2:
+large 3D R16_FLOAT volumetric density resource
+
+t3:
+1D R32_FLOAT repartition lookup
+
+t5:
+native motion vectors
+
+t6:
+different full-resolution depth-shaped resource
+
+output:
+full-resolution R16_FLOAT
+
+This matches the publicly reconstructed Skyrim:
+
+ISApplyVolumetricLighting
+
+input topology.
+
+The t6 resource is marked:
+
+VOLUMETRIC_PREVIOUS_DEPTH
+
+with PreviousFrameHistory availability.
+
+======================================================================
+14. DEPTH CONTENT-EPOCH TRANSITION
+======================================================================
+
+After the volumetric temporal apply completes, when the engine performs:
+
+MAIN_DEPTH
+->
+the same physical resource that was just consumed as
+VOLUMETRIC_PREVIOUS_DEPTH
+
+the authority transitions the semantic view.
+
+From:
+
+VOLUMETRIC_PREVIOUS_DEPTH
+
+To:
+
+PRE_WATER_DEPTH_CURRENT
+
+Event:
+
+MAIN_DEPTH_COPY
+
+A content epoch transition is recorded.
+
+The old previous-history availability is closed.
+
+The new current pre-water availability becomes active.
+
+This implements the most important new semantic rule:
+
+RESOURCE IDENTITY != RESOURCE CONTENT MEANING.
+
+======================================================================
+15. STAGE SCHEDULER — CORRECTED VOCABULARY
+======================================================================
+
+Primary files:
+
+include/gzfx/render/stage_scheduler.hpp
+src/render/stage_scheduler.cpp
+
+Corrected stage vocabulary includes:
+
+AfterShadowProduction
+AfterDepthPrepass
+AfterOpaqueWorldMRT
+AfterCameraZ
+AfterStockAO
+BeforeAmbientScreenSpaceComposite
+AtAmbientScreenSpaceComposite
+AfterAmbientScreenSpaceComposite
+BeforeVolumetricApply
+AfterVolumetricApply
+PublishPreWaterDepth
+WaterDomain
+BeforeGlobalTAA
+AfterGlobalTAA
+HDRReduction
+BeforeTonemap
+PostTonemapPreUi
+UiPresent
+
+Not every defined future domain is signaled today.
+
+Unresolved stages remain vocabulary only until evidence exists.
+
+======================================================================
+16. REMOVED / RETIRED STAGE NAMES
+======================================================================
+
+The following misleading 0.0.19 stage is removed:
+
+AfterOpaqueGeometryFinalDepth
+
+Reason:
+
+the observed copy was not a universal finished-opaque boundary.
+
+
+The broad names:
+
+BeforeIndirectLightingComposite
+AtLightingComposite
+AfterLightingComposite
+
+are retired for the observed stage.
+
+Research showed the actual field signature is a very strong match to the
+stock SAO / Ambient Screen-Space Composite family.
+
+Correct names:
+
+BeforeAmbientScreenSpaceComposite
+AtAmbientScreenSpaceComposite
+AfterAmbientScreenSpaceComposite
+
+======================================================================
+17. AFTER_OPAQUE_WORLD_MRT
+======================================================================
+
+New structural boundary:
+
+AfterOpaqueWorldMRT
+
+Purpose:
+
+identify the transition from the known four-target opaque world MRT into the
+stock CameraZ producer.
+
+The authority does not use a fixed draw ordinal.
+
+The state machine requires:
+
+- main four-target MRT has been observed this frame
+- first recognized CameraZ producer begins
+- AfterOpaqueWorldMRT has not already fired this frame
+
+Then it signals the boundary once.
+
+This is the future candidate boundary for building a GZFX-owned post-opaque
+depth hierarchy in Wave 3.
+
+0.0.20 does not build that hierarchy yet.
+
+======================================================================
+18. AFTER_CAMERAZ — FIXED PER FRAME
+======================================================================
+
+0.0.19 failure:
+
+CameraZ identity was discovered correctly, but AfterCameraZ was tied to
+semantic promotion.
+
+Once the resource identity was known, later frames had no promotion and no
+stage event.
+
+0.0.20 separates:
+
+resource discovery
+
+from:
+
+hierarchy completion this frame.
+
+The authority now tracks:
+
+- current CameraZ candidate identity
+- current frame mip-write mask
+- required mip count derived from descriptor
+- whether completion has already been signaled this frame
+
+When required mip coverage is complete:
+
+STOCK_CAMERAZ is marked current for the frame
+
+and:
+
+AfterCameraZ
+
+fires exactly once for that applicable frame.
+
+This works independently of whether the resource was first discovered that
+frame or hundreds of frames earlier.
+
+======================================================================
+19. AFTER_STOCK_AO
+======================================================================
+
+The existing temporal RawAO + two-pass filtering path remains recognized.
+
+The final AO filter output becomes:
+
+SAO_FILTERED
+
+and:
+
+AfterStockAO
+
+fires after the two-pass filter completes.
+
+This path remains cross-environment.
+
+======================================================================
+20. AMBIENT SCREEN-SPACE COMPOSITE
+======================================================================
+
+The stage previously called generic LightingComposite is now modeled as:
+
+Ambient Screen-Space Composite
+
+Recognition still requires the field-proven structural relationship:
+
+writes:
+MAIN_HDR
+
+reads:
+RAW_INDIRECT
++
+SAO_FILTERED
+
+Before execution:
+
+BeforeAmbientScreenSpaceComposite
+AtAmbientScreenSpaceComposite
+
+After execution:
+
+AfterAmbientScreenSpaceComposite
+
+The corrected names match the evidence more honestly and avoid pretending the
+pass is the generic Skyrim ISLightingComposite stage.
+
+======================================================================
+21. VOLUMETRIC APPLY STAGES
+======================================================================
+
+When the corrected volumetric temporal pass is recognized:
+
+BeforeVolumetricApply
+
+fires before its real D3D draw.
+
+After its real D3D draw:
+
+AfterVolumetricApply
+
+fires.
+
+The subsequent current-depth publication into the history texture emits:
+
+PublishPreWaterDepth
+
+after the CopyResource has executed.
+
+This makes the temporal-history use and content-epoch mutation visible as
+separate renderer events.
+
+======================================================================
+22. ENVIRONMENT-SCOPED SEMANTICS
+======================================================================
+
+Exterior-specific semantics include:
+
+VOLUMETRIC_DENSITY_A
+VOLUMETRIC_DENSITY_B
+VOLUMETRIC_PREVIOUS_DEPTH
+PRE_WATER_DEPTH_CURRENT
+
+They are marked with Exterior environment scope.
+
+Persistent identities may remain in the session registry after moving
+indoors.
+
+CurrentFrame queries do not automatically remain valid.
+
+Per-frame availability is reset.
+
+This is exactly the distinction required by the 0.0.19 field findings.
+
+======================================================================
+23. REVISED DIAGNOSTIC OUTPUT
+======================================================================
+
+The semantic authority report now separates scopes.
+
+New sections:
+
+[session_identity_registry]
+
+Persistent known resource identities.
+
+
+[current_frame_semantic_views]
+
+Per-semantic current availability, frame, epoch, environment scope, stage
+validity, produced/consumed state.
+
+
+[capture_local_observations]
+
+Strictly capture-window-bounded semantic observations.
+
+
+[capture_local_promotions]
+
+Strictly capture-window-bounded new identity promotions.
+
+
+[content_epoch_transitions]
+
+Explicit same-resource semantic changes, including:
+
+VOLUMETRIC_PREVIOUS_DEPTH
+->
+PRE_WATER_DEPTH_CURRENT
+
+
+The scheduler remains:
+
+stage_schedule*.csv
+
+This directly fixes the ambiguity where session registry state could be
+mistaken for capture-local/current-frame state.
+
+======================================================================
+24. SYNTHETIC HARNESS EXPANSION
+======================================================================
+
+Primary file:
+
+tests/semantic_authority_harness.cpp
+
+The corrected WARP harness now constructs:
+
+- Skyrim-like four-target main MRT
+- R24G8 main depth
+- early depth copy
+- multilevel CameraZ
+- temporal RawAO ping-pong
+- AO filter temp
+- final AO
+- full-resolution raw indirect
+- Ambient Screen-Space Composite
+- 3D R16 volumetric density
+- 1D R32 repartition lookup
+- motion
+- previous full-resolution volumetric result
+- current full-resolution volumetric result
+- depth-history resource
+- exact synthetic volumetric t0..t6 topology
+- MAIN_DEPTH copy into the same previous-depth resource
+- later synthetic frames with the exterior volumetric path omitted to model
+  interior stale-identity behavior
+
+======================================================================
+25. HARNESS ACCEPTANCE REQUIREMENTS
+======================================================================
+
+The harness requires:
+
+MAIN_HDR
+MAIN_DEPTH_CURRENT
+MOTION
+NORMAL_MASK_CURRENT
+AUXILIARY_RT3
+DEPTH_EARLY_COPY
+STOCK_CAMERAZ
+SAO_RAWAO_CURRENT
+SAO_FILTERED
+RAW_INDIRECT
+VOLUMETRIC_DENSITY_A
+VOLUMETRIC_PREVIOUS_DEPTH
+PRE_WATER_DEPTH_CURRENT
+
+It explicitly rejects:
+
+OPAQUE_FINAL_DEPTH
+
+It requires repeated:
+
+after_opaque_world_mrt
+after_cameraz
+after_stock_ao
+before_ambient_screen_space_composite
+at_ambient_screen_space_composite
+after_ambient_screen_space_composite
+
+It requires:
+
+before_volumetric_apply
+after_volumetric_apply
+publish_pre_water_depth
+
+It rejects the retired stage names.
+
+It requires the epoch transition:
+
+VOLUMETRIC_PREVIOUS_DEPTH
+->
+PRE_WATER_DEPTH_CURRENT
+
+with event:
+
+MAIN_DEPTH_COPY
+
+It requires that after the synthetic interior transition:
+
+persistent exterior identities can remain known
+
+but:
+
+current availability is false.
+
+It also verifies that capture-local semantic observations stay inside the
+declared capture frame interval.
+
+======================================================================
+26. D3D11 STATE / HAZARD BEHAVIOR
+======================================================================
+
+The 0.0.19 D3D11 read/output hazard mirroring remains intact.
+
+When a resource becomes an output, stale matching SRV state is removed from
+the semantic observer.
+
+When an SRV conflicts with a current output, the authority does not report it
+as a live read.
+
+This prevents false producer/consumer edges caused by D3D11's automatic
+hazard unbinding behavior.
+
+======================================================================
+27. RESIZE / SCHEDULER SUBSCRIBER BEHAVIOR
+======================================================================
+
+Resize still invalidates semantic renderer state.
+
+The previously fixed scheduler behavior remains:
+
+registered stage subscribers are NOT erased merely because ResizeBuffers
+invalidated renderer resources.
+
+Callback removal is separate.
+
+This preserves the intended future stage-registration architecture.
+
+======================================================================
+28. README / TAKEOVER UPDATE
+======================================================================
+
+README now identifies:
+
+0.0.20-foundation-epochs-stage-correctness
+
+as the active frontier.
+
+It records:
+
+- GZFX23222111.zip as the latest 0.0.19 field gate evidence
+- the AfterCameraZ discovery-vs-completion defect
+- the incorrect OPAQUE_FINAL_DEPTH model
+- the persistent-identity-vs-current-availability defect
+- Research Pass 2's content-epoch resolution
+- Blueprint Revision 2 as controlling authority
+- corrected stage vocabulary
+- current evidence-output sections
+- production AO/GI remains frozen
+
+This prevents a future agent from resurrecting the 0.0.19 assumptions.
+
+======================================================================
+29. WHAT WAS INTENTIONALLY NOT IMPLEMENTED
+======================================================================
+
+No new AO shader.
+
+No new GI shader.
+
+No GZFX-owned post-opaque depth hierarchy yet.
+
+No artistic tuning.
+
+No setting-range redesign.
+
+No old Horizon repair.
+No old bounce repair.
+
+No Local Glow repair.
+
+No reflection replacement.
+
+No water integration.
+
+No global TAA mapping.
+
+No HDR changes.
+
+No RT2.B semantic guess.
+
+No RT3 semantic guess.
+
+No kPOST_WATER_COPY mapping.
+
+The pass stayed inside the approved Foundation Blueprint Revision 2 scope.
+
+======================================================================
+30. CURRENT PROJECT FRONTIER
+======================================================================
+
+Wave 1 corrected implementation:
+
+Semantic Authority
+- persistent identity
+- availability
+- content epochs
+- stage validity
+- environment validity
+- corrected depth semantics
+- revised evidence
+
+CODE:
+COMPLETE
+
+CI:
+PASS
+
+REAL-SKYRIM FIELD CREDIT:
+PENDING
+
+
+Wave 2 corrected implementation:
+
+Stage Scheduler
+- AfterOpaqueWorldMRT
+- per-frame AfterCameraZ
+- AfterStockAO
+- Ambient Screen-Space Composite
+- Volumetric Apply
+- PublishPreWaterDepth
+
+CODE:
+COMPLETE
+
+CI:
+PASS
+
+REAL-SKYRIM FIELD CREDIT:
+PENDING
+
+
+Wave 3:
+
+Native Input Broker + Temporal Core
+
+NOT YET AUTHORIZED TO START.
+
+The corrected Wave 1/2 foundation must pass real Skyrim first.
+
+======================================================================
+31. NEXT FIELD REVIEW MUST PROVE
+======================================================================
+
+The next real-Skyrim evidence review should verify:
+
+- AfterOpaqueWorldMRT fires every applicable frame
+- AfterCameraZ fires every applicable frame
+- AfterStockAO remains stable
+- Ambient Screen-Space Composite boundaries remain stable
+
+Common ordering:
+
+AfterDepthPrepass
+<
+AfterOpaqueWorldMRT
+<
+AfterCameraZ
+<
+AfterStockAO
+<
+Ambient Screen-Space Composite
+
+Exterior-only ordering:
+
+BeforeVolumetricApply
+<
+AfterVolumetricApply
+<
+PublishPreWaterDepth
+
+The field data should also prove:
+
+- VOLUMETRIC_PREVIOUS_DEPTH is a previous-history semantic before copy
+- the same physical resource becomes PRE_WATER_DEPTH_CURRENT after copy
+- interiors do not expose current exterior-volumetric semantics
+- persistent exterior identities can remain diagnostically known without
+  becoming CurrentFrame-available
+- OPAQUE_FINAL_DEPTH does not reappear
+- no device instability / crash / obvious always-on regression
+
+======================================================================
+32. FINAL ENGINEERING STATUS
+======================================================================
+
+PR:
+
+#23
+MERGED
+
+Final tested PR head:
+
+b8a1c03c47a4a78db47a6b00a8179773de332618
+
+Source merge:
+
+981b4a020566238c550a01083d920d39a8f6ca39
+
+Current main:
+
+08d1159d55729137431a70b50ab900e98b7e8bb7
+
+Current main package blob:
+
+03dbe0b3ec7afa4060f2431883816bc318c9ebb1
+
+Current package size:
+
+244,703 bytes
+
+Final PR CI:
+
+40068660561
+job 120797157691
+SUCCESS
+
+Merged-main CI:
+
+40068823647
+job 120797641540
+SUCCESS
+
+Tests:
+
+14/14 PASS
+0 failures
+
+Package publication:
+
+SUCCESS
+
+Post-merge package-only custody check:
+
+PASS
+
+Open PRs:
+
+NONE
+
+Manual merge:
+
+NONE
+
+0.0.20 corrected semantic foundation is now CODE-COMPLETE and CI-PROVEN.
+
+It is NOT yet FIELD-ACCEPTED.
+
+Next action:
+
+real-Skyrim corrected-foundation evidence campaign.
+
+END OF ENGINEERING REPORT

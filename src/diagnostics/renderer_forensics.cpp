@@ -3,6 +3,7 @@
 #include "gzfx/diagnostics/semantic_probe.hpp"
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/render/scene_effects.hpp"
+#include "gzfx/render/renderer_execution_service.hpp"
 #include "gzfx/render/semantic_authority.hpp"
 #include "gzfx/render/visible_pass.hpp"
 
@@ -2148,7 +2149,22 @@ namespace gzfx::diagnostics
             ID3D11CommandList* commandList,
             BOOL restoreContextState)
         {
-            if (c == g_primaryContext)
+            gzfx::render::execution::OwnedPass ownedPass =
+                gzfx::render::execution::OwnedPass::Unknown;
+            std::uint64_t ownedFrame = 0;
+
+            const bool gzfxOwned =
+                c == g_primaryContext &&
+                gzfx::render::execution::QueryOwnedCommandList(
+                    commandList,
+                    &ownedPass,
+                    &ownedFrame);
+
+            (void)ownedPass;
+            (void)ownedFrame;
+
+            if (c == g_primaryContext &&
+                !gzfxOwned)
             {
                 pipeline_cartography::ExecuteCommandList(
                     g_frame,
@@ -2595,6 +2611,11 @@ namespace gzfx::diagnostics
             g_primaryDevice = device;
             g_primaryContext = context;
             InstallContextHooks(context);
+
+            gzfx::render::execution::AttachPrimary(
+                g_primarySwap,
+                g_primaryDevice,
+                g_primaryContext);
 
             WriteRendererSummary();
         }

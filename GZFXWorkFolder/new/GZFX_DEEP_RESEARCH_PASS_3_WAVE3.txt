@@ -1,0 +1,2029 @@
+GZFX DEEP RESEARCH PASS 3
+Wave 3 Native Input Broker + Temporal Core + Post-Opaque Depth Hierarchy
+
+Research date: October 24, 2026
+Status: COMPLETE
+Repository modification during research: NONE
+
+Primary GZFX authority:
+- GZFX 0.0.20 field evidence from GZFX44rffredas.zip
+- GZFX_0.0.20_FIELD_FINDINGS_FOUNDATION_CLOSED.txt
+- GZFX_FOUNDATION_BLUEPRINT_REVISION_2.txt
+- current GZFX main source at the beginning of this research
+
+Public research basis:
+- current Community Shaders public source / reconstructed Skyrim shaders
+- CommonLibSSE-NG public renderer structures
+- Intel XeGTAO reference implementation and documentation
+- Microsoft Direct3D 11 documentation
+- AMD FidelityFX FSR temporal/upscaling documentation
+- NVIDIA NRD temporal denoising guidance
+
+REPOSITORY:
+UNTOUCHED
+
+======================================================================
+1. EXECUTIVE CONCLUSION
+======================================================================
+
+Wave 3 can now be designed and implemented without another broad renderer
+cartography pass.
+
+The research resolves the immediate engineering questions needed for:
+
+- a production Native Semantic Broker;
+- a GZFX-owned post-opaque depth hierarchy;
+- exact use of Skyrim native motion vectors;
+- native normal decoding;
+- temporal history management;
+- disocclusion / rejection logic;
+- dynamic-resolution handling;
+- camera/history invalidation;
+- D3D11 integration at the proven AfterOpaqueWorldMRT boundary;
+- state-safe execution inside Skyrim's renderer.
+
+The recommended implementation direction is:
+
+1. Use the field-closed Semantic Authority as the production source of truth.
+
+2. Add a small Renderer Execution Service that exposes the live D3D11 device
+   and immediate context to renderer modules without making production code
+   depend on diagnostics internals.
+
+3. At AfterOpaqueWorldMRT, build a GZFX-owned R32_FLOAT view-space depth
+   hierarchy from MAIN_DEPTH_CURRENT.
+
+4. Consume native Skyrim motion exactly as a normalized previous-UV delta:
+
+   previousUV = currentUV + motion.xy
+
+5. Decode native normal R/G using the public Skyrim normal decode already
+   corroborated by GZFX field evidence.
+
+6. Give GZFX its own temporal history manager with explicit generation,
+   validity, frame continuity, resize, environment and camera-cut rules.
+
+7. Record GZFX compute work on a dedicated deferred D3D11 context and execute
+   the resulting command list on the immediate context at the scheduler
+   boundary with state restoration enabled.
+
+8. Embed aggressive targeted proof inside the Wave 3 build:
+   depth comparison, motion reprojection, history validity, camera-cut
+   diagnostics, GPU timers, and stage-order evidence.
+
+This is the point where implementation should lead again.
+
+======================================================================
+2. WHAT WAVE 3 ACTUALLY NEEDS
+======================================================================
+
+Wave 3 does NOT need to solve the entire remaining Skyrim renderer.
+
+It needs a trustworthy pre-lighting geometry/temporal foundation.
+
+Required production inputs:
+
+- MAIN_DEPTH_CURRENT
+- MAIN_HDR where needed for diagnostics/future radiance
+- MOTION
+- NORMAL_MASK_CURRENT R/G
+- 720-byte native camera buffer
+- AfterOpaqueWorldMRT stage
+- frame/environment/generation validity
+
+Required GZFX-owned outputs:
+
+- GZFXSceneDepthHierarchy
+- current linear/view-space depth
+- previous geometry history
+- history confidence / accumulation state
+- temporal reprojection utilities
+- disocclusion utilities
+
+Remaining unrelated unknowns such as water history and exact global TAA
+placement must not block this work.
+
+======================================================================
+3. EXACT NATIVE SKYRIM MOTION VECTOR CONVENTION
+======================================================================
+
+This is no longer provisional.
+
+Community Shaders' public reconstructed motion generation uses the current
+and previous UNJITTERED view-projection matrices.
+
+The operation is mathematically equivalent to:
+
+currentUV =
+    currentNDC.xy * (0.5, -0.5) + 0.5
+
+previousUV =
+    previousNDC.xy * (0.5, -0.5) + 0.5
+
+nativeMotion =
+    previousUV - currentUV
+
+Therefore:
+
+PREVIOUS UV = CURRENT UV + NATIVE MOTION
+
+
+This exact sign convention is independently confirmed by the publicly
+reconstructed Skyrim volumetric temporal pass, which samples native motion
+and adds it to the current texture coordinate to obtain the previous-frame
+coordinate.
+
+RESEARCH VERDICT:
+
+Motion sign:
+LOCKED
+
+Motion coordinate space:
+NORMALIZED SCREEN UV
+
+Motion unit:
+NOT PIXELS
+
+Native motion already represents:
+previous - current
+
+No negation should be applied by GZFX temporal reprojection.
+
+======================================================================
+4. MOTION VECTOR X/Y ORIENTATION
+======================================================================
+
+The native generation converts clip/NDC coordinates into texture UV space.
+
+NDC X:
+standard horizontal direction
+
+NDC Y:
+flipped into texture-space Y
+
+That flip is already encoded in the native vector generation.
+
+GZFX should therefore treat the sampled R16G16 motion value directly as a
+texture-UV displacement.
+
+Do not manually flip Y again.
+
+Correct basic use:
+
+prevUV = uv + motion.xy
+
+Then perform bounds and history validity tests.
+
+======================================================================
+5. MOTION VECTOR JITTER RELATIONSHIP
+======================================================================
+
+The public motion generator uses:
+
+CameraViewProjUnjittered
+CameraPreviousViewProjUnjittered
+
+Therefore native motion is based on unjittered geometry projection.
+
+This is important.
+
+GZFX should not try to "remove TAA jitter" from native motion.
+
+Temporal upscalers pass jitter as separate metadata precisely because motion
+and jitter are separate concerns.
+
+RESEARCH RULE:
+
+Native GZFX history reprojection:
+use native motion directly.
+
+Do not:
+- negate it;
+- scale it to pixels for shader history sampling;
+- add/subtract TAA jitter to the vector itself.
+
+Only convert to pixel magnitude when a diagnostic or external API explicitly
+needs pixel-space motion.
+
+======================================================================
+6. MOTION VECTOR SCALING FOR EXTERNAL TEMPORAL APIS
+======================================================================
+
+Community Shaders' FidelityFX integration passes the Skyrim motion texture to
+FSR and provides:
+
+motionVectorScale =
+render width, render height
+
+This is consistent with:
+
+native vector = normalized UV displacement
+
+external API = wants motion scaling relative to render dimensions
+
+
+For GZFX shaders:
+
+sample and use normalized motion directly.
+
+For diagnostics:
+
+motionPixels =
+motionUV * activeRenderSize
+
+This distinction should be explicit in the Wave 3 API.
+
+======================================================================
+7. DYNAMIC RESOLUTION MOTION / HISTORY MAPPING
+======================================================================
+
+The field-proven 720-byte camera buffer contains both:
+
+current dynamic-resolution ratios
+
+and:
+
+previous dynamic-resolution ratios.
+
+
+Public Skyrim framebuffer logic uses separate mappings.
+
+Current logical normalized UV:
+
+currentDRUV =
+currentRatio * currentUV
+
+Previous logical normalized UV:
+
+previousDRUV =
+previousRatio * previousUV
+
+
+Correct GZFX temporal flow:
+
+1. currentUV is logical normalized screen position.
+
+2. Convert currentUV with CURRENT dynamic-resolution ratio to sample current
+   depth / normal / motion.
+
+3. Read native motion.
+
+4. previousUV = currentUV + motion.
+
+5. Bounds-test previousUV in logical normalized space.
+
+6. Convert previousUV using PREVIOUS dynamic-resolution ratio.
+
+7. Sample previous history at previousDRUV or the appropriate history texture
+   coordinate.
+
+Do not use current DR scaling for the previous frame.
+
+======================================================================
+8. WAVE 3 HISTORY ALLOCATION AND DYNAMIC RESOLUTION
+======================================================================
+
+Recommended first architecture:
+
+Allocate history resources at maximum/current display resource dimensions.
+
+Track the active current and previous dynamic-resolution regions using the
+native camera buffer.
+
+Advantages:
+
+- avoids resource churn when Skyrim changes dynamic-resolution ratio;
+- preserves history texture identity;
+- matches the native renderer model;
+- allows current/previous ratios to map logical UVs correctly;
+- makes field diagnostics easier.
+
+Invalidate on:
+
+- actual resource resize;
+- device recreation;
+- impossible/invalid ratios;
+- severe discontinuity until proven safe.
+
+Do not reallocate histories for ordinary small DR ratio changes.
+
+======================================================================
+9. NATIVE NORMAL DECODE
+======================================================================
+
+The native normal target R/G is already field-proven.
+
+Public Skyrim renderer work uses an octahedral-style two-channel normal
+encoding.
+
+The public decode is conceptually:
+
+1. map RG from [0,1] to [-1,1];
+2. reconstruct Z from 1 - |x| - |y|;
+3. fold lower hemisphere;
+4. normalize;
+5. apply the renderer's direction convention.
+
+GZFX should implement the same decode in one shared HLSL helper.
+
+The decoded native normal is treated as view-space orientation in the public
+screen-space GI path.
+
+For temporal geometry history:
+
+decode current normal in view space
+
+then transform to world space with:
+
+CameraViewInverse
+
+before storing/comparing across frames.
+
+This avoids comparing normals expressed in different camera coordinate
+systems.
+
+======================================================================
+10. RT2 B/A ARE STILL NOT REQUIRED FOR WAVE 3
+======================================================================
+
+The normal resource's B/A channels remain outside Wave 3's required contract.
+
+Known:
+
+R/G = usable normal field
+
+A = strong SSR-related public evidence
+
+B = path-dependent/unresolved
+
+Wave 3 must use only R/G for geometry normal.
+
+Do not let unresolved B/A semantics delay temporal-core work.
+
+======================================================================
+11. WHY STOCK CAMERAZ SHOULD NOT BE THE PRODUCTION GZFX HIERARCHY
+======================================================================
+
+Stock CameraZ remains valuable and trusted as a stock semantic.
+
+But field/research evidence shows:
+
+- Skyrim builds stock CameraZ from the early depth-copy path;
+- public renderer work has documented that an earlier z-prepass depth can
+  omit alpha-tested geometry;
+- post-geometry screen-space systems benefit from a later/current main depth.
+
+GZFX now has a proven boundary:
+
+AfterOpaqueWorldMRT
+
+where the main opaque scene has completed and current MAIN_DEPTH can be used.
+
+Therefore:
+
+stock CameraZ =
+reference / comparison / native stock input
+
+GZFXSceneDepthHierarchy =
+production GZFX analysis depth
+
+They should coexist.
+
+======================================================================
+12. AFTEROPAQUEWORLDMRT IS THE CORRECT INSERTION POINT
+======================================================================
+
+0.0.20 field evidence proves the boundary in:
+
+54 / 54 captured frames.
+
+Current GZFX hook ordering is also favorable.
+
+The scheduler identifies AfterOpaqueWorldMRT when:
+
+- the main MRT has already been active;
+- Skyrim has transitioned into the CameraZ producer;
+- the upcoming CameraZ draw has not yet executed.
+
+At this point Skyrim has already rebound away from the main world MRT / DSV.
+
+That matters because MAIN_DEPTH_CURRENT is no longer the active DSV output.
+
+Therefore a GZFX command inserted at this boundary can create a typed depth
+SRV and sample MAIN_DEPTH_CURRENT without deliberately binding the same
+resource for simultaneous read/write.
+
+RESEARCH VERDICT:
+
+AfterOpaqueWorldMRT is the preferred Wave 3 depth-hierarchy construction
+boundary.
+
+======================================================================
+13. SOURCE MAIN DEPTH VIEW
+======================================================================
+
+Field source resource:
+
+R24G8_TYPELESS
+
+For shader sampling GZFX should use a typed SRV:
+
+R24_UNORM_X8_TYPELESS
+
+This is the standard D3D11 typeless-resource / typed-view model.
+
+Do not copy raw depth into a color texture first merely to obtain an SRV if a
+compatible SRV on the existing resource can be created and cached safely.
+
+Cache the SRV by semantic resource generation.
+
+Release/recreate when the underlying MAIN_DEPTH generation changes or on
+resize/device reset.
+
+======================================================================
+14. GZFXSCENEDEPTHHIERARCHY FORMAT
+======================================================================
+
+Recommended Wave 3 correctness format:
+
+DXGI_FORMAT_R32_FLOAT
+
+Bind flags:
+
+D3D11_BIND_SHADER_RESOURCE
+|
+D3D11_BIND_UNORDERED_ACCESS
+
+Use a full mip chain.
+
+At 2560x1440:
+
+base R32 depth:
+~14.1 MiB
+
+full mip chain:
+~18.75 MiB
+
+The difference between R32 and R16 full chains is only roughly 9.4 MiB.
+
+On the RTX 4060 Laptop 8 GB reference system this memory difference is not a
+reasonable justification for starting the production foundation at lower
+precision.
+
+RESEARCH DECISION:
+
+Wave 3 default:
+R32_FLOAT
+
+Possible later optimization:
+R16_FLOAT
+
+Only optimize to R16 after:
+- image-quality comparison;
+- temporal stability comparison;
+- measured bandwidth/GPU benefit.
+
+======================================================================
+15. WHY NOT R16 AS THE FIRST PRODUCTION FOUNDATION
+======================================================================
+
+R16_FLOAT is a legitimate performance choice.
+
+Current public SSGI implementations use it successfully.
+
+However GZFX's immediate problem is not "how do we save 9 MiB."
+
+The project has already lost time to incorrect geometry signals and unstable
+effects.
+
+The Wave 3 hierarchy is foundational infrastructure for:
+
+- AO
+- GI
+- disocclusion
+- temporal rejection
+- potentially shadows/reflections later
+
+Starting with R32 makes validation easier and reduces depth-quantization
+ambiguity.
+
+R16 becomes a controlled optimization experiment later.
+
+======================================================================
+16. DEPTH REPRESENTATION
+======================================================================
+
+The GZFX hierarchy should store positive VIEW-SPACE DEPTH, not raw nonlinear
+device Z.
+
+Reason:
+
+view-space depth makes:
+
+- radius reasoning intuitive;
+- relative-depth rejection stable;
+- hierarchy traversal meaningful;
+- temporal disocclusion thresholds easier to interpret;
+- debugging much easier.
+
+The base compute pass should convert Skyrim raw depth to view-space depth.
+
+Two viable conversion sources exist:
+
+A. native projection/near-far parameters
+
+B. CameraProjInverse from the already validated b12 camera buffer
+
+Recommended Wave 3 approach:
+
+use the validated camera/projection data already in b12.
+
+Then independently compare against stock CameraZ as a diagnostic proof.
+
+======================================================================
+17. DEPTH CONVERSION PROOF
+======================================================================
+
+Wave 3 should not silently assume the reconstructed Z sign/scale.
+
+The implementation should include a one-run diagnostic comparison:
+
+GZFX hierarchy mip0
+vs
+STOCK_CAMERAZ mip0
+
+on pixels where both depth paths represent the same geometry.
+
+Because stock CameraZ can miss some later geometry, the proof should use
+robust statistics rather than require exact equality everywhere.
+
+Recommended evidence:
+
+- median ratio/difference
+- percentile error
+- valid pixel count
+- mismatch mask preview
+- separate mismatch classification for:
+  - stock-background / GZFX-geometry
+  - both geometry but numerical mismatch
+
+The expected valuable result is:
+
+common geometry matches in scale,
+
+while post-opaque geometry may exist only in GZFX depth.
+
+That would simultaneously validate depth conversion and the reason for the new
+hierarchy.
+
+======================================================================
+18. DEPTH PYRAMID MIP COUNT
+======================================================================
+
+Use a full chain to 1x1.
+
+At 2560x1440 this naturally gives roughly the same useful hierarchy depth as
+stock CameraZ.
+
+A full chain is inexpensive because coarse tail mips contain very few pixels.
+
+The first five levels consume nearly all of the hierarchy memory anyway.
+
+Therefore there is little reason to artificially stop allocation at mip 4.
+
+Implementation may generate coarse tail mips in a second cheap dispatch.
+
+======================================================================
+19. COMPUTE GENERATION IS PREFERRED
+======================================================================
+
+Do not use D3D11 GenerateMips for GZFXSceneDepthHierarchy.
+
+Reasons:
+
+- GZFX needs raw-depth to view-depth conversion;
+- reduction behavior must be under our control;
+- the hierarchy is a geometry-analysis structure, not a generic color mipmap;
+- UAV-per-mip compute is already a proven D3D11 pattern;
+- shared-memory reduction can generate multiple mips efficiently.
+
+Recommended:
+
+BuildDepthHierarchyCS
+
+with:
+
+- one dispatch for base + first coarse mips;
+- optional second/tail dispatch for remaining levels.
+
+======================================================================
+20. THREAD GROUP / MIP CONSTRUCTION PATTERN
+======================================================================
+
+A proven public pattern uses:
+
+8x8 compute groups
+
+where each invocation handles a small base tile and group-shared memory is
+used to construct multiple mips in one dispatch.
+
+Recommended GZFX structure:
+
+Pass A:
+
+- read raw main depth
+- convert to R32 view-space depth mip 0
+- reduce mip 1
+- reduce mip 2
+- reduce mip 3
+- reduce mip 4
+
+Pass B:
+
+- reduce mip 4 onward to the tail
+
+This minimizes repeated full-screen reads and dispatch overhead.
+
+Do not over-optimize the first implementation beyond this.
+
+======================================================================
+21. DEPTH REDUCTION FILTER
+======================================================================
+
+A plain average is workable.
+
+Pure MIN/MAX are useful diagnostic/reference modes but are not generally ideal
+as the only AO/GI hierarchy reduction.
+
+Intel XeGTAO moved away from a simple minimum-depth hierarchy toward a weighted
+average based on the local depth relationship, because pure min selection can
+produce incorrect depth behavior across sloped geometry and unstable sampling.
+
+RESEARCH RECOMMENDATION:
+
+Implement at least:
+
+1. WeightedFar
+   default production candidate
+
+2. LinearAverage
+   diagnostic/reference
+
+Optional debug modes:
+
+3. Min
+
+4. Max
+
+Do not expose these as normal user settings yet.
+
+Use them as engineering diagnostics.
+
+======================================================================
+22. NATIVE SEMANTIC BROKER
+======================================================================
+
+Current GZFX has two different worlds:
+
+A. Semantic Authority
+   now field-proven and stage-aware
+
+B. older resource_intelligence LiveInputs
+   useful but originally diagnostic/heuristic
+
+Wave 3 should make Semantic Authority the production authority.
+
+The Native Semantic Broker should request:
+
+- semantic
+- frame
+- stage
+- query mode
+
+and receive a typed resource view only if the authority says it is valid.
+
+Examples:
+
+CurrentFrame MAIN_DEPTH_CURRENT @ AfterOpaqueWorldMRT
+
+CurrentFrame MOTION @ temporal stage
+
+CurrentFrame NORMAL_MASK_CURRENT @ temporal stage
+
+PersistentIdentity only for diagnostics
+
+PreviousFrameHistory only for explicit GZFX histories / native history
+semantics
+
+======================================================================
+23. BROKER MUST OWN REAL D3D OBJECT REFERENCES
+======================================================================
+
+0.0.20 Semantic Authority knows canonical identities and descriptors.
+
+Wave 3 needs actual production resources/views.
+
+Recommended extension:
+
+For each semantic generation retain a strong AddRef'd resource object.
+
+Cache compatible SRVs/views by generation.
+
+On identity replacement:
+
+- release old resource reference;
+- release cached views;
+- promote new generation;
+- recreate typed views lazily.
+
+On resize/device reset:
+
+- release all production views;
+- invalidate broker generation;
+- force reacquisition.
+
+Do not require each effect to rediscover a COM pointer from an integer identity.
+
+======================================================================
+24. BROKER RESOURCE CONTRACT
+======================================================================
+
+Recommended return object:
+
+SemanticInputView
+
+Containing:
+
+- semantic
+- frame
+- generation
+- stage
+- environment
+- content epoch
+- typed ID3D11Resource / texture reference
+- typed SRV where applicable
+- descriptor
+- availability proof
+
+The caller must never treat:
+
+identity != 0
+
+as sufficient.
+
+The broker itself should enforce current validity.
+
+======================================================================
+25. CAMERA BUFFER CONTRACT
+======================================================================
+
+The field-proven camera buffer is:
+
+720 bytes
+VS slot 12
+PS slot 12
+
+Public structure matches the field map and includes:
+
+- current view/projection
+- current unjittered view-projection
+- previous unjittered view-projection
+- inverse matrices
+- current/previous position adjustment
+- current/previous dynamic-resolution parameters
+
+Wave 3 should stop treating the camera buffer as an opaque blob.
+
+Create a versioned internal CameraFrameData parser/layout matching the
+field-proven b12 structure.
+
+Validate:
+
+- byte size
+- finite matrix values
+- projection inverse consistency
+- frame-to-frame continuity
+
+Fail closed if validation fails.
+
+======================================================================
+26. RENDERER EXECUTION SERVICE
+======================================================================
+
+Current scheduler callbacks only carry:
+
+- boundary
+- phase
+- frame
+- ordinal
+- sequence
+- reason
+
+That is enough for observation.
+
+It is not enough for production renderer work by itself.
+
+Current primary device/context ownership lives inside diagnostics
+renderer_forensics.
+
+Wave 3 should introduce a small production service:
+
+RendererExecutionService
+
+Responsibilities:
+
+- hold AddRef'd primary ID3D11Device
+- hold AddRef'd primary ID3D11DeviceContext
+- optionally primary swap chain
+- expose current device generation
+- update on primary acquisition / replacement
+- invalidate on resize/device loss where appropriate
+
+Production renderer modules should depend on this service.
+
+They should NOT reach into diagnostics globals.
+
+======================================================================
+27. SCHEDULER TO PRODUCTION EXECUTION
+======================================================================
+
+Recommended architecture:
+
+Stage Scheduler
+->
+registered production stage handler
+->
+Renderer Execution Service
+->
+Native Semantic Broker
+->
+GZFX renderer module
+
+Example:
+
+AfterOpaqueWorldMRT
+->
+DepthHierarchySystem::Execute(frame)
+
+DepthHierarchySystem asks broker for:
+
+MAIN_DEPTH_CURRENT
+camera b12
+
+records work
+
+executes at that exact stage.
+
+This turns Stage Scheduler from a mapper into GZFX's rendering backbone.
+
+======================================================================
+28. D3D11 STATE SAFETY
+======================================================================
+
+GZFX already uses a good pattern in existing rendering code:
+
+- create a deferred D3D11 context;
+- record GZFX commands there;
+- FinishCommandList(FALSE);
+- execute on immediate context with ExecuteCommandList(..., TRUE).
+
+Microsoft's D3D11 behavior for the TRUE restore flag is specifically useful
+for a renderer plug-in architecture:
+
+the immediate context's surrounding state is restored after the GZFX command
+list executes.
+
+RESEARCH RECOMMENDATION:
+
+Use a dedicated Wave 3 deferred context for:
+
+- depth hierarchy construction
+- temporal debug/probe passes
+- future AO/GI compute work
+
+Execute command list at the scheduler boundary with:
+
+RestoreContextState = TRUE
+
+Correctness first.
+
+If profiling later proves state-save/restore overhead significant, optimize
+the state strategy then.
+
+======================================================================
+29. WHY NOT DIRECTLY MUTATE THE IMMEDIATE CONTEXT FOR EVERY PASS
+======================================================================
+
+Direct immediate-context work can be faster in a tightly controlled engine.
+
+GZFX is an injected renderer participating inside another renderer.
+
+Restoring every relevant:
+
+- shader
+- SRV
+- UAV
+- CB
+- sampler
+- viewport
+- render target
+- depth state
+- raster state
+- blend state
+
+manually is fragile.
+
+The existing command-list approach gives GZFX a strong isolation boundary.
+
+It is a much better default for Wave 3 correctness.
+
+======================================================================
+30. WAVE 3 TEMPORAL HISTORY MANAGER
+======================================================================
+
+Do not let AO, GI, reflections, volumetrics and future systems each invent
+their own history lifecycle.
+
+Create one:
+
+TemporalHistoryManager
+
+It should own:
+
+- history generation
+- valid frame
+- last produced frame
+- valid environment
+- resource dimensions
+- active dynamic-resolution parameters
+- camera continuity token
+- semantic input generation
+- reset reason
+- per-domain histories
+
+Domains later can register histories with this manager.
+
+======================================================================
+31. GLOBAL HISTORY INVALIDATION RULES
+======================================================================
+
+Reset history on at least:
+
+1. no prior history / first frame
+
+2. actual texture resize
+
+3. swapchain/device generation change
+
+4. frame discontinuity:
+   currentFrame != lastFrame + 1
+
+5. world/load transition
+
+6. loading-screen completion
+
+7. world-active false -> true transition
+
+8. interior <-> exterior transition
+   initially conservative
+
+9. native semantic generation change for:
+   depth
+   motion
+   normal
+   camera
+
+10. non-finite camera data
+
+11. camera cut / teleport
+
+12. shader/resource rebuild that changes the temporal signal
+13. explicit developer reset command
+
+Dynamic-resolution ratio changes do not necessarily require complete reset if
+previous/current mapping is valid, but actual resource-size changes do.
+
+======================================================================
+32. CAMERA CUT DETECTION
+======================================================================
+
+GZFX cannot assume ordinary camera continuity.
+
+The native b12 gives enough data to detect discontinuity without SKSE.
+
+Track:
+
+- CameraPosAdjust
+- CameraPreviousPosAdjust
+- current unjittered view-projection
+- previous unjittered view-projection
+- inverse view orientation
+
+Candidate reset signals:
+
+A. matrix non-finite / singular
+
+B. translation delta exceeds a large threshold
+
+C. angular rotation delta exceeds a large threshold in one frame
+
+D. previous matrix stored in current b12 disagrees radically with GZFX's
+   prior-frame matrix
+
+E. frame gap
+
+F. environment/world transition
+
+Do not hardcode artistic thresholds in the research document.
+
+Wave 3 should log:
+
+translation delta
+rotation delta
+matrix continuity error
+
+and tune the cut thresholds from one compact field run.
+
+======================================================================
+33. PER-PIXEL REPROJECTION
+======================================================================
+
+Base algorithm:
+
+current logical UV
+
+sample current native motion
+
+previousUV =
+currentUV + motion
+
+reject if outside [0,1]
+
+map previousUV through previous DR ratio
+
+sample previous geometry/history
+
+then run disocclusion tests.
+
+Use bilinear history reprojection rather than nearest-neighbor history lookup.
+
+A four-tap bilinear gather is a good baseline.
+
+======================================================================
+34. PREVIOUS GEOMETRY HISTORY
+======================================================================
+
+Temporal rejection needs more than the current frame's depth.
+
+Wave 3 should preserve previous geometry.
+
+Recommended first representation:
+
+PreviousLinearDepth:
+R32_FLOAT
+
+PreviousWorldNormal:
+R8G8_UNORM octahedral
+
+HistoryConfidence / AccumFrames:
+R8_UNORM
+
+This is explicit and easy to debug.
+
+A packed single-resource representation can be explored later.
+
+Public SSGI work demonstrates a packed previous-geometry buffer can work, but
+GZFX should optimize only after correctness is proven.
+
+======================================================================
+35. WHY STORE WORLD NORMAL FOR HISTORY
+======================================================================
+
+Native normal is naturally decoded in the current camera/view frame.
+
+If GZFX stores raw current view-space normal then compares it one frame later,
+the camera coordinate system has changed.
+
+Better:
+
+current native RG
+->
+decode view normal
+->
+transform by current CameraViewInverse
+->
+encode/store world normal
+
+Previous history then contains a camera-independent orientation.
+
+Temporal rejection compares:
+
+current world normal
+vs
+previous world normal.
+
+======================================================================
+36. DEPTH DISOCCLUSION
+======================================================================
+
+Use more than one test.
+
+Recommended hierarchy:
+
+FAST EARLY REJECT
+
+relative linear-depth difference:
+
+abs(currentDepth - previousDepth)
+>
+currentDepth * threshold
+
+
+STRONG GEOMETRIC REJECT
+
+reconstruct current world position
+
+reconstruct previous world position using previous camera data
+
+compare world-space position delta against a depth-scaled threshold
+
+
+This layered approach avoids expensive world reconstruction for obviously
+wrong taps.
+
+======================================================================
+37. NORMAL DISOCCLUSION
+======================================================================
+
+For GZFX's quality target normal rejection should be enabled.
+
+Recommended:
+
+currentWorldNormal dot previousWorldNormal
+
+must exceed a configurable engineering threshold.
+
+Use normal confidence together with depth confidence.
+
+Do not rely on normal alone because thin geometry / temporal visibility can
+still disagree.
+
+Do not copy a public implementation's currently disabled normal check merely
+because that project disabled it for its own tradeoffs.
+
+======================================================================
+38. HISTORY NEIGHBORHOOD CLAMP
+======================================================================
+
+Before blending temporal radiance or later AO/GI signals:
+
+clamp reprojected history to a current local neighborhood range.
+
+A small cross / 3x3 neighborhood is sufficient as a baseline.
+
+This reduces:
+
+- long trails
+- bright color smearing
+- stale indirect-light leakage
+
+The current public SSGI path uses neighborhood history clamping for exactly
+this purpose.
+
+Wave 3 should build the utility even before production GI exists.
+
+======================================================================
+39. HISTORY ACCUMULATION
+======================================================================
+
+Recommended history confidence model:
+
+0 on reset
+
+increment toward a maximum when valid
+
+reduce or reset on disocclusion
+
+cap maximum confidence more aggressively under high motion
+
+Initial maximum:
+
+16 frames
+
+This is a good engineering starting point, not a permanent artistic law.
+
+The manager should expose:
+
+historyLength
+historyWeight
+reprojectionValid
+resetReason
+
+to diagnostics.
+
+======================================================================
+40. DISOCCLUSION RESPONSE
+======================================================================
+
+Two useful behaviors should be supported:
+
+HARD REJECT
+
+history weight = 0
+
+for:
+- camera cuts
+- invalid geometry
+- environment/load transitions
+
+
+SOFT DECAY
+
+reduce history confidence
+
+for:
+- marginal per-pixel mismatch
+- fast motion
+- weak history
+
+Wave 3 should distinguish global invalidation from per-pixel disocclusion.
+
+======================================================================
+41. GLOBAL TAA IS NOT A WAVE 3 BLOCKER
+======================================================================
+
+Exact stock global TAA location remains unresolved.
+
+Wave 3 does not need it.
+
+Why:
+
+- native motion itself is unjittered and already valid for pre-TAA temporal
+  reconstruction;
+- stock SAO and volumetric systems already perform temporal work using this
+  information;
+- GZFX Wave 3 operates in the pre-final-post renderer domain.
+
+Rule:
+
+GZFX temporal geometry/history infrastructure should remain before final
+global TAA.
+
+Later production composite research can map exact TAA ownership when needed.
+
+Do not stop Wave 3 to cartograph TAA.
+
+======================================================================
+42. GZFXSCENEDEPTHHIERARCHY AND STOCK CAMERAZ SHOULD BOTH BE KEPT
+======================================================================
+
+Wave 3 should expose both:
+
+StockCameraZ
+
+GZFXSceneDepthHierarchy
+
+This gives powerful diagnostics:
+
+- compare depth scale
+- compare missing geometry
+- compare mip behavior
+- detect alpha-tested/post-prepass geometry
+- compare temporal stability
+
+Do not delete stock CameraZ knowledge just because GZFX owns a better
+production hierarchy.
+
+======================================================================
+43. TARGETED DEPTH PROBES TO EMBED IN THE BUILD
+======================================================================
+
+The Wave 3 implementation should automatically produce bounded proof for:
+
+A. hierarchy construction frame/stage
+
+B. source MAIN_DEPTH generation
+
+C. camera generation
+
+D. mip count / dimensions
+
+E. GPU time
+
+F. mip0 vs stock CameraZ common-pixel statistics
+
+G. "GZFX geometry where stock CameraZ says background" count
+
+H. selected mip previews:
+   mip 0
+   mip 1
+   mip 2
+   mip 4
+   coarse tail
+
+I. active dynamic-resolution region
+
+This one probe set can answer several questions without another broad
+renderer dump.
+
+======================================================================
+44. TARGETED MOTION PROBES
+======================================================================
+
+Wave 3 should produce a compact temporal diagnostic:
+
+- current motion UV vector
+- motion magnitude in pixels
+- previousUV bounds valid percentage
+- reprojected current-to-previous depth error
+- valid history percentage
+- disocclusion percentage
+- max/mean motion magnitude
+- camera motion scalar
+
+Accessible diagnostics should include monochrome:
+
+- motion magnitude
+- reprojection-valid mask
+- disocclusion mask
+- history confidence
+
+No hue-only vector visualization should be required.
+
+======================================================================
+45. TARGETED CAMERA-CUT PROBES
+======================================================================
+
+Each captured frame should log:
+
+- camera translation delta
+- camera rotation delta
+- current/previous matrix continuity error
+- dynamic-resolution current/previous ratios
+- history reset boolean
+- reset reason
+
+This makes camera-cut threshold tuning one finite field task.
+
+======================================================================
+46. GPU TIMING
+======================================================================
+
+Wave 3 should time separately:
+
+- depth hierarchy base/early mips
+- depth hierarchy tail
+- geometry-history update
+- reprojection/disocclusion diagnostic pass
+
+Do not bundle them into one vague "temporal" timer.
+
+The user wants throughput, but performance work must target real costs.
+
+======================================================================
+47. PERFORMANCE EXPECTATION
+======================================================================
+
+Wave 3 is infrastructure, not the final AO/GI cost.
+
+At 1440p:
+
+- one R32 depth conversion/reduction pass is a straightforward bandwidth /
+  compute workload;
+- coarse mip tail is tiny;
+- history validation can run at full or reduced resolution depending future
+  consumer.
+
+Do not prematurely force half-resolution geometry infrastructure.
+
+First prove correctness and measure.
+
+Ambient Visibility / GI can choose their own operating resolution later while
+sampling the full hierarchy.
+
+======================================================================
+48. BROKER + EXECUTION + HISTORY OWNERSHIP
+======================================================================
+
+Recommended module separation:
+
+RendererExecutionService
+
+owns:
+- device
+- immediate context
+- device generation
+
+
+NativeSemanticBroker
+
+owns:
+- production typed semantic views
+- strong resource references
+- SRV cache
+- frame/stage validation
+
+
+SceneDepthHierarchy
+
+owns:
+- R32 hierarchy texture
+- per-mip UAVs
+- SRV
+- compute shaders
+- timing
+- depth diagnostics
+
+
+TemporalHistoryManager
+
+owns:
+- global continuity
+- reset reasons
+- history generations
+- domain registrations
+
+
+TemporalGeometry
+
+owns:
+- previous depth
+- previous world normal
+- confidence
+- reprojection/disocclusion utilities
+
+
+Diagnostics
+
+observes all of the above but does not own production decisions.
+
+======================================================================
+49. EXISTING RESOURCE_INTELLIGENCE ROLE
+======================================================================
+
+Do not delete the older resource_intelligence system yet.
+
+Use it as:
+
+- compatibility fallback
+- diagnostic cross-check
+- regression evidence
+
+But production Wave 3 should not ask:
+
+"Which texture scores highest as depth?"
+
+It should ask:
+
+"Give me MAIN_DEPTH_CURRENT for this frame at AfterOpaqueWorldMRT."
+
+That is the architectural upgrade the last several versions earned.
+
+======================================================================
+50. STATE CALLBACK API DIRECTION
+======================================================================
+
+Current Stage Scheduler callback signature is intentionally small.
+
+It can remain small if renderer modules acquire execution context from the
+RendererExecutionService.
+
+This is preferable to making every scheduler Event carry raw D3D pointers.
+
+Event stays semantic.
+
+Execution service stays renderer/runtime ownership.
+
+Broker stays resource ownership.
+
+This separation keeps the scheduler reusable and testable.
+
+======================================================================
+51. DEVICE / RESIZE LIFETIME
+======================================================================
+
+Wave 3 resources must be tied to a renderer device generation.
+
+On:
+
+ResizeBuffers
+
+- invalidate hierarchy dimensions;
+- release/recreate dependent textures as needed;
+- reset temporal history;
+- preserve scheduler subscriptions.
+
+On device replacement/loss:
+
+- invalidate renderer execution service;
+- release all D3D resources;
+- increment device generation;
+- reacquire before next production execution.
+
+No old semantic generation may survive into a different device generation.
+
+======================================================================
+52. FRAME FAILURE POLICY
+======================================================================
+
+Wave 3 must fail soft.
+
+If a required semantic is missing or invalid:
+
+- do not crash;
+- do not guess;
+- do not consume stale data;
+- skip the affected GZFX pass;
+- log one bounded reason;
+- invalidate dependent history if needed.
+
+Examples:
+
+missing current motion:
+skip temporal reuse, preserve spatial infrastructure
+
+missing native normal:
+Wave 3 temporal normal validation unavailable; do NOT silently promote
+depth-derived normal as equivalent production data
+
+missing camera:
+skip hierarchy/temporal pass that requires it
+
+missing MAIN_DEPTH_CURRENT:
+skip hierarchy
+
+======================================================================
+53. NO DEPTH-DERIVED NORMAL AS PRIMARY FALLBACK
+======================================================================
+
+This remains a locked lesson from prior failed AO work.
+
+Wave 3 should not rebuild a depth-derived normal pipeline as an automatic
+"production fallback."
+
+If native normal is unavailable:
+
+- fail closed for normal-dependent temporal validation;
+- optionally expose a clearly labelled diagnostic fallback;
+- do not hide the missing semantic.
+
+======================================================================
+54. PROPOSED WAVE 3 INTERNAL GATES
+======================================================================
+
+GATE A
+Renderer Execution Service
+
+Prove:
+- correct device/context
+- generation reset
+- no state corruption
+
+
+GATE B
+Native Semantic Broker
+
+Prove:
+- current-frame typed depth/motion/normal/camera
+- stale queries fail
+- generation replacement works
+
+
+GATE C
+GZFXSceneDepthHierarchy
+
+Prove:
+- executes at AfterOpaqueWorldMRT
+- R32 view depth
+- correct mip chain
+- stock CameraZ common-pixel agreement
+- additional post-opaque geometry visible
+
+
+GATE D
+Motion Convention
+
+Prove:
+- previousUV = currentUV + motion
+- stationary camera near-zero motion
+- pan/strafe reprojection moves history correctly
+
+
+GATE E
+Temporal Geometry
+
+Prove:
+- previous depth
+- previous world normal
+- bilinear reprojection
+- disocclusion validity
+
+
+GATE F
+History Lifecycle
+
+Prove reset on:
+- load
+- resize
+- frame gap
+- environment transition
+- deliberate camera cut
+
+
+GATE G
+GPU / State Safety
+
+Prove:
+- timers
+- zero D3D hazards
+- surrounding Skyrim state intact
+- no command-list leakage
+
+These should be implemented in one coherent engineering wave, not seven
+separate releases.
+
+======================================================================
+55. NEXT FIELD TEST SHOULD BE COMPACT
+======================================================================
+
+If the Wave 3 implementation is built as recommended, field validation should
+not need another 18-static-capture cartography campaign.
+
+A more useful test is movement/transition focused.
+
+Suggested future field categories:
+
+1. exterior stationary
+
+2. slow camera pan
+
+3. forward/back movement
+
+4. lateral strafe
+
+5. fast camera turn
+
+6. interior stationary/motion
+
+7. exterior -> interior transition
+
+8. loading/teleport event
+
+9. resize/resolution event only if practical
+
+The exact test instructions belong in chat after implementation, not in the
+engineering report.
+
+======================================================================
+56. WAVE 3 DOES NOT NEED AO OUTPUT YET
+======================================================================
+
+This is important for throughput.
+
+Wave 3 should NOT spend time making a pretty AO effect.
+
+Its visible/debug outputs should prove:
+
+- depth hierarchy
+- motion
+- reprojection
+- disocclusion
+- history confidence
+
+Once these are stable:
+
+Wave 4 can implement Ambient Visibility v2 on top of them.
+
+This prevents mixing infrastructure bugs with AO tuning again.
+
+======================================================================
+57. HOW THIS GETS GZFX MOVING FASTER
+======================================================================
+
+The old loop was effectively:
+
+unknown renderer
+->
+probe
+->
+name resource
+->
+new unknown
+->
+probe again
+
+That was necessary until the semantic spine was closed.
+
+The new loop should be:
+
+implement production subsystem
+->
+embedded targeted evidence
+->
+one field gate
+->
+next production subsystem
+
+Unknown renderer questions are now investigated only when they block the
+subsystem being built.
+
+This is the correct acceleration strategy.
+
+======================================================================
+58. SPECIFIC RESEARCH DECISIONS FOR THE NEXT BLUEPRINT
+======================================================================
+
+The next blueprint should lock:
+
+DEPTH SOURCE
+
+MAIN_DEPTH_CURRENT
+
+
+DEPTH BUILD STAGE
+
+AfterOpaqueWorldMRT
+
+
+DEPTH HIERARCHY FORMAT
+
+R32_FLOAT
+
+
+DEPTH HIERARCHY STORAGE
+
+full mip chain
+SRV + per-mip UAV
+
+
+DEPTH EXECUTION
+
+compute
+
+
+DEFAULT REDUCTION
+
+XeGTAO-style weighted/far-aware candidate
+
+with linear reference/debug mode
+
+
+NATIVE MOTION
+
+R16G16_FLOAT
+normalized UV
+previousUV = currentUV + motion
+
+
+NATIVE NORMAL
+
+R/G only
+oct decode
+view-space -> world-space for history
+
+
+CAMERA
+
+validated 720-byte b12
+
+
+HISTORY FRAME CONTINUITY
+
+must be exactly previous frame unless explicitly reset
+
+
+TEMPORAL REPROJECT
+
+bilinear
+
+
+DISOCCLUSION
+
+depth early reject
++
+world-position validation
++
+world-normal validation
+
+
+HISTORY CONFIDENCE
+
+explicit accumulation/confidence texture
+initial max 16
+
+
+STATE EXECUTION
+
+deferred command list
+ExecuteCommandList restore-state enabled
+
+
+PRODUCTION RESOURCE AUTHORITY
+
+Semantic Authority + Native Semantic Broker
+
+
+DIAGNOSTIC HEURISTIC AUTHORITY
+
+resource_intelligence only as cross-check/fallback
+
+
+BROAD CARTOGRAPHY
+
+not required
+
+======================================================================
+59. RESEARCH UNCERTAINTIES THAT MAY RIDE INTO IMPLEMENTATION
+======================================================================
+
+The following do NOT justify another pre-implementation research phase.
+
+A. final WeightedFar reduction constants
+
+Solve via diagnostic comparison.
+
+
+B. exact camera-cut thresholds
+
+Log and tune in field.
+
+
+C. R32 vs R16 performance crossover
+
+Measure after R32 correctness.
+
+
+D. whether environment transition must always reset history
+
+Start conservative; relax later if evidence supports.
+
+
+E. exact normal-dot rejection threshold
+
+Expose engineering diagnostic; tune from motion tests.
+
+
+F. full tail mip generation strategy
+
+Implement straightforward tail first; optimize if measured.
+
+
+These are implementation-time engineering parameters, not architecture
+unknowns.
+
+======================================================================
+60. REMAINING FUTURE RENDERER RESEARCH
+======================================================================
+
+Still unresolved, but deferred until the feature needs it:
+
+GLOBAL TAA
+exact stage and history ownership
+
+WATER
+post-water copy
+water TAA/history
+refraction/reflection boundary
+
+REFLECTIONS
+exact half-resolution branch substage
+
+RT2.B
+exact channel semantic
+
+RT3 R/G
+exact channel semantics
+
+HDR / TONEMAP
+later ownership and replacement strategy
+
+
+Do not mix these into Wave 3 unless direct evidence shows they are required.
+
+======================================================================
+61. PRIMARY PUBLIC SOURCES
+======================================================================
+
+COMMUNITY SHADERS
+Repository:
+https://github.com/community-shaders/skyrim-community-shaders
+
+Key public files reviewed:
+
+package/Shaders/Common/MotionBlur.hlsli
+package/Shaders/Common/FrameBuffer.hlsli
+package/Shaders/Common/GBuffer.hlsli
+package/Shaders/ISSAOCameraZ.hlsl
+package/Shaders/ISApplyVolumetricLighting.hlsl
+src/Features/ScreenSpaceGI.cpp
+features/Screen Space GI/Shaders/ScreenSpaceGI/common.hlsli
+features/Screen Space GI/Shaders/ScreenSpaceGI/prefilterDepths.cs.hlsl
+features/Screen Space GI/Shaders/ScreenSpaceGI/radianceDisocc.cs.hlsl
+features/Screen Space GI/Shaders/ScreenSpaceGI/gi.cs.hlsl
+src/Features/Upscaling/FidelityFX.cpp
+src/State.h
+src/Features/ExponentialHeightFog.cpp
+
+
+INTEL XEGTAO
+Repository:
+https://github.com/GameTechDev/XeGTAO
+
+Key concepts used:
+- view-space working depth
+- hierarchical depth
+- compute mip construction
+- weighted depth reduction
+- temporal stability rationale
+
+
+MICROSOFT DIRECT3D 11 DOCUMENTATION
+
+Shader resource views:
+https://learn.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-resources-intro
+
+ExecuteCommandList:
+https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11devicecontext-executecommandlist
+
+Deferred rendering:
+https://learn.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-render-multi-thread-render
+
+
+AMD FIDELITYFX FSR
+
+FSR temporal/upscaling guidance:
+https://gpuopen.com/manuals/fidelityfx_sdk/techniques/super-resolution-temporal/
+
+
+NVIDIA NRD
+
+Repository:
+https://github.com/NVIDIA-RTX/NRD
+
+Key concepts used:
+- linear view-space depth
+- history confidence
+- temporal reset
+- anti-lag / responsive history
+
+======================================================================
+62. FINAL RESEARCH VERDICT
+======================================================================
+
+Deep Wave 3 research is complete.
+
+No additional broad research pass is required before blueprinting.
+
+The most important conclusions are now firm:
+
+1. Skyrim native motion convention is known exactly enough for production:
+   previousUV = currentUV + motion.
+
+2. Native motion is normalized UV-space and generated from unjittered camera
+   transforms.
+
+3. AfterOpaqueWorldMRT is the correct insertion point for a GZFX-owned
+   post-opaque depth hierarchy.
+
+4. A R32_FLOAT view-space hierarchy is the correct correctness-first Wave 3
+   choice.
+
+5. Compute generation with explicit per-mip UAVs is preferred.
+
+6. GZFX should use the field-proven Semantic Authority through a real typed
+   Native Semantic Broker.
+
+7. Production renderer execution needs a small Renderer Execution Service,
+   not dependencies on diagnostics globals.
+
+8. Deferred command lists with immediate-context state restoration are the   safest default injected-renderer execution model.
+
+9. Temporal history must be centralized and fail closed.
+
+10. Depth + world-position + world-normal validation plus history clamping is
+    the correct quality-first temporal foundation.
+
+11. Camera cuts, frame gaps, resize, load and semantic-generation changes must
+    explicitly invalidate history.
+
+12. Exact global TAA mapping is not a Wave 3 blocker.
+
+13. Remaining thresholds/filter constants can be solved by embedded targeted
+    probes during implementation.
+
+NEXT PHASE:
+
+WAVE 3 BLUEPRINT
+
+Recommended blueprint target:
+
+0.0.21
+Native Input Broker + GZFXSceneDepthHierarchy + Temporal Core
+
+The next blueprint should authorize one large coherent engineering pass with
+internal gates and embedded aggressive diagnostics.
+
+REPOSITORY:
+UNTOUCHED
+
+END OF DEEP RESEARCH PASS 3

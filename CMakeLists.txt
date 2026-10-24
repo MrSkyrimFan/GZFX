@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.20
+    VERSION 0.0.21
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -71,6 +71,9 @@ add_library(GZFX SHARED
     src/render/runtime_state.cpp
     src/render/semantic_authority.cpp
     src/render/stage_scheduler.cpp
+    src/render/renderer_execution_service.cpp
+    src/render/native_input_broker.cpp
+    src/render/wave3_pipeline.cpp
     src/render/ambient_visibility_stack.cpp
     src/render/scene_effects.cpp
     src/render/visible_pass.cpp
@@ -206,6 +209,28 @@ target_link_libraries(
 )
 gzfx_apply_common(GZFXNativeSurfaceTemporalHarness)
 
+add_executable(GZFXWave3MathHarness
+    tests/wave3_math_harness.cpp
+)
+target_include_directories(
+    GZFXWave3MathHarness
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+gzfx_apply_common(GZFXWave3MathHarness)
+
+add_executable(GZFXWave3PipelineHarness
+    tests/wave3_pipeline_harness.cpp
+)
+target_link_libraries(
+    GZFXWave3PipelineHarness
+    PRIVATE
+        d3d11
+        dxgi
+        user32
+)
+gzfx_apply_common(GZFXWave3PipelineHarness)
+
 enable_testing()
 
 add_test(
@@ -324,4 +349,18 @@ add_test(
         "$<TARGET_FILE:GZFXNativeSurfaceTemporalHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/native-surface-temporal-output"
+)
+
+add_test(
+    NAME wave3_math
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3MathHarness>"
+)
+
+add_test(
+    NAME wave3_pipeline
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/wave3-pipeline-output"
 )

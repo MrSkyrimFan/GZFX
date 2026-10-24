@@ -1,0 +1,810 @@
+GZFX ENGINEERING REPORT
+Wave 1 + Wave 2 Foundation
+Date: 2026-10-23
+Status: MERGED / CI GREEN / TEST PACKAGE READY
+
+============================================================
+1. AUTHORITY USED
+============================================================
+
+Engineering was performed from the authority bundle supplied in:
+
+GZFXWorkFolder1.zip
+
+Authority stack:
+1. GZFX 0.0.18 Field Forensic Review
+2. GZFX Renderer Research Pass 1
+3. GZFX Renderer Blueprint v1.0
+
+No AO/GI artistic redesign was authorized in this pass.
+
+Authorized work:
+- Wave 1: Semantic Authority Layer
+- Wave 2: Stage Scheduler / No-Op Integration
+
+============================================================
+2. REPOSITORY / MERGE STATE
+============================================================
+
+Repository:
+MrSkyrimFan/GZFX
+
+Engineering branch:
+render/semantic-authority-foundation
+
+Pull request:
+#22
+Build semantic authority and renderer stage scheduler foundation
+
+PR #22 status:
+MERGED
+
+Squash merge commit:
+716108dcf6391ce58b173b4720342ffd48d687f8
+
+Current main after automatic package refresh:
+928765683a3652665c0d5a4aafa0c6343618d1d5
+
+The commit after the source merge modifies ONLY:
+
+LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Therefore the post-merge package-refresh commit contains no hidden source-code change.
+
+Current runtime version:
+0.0.19-semantic-authority-foundation
+
+NO MANUAL MERGE IS REQUIRED.
+
+============================================================
+3. CURRENT TEST PACKAGE
+============================================================
+
+Path in repository:
+
+LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Package Git blob:
+e135d0395ae45d3ddb9c43e8d5ad7540eee1f21c
+
+Package size:
+238,448 bytes
+
+Package contains the normal root DLL pair:
+
+GZFX.dll
+dinput8.dll
+
+No new manually placed Skyrim subfolder file was introduced.
+
+============================================================
+4. CI ACCEPTANCE
+============================================================
+
+Final PR-head Windows x64 run:
+40060828788
+
+Result:
+SUCCESS
+
+Final merged-main Windows x64 run:
+40060997253
+
+Result:
+SUCCESS
+
+Full test gate:
+
+14 / 14 PASS
+0 failures
+
+Relevant final lines:
+
+10/14 ambient_visibility_flat_ao ........ Passed
+11/14 ambient_visibility_uniform_ssil ... Passed
+12/14 renderer_semantic_probe ........... Passed
+13/14 semantic_authority_foundation ..... Passed
+14/14 native_surface_temporal ........... Passed
+
+100% tests passed, 0 tests failed out of 14
+
+Build:
+PASS
+
+Package:
+PASS
+
+Post-merge automatic Lance ZIP publication:
+PASS
+
+============================================================
+5. WHAT WAS IMPLEMENTED
+============================================================
+
+A. SEMANTIC AUTHORITY LAYER
+
+New files:
+
+include/gzfx/render/semantic_authority.hpp
+src/render/semantic_authority.cpp
+
+Purpose:
+
+Create a lightweight always-on semantic authority for the Skyrim renderer instead of requiring future effects to rediscover arbitrary textures by pointer, format, or timing guess.
+
+The authority currently tracks/promotes structural semantic identities for:
+
+MAIN_HDR
+MAIN_DEPTH
+MOTION
+NORMAL_MASK_CURRENT
+AUXILIARY_RT3
+DEPTH_EARLY_COPY
+OPAQUE_FINAL_DEPTH
+CAMERAZ
+SAO_RAWAO_CURRENT
+SAO_RAWAO_PREVIOUS
+SAO_FILTER_TEMP
+SAO_FILTERED
+RAW_INDIRECT
+SHADOW_MASK
+VOLUMETRIC_DENSITY_A
+VOLUMETRIC_DENSITY_B
+REDUCED_REFLECTION_LIGHTING [reserved / unresolved exact promotion]
+REDUCED_TEMPORAL_LIGHTING_HISTORY [reserved / unresolved exact promotion]
+
+Each semantic identity carries:
+
+- confidence level
+- canonical COM identity
+- generation
+- first-seen frame
+- last-seen frame
+- resource dimension
+- width / height / depth
+- mip count
+- array size
+- DXGI format
+- bind flags
+
+Confidence vocabulary:
+
+Unknown
+Provisional
+Strong
+Verified
+
+The system deliberately leaves unresolved resources unresolved instead of assigning convenient names.
+
+------------------------------------------------------------
+5.1 MAIN OPAQUE MRT REACQUISITION
+------------------------------------------------------------
+
+The authority structurally recognizes the field-verified Skyrim world MRT:
+
+RT0:
+R16G16B16A16_FLOAT
+=> MAIN_HDR
+
+RT1:
+R16G16_FLOAT
+=> MOTION
+
+RT2:
+R8G8B8A8_UNORM
+=> NORMAL_MASK_CURRENT
+
+RT3:
+R8G8_UNORM
+=> AUXILIARY_RT3
+
+DSV:
+R24G8_TYPELESS
+=> MAIN_DEPTH
+
+Recognition uses structure and descriptor relationships rather than one-session addresses.
+
+------------------------------------------------------------
+5.2 DEPTH CHRONOLOGY
+------------------------------------------------------------
+
+The authority distinguishes copies sourced from MAIN_DEPTH.
+
+Before the main opaque MRT:
+=> DEPTH_EARLY_COPY
+
+First same-shape main-depth copy after opaque MRT activity:
+=> OPAQUE_FINAL_DEPTH
+
+The corresponding stage landmarks are emitted as:
+
+after_depth_prepass
+after_opaque_geometry_final_depth
+
+This implements the blueprint rule that "depth" is not one timeless semantic object.
+
+------------------------------------------------------------
+5.3 CAMERAZ
+------------------------------------------------------------
+
+The authority identifies a full-resolution R32_FLOAT multilevel texture only after observing its mip hierarchy being constructed.
+
+Promotion:
+CAMERAZ
+confidence:
+Verified
+
+Scheduler landmark:
+after_cameraz
+
+This avoids promoting an arbitrary R32_FLOAT resource merely because the format looked convenient.
+
+------------------------------------------------------------
+5.4 STOCK TEMPORAL AO FAMILY
+------------------------------------------------------------
+
+The authority recognizes the field-proven structure:
+
+CameraZ
++ native normal
++ motion
++ previous full-resolution AO/history
+=> current RawAO/history
+
+Promotions:
+
+SAO_RAWAO_PREVIOUS
+SAO_RAWAO_CURRENT
+
+It then follows the first two full-resolution RGBA8 filter stages:
+
+SAO_FILTER_TEMP
+SAO_FILTERED
+
+After the second filter:
+stage landmark:
+after_stock_ao
+
+------------------------------------------------------------
+5.5 RAW INDIRECT
+------------------------------------------------------------
+
+The authority recognizes the field-supported raw-indirect structure:
+
+full-resolution R11G11B10_FLOAT output
+reading:
+- CAMERAZ
+- MAIN_HDR
+- AUXILIARY_RT3
+
+Promotion:
+RAW_INDIRECT
+confidence:
+Strong
+
+------------------------------------------------------------
+5.6 LIGHTING COMPOSITE BOUNDARY
+------------------------------------------------------------
+
+When a pass:
+
+writes MAIN_HDR
+
+and reads:
+
+RAW_INDIRECT
++
+SAO_FILTERED
+
+the Stage Scheduler emits:
+
+before_indirect_lighting_composite
+at_lighting_composite
+
+before execution
+
+and:
+
+after_lighting_composite
+
+after real D3D execution completes.
+
+This is a major architectural change.
+
+Future GZFX lighting code can eventually execute relative to an actual verified lighting boundary instead of a generic pre-UI point.
+
+------------------------------------------------------------
+5.7 EXTERIOR VOLUMETRIC DENSITY
+------------------------------------------------------------
+
+The authority structurally recognizes the field-verified large R16_FLOAT 3D density resources.
+
+Promotions:
+
+VOLUMETRIC_DENSITY_A
+VOLUMETRIC_DENSITY_B
+
+confidence:
+Verified
+
+Seeing the exterior volumetric family contributes to environment classification.
+
+------------------------------------------------------------
+5.8 BASIC ENVIRONMENT CLASSIFICATION
+------------------------------------------------------------
+
+Current runtime classifications:
+
+Exterior:
+field-proven volumetric 3D family observed
+
+Interior:
+main world MRT + CameraZ + stock AO active, real gameplay activity present, but exterior volumetric family absent
+
+UnknownTransition:
+insufficient evidence / transitional state
+
+Important:
+
+Night is NOT treated as a separate renderer architecture.
+
+The 0.0.18 Riverwood nighttime campaign already proved exterior renderer architecture survives nighttime.
+
+============================================================
+6. D3D11 STATE CORRECTNESS
+============================================================
+
+The Semantic Authority mirrors D3D11 read/output hazards.
+
+When a resource becomes an output, matching stored SRV reads are nulled.
+
+When an SRV is set while conflicting with an active output, the authority does not report it as a live read.
+
+Reason:
+
+D3D11 can automatically null incompatible read/output bindings.
+
+Without this mirroring, GZFX could falsely infer a producer/consumer dependency from stale state.
+
+This was explicitly hardened before merge.
+
+============================================================
+7. STAGE SCHEDULER
+============================================================
+
+New files:
+
+include/gzfx/render/stage_scheduler.hpp
+src/render/stage_scheduler.cpp
+
+The scheduler provides a renderer-domain execution vocabulary.
+
+Defined boundaries include:
+
+AfterShadowProduction
+AfterDepthPrepass
+AfterOpaqueGeometryFinalDepth
+AfterCameraZ
+AfterStockAO
+BeforeIndirectLightingComposite
+AtLightingComposite
+AfterLightingComposite
+BeforeVolumetricComposite
+AfterVolumetricComposite
+WaterDomain
+BeforeGlobalTAA
+AfterGlobalTAA
+HDRReduction
+BeforeTonemap
+PostTonemapPreUi
+UiPresent
+
+IMPORTANT:
+
+Not every boundary above is currently claimed as field identified.
+
+The enum defines the architecture.
+
+Only boundaries with sufficient evidence are currently signaled.
+
+The implementation intentionally does NOT invent global TAA, water, reflection, or other unresolved stage locations.
+
+Scheduler phases:
+
+Landmark
+BeforeExecution
+AfterExecution
+
+The callback interface allows future renderer systems to register work at semantic boundaries.
+
+This pass registers no visual AO/GI replacement.
+
+It is a no-op integration foundation.
+
+============================================================
+8. ACTUAL D3D11 EXECUTION WIRING
+============================================================
+
+The Semantic Authority is wired into the real immediate-context hook path.
+
+It observes:
+
+- shader resources for VS / HS / DS / GS / PS / CS
+- active shaders for all six stages
+- render targets
+- depth target
+- graphics UAVs
+- compute UAVs
+- viewport
+- draw calls
+- dispatches
+- CopyResource
+- Present
+- resize
+- ClearState / command-list state reset
+
+Important ordering:
+
+BeginDraw / BeginDispatch:
+before Skyrim's real D3D execution
+
+EndDraw / EndDispatch:
+after Skyrim's real D3D execution
+
+AfterCopy:
+after the real CopyResource call completes
+
+This gives future stage callbacks meaningful before/after execution ownership.
+
+============================================================
+9. RESIZE / LIFECYCLE FIX
+============================================================
+
+During source audit a lifecycle problem was caught:
+
+The initial scheduler Reset behavior would have erased registered callbacks after a ResizeBuffers event.
+
+That was repaired before merge.
+
+Current behavior:
+
+resize invalidates renderer semantic/state data
+
+BUT
+
+registered stage subscribers survive resize
+
+Explicit callback removal remains separate through ClearCallbacks.
+
+============================================================
+10. NEW EVIDENCE FILES
+============================================================
+
+Every automatic/manual semantic evidence window now also writes:
+
+semantic_authority*.txt
+stage_schedule*.csv
+
+semantic_authority contains:
+
+- current frame
+- environment classification
+- screen size
+- promoted semantic table
+- confidence
+- canonical identity
+- generation
+- descriptors
+- capture-local promotion reasons
+
+stage_schedule contains:
+
+- sequence
+- frame
+- ordinal
+- boundary
+- phase
+- reason
+
+These are designed to make future field bundles directly test the blueprint foundation.
+
+============================================================
+11. NEW CI HARNESS
+============================================================
+
+New test:
+
+semantic_authority_foundation
+
+File:
+
+tests/semantic_authority_harness.cpp
+
+It runs through the real GZFX hook path using WARP D3D11 and synthetically reproduces:
+
+- Skyrim-like four-target opaque MRT
+- main R24G8 depth
+- early depth copy
+- post-opaque/final depth copy
+- multilevel CameraZ
+- temporal RawAO A/B ping-pong
+- AO filter temp
+- final AO filter
+- raw indirect
+- lighting composite back into HDR
+- exterior 3D R16 volumetric density
+
+The test refuses success unless required semantic promotions and stage events are present.
+
+This increased the suite from:
+
+13 tests
+
+to:
+
+14 tests
+
+============================================================
+12. WHAT WAS INTENTIONALLY NOT DONE
+============================================================
+
+No production AO redesign.
+
+No Ambient Visibility v2 shader.
+
+No GI / Indirect Radiance v1 implementation.
+
+No Local Glow redesign.
+
+No Horizon tuning.
+
+No slider tuning.
+
+No global TAA guess.
+
+No water-history guess.
+
+No RT2.B guess.
+
+No RT3 R/G semantic guess.
+
+No reflection replacement.
+
+No volumetric replacement.
+
+No HDR redesign.
+
+No use of one-session field pointer addresses as permanent identities.
+
+This is exactly what Blueprint v1.0 authorized:
+foundation before effects.
+
+============================================================
+13. CURRENT ARCHITECTURAL FRONTIER
+============================================================
+
+Wave 1 implementation:
+Semantic Authority Layer
+=> CODE / CI COMPLETE
+=> FIELD CREDIT NOT YET GRANTED
+
+Wave 2 implementation:
+Stage Scheduler / No-Op Integration
+=> CODE / CI COMPLETE
+=> FIELD CREDIT NOT YET GRANTED
+
+The next required action is real-Skyrim field validation.
+
+Production AO remains unauthorized until this field gate is reviewed.
+
+============================================================
+14. REQUIRED NEXT IN-GAME FIELD GATE
+============================================================
+
+PURPOSE:
+
+Prove 0.0.19 can structurally reacquire the same renderer semantics and stage boundaries in real Skyrim without relying on the previous game's pointer values.
+
+Use ONE Skyrim launch for the entire campaign.
+
+FIRST:
+
+1. Load the current 0.0.19 package.
+2. Load into normal gameplay.
+3. Press Shift + Numpad3 until GZFX is in:
+
+MODE 0 / OFF
+
+The image must look like plain native Skyrim.
+
+Leave Mode 0 active for the entire campaign.
+
+Do not adjust AO, Horizon, Bounce, Local Glow, temporal values, or other artistic settings.
+
+------------------------------------------------------------
+GROUP A — DAYLIGHT EXTERIOR
+Captures 0001–0006
+------------------------------------------------------------
+
+Use an exterior daylight area.
+
+Guardian Standing Stones / surrounding exterior is good.
+
+Take six varied captures:
+
+- open landscape
+- rocks / trees / vegetation
+- strong depth variation
+- shoreline or general exterior geometry
+- wide view
+- closer geometry-heavy view
+
+Mix still views and normal camera motion.
+
+For each:
+
+Press Shift + Numpad5 ONCE.
+
+Wait about 4–5 seconds before the next capture.
+
+------------------------------------------------------------
+GROUP B — NIGHT EXTERIOR RIVERWOOD
+Captures 0007–0012
+------------------------------------------------------------
+
+Use the same general nighttime Riverwood control from the previous campaign:
+
+- near Alvor's blacksmith
+- small bridge
+- wood-chopping / logging area
+
+Take six different views.
+
+Include:
+
+- bridge
+- logging area
+- buildings
+- trees / terrain
+- local nighttime lighting
+- at least one moving-camera capture
+
+For each:
+
+Press Shift + Numpad5 ONCE.
+
+Wait about 4–5 seconds before the next capture.
+
+------------------------------------------------------------
+GROUP C — INTERIOR
+Captures 0013–0018
+------------------------------------------------------------
+
+Enter one normal interior.
+
+Take six varied views:
+
+- wide room
+- local lights
+- darker area
+- close geometry
+- clutter
+- one moving-camera view
+
+For each:
+
+Press Shift + Numpad5 ONCE.
+
+Wait about 4–5 seconds before the next capture.
+
+------------------------------------------------------------
+END
+------------------------------------------------------------
+
+After capture 0018:
+
+Quit Skyrim normally.
+
+No restart between groups.
+
+No Shift + Numpad4.
+
+No need for split-screen comparisons.
+
+No need to tune effects.
+
+Total manual semantic captures:
+
+18
+
+Expected high-value new evidence per capture includes:
+
+semantic_authority_manual_XXXX.txt
+stage_schedule_manual_XXXX.csv
+
+plus the existing pipeline / semantic evidence set.
+
+============================================================
+15. FIELD ACCEPTANCE QUESTIONS
+============================================================
+
+The next forensic review should answer:
+
+1. Does MAIN_HDR reacquire in all three environment classes?
+2. Does MAIN_DEPTH reacquire?
+3. Do MOTION, NORMAL_MASK_CURRENT, and AUXILIARY_RT3 reacquire structurally?
+4. Is early depth consistently distinct from final opaque depth?
+5. Is CAMERAZ reacquired without pointer assumptions?
+6. Does temporal RawAO current/previous reacquire?
+7. Does SAO_FILTERED reacquire?
+8. Does RAW_INDIRECT reacquire?
+9. Do the stage events occur in correct order:
+   - final opaque depth
+   - CameraZ
+   - stock AO
+   - lighting composite
+10. Does exterior volumetric density appear in both day and night exterior?
+11. Does exterior volumetric density disappear indoors?
+12. Does the environment classifier report:
+   - exterior for daylight exterior
+   - exterior for nighttime Riverwood
+   - interior for interior
+13. Are any semantics falsely promoted in interiors?
+14. Do canonical identities remain coherent inside each capture while changing naturally between game sessions?
+15. Does the new always-on authority cause any measurable gameplay instability, device error, or obvious performance regression?
+
+Only after the field evidence is reviewed should Wave 1 / Wave 2 receive field credit.
+
+============================================================
+16. NEXT BLUEPRINT STEP AFTER FIELD PASS
+============================================================
+
+If the field gate passes:
+
+Wave 1:
+CLOSED / FIELD ACCEPTED
+
+Wave 2:
+CLOSED / FIELD ACCEPTED
+
+Then engineering advances to:
+
+Wave 3
+Native Input Broker + Temporal Core
+
+That wave must be completed before:
+
+Wave 4
+Ambient Visibility v2
+
+The old Horizon/AO/Indirect Bounce prototype does NOT become the production base.
+
+============================================================
+17. FINAL STATUS
+============================================================
+
+PR #22:
+MERGED
+
+Source merge:
+716108dcf6391ce58b173b4720342ffd48d687f8
+
+Current main:
+928765683a3652665c0d5a4aafa0c6343618d1d5
+
+CI:
+14/14 PASS
+
+Package:
+READY
+
+Manual merge:
+NONE
+
+Current project state:
+
+GZFX 0.0.19 Semantic Authority + Stage Scheduler foundation is implemented and CI-proven.
+
+The next step is the 18-capture real-Skyrim field gate described above.
+
+END OF REPORT

@@ -1,0 +1,1467 @@
+GZFX FOUNDATION BLUEPRINT REVISION 2
+Semantic Authority, Stage Scheduler, Depth Epochs, and Corrected Renderer Boundaries
+
+Blueprint date: October 23, 2026
+Status: CONTROLLING FOUNDATION BLUEPRINT FOR NEXT ENGINEERING PASS
+Repository modification during blueprint phase: NONE
+
+Primary evidence:
+- GZFX23222111.zip
+- GZFX_0.0.19_FIELD_FINDINGS.txt
+
+Primary research:
+- GZFX_RESEARCH_PASS_2_FOUNDATION_CORRECTIONS.txt
+
+Prior architecture authority:
+- GZFX Renderer Blueprint v1.0
+
+This document supersedes the affected Wave 1 / Wave 2 portions of Blueprint v1.0.
+Unchanged portions of Blueprint v1.0 remain valid unless explicitly revised here.
+
+======================================================================
+0. PURPOSE
+======================================================================
+
+This blueprint corrects the first implementation of the GZFX renderer
+foundation after real-Skyrim evidence exposed three structural problems:
+
+1. Resource identity was being treated as if it implied current semantic
+   validity.
+
+2. A physical depth texture with multiple in-frame roles was assigned one
+   permanent semantic name.
+
+3. Stage events were tied too closely to semantic discovery rather than to
+   actual per-frame execution completion.
+
+The corrected foundation must preserve what 0.0.19 proved good while removing
+those static assumptions.
+
+The objective of this revision is:
+
+- close Wave 1 correctly;
+- close Wave 2 correctly;
+- establish safe runtime contracts for Wave 3;
+- prevent future AO/GI from binding to stale or semantically wrong resources;
+- give future effects real stage ownership instead of approximate timing.
+
+Production AO/GI redesign remains paused until this corrected foundation
+passes its real-Skyrim field gate.
+
+======================================================================
+1. AUTHORITY ORDER
+======================================================================
+
+For the corrected foundation, authority order is:
+
+1. GZFX23222111.zip field evidence
+2. this Blueprint Revision 2
+3. Research Pass 2
+4. Field Findings 0.0.19
+5. Blueprint v1.0 where not superseded
+6. current GZFX main
+7. public Skyrim renderer reverse-engineering
+8. older assumptions / prototype behavior
+
+If current code conflicts with this blueprint, this blueprint controls the
+next engineering pass.
+
+If public renderer naming conflicts with GZFX field chronology, GZFX field
+chronology controls.
+
+======================================================================
+2. CORE ARCHITECTURAL CORRECTION
+======================================================================
+
+The 0.0.19 semantic model was:
+
+physical resource
+->
+one semantic identity
+
+The corrected model is:
+
+physical resource identity
++
+current frame state
++
+stage
++
+content epoch
++
+environment
+->
+semantic view
+
+A single texture may hold different semantic content at different moments.
+
+Therefore GZFX must stop treating a COM identity as a permanent semantic fact.
+
+======================================================================
+3. NEW REQUIRED CONCEPTS
+======================================================================
+
+The corrected foundation introduces four separate concepts.
+
+----------------------------------------------------------------------
+3.1 RESOURCE IDENTITY
+----------------------------------------------------------------------
+
+Persistent structural knowledge about a physical D3D11 resource.
+
+Contains:
+
+- canonical IUnknown identity
+- generation
+- descriptor
+- format
+- dimensions
+- mip count
+- array size
+- bind flags
+- first seen frame
+- last seen frame
+- confidence
+- known structural roles
+
+This record can survive across many frames.
+
+It does NOT mean the resource is safe to consume now.
+
+----------------------------------------------------------------------
+3.2 FRAME AVAILABILITY
+----------------------------------------------------------------------
+
+Current-frame validity.
+
+Contains at minimum:
+
+- observed_this_frame
+- produced_this_frame
+- consumed_this_frame
+- last_observed_frame
+- last_produced_frame
+- current_frame_available
+- environment validity
+- valid_from_stage
+- valid_until_stage
+
+A semantic broker query for a current-frame resource must fail closed if this
+contract is not satisfied.
+
+----------------------------------------------------------------------
+3.3 SEMANTIC VIEW
+----------------------------------------------------------------------
+
+The meaning of a resource at a specific stage.
+
+Examples:
+
+MAIN_DEPTH_CURRENT
+
+CAMERAZ_CURRENT
+
+RAW_INDIRECT_CURRENT
+
+VOLUMETRIC_PREVIOUS_DEPTH
+
+POST_ZPREPASS_DEPTH_CURRENT
+
+
+A Semantic View is what production effects request.
+
+Effects do not directly request raw physical resources.
+
+----------------------------------------------------------------------
+3.4 CONTENT EPOCH
+----------------------------------------------------------------------
+
+A content epoch describes when one physical resource changes meaning after a
+known producer/copy event.
+
+The critical field-proven example:
+
+same physical depth texture
+
+Epoch A:
+before current MAIN_DEPTH copy
+=
+previous-frame depth for volumetric temporal reprojection
+
+Epoch B:
+after current MAIN_DEPTH copy
+=
+current pre-water/post-z-prepass depth
+
+The physical resource identity does not change.
+
+The semantic content does.
+
+======================================================================
+4. CORRECTED DEPTH MODEL
+======================================================================
+
+The depth model is revised as follows.
+
+----------------------------------------------------------------------
+4.1 MAIN_DEPTH_CURRENT
+----------------------------------------------------------------------
+
+Physical role:
+
+live Skyrim main depth-stencil.
+
+Status:
+VERIFIED
+
+Scope:
+day exterior
+night exterior
+interior
+
+Use:
+primary live depth state
+
+Important:
+
+MAIN_DEPTH_CURRENT is stage-dependent because geometry continues to accumulate
+over the frame.
+
+Consumers must declare which stage they require.
+
+----------------------------------------------------------------------
+4.2 DEPTH_EARLY_COPY
+----------------------------------------------------------------------
+
+Current neutral name remains valid.
+
+Strong public match:
+kMAIN_COPY
+
+Status:
+VERIFIED functional role
+STRONG engine-target match
+
+Observed behavior:
+
+- MAIN_DEPTH copied into this resource every tested frame
+- cross-environment
+- stock CameraZ reads it
+- present before stock RawAO
+
+Production interpretation:
+
+stock early image-space depth source
+
+It may remain a stock semantic input.
+
+It must not be assumed to contain all later opaque/alpha-tested geometry.
+
+----------------------------------------------------------------------
+4.3 STOCK_CAMERAZ
+----------------------------------------------------------------------
+
+Status:
+VERIFIED
+
+Structure:
+
+- R32_FLOAT
+- full-resolution base
+- hierarchical mip chain
+- current field path uses 12 mips at 2560x1440
+
+Source:
+DEPTH_EARLY_COPY
+
+Role:
+stock SAO/SIL analysis depth hierarchy
+
+Important correction:
+
+STOCK_CAMERAZ is a trusted stock semantic.
+
+It is NOT automatically declared to be the final production GZFX AO/GI depth
+hierarchy.
+
+----------------------------------------------------------------------
+4.4 VOLUMETRIC_PREVIOUS_DEPTH
+----------------------------------------------------------------------
+
+This semantic replaces the pre-copy meaning of the old:
+
+OPAQUE_FINAL_DEPTH
+
+Status:
+FUNCTIONALLY IDENTIFIED
+
+Scope:
+exterior volumetric path
+
+Observed role:
+
+bound as t6 PreviousDepthTex in the pass matching:
+
+ISApplyVolumetricLighting
+
+Used with:
+
+- current depth
+- previous VL
+- 3D VL density
+- repartition
+- noise
+- motion
+
+Validity:
+
+only BEFORE current MAIN_DEPTH is copied into the same physical resource.
+
+This semantic is explicitly PreviousFrame-domain data.
+
+----------------------------------------------------------------------
+4.5 POST_ZPREPASS_DEPTH_CURRENT / PRE_WATER_DEPTH_CURRENT
+----------------------------------------------------------------------
+
+This semantic replaces the post-copy meaning of the same physical resource.
+
+Very strong public target match:
+kPOST_ZPREPASS_COPY
+
+Status:
+FIELD IDENTIFIED content transition
+VERY STRONG engine-target match
+
+Created when:
+
+MAIN_DEPTH
+->
+same physical resource previously holding VOLUMETRIC_PREVIOUS_DEPTH
+
+Observed timing:
+exterior path only in current field campaign
+
+Validity:
+after publication copy
+until later overwrite / next frame / invalidating transition
+
+Logical naming:
+
+Preferred internal neutral name:
+PRE_WATER_DEPTH_CURRENT
+
+Optional public alias:
+POST_ZPREPASS_DEPTH_CURRENT
+
+Reason:
+
+The public target name is useful, but GZFX should retain a semantic name that
+describes runtime meaning.
+
+----------------------------------------------------------------------
+4.6 POST_WATER_DEPTH
+----------------------------------------------------------------------
+
+Public Skyrim target exists:
+kPOST_WATER_COPY
+
+GZFX field identity:
+UNRESOLVED
+
+Rule:
+
+Do not assign any current resource to this semantic until field evidence does.
+
+======================================================================
+5. REMOVE THE OLD STATIC SEMANTIC
+======================================================================
+
+The following static semantic is retired:
+
+OPAQUE_FINAL_DEPTH
+
+Reason:
+
+It falsely implied:
+
+- one timeless content meaning;
+- universal availability;
+- interior availability;
+- pre-AO relevance;
+- universal finished-opaque timing.
+
+Field and research reject those assumptions.
+
+The physical resource formerly carrying that label must instead expose
+stage-aware semantic views.
+
+======================================================================
+6. CORRECTED STAGE MODEL
+======================================================================
+
+The Stage Scheduler is revised around execution events, not discovery events.
+
+Required boundary vocabulary after this revision:
+
+AfterDepthPrepass
+AfterOpaqueWorldMRT
+AfterCameraZ
+AfterStockAO
+BeforeAmbientScreenSpaceComposite
+AtAmbientScreenSpaceComposite
+AfterAmbientScreenSpaceComposite
+BeforeVolumetricApply
+AfterVolumetricApply
+PublishPreWaterDepth
+WaterDomain
+BeforeGlobalTAA
+AfterGlobalTAA
+HDRReduction
+BeforeTonemap
+PostTonemapPreUi
+UiPresent
+
+Not all are currently field-proven.
+
+Only proven boundaries may signal in production.
+
+======================================================================
+7. AFTER_DEPTH_PREPASS
+======================================================================
+
+Current event:
+works in field
+
+Status:
+KEEP
+
+Meaning:
+
+the early stock depth publication/copy relevant to stock CameraZ has completed.
+
+This boundary is cross-environment in the current field evidence.
+
+Do not rename it to finished opaque depth.
+
+======================================================================
+8. NEW BOUNDARY: AFTER_OPAQUE_WORLD_MRT
+======================================================================
+
+This is required by the revised architecture.
+
+Purpose:
+
+identify the completion of the main opaque four-target world MRT before
+stock CameraZ construction begins.
+
+Why this boundary matters:
+
+At this point GZFX should have access to:
+
+- MAIN_HDR
+- MAIN_DEPTH
+- MOTION
+- NORMAL_MASK_CURRENT
+- AUXILIARY_RT3
+
+with opaque world geometry for that stage already rendered.
+
+This boundary is a better candidate for GZFX-owned screen-space analysis
+snapshotting than the later exterior-only pre-water depth publication.
+
+Detection requirement:
+
+must be structural.
+
+Do NOT:
+
+- hardcode one ordinal;
+- hardcode one shader pointer;
+- assume one draw count.
+
+Recommended state-machine concept:
+
+1. main four-target MRT has been observed and active;
+2. opaque-MRT activity is ongoing;
+3. transition occurs away from main MRT into the known stock CameraZ producer;
+4. emit AfterOpaqueWorldMRT once per frame before first CameraZ write.
+
+This boundary should be proven first as a no-op execution landmark.
+
+======================================================================
+9. AFTER_CAMERAZ
+======================================================================
+
+0.0.19 behavior:
+BROKEN
+
+Reason:
+event was tied to semantic promotion.
+
+Correct contract:
+
+AfterCameraZ fires once per applicable frame after the current frame's active
+CameraZ hierarchy is fully produced.
+
+Required algorithm:
+
+- track active CameraZ identity;
+- track mip writes for current frame;
+- derive required mip coverage from descriptor;
+- reset coverage on frame transition;
+- observe mip writes;
+- when required hierarchy completion condition is met:
+  emit AfterCameraZ
+  exactly once for that frame.
+
+Important:
+
+Promotion is separate.
+
+CameraZ identity can be known for thousands of frames while the stage
+completion event still fires once each frame.
+
+Compute CameraZ paths:
+
+If the engine uses a compute stage that creates multiple mips differently,
+the scheduler must support an alternate structural completion rule.
+
+Do not hardcode "12 draw calls" as the abstract contract.
+
+======================================================================
+10. AFTER_STOCK_AO
+======================================================================
+
+0.0.19 field result:
+PASS
+
+Status:
+KEEP
+
+Meaning:
+
+the recognized temporal RawAO + two-stage stock AO filtering family has
+completed for the current frame.
+
+Requirements:
+
+- signal every applicable frame;
+- remain independent from first promotion;
+- remain valid across exterior/interior.
+
+======================================================================
+11. CORRECT THE CURRENT LIGHTING-COMPOSITE NAME
+======================================================================
+
+The current generic scheduler events:
+
+BeforeIndirectLightingComposite
+AtLightingComposite
+AfterLightingComposite
+
+are too broad.
+
+Field/public structural evidence strongly matches:
+
+ISSAOComposite family
+
+Inputs:
+
+- source / raw indirect path
+- filtered AO
+- depth
+- normal/SSR mask
+- snow/spec-alpha / auxiliary
+- shadow mask
+- SSR source
+
+Output:
+MAIN_HDR
+
+The current pass does NOT structurally match generic ISLightingComposite.
+
+Correct neutral boundary names:
+
+BeforeAmbientScreenSpaceComposite
+AtAmbientScreenSpaceComposite
+AfterAmbientScreenSpaceComposite
+
+These names are authoritative for the revised foundation.
+
+Optional diagnostic annotation may include:
+
+public_match = ISSAOComposite
+public_match_confidence = very_strong
+
+Do not hardcode the exact ISSAOComposite variant unless independently proven.
+
+======================================================================
+12. VOLUMETRIC APPLY BOUNDARIES
+======================================================================
+
+The field pass matching:
+
+ISApplyVolumetricLighting
+
+is now well enough understood to expose stage landmarks.
+
+Required optional scheduler boundaries:
+
+BeforeVolumetricApply
+AfterVolumetricApply
+
+Scope:
+exterior path
+
+Inputs include:
+
+- current depth
+- previous volumetric frame
+- 3D volumetric density
+- repartition
+- noise
+- motion
+- previous depth
+
+These boundaries are useful because the subsequent depth-content epoch change
+occurs immediately afterward.
+
+======================================================================
+13. PUBLISH_PRE_WATER_DEPTH
+======================================================================
+
+This replaces:
+
+AfterOpaqueGeometryFinalDepth
+
+for the observed late exterior copy.
+
+Correct meaning:
+
+current MAIN_DEPTH has been copied into the physical depth-history resource,
+transitioning it from:
+
+VOLUMETRIC_PREVIOUS_DEPTH
+
+to:
+
+PRE_WATER_DEPTH_CURRENT
+
+Scheduler event:
+
+PublishPreWaterDepth
+
+or:
+
+AfterPreWaterDepthPublish
+
+Preferred:
+PublishPreWaterDepth
+
+This is an execution/content transition, not a generic "opaque finished"
+statement.
+
+Current scope:
+exterior field path
+
+Interiors are not required to emit it.
+
+======================================================================
+14. SEMANTIC AVAILABILITY CONTRACT
+======================================================================
+
+Every semantic query must return:
+
+- identity
+- semantic view
+- confidence
+- current availability
+- frame
+- content epoch
+- valid stage range
+- environment scope
+
+A current-frame query fails closed unless validity passes.
+
+No future effect may do:
+
+if (semantic.identity != 0)
+    use it;
+
+That is explicitly forbidden.
+
+======================================================================
+15. REQUIRED BROKER QUERY MODES
+======================================================================
+
+The revised foundation should support query intent.
+
+Minimum modes:
+
+CurrentFrame
+PreviousFrameHistory
+PersistentIdentity
+DiagnosticAnyKnown
+
+Production effects may use only:
+
+CurrentFrame
+PreviousFrameHistory
+
+unless explicitly authorized.
+
+Diagnostic tools may use:
+PersistentIdentity
+DiagnosticAnyKnown
+
+This prevents stale session data from leaking into rendering.
+
+======================================================================
+16. CURRENT-FRAME VALIDITY RULES
+======================================================================
+
+For universal current scene semantics:
+
+MAIN_HDR
+MAIN_DEPTH
+MOTION
+NORMAL_MASK_CURRENT
+AUXILIARY_RT3
+STOCK_CAMERAZ
+SAO_FILTERED
+RAW_INDIRECT
+
+Default production requirement:
+
+lastObservedFrame == currentFrame
+OR
+equivalent explicit current-frame-produced/validated state
+
+and requested stage must fall inside the semantic validity interval.
+
+======================================================================
+17. ENVIRONMENT-SCOPED VALIDITY RULES
+======================================================================
+
+For:
+
+VOLUMETRIC_DENSITY_A
+VOLUMETRIC_DENSITY_B
+VOLUMETRIC_PREVIOUS_DEPTH
+PRE_WATER_DEPTH_CURRENT
+exterior-specific shadow inputs
+
+Requirements:
+
+- environment == Exterior
+- semantic observed/produced in current applicable frame where required
+- correct content epoch
+- correct stage window
+
+When environment becomes Interior:
+
+CurrentFrame lookup must fail.
+
+Persistent identity may remain known diagnostically.
+
+======================================================================
+18. PREVIOUS-FRAME HISTORY RULES
+======================================================================
+
+History semantics are allowed to be stale by one frame only when that is
+their intended contract.
+
+Examples:
+
+VOLUMETRIC_PREVIOUS_DEPTH
+AO previous history
+future GZFX GI history
+
+Requirements:
+
+- explicitly requested as PreviousFrameHistory
+- expected previous frame matches
+- no invalidating transition
+- no frame gap
+- no resize
+- no camera/history reset condition
+- correct environment continuity
+
+A random last-seen resource is not history.
+
+======================================================================
+19. CONTENT-EPOCH STATE MACHINE
+======================================================================
+
+The revised authority needs explicit epoch transitions.
+
+Example physical resource:
+probable kPOST_ZPREPASS_COPY
+
+At exterior frame start / before overwrite:
+
+semantic view:
+VOLUMETRIC_PREVIOUS_DEPTH
+
+When bound to:
+ISApplyVolumetricLighting t6-like slot
+
+validate:
+PreviousFrameHistory
+
+After:
+MAIN_DEPTH -> resource CopyResource
+
+transition to:
+PRE_WATER_DEPTH_CURRENT
+
+mark:
+current_frame_available = true
+produced_this_frame = true
+content_epoch += 1
+
+At next frame:
+before new overwrite
+the same physical resource may again satisfy:
+VOLUMETRIC_PREVIOUS_DEPTH
+if continuity checks pass.
+
+This state machine must be explicit in code.
+
+======================================================================
+20. DIAGNOSTIC OUTPUT REVISION
+======================================================================
+
+`semantic_authority*.txt` should no longer present one blended table as if it
+were capture-local truth.
+
+Required report sections:
+
+A. SESSION IDENTITY REGISTRY
+
+Persistent known resources.
+
+B. CURRENT FRAME SEMANTIC VIEWS
+
+Each semantic view with:
+- available
+- frame
+- stage
+- epoch
+- environment
+- identity
+
+C. CAPTURE-LOCAL OBSERVATIONS
+
+Strictly bounded to capture frames.
+
+D. CAPTURE-LOCAL PROMOTIONS
+
+Strictly bounded.
+
+E. CONTENT-EPOCH TRANSITIONS
+
+Example:
+
+frame=1234
+resource=0x...
+from=VOLUMETRIC_PREVIOUS_DEPTH
+event=MAIN_DEPTH_COPY
+to=PRE_WATER_DEPTH_CURRENT
+
+F. STAGE SCHEDULE
+
+Keep separate CSV or equivalent.
+
+This improves machine analysis and prevents stale rows from being misread as
+current state.
+
+======================================================================
+21. PRODUCTION AO/GI DEPTH POLICY REVISION
+======================================================================
+
+Blueprint v1.0 treated stock CameraZ as a preferred hierarchy.
+
+Revision 2 narrows that claim.
+
+New policy:
+
+Stock CameraZ is:
+
+- trusted;
+- useful;
+- field-proven;
+- useful for comparisons and stock-system mapping.
+
+But production GZFX AO/GI should not automatically depend on stock CameraZ as
+its final geometry hierarchy.
+
+Reason:
+
+public renderer work demonstrates that earlier z-prepass depth can omit
+alpha-tested geometry and other later opaque content.
+
+GZFX field evidence shows stock CameraZ is sourced from the early copy.
+
+Therefore production AO/GI must evaluate:
+
+GZFX-owned hierarchical depth
+built from:
+MAIN_DEPTH
+at:
+AfterOpaqueWorldMRT
+
+This is now a planned Wave 3 responsibility.
+
+======================================================================
+22. GZFX-OWNED DEPTH HIERARCHY CONCEPT
+======================================================================
+
+Working logical name:
+
+GZFXSceneDepthHierarchy
+
+Purpose:
+
+provide a stage-correct hierarchical depth representation based on completed
+opaque-world depth rather than the earlier stock CameraZ source.
+
+Requirements:
+
+- generated after AfterOpaqueWorldMRT;
+- source MAIN_DEPTH_CURRENT;
+- cross-environment;
+- owned by GZFX;
+- deterministic mip construction;
+- format chosen for precision/performance;
+- dynamic-resolution aware;
+- resize-safe;
+- no dependence on exterior volumetric path;
+- debug view support;
+- independent timing measurement.
+
+This hierarchy does not replace stock CameraZ.
+
+Both can coexist:
+
+StockCameraZ:
+observe / reference / compare
+
+GZFXSceneDepthHierarchy:
+production GZFX analysis candidate
+
+======================================================================
+23. WAVE 1 REVISED SCOPE
+======================================================================
+
+Wave 1 remains:
+
+Semantic Authority Layer
+
+But closure now requires:
+
+1. persistent resource identity registry;
+2. current-frame availability;
+3. stage validity;
+4. environment validity;
+5. semantic views;
+6. content epochs;
+7. stale-resource fail-closed behavior;
+8. corrected depth semantic model;
+9. corrected diagnostic reporting.
+
+Wave 1 is NOT closed until real Skyrim proves these.
+
+======================================================================
+24. WAVE 2 REVISED SCOPE
+======================================================================
+
+Wave 2 remains:
+
+Stage Scheduler / No-Op Integration
+
+But closure now requires these field-proven events:
+
+- AfterDepthPrepass
+- AfterOpaqueWorldMRT
+- AfterCameraZ
+- AfterStockAO
+- BeforeAmbientScreenSpaceComposite
+- AtAmbientScreenSpaceComposite
+- AfterAmbientScreenSpaceComposite
+
+Exterior-only:
+- BeforeVolumetricApply
+- AfterVolumetricApply
+- PublishPreWaterDepth
+
+Common:
+- UiPresent
+Events must represent execution each frame, not first discovery.
+
+======================================================================
+25. IMPLEMENTATION AUTHORIZATION
+======================================================================
+
+The next engineering pass is authorized to implement ONLY the corrected
+foundation.
+
+Working release target:
+
+0.0.20-foundation-epochs-stage-correctness
+
+Authorized work:
+
+A. Semantic Authority correction
+
+- remove static OPAQUE_FINAL_DEPTH semantic;
+- add semantic views;
+- add availability;
+- add content epochs;
+- add current-frame fail-closed queries;
+- add environment-scope validity;
+- add history-specific validity;
+- revise diagnostics.
+
+B. Stage Scheduler correction
+
+- fix AfterCameraZ per-frame completion;
+- add AfterOpaqueWorldMRT;
+- rename ambient composite boundaries;
+- add volumetric apply boundaries;
+- replace old final-depth boundary with PublishPreWaterDepth;
+- preserve before/after execution semantics.
+
+C. Harness expansion
+
+Synthetic harness must test:
+
+- resource identity persisting while semantic epoch changes;
+- stale exterior resources becoming unavailable in interior;
+- current-frame broker lookup failure on stale resources;
+- CameraZ event firing every frame after hierarchy completion;
+- AfterOpaqueWorldMRT before CameraZ;
+- AmbientScreenSpaceComposite naming/order;
+- VolumetricPreviousDepth -> PublishPreWaterDepth epoch transition.
+
+D. Documentation
+
+README/takeover must reflect revised field model.
+
+======================================================================
+26. NOT AUTHORIZED IN 0.0.20
+======================================================================
+
+No Ambient Visibility v2 shader.
+
+No GI shader.
+
+No Local Glow redesign.
+
+No Horizon tuning.
+
+No final production depth hierarchy quality work beyond foundation/proof unless
+required to establish AfterOpaqueWorldMRT.
+
+No reflection replacement.
+
+No water replacement.
+
+No global TAA replacement.
+
+No HDR redesign.
+
+No RT2.B semantic assignment.
+
+No RT3 channel semantic assignment.
+
+No kPOST_WATER_COPY assignment without field proof.
+
+======================================================================
+27. REQUIRED 0.0.20 CI TESTS
+======================================================================
+
+The corrected harness must prove at minimum:
+
+TEST A
+Core MRT structural reacquisition.
+
+TEST B
+DepthEarlyCopy recognition.
+
+TEST C
+AfterOpaqueWorldMRT fires before CameraZ.
+
+TEST D
+CameraZ hierarchy completes.
+
+TEST E
+AfterCameraZ fires once in every synthetic applicable frame, even after the
+resource was previously promoted.
+
+TEST F
+RawAO/filtered AO remains intact.
+
+TEST G
+RawIndirect remains intact.
+
+TEST H
+AmbientScreenSpaceComposite:
+before/at/after ordering.
+
+TEST I
+Exterior volumetric path:
+PreviousDepth semantic valid before copy.
+
+TEST J
+After MAIN_DEPTH copy:
+same resource transitions to PreWaterDepthCurrent.
+
+TEST K
+Next frame:
+same physical resource can become PreviousDepth history again.
+
+TEST L
+Interior transition:
+volumetric semantics remain known persistently but CurrentFrame lookup fails.
+
+TEST M
+Resize:
+identity/availability reset appropriately while scheduler subscribers survive.
+
+TEST N
+Capture-local reporting is actually bounded.
+
+======================================================================
+28. FIELD GATE AFTER 0.0.20
+======================================================================
+
+The next real-Skyrim gate should not repeat a giant 20+ capture survey unless
+needed.
+
+The foundation-specific field gate should prove:
+
+DAY EXTERIOR
+NIGHT EXTERIOR
+INTERIOR
+
+Minimum useful samples:
+
+4 each
+=
+12 manual captures
+
+The field review must prove:
+
+1. AfterOpaqueWorldMRT fires every applicable frame.
+
+2. AfterCameraZ fires every applicable frame.
+
+3. Order is:
+
+AfterDepthPrepass
+<
+AfterOpaqueWorldMRT
+<
+AfterCameraZ
+<
+AfterStockAO
+<
+AmbientScreenSpaceComposite
+
+for the common stock path.
+
+4. Exterior only:
+
+BeforeVolumetricApply
+<
+AfterVolumetricApply
+<
+PublishPreWaterDepth
+
+with correct content epoch transition.
+
+5. Interior:
+no current volumetric semantic availability.
+
+6. Persistent exterior resource identities may remain known but broker current
+lookups must report unavailable.
+
+7. Ambient screen-space composite boundaries fire every frame in all three
+scene classes.
+
+8. No false `OPAQUE_FINAL_DEPTH` semantic exists.
+
+9. No device instability.
+
+10. No obvious always-on authority regression.
+
+Wave 1 and Wave 2 receive final field credit only after this gate passes.
+
+======================================================================
+29. WAVE 3 AFTER FOUNDATION CLOSURE
+======================================================================
+
+Only after Wave 1/2 field closure:
+
+Wave 3:
+Native Input Broker + Temporal Core
+
+Updated Wave 3 must include:
+
+- typed CurrentFrame semantic queries;
+- typed PreviousFrameHistory queries;
+- stage-aware input contracts;
+- GZFXSceneDepthHierarchy prototype;
+- native normal decode;
+- motion convention verification;
+- temporal history manager;
+- camera-cut / resize / environment-transition invalidation;
+- disocclusion utilities;
+- debug views.
+
+Wave 3 becomes the first consumer of the corrected semantic authority.
+
+======================================================================
+30. AO/GI AUTHORIZATION REMAINS LATER
+======================================================================
+
+Ambient Visibility v2 remains Wave 4.
+
+Indirect Radiance remains Wave 5.
+
+Lighting Composition remains Wave 6.
+
+They are not authorized until:
+
+Wave 1 field pass
+Wave 2 field pass
+Wave 3 field pass
+
+This preserves the new XForge-style discipline.
+
+======================================================================
+31. HARD RULES ADDED BY THIS REVISION
+======================================================================
+
+RULE 1
+
+Physical resource identity is never enough to prove semantic validity.
+
+RULE 2
+
+A semantic broker query must fail closed on stale current-frame data.
+
+RULE 3
+
+A resource may have multiple content epochs in one frame.
+
+RULE 4
+
+Stage events must fire from execution completion, not resource discovery.
+
+RULE 5
+
+Exterior-only semantic resources cannot be treated as universal scene inputs.
+
+RULE 6
+
+The pre-water depth publication is not the universal AO depth source.
+
+RULE 7
+
+Stock CameraZ is trusted, but not automatically the final GZFX production
+hierarchy.
+
+RULE 8
+
+Generic "lighting composite" naming is forbidden when the observed signature
+identifies a narrower renderer domain.
+
+RULE 9
+
+Unknown engine target identity remains unknown even if a format seems
+obvious.
+
+RULE 10
+
+Wave 3 may not begin until corrected Wave 1/2 field credit exists.
+
+======================================================================
+32. DEAD / RETIRED FOUNDATION ASSUMPTIONS
+======================================================================
+
+Retired:
+
+"first post-MRT MAIN_DEPTH copy = OPAQUE_FINAL_DEPTH"
+
+Retired:
+
+"AfterCameraZ can be tied to CameraZ promotion"
+
+Retired:
+
+"known semantic identity implies current availability"
+
+Retired:
+
+"the later exterior depth copy is required for universal AO/indirect"
+
+Retired:
+
+"the current RAW_INDIRECT + AO -> MAIN pass is generic ISLightingComposite"
+
+Retired:
+
+"one physical texture has one semantic meaning"
+
+Do not reintroduce these assumptions.
+
+======================================================================
+33. CORRECTED HIGH-LEVEL FRAME MAP
+======================================================================
+
+Current best logical frame map:
+
+EXTERIOR
+
+1. shadow / scene setup
+2. depth prepass
+3. early MAIN_DEPTH copy
+4. main opaque world MRT
+5. AfterOpaqueWorldMRT
+6. stock CameraZ hierarchy
+7. AfterCameraZ
+8. temporal RawAO
+9. AO filtering
+10. AfterStockAO
+11. RawIndirect
+12. Ambient Screen-Space / SAO Composite
+13. exterior volumetric generation / apply
+14. VolumetricPreviousDepth consumed
+15. MAIN_DEPTH copied into same resource
+16. PublishPreWaterDepth
+17. water / later domains
+18. TAA / HDR / post
+19. UI / Present
+
+
+INTERIOR
+
+1. shadow / scene setup
+2. depth prepass
+3. early MAIN_DEPTH copy
+4. main opaque world MRT
+5. AfterOpaqueWorldMRT
+6. stock CameraZ hierarchy
+7. AfterCameraZ
+8. temporal RawAO
+9. AO filtering
+10. AfterStockAO
+11. RawIndirect
+12. Ambient Screen-Space / SAO Composite
+13. no exterior volumetric previous-depth cycle
+14. later post domains
+15. UI / Present
+
+This is the controlling conceptual map for the corrected foundation.
+
+======================================================================
+34. FIELD / PUBLIC CONFIDENCE LABELS
+======================================================================
+
+Use these labels in future docs:
+
+FIELD VERIFIED
+direct GZFX evidence
+
+FIELD STRONG
+strong repeated GZFX correlation
+
+PUBLIC MATCH
+public renderer structure aligns
+
+VERY STRONG PUBLIC MATCH
+slot/order/behavior closely matches field evidence
+
+PROVISIONAL
+plausible but unresolved
+
+UNKNOWN
+no safe semantic claim
+
+Do not collapse these into one "known" bucket.
+
+======================================================================
+35. CURRENT FRONTIER AFTER THIS BLUEPRINT
+======================================================================
+
+Current state:
+
+0.0.19 proved the foundation concept but exposed static semantic assumptions.
+
+Research Pass 2 resolved the major contradiction.
+
+Blueprint Revision 2 now defines the corrected model.
+
+Next authorized step:
+
+IMPLEMENT 0.0.20 corrected foundation
+
+Scope:
+
+- semantic availability
+- content epochs
+- corrected depth semantics
+- corrected CameraZ scheduler
+- corrected ambient composite scheduler
+- opaque MRT boundary
+- volumetric depth-history transition
+- revised diagnostics
+- expanded harness
+
+Then:
+
+real-Skyrim field gate
+
+Only after pass:
+
+Wave 3.
+
+======================================================================
+36. FINAL BLUEPRINT RULE
+======================================================================
+
+The original Blueprint v1.0 final rule remains valid:
+
+GZFX must ask:
+
+"Which Skyrim renderer domain owns this information, what semantic scene state
+exists there, and how should GZFX participate without corrupting surrounding
+stages?"
+
+Revision 2 adds a second mandatory question:
+
+"Is this physical resource carrying the semantic content I need RIGHT NOW, in
+this frame, at this stage, in this environment, and in this content epoch?"
+
+Both questions must be answered before a production effect consumes a
+resource.
+
+======================================================================
+37. BLUEPRINT STATUS
+======================================================================
+
+Blueprint Revision 2:
+COMPLETE
+
+Repository:
+UNTOUCHED
+
+Next phase:
+ENGINEERING
+
+Authorized release target:
+0.0.20-foundation-epochs-stage-correctness
+
+END OF BLUEPRINT

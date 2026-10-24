@@ -1,0 +1,4421 @@
+======================================================================
+GZFX WAVE 3 BLUEPRINT
+0.0.21 - NATIVE INPUT BROKER + GZFXSCENEDEPTHHIERARCHY + TEMPORAL CORE
+Blueprint date: October 24, 2026
+Status: BLUEPRINT COMPLETE
+Repository engineering status: NOT AUTHORIZED YET
+======================================================================
+
+THIS DOCUMENT IS THE CONTROLLING WAVE 3 IMPLEMENTATION BLUEPRINT.
+
+It converts the field-closed 0.0.20 renderer foundation and completed
+Wave 3 research into one coherent production engineering pass.
+
+DO NOT MODIFY THE GZFX REPOSITORY FROM THIS DOCUMENT ALONE.
+
+Repository engineering begins only after:
+1. this TXT is placed into the user's GZFX authority folder;
+2. the full authority folder is uploaded back into chat;
+3. the authority stack is reread;
+4. the user explicitly authorizes repository implementation.
+
+The implementation target authorized by this blueprint, once the user gives
+that later authorization, is:
+
+    GZFX 0.0.21
+    Native Input Broker
+    + Renderer Execution Service
+    + GZFXSceneDepthHierarchy
+    + Temporal History / Geometry Core
+    + Embedded Wave 3 diagnostics
+
+This is one engineering wave, one coherent architecture, and one field gate.
+
+It is NOT a sequence of tiny probe releases.
+
+======================================================================
+0. AUTHORITY / BASELINE
+======================================================================
+
+This blueprint is derived from, in descending practical relevance:
+
+1. GZFX 0.0.20 real-Skyrim field evidence and corrected foundation findings.
+2. GZFX Deep Research Pass 3 for Wave 3.
+3. GZFX Foundation Blueprint Revision 2 where not superseded.
+4. Current main source, inspected read-only at blueprint time.
+5. Earlier documentation only where it does not conflict with newer evidence.
+
+Current verified repository baseline at blueprint time:
+
+    repository:
+    MrSkyrimFan/GZFX
+
+    main:
+    08d1159d55729137431a70b50ab900e98b7e8bb7
+
+    source merge parent:
+    981b4a020566238c550a01083d920d39a8f6ca39
+
+    current runtime:
+    0.0.20-foundation-epochs-stage-correctness
+
+    current test gate:
+    14 / 14 PASS
+
+    Wave 1:
+    CLOSED
+
+    Wave 2:
+    CLOSED
+
+    foundation cartography:
+    COMPLETE
+
+Read-only verification of the current main commit confirmed that the
+post-merge main commit changes only:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+No source drift was found after the accepted 0.0.20 source merge.
+
+The repository remains untouched by this blueprint phase.
+
+======================================================================
+1. SUPERSESSION RULES
+======================================================================
+
+Where earlier Wave 3 notes differ from the completed Deep Research Pass 3,
+the latest research controls.
+
+The following decisions are explicitly superseded/clarified:
+
+A. DEPTH MIP COUNT
+
+Earlier direction:
+    approximately five useful mips minimum
+
+Final Wave 3 decision:
+    ALLOCATE A FULL MIP CHAIN TO 1x1.
+
+The implementation may generate mip 0 through mip 4 in one efficient pass
+and generate the coarse tail separately, but the production hierarchy itself
+owns the full chain.
+
+B. DEPTH REDUCTION
+
+Earlier direction:
+    plain linear / average reduction as the likely first production filter
+
+Final Wave 3 decision:
+    default production candidate =
+    XeGTAO-style weighted / far-aware reduction
+
+    diagnostic reference =
+    linear average
+
+    optional engineering diagnostics =
+    minimum and maximum
+
+The final weighted constants remain engineering parameters to be proven by
+the Wave 3 diagnostics; the architecture is not blocked on those constants.
+
+C. PREVIOUS GEOMETRY STORAGE
+
+Earlier direction:
+    a packed R16G16B16A16_FLOAT representation was considered attractive
+
+Final Wave 3 decision:
+    begin correctness-first with explicit resources:
+
+    PreviousLinearDepth:
+        R32_FLOAT
+
+    PreviousWorldNormal:
+        R8G8_UNORM octahedral encoding
+
+    HistoryConfidence:
+        R8_UNORM
+
+A packed representation may be evaluated later only after correctness and
+performance evidence justify it.
+
+======================================================================
+2. WAVE 3 PURPOSE
+======================================================================
+
+Wave 3 establishes a production-grade, renderer-native input and temporal
+foundation.
+
+It does NOT make a final AO effect.
+
+It does NOT make GI.
+
+It does NOT tune the old prototypes.
+
+It creates the systems that make the next graphics features trustworthy.
+
+Wave 3 must deliver:
+
+1. Renderer Execution Service
+2. production Native Semantic Broker
+3. production camera-frame acquisition and parsing
+4. GZFXSceneDepthHierarchy
+5. shared depth reconstruction utilities
+6. shared native normal decode utilities
+7. shared native motion / dynamic-resolution utilities
+8. centralized Temporal History Manager
+9. Temporal Geometry history
+10. temporal reprojection
+11. depth / position / normal disocclusion validation
+12. generic neighborhood history clamping utility
+13. motion-dependent accumulation infrastructure
+14. GZFX-owned pass tagging
+15. accessible targeted diagnostics
+16. per-pass GPU timing
+17. expanded CI / synthetic harnesses
+18. one compact real-Skyrim field campaign
+
+The visible game output must remain neutral during Wave 3.
+
+No production AO/GI shading is required for acceptance.
+
+======================================================================
+3. LOCKED FIELD FOUNDATION
+======================================================================
+
+The implementation must trust, not repeatedly rediscover, the following
+field-closed renderer model.
+
+Common stage spine:
+
+    AfterDepthPrepass
+    ->
+    AfterOpaqueWorldMRT
+    ->
+    AfterCameraZ
+    ->
+    AfterStockAO
+    ->
+    BeforeAmbientScreenSpaceComposite
+    ->
+    AtAmbientScreenSpaceComposite
+    ->
+    AfterAmbientScreenSpaceComposite
+    ->
+    UiPresent
+
+Exterior branch:
+
+    BeforeVolumetricApply
+    ->
+    AfterVolumetricApply
+    ->
+    PublishPreWaterDepth
+
+The common stage spine passed in all 54 captured field frames.
+
+The exterior branch passed in all 36 exterior captured frames and correctly
+disappeared in all 18 interior captured frames.
+
+The following ordinal distances are evidence of structural stability only:
+
+    AfterOpaqueWorldMRT -> AfterCameraZ = 11 draw ordinals
+    AfterCameraZ -> AfterStockAO = 3 draw ordinals
+    AfterStockAO -> BeforeAmbientScreenSpaceComposite = 2 draw ordinals
+
+THESE NUMBERS MUST NOT BE HARDCODED.
+
+Wave 3 runs from semantic stage callbacks, never ordinal constants.
+
+======================================================================
+4. LOCKED NATIVE INPUT SEMANTICS
+======================================================================
+
+Main opaque world MRT:
+
+    RT0
+    R16G16B16A16_FLOAT
+    MAIN_HDR
+
+    RT1
+    R16G16_FLOAT
+    MOTION
+
+    RT2
+    R8G8B8A8_UNORM
+    NORMAL_MASK_CURRENT
+
+    RT3
+    R8G8_UNORM
+    AUXILIARY_RT3
+
+    DSV
+    R24G8_TYPELESS
+    MAIN_DEPTH_CURRENT
+
+Stock depth-related semantics remain:
+
+    DEPTH_EARLY_COPY
+    STOCK_CAMERAZ
+    VOLUMETRIC_PREVIOUS_DEPTH
+    PRE_WATER_DEPTH_CURRENT
+
+The old model:
+
+    OPAQUE_FINAL_DEPTH
+
+is retired and MUST NOT return.
+
+The old generic stage names are also retired and MUST NOT return.
+
+======================================================================
+5. LOCKED MOTION CONVENTION
+======================================================================
+
+Native Skyrim motion is:
+
+    R16G16_FLOAT
+
+Coordinate space:
+
+    normalized screen UV displacement
+
+Meaning:
+
+    previous - current
+
+Required Wave 3 reprojection:
+
+    previousUV = currentUV + nativeMotion.xy
+
+DO NOT:
+
+    negate motion
+    subtract motion
+    flip Y again
+    convert motion to pixels before history sampling
+    inject TAA jitter into the motion vector
+    remove jitter from the motion vector
+
+Native motion is generated from unjittered camera transforms.
+
+Pixel-space motion exists only as a diagnostic quantity:
+
+    motionPixels =
+        nativeMotionUV * activeRenderSize
+
+======================================================================
+6. LOCKED DYNAMIC-RESOLUTION MODEL
+======================================================================
+
+The native 720-byte camera buffer contains:
+
+DynamicResolutionParams1:
+
+    x = current width ratio
+    y = current height ratio
+    z = previous width ratio
+    w = previous height ratio
+
+DynamicResolutionParams2:
+
+    x/y = inverse current ratios
+    z/w = current / previous clamp-related values
+
+Logical current UV and previous UV MUST use different mappings.
+
+Current:
+
+    currentDRUV =
+        currentRatio * currentUV
+
+Previous:
+
+    previousDRUV =
+        previousRatio * previousUV
+
+Required temporal flow:
+
+    currentUV
+    ->
+    currentDRUV
+    ->
+    sample current motion
+    ->
+    previousUV = currentUV + motion
+    ->
+    logical [0,1] bounds test
+    ->
+    previousDRUV
+    ->
+    sample previous history
+
+Never map previous history with the current ratio.
+
+History allocations should remain at the full resource/display dimensions.
+
+Ordinary native dynamic-resolution ratio changes should NOT cause texture
+reallocation.
+
+Actual resource-size changes DO invalidate/recreate history.
+
+======================================================================
+7. PRODUCTION MODULE LAYOUT
+======================================================================
+
+Wave 3 should introduce the following production modules.
+
+Recommended files:
+
+    include/gzfx/render/renderer_execution_service.hpp
+    src/render/renderer_execution_service.cpp
+
+    include/gzfx/render/camera_frame_data.hpp
+    src/render/camera_frame_data.cpp
+
+    include/gzfx/render/native_input_broker.hpp
+    src/render/native_input_broker.cpp
+
+    include/gzfx/render/scene_depth_hierarchy.hpp
+    src/render/scene_depth_hierarchy.cpp
+
+    include/gzfx/render/temporal_history.hpp
+    src/render/temporal_history.cpp
+
+    include/gzfx/render/temporal_geometry.hpp
+    src/render/temporal_geometry.cpp
+
+    include/gzfx/render/wave3_pipeline.hpp
+    src/render/wave3_pipeline.cpp
+
+    include/gzfx/diagnostics/wave3_diagnostics.hpp
+    src/diagnostics/wave3_diagnostics.cpp
+
+Shared shader helpers may be kept in .inl/.hlsli-style generated strings
+consistent with the repository's existing build strategy.
+
+Recommended logical shared shader utilities:
+
+    Wave3Camera
+    Wave3Depth
+    Wave3NativeNormal
+    Wave3Motion
+    Wave3Temporal
+    Wave3HistoryClamp
+
+The precise physical source-file split may be adjusted during implementation
+if the live code makes a different separation cleaner.
+
+The architectural ownership boundaries below are mandatory.
+
+======================================================================
+8. RENDERER EXECUTION SERVICE
+======================================================================
+
+Current primary device/context ownership lives inside renderer diagnostics.
+
+Production renderer modules must not depend on diagnostic globals.
+
+Wave 3 therefore adds:
+
+    RendererExecutionService
+
+Responsibilities:
+
+    - retain the primary ID3D11Device
+    - retain the primary immediate ID3D11DeviceContext
+    - retain the primary swap chain when useful
+    - expose a renderer/device generation
+    - expose a surface generation
+    - invalidate cleanly on resize/device replacement
+    - provide short-lived AddRef'd execution leases
+    - register GZFX-owned command lists / pass tags
+    - remain independent of feature-specific rendering logic
+
+Recommended public contract:
+
+    namespace gzfx::render::execution
+    {
+        enum class OwnedPass : uint32_t
+        {
+            Unknown = 0,
+            Wave3DepthHierarchy,
+            Wave3TemporalGeometry,
+            Wave3Diagnostics,
+            Count
+        };
+
+        struct ExecutionLease
+        {
+            ID3D11Device* device = nullptr;
+            ID3D11DeviceContext* immediate = nullptr;
+            IDXGISwapChain* swapChain = nullptr;
+
+            uint64_t deviceGeneration = 0;
+            uint64_t surfaceGeneration = 0;
+
+            bool valid = false;
+        };
+
+        bool AttachPrimary(
+            IDXGISwapChain* swapChain,
+            ID3D11Device* device,
+            ID3D11DeviceContext* immediate) noexcept;
+
+        bool Acquire(
+            ExecutionLease* outLease) noexcept;
+
+        void Release(
+            ExecutionLease& lease) noexcept;
+
+        void NotifyResizeBegin() noexcept;
+
+        void NotifyResizeComplete(
+            bool succeeded,
+            UINT width,
+            UINT height) noexcept;
+
+        uint64_t DeviceGeneration() noexcept;
+        uint64_t SurfaceGeneration() noexcept;
+
+        void TagCommandList(
+            ID3D11CommandList* list,
+            OwnedPass pass,
+            uint64_t frame) noexcept;
+
+        bool QueryOwnedCommandList(
+            ID3D11CommandList* list,
+            OwnedPass* outPass,
+            uint64_t* outFrame) noexcept;
+
+        void RetireCommandList(
+            ID3D11CommandList* list) noexcept;
+    }
+
+Exact function spelling can be adjusted to repository style.
+
+Required behavior:
+
+- AttachPrimary is called from the already-proven primary swap/device acquisition
+  path.
+- The service retains its own strong references.
+- A real device replacement increments deviceGeneration.
+- A successful resize increments surfaceGeneration.
+- Production modules acquire a lease rather than reaching into
+  renderer_forensics globals.
+- Leases are bounded and explicitly released.
+
+======================================================================
+9. GZFX-OWNED PASS TAGGING
+======================================================================
+
+Wave 3 executes D3D11 work inside a renderer that is already being observed by
+GZFX diagnostics.
+
+GZFX must not mistake its own work for new Skyrim renderer evidence.
+
+All Wave 3 command lists must therefore be tagged before execution.
+
+The immediate-context ExecuteCommandList hook must be able to answer:
+
+    Is this command list GZFX-owned?
+
+If yes:
+
+    - diagnostics may record that a GZFX pass executed;
+    - pipeline cartography must not treat it as opaque Skyrim work;
+    - semantic classification must not promote GZFX-owned resources as native
+      Skyrim semantics;
+    - it must not increment the historical "opaque Skyrim command-list blind
+      spot" evidence.
+
+Required bounded record:
+
+    command list identity
+    frame
+    OwnedPass
+    device generation
+
+The tag is retired after immediate-context execution.
+
+Do not maintain an unbounded registry.
+
+======================================================================
+10. D3D11 STATE ISOLATION
+======================================================================
+
+Wave 3 uses the existing proven pattern:
+
+    device->CreateDeferredContext(...)
+    ->
+    record GZFX commands
+    ->
+    deferred->FinishCommandList(FALSE, ...)
+    ->
+    immediate->ExecuteCommandList(commandList, TRUE)
+
+RestoreContextState MUST be TRUE for the default Wave 3 execution path.
+
+This preserves the surrounding Skyrim immediate-context state.
+
+Wave 3 does not manually snapshot and restore every:
+
+    shader
+    constant buffer
+    SRV
+    UAV
+    sampler
+    viewport
+    render target
+    depth state
+    raster state
+    blend state
+
+unless later profiling proves that the command-list restore mechanism is an
+actual performance blocker.
+
+Correctness comes first.
+
+The preferred Wave 3 structure is ONE coherent deferred command list at
+AfterOpaqueWorldMRT containing:
+
+    depth hierarchy
+    temporal geometry/history
+    ordinary Wave 3 diagnostic GPU work if armed
+    timestamp queries
+
+A second short owned command list at AfterCameraZ is allowed only when a
+manual diagnostic capture needs to compare GZFX hierarchy data against
+same-frame STOCK_CAMERAZ.
+
+======================================================================
+11. SEMANTIC AUTHORITY PRODUCTION EXTENSION
+======================================================================
+
+The 0.0.20 Semantic Authority remains the canonical semantic classifier.
+
+Do NOT replace it with resource_intelligence.
+
+Wave 3 extends production ownership around it.
+
+Current authority records identity, descriptor, generation and availability.
+
+Wave 3 additionally needs a safe way to obtain the real D3D11 resource that
+corresponds to an accepted semantic generation.
+
+Required rule:
+
+    QuerySemantic decides whether a semantic is valid.
+
+Only after QuerySemantic succeeds may production code obtain the resource.
+
+Recommended internal change:
+
+- bound view state retains an ID3D11Resource strong reference while the binding
+  is active;
+- each accepted semantic record retains one strong resource reference for its
+  CURRENT semantic generation;
+- replacing a semantic generation releases the old reference;
+- resize/device reset releases all semantic strong references.
+
+This is bounded by the semantic enum count.
+
+It is NOT an unbounded global COM-object cache.
+
+Recommended narrow authority API:
+
+    bool AcquireResourceObject(
+        Semantic semantic,
+        uint64_t expectedGeneration,
+        ID3D11Resource** outResource) noexcept;
+
+Contract:
+
+- expectedGeneration must equal the authority's current semantic generation;
+- returned resource is AddRef'd for the caller;
+- failure returns nullptr;
+- this API does NOT bypass availability, stage or environment checks;
+- callers must first obtain a successful SemanticView from QuerySemantic.
+
+The public SemanticView remains lightweight metadata.
+
+Production COM lifetime ownership is explicit.
+
+======================================================================
+12. CAMERA FRAME DATA - PRODUCTION OWNERSHIP
+======================================================================
+
+The field-proven native camera constant buffer is:
+
+    720 bytes
+
+Native slots:
+
+    VS b12
+    PS b12
+
+Wave 3 creates an explicit versioned internal layout.
+
+Required structure conceptually:
+
+    struct CameraFrameData
+    {
+        float CameraView[16];
+        float CameraProj[16];
+        float CameraViewProj[16];
+        float CameraViewProjUnjittered[16];
+        float CameraPreviousViewProjUnjittered[16];
+        float CameraProjUnjittered[16];
+        float CameraProjUnjitteredInverse[16];
+        float CameraViewInverse[16];
+        float CameraViewProjInverse[16];
+        float CameraProjInverse[16];
+
+        float CameraPosAdjust[4];
+        float CameraPreviousPosAdjust[4];
+        float FrameParams[4];
+        float DynamicResolutionParams1[4];
+        float DynamicResolutionParams2[4];
+    };
+
+Required compile-time assertion:
+
+    sizeof(CameraFrameData) == 720
+
+Do not continue treating this buffer as an opaque float blob in production.
+
+======================================================================
+13. CAMERA BUFFER ACQUISITION
+======================================================================
+
+The old resource_intelligence path identifies the likely camera buffer using:
+
+    byte width == 720
+    VS slot 12
+    PS slot 12
+
+That was good enough for diagnostics.
+
+Wave 3 must make the camera signal production-grade.
+
+Recommended acquisition architecture:
+
+A. OBSERVE BINDING
+
+The primary-context constant-buffer hooks already see VS/PS b12.
+
+A candidate becomes production-eligible only when:
+
+    ByteWidth == 720
+    AND
+    observed at VS slot 12
+    AND
+    observed at PS slot 12
+
+B. RETAIN THE SELECTED BUFFER
+
+Retain one AddRef'd selected camera ID3D11Buffer for the accepted generation.
+
+C. CAPTURE THE CPU-WRITTEN CONTENT WITHOUT A PER-FRAME GPU READBACK
+
+The existing immediate-context hook layer already observes:
+
+    Map
+    Unmap
+    UpdateSubresource
+
+The Wave 3 camera provider should capture the 720 bytes from CPU-visible writes
+when possible:
+
+- on a successful mapped update, retain the relevant mapped bytes before Unmap;
+- on UpdateSubresource, copy the supplied 720-byte source payload;
+- associate the captured payload with the candidate buffer and current frame.
+
+This is the normal production path.
+
+D. DO NOT MAKE PER-FRAME STAGING READBACK THE DEFAULT
+
+Existing staging CopyResource + Map validation may remain as:
+
+    diagnostic cross-check
+    one-time verification
+    CI/test support
+
+It must not become a normal full-frame GPU synchronization point.
+
+E. FAIL CLOSED
+
+If current camera bytes cannot be proven for the frame:
+
+    temporal reuse is invalid
+    hierarchy work requiring camera reconstruction is skipped
+    bounded diagnostic reason is recorded
+
+Do not silently use arbitrary stale camera bytes.
+
+======================================================================
+14. CAMERA VALIDATION CONTRACT
+======================================================================
+
+Production CameraFrameData must pass:
+
+1. exact 720-byte layout
+2. all required matrix/parameter values finite
+3. valid projection data
+4. current/inverse matrix consistency
+5. dynamic-resolution ratios positive and finite
+6. frame continuity checks
+
+The existing code has already proven a matrix inverse validation tolerance of:
+
+    max absolute inverse identity error < 0.001
+
+Wave 3 may preserve that as the initial validation threshold.
+
+Required matrix consistency checks include at minimum:
+
+    CameraView * CameraViewInverse
+    CameraProj * CameraProjInverse
+    CameraViewProj * CameraViewProjInverse
+
+Diagnostic output must report the maximum error.
+
+Do not hide camera validation failure.
+
+======================================================================
+15. NATIVE INPUT BROKER
+======================================================================
+
+Wave 3 introduces:
+
+    NativeSemanticBroker
+
+Production effects must stop manually collecting random native resources.
+
+The broker translates:
+
+    semantic authority
+    + camera provider
+    + renderer device generation
+
+into an atomic typed input contract.
+
+Recommended generic object:
+
+    struct SemanticInputView
+    {
+        semantic_authority::Semantic semantic;
+        semantic_authority::QueryMode queryMode;
+
+        uint64_t frame;
+        uint64_t semanticGeneration;
+        uint64_t deviceGeneration;
+        uint64_t surfaceGeneration;
+
+        stage_scheduler::Boundary stage;
+        semantic_authority::EnvironmentClass environment;
+        semantic_authority::ContentEpochKind contentEpoch;
+
+        ID3D11Resource* resource;
+        ID3D11ShaderResourceView* srv;
+
+        D3D11_RESOURCE_DIMENSION dimension;
+        UINT width;
+        UINT height;
+        UINT mipLevels;
+        UINT arraySize;
+        DXGI_FORMAT resourceFormat;
+        DXGI_FORMAT viewFormat;
+
+        bool available;
+    };
+
+Returned resource/SRV references are caller-owned AddRef'd references or
+explicitly scoped RAII equivalents.
+
+======================================================================
+16. BROKER FAILURE MODEL
+======================================================================
+
+Recommended failure enum:
+
+    enum class NativeInputFailure
+    {
+        None = 0,
+        MissingSemantic,
+        StageInvalid,
+        EnvironmentInvalid,
+        ContentEpochInvalid,
+        SemanticGenerationMismatch,
+        ResourceUnavailable,
+        ResourceShapeInvalid,
+        ResourceFormatInvalid,
+        ViewCreationFailed,
+        CameraUnavailable,
+        CameraInvalid,
+        CameraFrameMismatch,
+        DeviceGenerationMismatch,
+        SurfaceGenerationMismatch
+    };
+
+Every production request returns either:
+
+    COMPLETE VALID BUNDLE
+
+or:
+
+    FAILURE
+
+No partial production execution.
+
+Diagnostics may query individual semantics separately.
+
+Production does not.
+
+======================================================================
+17. WAVE 3 GEOMETRY INPUT BUNDLE
+======================================================================
+
+At:
+
+    AfterOpaqueWorldMRT
+
+the Wave 3 pipeline requests one atomic geometry bundle.
+
+Recommended structure:
+
+    struct NativeGeometryInputs
+    {
+        uint64_t frame;
+        uint64_t deviceGeneration;
+        uint64_t surfaceGeneration;
+
+        SemanticInputView mainDepth;
+        SemanticInputView motion;
+        SemanticInputView nativeNormal;
+
+        CameraFrameData camera;
+        uint64_t cameraGeneration;
+
+        UINT resourceWidth;
+        UINT resourceHeight;
+
+        float currentResolutionRatio[2];
+        float previousResolutionRatio[2];
+
+        UINT currentActiveWidth;
+        UINT currentActiveHeight;
+        UINT previousActiveWidth;
+        UINT previousActiveHeight;
+
+        EnvironmentClass previousCompletedEnvironment;
+    };
+
+Required native semantics:
+
+    MAIN_DEPTH_CURRENT
+    MOTION
+    NORMAL_MASK_CURRENT
+    camera b12
+
+Required query mode:
+
+    CurrentFrame
+
+Required stage:
+
+    AfterOpaqueWorldMRT
+
+If one required member is missing:
+
+    do not build a half-valid temporal frame.
+
+The pipeline may still log the reason and preserve safe state.
+
+======================================================================
+18. BROKER VIEW FORMATS
+======================================================================
+
+Required source/resource format contracts:
+
+MAIN_DEPTH_CURRENT:
+
+    resource:
+    R24G8_TYPELESS
+
+    SRV:
+    R24_UNORM_X8_TYPELESS
+
+MOTION:
+
+    resource:
+    R16G16_FLOAT
+
+    SRV:
+    R16G16_FLOAT
+
+NORMAL_MASK_CURRENT:
+
+    resource:
+    R8G8B8A8_UNORM
+
+    SRV:
+    R8G8B8A8_UNORM
+
+STOCK_CAMERAZ diagnostic reference:
+
+    resource:
+    R32_FLOAT
+
+    SRV:
+    R32_FLOAT
+
+The broker caches compatible typed views by:
+
+    semantic generation
+    + device generation
+    + view descriptor
+
+When a semantic generation changes:
+
+    release old cached view
+    acquire/rebuild lazily
+
+On resize/device reset:
+
+    clear all production view caches.
+
+======================================================================
+19. ROLE OF RESOURCE_INTELLIGENCE
+======================================================================
+
+Do NOT delete resource_intelligence in Wave 3.
+
+Its role becomes:
+
+    diagnostic cross-check
+    compatibility fallback for investigation
+    regression evidence
+
+It is NOT the production authority.
+Production question:
+
+    "Give me MAIN_DEPTH_CURRENT for this frame at AfterOpaqueWorldMRT."
+
+Not:
+
+    "Which texture currently scores highest as depth?"
+
+This distinction is one of the main architectural outcomes of the foundation
+work.
+
+======================================================================
+20. GZFXSCENEDEPTHHIERARCHY
+======================================================================
+
+Wave 3 creates the production resource:
+
+    GZFXSceneDepthHierarchy
+
+Source:
+
+    MAIN_DEPTH_CURRENT
+
+Build stage:
+
+    AfterOpaqueWorldMRT
+
+Representation:
+
+    positive view-space depth
+
+Resource format:
+
+    DXGI_FORMAT_R32_FLOAT
+
+Bind flags:
+
+    D3D11_BIND_SHADER_RESOURCE
+    |
+    D3D11_BIND_UNORDERED_ACCESS
+
+Sample count:
+
+    1
+
+Array size:
+
+    1
+
+Mip count:
+
+    full chain to 1x1
+
+At 2560x1440:
+
+    mip 0  2560x1440
+    mip 1  1280x720
+    mip 2  640x360
+    mip 3  320x180
+    mip 4  160x90
+    mip 5  80x45
+    mip 6  40x22
+    mip 7  20x11
+    mip 8  10x5
+    mip 9  5x2
+    mip 10 2x1
+    mip 11 1x1
+
+General mip count:
+
+    1 + floor(log2(max(width, height)))
+
+======================================================================
+21. HIERARCHY MEMORY CONTRACT
+======================================================================
+
+At 2560x1440:
+
+    R32 mip 0:
+    approximately 14.06 MiB
+
+    full R32 chain:
+    approximately 18.75 MiB
+
+This cost is accepted for Wave 3.
+
+Do not weaken the architecture to R16_FLOAT merely to save approximately
+9.4 MiB.
+
+R16_FLOAT may be evaluated later only through:
+
+    visual comparison
+    temporal stability comparison
+    measured GPU/bandwidth benefit
+
+Wave 3 correctness baseline remains R32_FLOAT.
+
+======================================================================
+22. HIERARCHY VIEW OWNERSHIP
+======================================================================
+
+Create:
+
+    one Texture2D R32_FLOAT with full mip chain
+
+Views:
+
+    one full-chain SRV
+    one per-mip UAV for every mip
+    per-mip SRV where needed for tail generation and diagnostics
+
+Recommended exposed view:
+
+    struct SceneDepthHierarchyView
+    {
+        ID3D11Texture2D* texture;
+        ID3D11ShaderResourceView* fullSrv;
+
+        uint64_t generation;
+        uint64_t frame;
+        uint64_t deviceGeneration;
+
+        UINT width;
+        UINT height;
+        UINT mipCount;
+
+        bool valid;
+    };
+
+A hierarchy view is valid only for the frame on which it was successfully
+built.
+
+Do not let a prior-frame hierarchy masquerade as current geometry.
+
+======================================================================
+23. DEPTH REPRESENTATION / BACKGROUND SENTINEL
+======================================================================
+
+The hierarchy stores:
+
+    positive view-space depth
+
+Background / invalid depth should use:
+
+    0.0
+
+Rules:
+
+    valid geometry:
+        viewDepth > 0
+
+    background:
+        viewDepth == 0
+
+Reduction filters must ignore invalid zero samples.
+
+If all source samples are invalid:
+
+    destination = 0
+
+This avoids contaminating depth reductions with an arbitrary far-plane
+numeric sentinel.
+
+======================================================================
+24. SHARED DEPTH RECONSTRUCTION
+======================================================================
+
+Wave 3 MUST have one canonical depth reconstruction implementation.
+
+It is shared by:
+
+    hierarchy generation
+    hierarchy debug visualization
+    temporal world-position reconstruction
+    stock CameraZ comparison diagnostics
+
+Source data:
+
+    native raw device depth
+    CameraProjInverse or equivalent validated camera projection data
+
+Canonical conceptual reconstruction:
+
+    clip.x = uv.x * 2 - 1
+    clip.y = (1 - uv.y) * 2 - 1
+    clip.z = rawDepth
+    clip.w = 1
+
+    viewH = mul(CameraProjInverse, clip)
+    view = viewH.xyz / viewH.w
+
+    positiveViewDepth = canonical positive forward distance
+
+The implementation must explicitly validate the renderer's forward-Z sign.
+
+DO NOT silently apply abs(view.z) to make bad math look plausible.
+
+One diagnostic comparison against stock CameraZ must prove scale/sign on common
+geometry.
+
+After proof, the shared function becomes the only production depth
+linearization path.
+
+======================================================================
+25. HIERARCHY COMPUTE PIPELINE
+======================================================================
+
+Do NOT use D3D11 GenerateMips.
+
+Wave 3 needs controlled geometry reduction.
+
+Preferred compute design:
+
+    BuildDepthHierarchyCS
+
+Thread group:
+
+    8x8 baseline
+
+PASS A:
+
+    read raw MAIN_DEPTH_CURRENT
+    reconstruct positive view-space depth
+    write mip 0
+    use group-shared memory
+    reduce mip 1
+    reduce mip 2
+    reduce mip 3
+    reduce mip 4
+
+PASS B / TAIL:
+
+    reduce mip 4 -> mip 5
+    mip 5 -> mip 6
+    ...
+    until 1x1
+
+The tail may use one small dispatch per mip initially.
+
+Correctness beats a clever giant shader.
+
+The tail contains little work and can be optimized later only if profiling
+proves it matters.
+
+======================================================================
+26. DEFAULT DEPTH REDUCTION
+======================================================================
+
+Production candidate:
+
+    WeightedFar
+
+Intent:
+
+    preserve a stable representative depth across slopes and discontinuities
+    without inheriting the worst behavior of pure minimum selection.
+
+The implementation should follow the XeGTAO-derived weighted/far-aware
+reduction concept documented in the completed Wave 3 research.
+
+Required engineering modes:
+
+    WeightedFar
+        production default
+
+    LinearAverage
+        reference / diagnostic
+
+Optional diagnostic-only modes:
+
+    Min
+    Max
+
+These are not end-user settings.
+
+They exist to prove the production reduction during engineering.
+
+Zero/background samples are ignored.
+
+If no valid sample exists:
+
+    output 0
+
+======================================================================
+27. NATIVE NORMAL DECODE
+======================================================================
+
+Wave 3 uses ONLY:
+
+    NORMAL_MASK_CURRENT.RG
+
+RT2.B remains unresolved.
+
+RT2.A has unrelated public SSR evidence.
+
+Neither B nor A is required for Wave 3 geometry normals.
+
+The shared native normal decoder must match the already-proven repository /
+public Skyrim behavior.
+
+Current exact validated repository form:
+
+    float3 DecodeNativeNormal(float2 encoded)
+    {
+        float2 e = encoded - 0.5;
+
+        float nz =
+            clamp(
+                8.0 * dot(e, e) - 1.0,
+                -1.0,
+                1.0);
+
+        float q =
+            sqrt(
+                max(
+                    8.0 - 8.0 * nz,
+                    0.0));
+
+        float3 n =
+            float3(
+                e * q,
+                nz);
+
+        return normalize(n);
+    }
+
+This helper must exist once in shared Wave 3 shader code.
+
+Do not create multiple slightly different normal decoders.
+
+======================================================================
+28. WORLD NORMAL HISTORY
+======================================================================
+
+Native decoded normal is expressed in the current camera/view frame.
+
+Do NOT store that raw view-space normal as cross-frame history.
+
+Required flow:
+
+    native RG
+    ->
+    decode current view-space normal
+    ->
+    transform direction through CameraViewInverse
+    ->
+    normalize
+    ->
+    encode world normal
+    ->
+    store history
+
+Previous history therefore holds a camera-independent surface orientation.
+
+Temporal comparison:
+
+    dot(currentWorldNormal, previousWorldNormal)
+
+not:
+
+    dot(currentViewNormalThisFrame, previousViewNormalLastFrame)
+
+======================================================================
+29. WORLD NORMAL HISTORY FORMAT
+======================================================================
+
+Primary format:
+
+    R8G8_UNORM
+
+Encoding:
+
+    conventional octahedral unit-vector encoding for GZFX-owned world normals
+
+This is a GZFX history format.
+
+It is not the Skyrim native normal encoding.
+
+The distinction must remain explicit:
+
+    Skyrim native normal:
+        proprietary/native two-channel decode described above
+
+    GZFX previous world normal:
+        GZFX-owned octahedral encode/decode
+
+If the target D3D11 device reports inadequate typed UAV support for the
+R8G8_UNORM write path:
+
+    allowed correctness fallback:
+        R16G16_FLOAT world-normal encoding
+
+That fallback must be logged.
+
+Do not silently change formats.
+
+======================================================================
+30. TEMPORAL HISTORY MANAGER
+======================================================================
+
+Wave 3 creates one central:
+
+    TemporalHistoryManager
+
+Future AO, GI, reflections and other temporal domains should register with
+this manager rather than each inventing their own reset lifecycle.
+
+Manager owns:
+
+    global history generation
+    last completed frame
+    valid-frame token
+    last valid environment
+    device generation
+    surface generation
+    resource dimensions
+    current/previous dynamic-resolution metadata
+    current camera continuity token
+    critical native input generations
+    reset reason
+    registered domain histories
+
+Recommended reset enum:
+
+    enum class TemporalResetReason : uint32_t
+    {
+        None = 0,
+        FirstValidFrame,
+        FrameGap,
+        Resize,
+        DeviceGenerationChanged,
+        SurfaceGenerationChanged,
+        MissingRequiredInput,
+        SemanticGenerationChanged,
+        CameraGenerationChanged,
+        CameraInvalid,
+        CameraCutTranslation,
+        CameraCutRotation,
+        CameraProjectionDiscontinuity,
+        CameraMatrixDiscontinuity,
+        DynamicResolutionMetadataInvalid,
+        EnvironmentTransition,
+        WorldReentry,
+        ShaderOrResourceRebuild,
+        DeveloperReset
+    };
+
+Diagnostics print both enum and readable text.
+
+======================================================================
+31. GLOBAL HISTORY INVALIDATION
+======================================================================
+
+Hard-reset history on at least:
+
+1. no valid prior history / first valid frame
+2. ResizeBuffers success
+3. actual render resource size change
+4. device generation change
+5. surface generation change
+6. frame discontinuity:
+       currentFrame != lastCompletedFrame + 1
+7. world/load interruption observable through renderer continuity
+8. world inactive -> active reentry
+9. conservative interior <-> exterior transition
+10. native semantic generation change for:
+       depth
+       motion
+       normal
+       camera
+11. non-finite or invalid camera data
+12. camera cut / teleport
+13. invalid dynamic-resolution metadata
+14. temporal shader/resource rebuild changing the signal
+15. explicit developer reset
+
+Ordinary dynamic-resolution ratio change does NOT automatically reset history
+if:
+
+    current ratio is valid
+    previous ratio is valid
+    resource dimensions are unchanged
+    previous mapping remains valid
+
+======================================================================
+32. ENVIRONMENT TRANSITION POLICY
+======================================================================
+
+0.0.20 determines environment from completed-frame renderer behavior.
+
+At AfterOpaqueWorldMRT, the current frame may not yet have completed enough
+work to classify itself as exterior/interior.
+
+Therefore Wave 3 must not pretend it has a future classification.
+
+Required initial policy:
+
+- carry the last completed environment token;
+- associate history with the environment in which it was completed;
+- if the new frame later proves an environment transition, invalidate history;
+- renderer discontinuity / frame-gap / camera-cut signals should already fail
+  closed on many load transitions;
+- begin conservative: interior <-> exterior transitions reset;
+- only relax this later if field evidence proves continuity safe.
+
+No SKSE event dependency is permitted.
+
+======================================================================
+33. CAMERA CUT DETECTOR
+======================================================================
+
+Camera-cut detection remains renderer-only.
+
+Inputs:
+
+    CameraPosAdjust
+    CameraPreviousPosAdjust
+    CameraViewProjUnjittered
+    CameraPreviousViewProjUnjittered
+    CameraViewInverse
+    projection data
+    frame continuity
+    dynamic-resolution continuity
+
+Track and log:
+
+    translation delta
+    rotation delta in degrees
+    projection delta
+    previous-matrix continuity error
+    current DR ratio
+    previous DR ratio
+    reset decision
+    reset reason
+
+======================================================================
+34. CAMERA CUT THRESHOLDS
+======================================================================
+
+The completed research intentionally leaves final artistic/field thresholds
+for one compact motion campaign.
+
+Wave 3 therefore defines implementation SEED thresholds, not immutable truth.
+
+Initial conservative seeds:
+
+    matrix inverse validation max error:
+        0.001
+
+    previous matrix continuity max absolute error:
+        0.02
+
+    one-frame translation hard-cut seed:
+        4096 Skyrim world units
+
+    one-frame rotation hard-cut seed:
+        75 degrees
+
+    projection/FOV relative discontinuity seed:
+        0.05
+
+    dynamic-resolution ratio:
+        finite, > 0, and within physically valid resource bounds
+
+These values exist to start the field run.
+
+They MAY be tuned inside the Wave 3 implementation branch based on the
+diagnostic logs without changing architecture.
+
+Final field acceptance requires:
+
+    normal fast turns do not cause pathological reset spam
+    teleports/cuts do reset
+    load transitions do reset/fail closed
+    invalid matrices never reuse history
+
+No threshold should be tuned by guessing from appearance alone.
+
+======================================================================
+35. TEMPORAL GEOMETRY HISTORY RESOURCES
+======================================================================
+
+Wave 3 uses two ping-pong history sets.
+
+Each set contains:
+
+A. LINEAR DEPTH
+
+    format:
+    R32_FLOAT
+
+    bind:
+    SRV | UAV
+
+B. WORLD NORMAL
+
+    primary format:
+    R8G8_UNORM
+
+    bind:
+    SRV | UAV
+
+C. HISTORY CONFIDENCE / ACCUMULATION
+
+    primary format:
+    R8_UNORM
+
+    bind:
+    SRV | UAV
+
+If typed UAV support requires fallback:
+
+    world normal:
+    R16G16_FLOAT
+
+    confidence:
+    R16_FLOAT
+
+Fallback must be capability-driven and recorded.
+
+Depth remains R32_FLOAT.
+
+======================================================================
+36. HISTORY MEMORY BUDGET
+======================================================================
+
+At 2560x1440, approximate full-resolution storage:
+
+One R32 depth:
+    14.06 MiB
+
+One R8G8 world normal:
+    7.03 MiB
+
+One R8 confidence:
+    3.52 MiB
+
+One history set:
+    ~24.61 MiB
+
+Two ping-pong history sets:
+    ~49.22 MiB
+
+GZFXSceneDepthHierarchy full R32 chain:
+    ~18.75 MiB
+
+Approximate persistent Wave 3 geometry infrastructure:
+    ~67.97 MiB
+
+This excludes small constant buffers, queries and on-demand diagnostics.
+
+This is acceptable on the 8 GB RTX 4060 Laptop reference system.
+
+Do not compromise depth precision merely to reduce this number before
+measurement.
+
+======================================================================
+37. HISTORY ALLOCATION / DYNAMIC RESOLUTION
+======================================================================
+
+Allocate history textures at the native full resource dimensions.
+
+Track active current/previous regions separately.
+
+Let:
+
+    resourceSize =
+        full texture dimensions
+
+    currentRatio =
+        DynamicResolutionParams1.xy
+
+    previousRatio =
+        DynamicResolutionParams1.zw
+
+Then:
+
+    currentActiveSize =
+        round(resourceSize * currentRatio)
+
+    previousActiveSize =
+        round(resourceSize * previousRatio)
+
+For a current physical pixel p inside currentActiveSize:
+
+    currentLogicalUV =
+        (p + 0.5) / currentActiveSize
+
+Equivalent current texture coordinate:
+
+    currentDRUV =
+        currentRatio * currentLogicalUV
+
+which is also equivalent to:
+
+    (p + 0.5) / resourceSize
+
+Native motion is applied in LOGICAL normalized screen space:
+
+    previousLogicalUV =
+        currentLogicalUV + motion.xy
+
+Bounds test:
+
+    0 <= previousLogicalUV.x <= 1
+    0 <= previousLogicalUV.y <= 1
+
+Then:
+
+    previousDRUV =
+        previousRatio * previousLogicalUV
+
+Use previousDRUV to sample previous history.
+
+This distinction must be synthetic-tested.
+
+======================================================================
+38. TEMPORAL GEOMETRY PASS
+======================================================================
+
+Wave 3 adds:
+
+    TemporalGeometry
+
+It runs after the current frame GZFX depth hierarchy is built, in the same
+AfterOpaqueWorldMRT owned command list.
+
+Inputs:
+
+    current GZFX depth hierarchy mip0
+    current native motion
+    current native normal RG
+    current CameraFrameData
+    previous CameraFrameData
+    previous linear-depth history
+    previous world-normal history
+    previous confidence
+    global history-valid token
+
+Outputs:
+
+    current linear-depth history
+    current world-normal history
+    current confidence
+    optional capture-only diagnostic masks
+
+This pass does NOT alter MAIN_HDR.
+
+It is visually neutral.
+
+======================================================================
+39. TEMPORAL GEOMETRY PER-PIXEL FLOW
+======================================================================
+
+For each active current pixel:
+
+1. read current view-space depth from hierarchy mip0
+
+2. if current depth == 0:
+       write invalid geometry
+       confidence = 0
+       stop
+
+3. read native normal RG
+   decode native view normal
+   transform to current world normal
+   normalize
+
+4. write current geometry regardless of temporal acceptance:
+       current linear depth
+       current world normal
+
+5. if global history is invalid:
+       confidence = 0
+       stop temporal reuse
+
+6. compute current logical UV
+
+7. sample native motion at currentDRUV
+
+8. compute:
+       previousLogicalUV =
+           currentLogicalUV + motion.xy
+
+9. reject if previousLogicalUV is out of logical [0,1]
+
+10. compute previousDRUV from PREVIOUS ratio
+
+11. gather previous:
+       linear depth
+       world normal
+       confidence
+
+12. run cheap depth rejection
+
+13. if still valid:
+       reconstruct current world position
+       reconstruct previous world position
+
+14. run world-position rejection
+
+15. run world-normal rejection
+
+16. if accepted:
+       update confidence / accumulation
+
+17. if rejected:
+       hard reject or soft decay according to mismatch class
+
+18. write capture masks if manual capture is armed
+
+======================================================================
+40. BILINEAR PREVIOUS GEOMETRY REPROJECTION
+======================================================================
+
+History sampling must be bilinear.
+
+A manual four-tap gather is the preferred baseline because it lets GZFX
+control how different geometry fields are combined.
+
+Depth:
+
+    bilinear weighted float depth
+
+World normal:
+
+    decode each of four oct normal taps
+    weighted sum
+    normalize
+
+Confidence:
+
+    bilinear weighted confidence
+
+Invalid geometry taps must not silently pollute valid taps.
+
+The implementation should renormalize weights over valid depth samples.
+
+If no valid previous geometry tap contributes:
+
+    history reject
+
+Nearest-neighbor history lookup is not the Wave 3 production baseline.
+
+======================================================================
+41. DEPTH DISOCCLUSION
+======================================================================
+
+Use a layered rejection sequence.
+
+Engineering parameter:
+
+    DepthDisocclusion
+
+Initial seed:
+
+    0.02
+
+This is field-tunable.
+
+A. CHEAP EARLY DEPTH REJECT
+
+Concept:
+
+    abs(currentDepth - previousDepth)
+    >
+    currentDepth * DepthDisocclusion * 3
+
+If true:
+
+    reject before expensive world reconstruction
+
+B. WORLD-POSITION VALIDATION
+
+Reconstruct:
+
+    current world position
+    previous world position
+
+using the corresponding frame camera data.
+
+Movement threshold:
+
+    movementThreshold =
+        currentDepth * DepthDisocclusion
+
+Accept geometry only when:
+
+    distance(
+        currentWorldPosition,
+        previousWorldPosition)
+    <
+    movementThreshold
+
+The exact multiplier may be tuned from Wave 3 evidence.
+
+The architecture does not change.
+
+======================================================================
+42. WORLD-POSITION RECONSTRUCTION
+======================================================================
+
+Current world reconstruction uses:
+
+    current camera projection/inverse view
+    current logical UV
+    current view-space depth
+    current CameraPosAdjust convention
+
+Previous world reconstruction uses:
+
+    previous frame camera data
+    previous logical UV
+    previous linear depth
+    previous CameraPosAdjust convention
+
+The implementation must not mix current and previous camera transforms.
+
+A shared helper must own this math.
+
+Synthetic CI must include a known camera translation test proving that
+reprojected previous geometry returns to the same world position.
+
+======================================================================
+43. NORMAL DISOCCLUSION
+======================================================================
+
+After depth/world-position validation:
+
+    normalAgreement =
+        dot(
+            currentWorldNormal,
+            previousWorldNormal)
+
+Initial engineering threshold seed:
+
+    0.75
+
+Accept normal geometry when:
+
+    normalAgreement >= threshold
+
+This is deliberately a field-tunable seed.
+
+The compact motion field run must report normal rejection percentage and
+confirm the threshold is not rejecting ordinary smooth surfaces wholesale.
+
+Depth and world-position remain primary validation.
+
+Normal rejection is an additional quality gate.
+
+======================================================================
+44. GLOBAL INVALIDATION VS PER-PIXEL DISOCCLUSION
+======================================================================
+
+Do not conflate these two concepts.
+
+GLOBAL INVALIDATION:
+
+    entire history is unsafe
+
+Examples:
+
+    camera cut
+    frame gap
+    resize
+    load transition
+    device generation change
+    missing critical semantic
+    camera invalid
+
+Response:
+
+    history weight = 0 everywhere
+    reset generation / reason recorded
+
+PER-PIXEL DISOCCLUSION:
+
+    global history exists, but this previous pixel does not represent the
+    same current surface
+
+Examples:
+
+    newly revealed geometry
+    moving viewpoint exposes background
+    geometry edge mismatch
+    normal mismatch
+
+Response:
+
+    reject/decay that pixel only
+
+======================================================================
+45. HISTORY CONFIDENCE / ACCUMULATION
+======================================================================
+
+Initial maximum stable history:
+
+    16 frames
+On global reset:
+
+    confidence = 0
+
+On a valid accepted reprojection:
+
+    confidence increases toward a motion-dependent maximum
+
+On hard per-pixel rejection:
+
+    confidence = 0
+
+On marginal mismatch / soft decay:
+
+    confidence decreases rather than necessarily dropping to zero
+
+The manager must expose:
+
+    historyLength
+    historyWeight
+    reprojectionValid
+    resetReason
+
+to diagnostics.
+
+======================================================================
+46. MOTION-DEPENDENT HISTORY CAP
+======================================================================
+
+The exact response curve is an engineering parameter.
+
+Initial Wave 3 seed behavior:
+
+    near-stationary motion:
+        max accumulation = 16
+
+    moderate motion:
+        progressively reduce cap
+
+    high motion:
+        minimum useful cap = 4
+
+One acceptable seed curve:
+
+    motionPixels <= 0.5:
+        cap = 16
+
+    motionPixels >= 32:
+        cap = 4
+
+    between:
+        smooth linear/saturating interpolation
+
+This is not a final artistic constant.
+
+Wave 3 diagnostics must report:
+
+    mean motion pixels
+    max motion pixels
+    mean confidence
+    accepted history percentage
+
+The architecture must allow later consumers to choose their own cap while
+sharing the same continuity/reprojection foundation.
+
+======================================================================
+47. GENERIC HISTORY NEIGHBORHOOD CLAMP
+======================================================================
+
+Wave 3 implements a generic shader utility for later temporal signals.
+
+Baseline:
+
+    current 3x3 neighborhood
+
+Compute:
+
+    neighborhoodMin
+    neighborhoodMax
+
+Then:
+
+    clampedHistory =
+        clamp(
+            reprojectedHistory,
+            neighborhoodMin,
+            neighborhoodMax)
+
+A smaller cross may be supported as a lower-cost option.
+
+This utility must be generic enough for:
+
+    Ambient Visibility
+    Indirect Radiance
+    reflections
+
+Wave 3 DOES NOT need to run a full-resolution radiance clamp every frame just
+to prove the helper exists.
+
+Required Wave 3 proof:
+
+    compile
+    synthetic CI
+    optional diagnostic test texture
+
+The first production runtime consumer is expected to be Wave 4.
+
+======================================================================
+48. WAVE 3 PIPELINE COORDINATOR
+======================================================================
+
+Add one production coordinator:
+
+    Wave3Pipeline
+
+It registers with the existing Stage Scheduler.
+
+Primary callback:
+
+    AfterOpaqueWorldMRT
+
+Diagnostic callback:
+
+    AfterCameraZ
+
+The scheduler Event remains semantic.
+
+Do NOT add raw device/context pointers to every stage Event.
+
+Execution objects come from RendererExecutionService.
+
+======================================================================
+49. AFTEROPAQUEWORLDMRT EXECUTION SEQUENCE
+======================================================================
+
+On the AfterOpaqueWorldMRT callback:
+
+1. verify event frame / phase is expected
+
+2. acquire RendererExecutionService lease
+
+3. ask NativeSemanticBroker for complete current geometry bundle
+
+4. validate current CameraFrameData
+
+5. TemporalHistoryManager::BeginFrame:
+       evaluate frame continuity
+       device/surface generations
+       semantic generations
+       prior environment
+       camera continuity
+       dynamic-resolution metadata
+
+6. ensure GZFXSceneDepthHierarchy resources match device/resource dimensions
+
+7. ensure TemporalGeometry ping-pong resources match dimensions/device generation
+
+8. reset the dedicated Wave 3 deferred context
+
+9. begin GPU timestamp/disjoint measurement
+
+10. record hierarchy Pass A
+
+11. timestamp hierarchy early/base
+
+12. record hierarchy tail
+
+13. timestamp hierarchy tail
+
+14. record temporal geometry/history update
+
+15. timestamp temporal geometry
+
+16. if a capture is armed:
+        record current-frame debug mask generation
+
+17. finish GPU timing query
+
+18. unbind Wave 3 SRVs/UAVs on deferred context as needed
+
+19. FinishCommandList(FALSE)
+
+20. tag command list as GZFX-owned
+
+21. ExecuteCommandList(commandList, TRUE)
+
+22. retire owned command-list tag
+
+23. commit CPU-side history/frame state only after successful command-list
+    construction/submission
+
+24. bounded-log the frame result
+
+If required inputs fail at step 3:
+
+    skip GPU work
+    invalidate dependent temporal history as required
+    do not crash
+    do not guess
+    do not consume stale resources
+
+======================================================================
+50. AFTERCAMERAZ DIAGNOSTIC SEQUENCE
+======================================================================
+
+Normal runtime:
+
+    no production Wave 3 pass is required here.
+
+When a manual Wave 3 diagnostic capture is armed:
+
+1. query current STOCK_CAMERAZ
+2. acquire current GZFXSceneDepthHierarchy view from this same frame
+3. execute a short GZFX-owned comparison command list
+4. compute:
+       common geometry error
+       stock-background / GZFX-geometry mask
+       selected CameraZ / hierarchy previews
+5. schedule bounded readback for capture evidence
+
+This proves the new hierarchy without making Stock CameraZ the production
+depth source.
+
+======================================================================
+51. STOCK CAMERAZ COMPARISON
+======================================================================
+
+Required statistics on common valid geometry:
+
+    sample count
+    median absolute error
+    median relative error
+    p95 relative error
+    p99 relative error
+
+Required classifications:
+
+A. BOTH VALID
+
+    stock CameraZ has geometry
+    GZFX hierarchy mip0 has geometry
+
+Used for scale/sign numerical agreement.
+
+B. GZFX-ONLY GEOMETRY
+
+    stock CameraZ says background/invalid
+    post-opaque GZFX depth contains geometry
+
+This is expected to reveal the class of later opaque/alpha-tested coverage
+that motivates the new hierarchy.
+
+C. STOCK-ONLY GEOMETRY
+
+Unexpected class.
+
+Must be counted and previewed.
+
+D. BOTH BACKGROUND
+
+Ignored for numerical error.
+
+Do not require exact equality everywhere.
+
+The sources intentionally represent different renderer epochs.
+
+======================================================================
+52. ACCESSIBLE DEPTH DIAGNOSTICS
+======================================================================
+
+The user is colorblind.
+
+All required Wave 3 validation must be possible without hue interpretation.
+
+Depth outputs should use:
+
+    grayscale
+    logarithmic or exposure-style remap for visibility
+    text metadata
+    binary masks with black/white or pattern overlays
+
+Required depth capture views:
+
+    native MAIN_DEPTH raw preview
+    GZFX hierarchy mip0
+    GZFX hierarchy mip1
+    GZFX hierarchy mip2
+    GZFX hierarchy mip4
+    coarse tail mip
+    STOCK_CAMERAZ comparison
+    GZFX-only geometry mask
+    stock-only geometry mask
+    numerical mismatch mask
+
+No rainbow depth visualization is required.
+
+======================================================================
+53. ACCESSIBLE MOTION DIAGNOSTICS
+======================================================================
+
+Required motion views:
+
+    motion X
+    motion Y
+    motion magnitude
+    previousUV valid mask
+
+X/Y displays:
+
+    centered signed grayscale
+    zero = mid gray
+    negative = darker
+    positive = lighter
+
+Motion magnitude:
+
+    black = zero
+    brighter = larger
+
+Required text statistics:
+
+    mean motion UV
+    max motion UV
+    mean motion pixels
+    max motion pixels
+    previousUV logical in-bounds percentage
+
+No hue wheel is required.
+
+======================================================================
+54. ACCESSIBLE TEMPORAL DIAGNOSTICS
+======================================================================
+
+Required masks:
+
+    reprojection valid
+    rejected by logical UV bounds
+    rejected by depth
+    rejected by world position
+    rejected by world normal
+    history accepted
+    history confidence
+    current/previous geometry difference
+
+Masks must be:
+
+    monochrome
+    labeled
+    optionally patterned if multiple classes are combined
+
+Required text:
+
+    valid percentage
+    each rejection percentage
+    mean/max confidence
+    reset boolean
+    reset reason
+
+======================================================================
+55. CAMERA CONTINUITY DIAGNOSTICS
+======================================================================
+
+For each captured frame record:
+
+    frame
+    camera generation
+    camera validation status
+    inverse matrix max error
+    translation delta
+    rotation delta degrees
+    projection delta
+    matrix continuity error
+    current dynamic-resolution ratio
+    previous dynamic-resolution ratio
+    current active size
+    previous active size
+    global history valid
+    reset reason
+
+This makes camera-cut tuning finite and evidence-driven.
+
+======================================================================
+56. GPU TIMING
+======================================================================
+
+Wave 3 must time independently:
+
+    depth hierarchy base / early mips
+    depth hierarchy tail
+    temporal geometry/history update
+    capture-only reprojection/disocclusion diagnostic work
+    capture-only stock CameraZ comparison
+
+Also record:
+
+    total Wave 3 GPU time for the frame
+
+Use asynchronous D3D11 timestamp/disjoint query rings.
+
+DO NOT stall every frame waiting for a query.
+
+Reuse the existing proven query-ring strategy from current rendering code.
+
+Timing is an engineering measurement gate.
+
+It is NOT permission to weaken architecture preemptively.
+
+A suspicious sustained multi-millisecond infrastructure cost must be
+investigated.
+
+R32 may not be downgraded merely because an arbitrary target was missed.
+
+Optimize only measured costs.
+
+======================================================================
+57. WAVE 3 MANUAL CAPTURE ENTRY POINT
+======================================================================
+
+Reuse the existing semantic capture workflow rather than inventing another
+human ritual.
+
+Existing user control:
+
+    Shift + Numpad5
+
+currently requests a manual semantic capture.
+
+Wave 3 implementation should extend the same action to also arm:
+
+    Wave3Diagnostics::RequestManualCapture()
+
+The user presses ONE capture control.
+
+The capture bundle should include both:
+
+    existing semantic/stage evidence
+    Wave 3 targeted evidence
+
+Do not force separate manual capture buttons for every subsystem.
+
+======================================================================
+58. WAVE 3 CAPTURE PACKAGE
+======================================================================
+
+Recommended bounded output layout:
+
+    GZFX/Diagnostics/Wave3/manualNNNN/
+
+Required files:
+
+    wave3_summary.txt
+    wave3_stage.csv
+    wave3_gpu_timing.csv
+    wave3_camera_continuity.txt
+    wave3_temporal_stats.txt
+    wave3_reset_reason.txt
+
+Depth images:
+
+    main_depth_raw.bmp
+    gzfx_depth_mip0.bmp
+    gzfx_depth_mip1.bmp
+    gzfx_depth_mip2.bmp
+    gzfx_depth_mip4.bmp
+    gzfx_depth_tail.bmp
+    stock_cameraz.bmp
+    depth_common_error.bmp
+    depth_gzfx_only_geometry.bmp
+    depth_stock_only_geometry.bmp
+
+Motion images:
+
+    motion_x.bmp
+    motion_y.bmp
+    motion_magnitude.bmp
+    previous_uv_valid.bmp
+
+Temporal images:
+
+    history_accepted.bmp
+    reject_uv_bounds.bmp
+    reject_depth.bmp
+    reject_world_position.bmp
+    reject_world_normal.bmp
+    history_confidence.bmp
+    geometry_difference.bmp
+
+The implementation may use PNG instead of BMP if the repository gains a
+simple dependable encoder during engineering.
+
+Do not add a heavy dependency solely for image format.
+
+======================================================================
+59. DIAGNOSTIC READBACK POLICY
+======================================================================
+
+Normal gameplay:
+
+    no continuous full-resolution CPU image readback
+
+Manual capture:
+
+    bounded diagnostic readback permitted
+
+Capture system should:
+
+    copy selected debug surfaces to staging resources
+    resolve asynchronously where possible
+    map only when the GPU has completed the relevant query/fence-equivalent
+    write a finite package
+    release capture-only resources afterward
+
+Do not turn diagnostics into a permanent GPU/CPU synchronization tax.
+
+======================================================================
+60. RESIZE LIFETIME
+======================================================================
+
+Resize handling must be explicit.
+
+Before original ResizeBuffers when practical:
+
+    release broker-owned cached native views/references that may obstruct
+    renderer resource recreation
+
+After successful ResizeBuffers:
+
+    semantic authority resets
+    execution service increments surface generation
+    hierarchy resources invalidate
+    temporal resources invalidate
+    camera continuity invalidates
+    history reset reason = Resize
+    diagnostics resize their capture surfaces lazily
+
+If ResizeBuffers fails:
+
+    do not pretend a new surface generation exists
+    broker reacquires the still-valid renderer resources as necessary
+    log failure boundedly
+
+No old semantic generation may cross a real device replacement.
+
+======================================================================
+61. DEVICE REPLACEMENT
+======================================================================
+
+On primary device replacement:
+
+    release all Wave 3 D3D objects
+    increment device generation
+    invalidate broker caches
+    invalidate camera resource generation
+    invalidate hierarchy
+    invalidate temporal histories
+    rebuild deferred context
+    reset all GPU query pools
+    require fresh semantics before execution
+
+History from one D3D device generation must never be consumed by another.
+
+======================================================================
+62. FRAME FAILURE POLICY
+======================================================================
+
+Wave 3 fails soft.
+
+Examples:
+
+MISSING MAIN DEPTH
+
+    skip hierarchy
+    skip temporal geometry
+    reset dependent history
+    bounded log
+
+MISSING CAMERA
+
+    skip hierarchy if reconstruction cannot be proven
+    skip temporal
+    bounded log
+
+MISSING MOTION
+
+    hierarchy may still build
+    temporal reuse must be invalid
+    current geometry may still be written if safe
+    no stale motion fallback
+
+MISSING NATIVE NORMAL
+
+    hierarchy may still build
+    normal-dependent temporal validation is unavailable
+    do NOT silently substitute depth-derived normal as production truth
+    temporal path must fail closed according to the bundle contract
+
+VIEW CREATION FAILURE
+
+    skip affected pass
+    invalidate dependent history
+    log HRESULT once/boundedly
+
+Never crash Skyrim for a missing optional GZFX frame.
+
+Never guess.
+
+======================================================================
+63. NO DEPTH-DERIVED NORMAL PRODUCTION FALLBACK
+======================================================================
+
+This remains a hard lesson from the failed prototype period.
+
+If native normal is unavailable:
+
+    do not automatically reconstruct a depth-derived normal and pretend it is
+    equivalent production data
+
+A depth-derived normal may exist only as:
+
+    clearly labeled diagnostic experiment
+
+It cannot satisfy the NativeGeometryInputs production contract.
+
+======================================================================
+64. DEVELOPMENT / USER SETTINGS
+======================================================================
+
+Wave 3 infrastructure is not an artistic user-facing feature.
+
+Do not clutter Settings.ini or the live editor with:
+
+    disocclusion threshold
+    normal-dot threshold
+    hierarchy reduction mode
+    camera cut threshold
+    history cap
+    debug filter selection
+
+unless needed as explicitly labeled engineering diagnostics.
+
+Engineering constants can live in:
+
+    internal constants
+    developer-only diagnostic controls
+
+They are not normal product settings yet.
+
+======================================================================
+65. VISUAL NEUTRALITY
+======================================================================
+
+Wave 3 production infrastructure must not alter:
+
+    MAIN_HDR
+    backbuffer
+    stock AO
+    stock indirect lighting
+    stock volumetrics
+    stock water
+    stock post-processing
+
+except for read-only sampling of native resources.
+
+Wave 3 debug images may be written to files.
+
+The game view should remain unchanged when no pre-existing development effect
+is enabled.
+
+This prevents infrastructure validation from being confused with AO tuning.
+
+======================================================================
+66. LEGACY PROTOTYPE RELATIONSHIP
+======================================================================
+
+Existing:
+
+    Ambient Contact
+    Local Glow
+    old horizon/HBAO prototype
+    old indirect bounce
+    ambient_depth_stack
+    visible pass diagnostics
+
+must not be treated as the new production Wave 3 architecture.
+
+Do not spend Wave 3 tuning them.
+
+Do not delete useful older code merely to make the tree look clean.
+
+Where practical:
+
+    keep old systems compiling
+    isolate the new production foundation
+    preserve them as regression/reference material until later cleanup is
+    explicitly authorized
+
+Wave 4 Ambient Visibility v2 is where production AO-like work resumes.
+
+======================================================================
+67. SYNTHETIC CI EXPANSION
+======================================================================
+
+Current 0.0.20 test gate:
+
+    14 / 14 PASS
+
+Wave 3 should add focused synthetic harnesses.
+
+Recommended new harnesses:
+
+1. renderer_execution_service
+2. native_input_broker
+3. scene_depth_hierarchy
+4. temporal_core
+5. wave3_integration
+
+This would produce an initial target of:
+
+    19 / 19 PASS
+
+if the current 14 remain intact.
+
+Exact test count may change if one harness is split/combined, but coverage may
+not shrink.
+
+======================================================================
+68. RENDERER EXECUTION SERVICE HARNESS
+======================================================================
+
+Must prove:
+
+    attach valid WARP D3D11 device/context
+    lease returns correct device/context
+    AddRef lifetime is safe
+    device generation increments on replacement
+    surface generation increments on successful resize notification
+    failed resize does not falsely advance accepted surface state
+    GZFX-owned command list tag is recognized
+    tag is retired after execution
+    surrounding immediate state is restored with ExecuteCommandList(TRUE)
+
+Include a deliberately different pre-command-list immediate state and verify
+it remains intact after a GZFX command list.
+
+======================================================================
+69. NATIVE INPUT BROKER HARNESS
+======================================================================
+
+Use synthetic resources shaped like the field-proven MRT:
+
+    HDR R16G16B16A16_FLOAT
+    motion R16G16_FLOAT
+    normal R8G8B8A8_UNORM
+    aux R8G8_UNORM
+    depth R24G8_TYPELESS
+
+Prove:
+
+    semantic authority recognizes current frame
+    broker obtains typed current depth SRV
+    depth view is R24_UNORM_X8_TYPELESS
+    broker obtains motion/normal views
+    generation replacement invalidates old cached view
+    stale frame query fails
+    wrong stage fails
+    wrong format fails
+    resize invalidates cached production views
+    camera must be current/valid
+    atomic bundle fails if any required input is absent
+
+The existing Semantic Authority harness should remain and may be expanded
+rather than duplicated unnecessarily.
+
+======================================================================
+70. CAMERA HARNESS
+======================================================================
+
+Synthetic 720-byte b12 data must prove:
+
+    exact structure size
+    finite validation
+    inverse matrix identity validation
+    CPU-shadow update through UpdateSubresource path
+    CPU-shadow update through Map/Unmap path where practical
+    VS b12 + PS b12 selection
+    wrong-size buffer rejection
+    stale camera-frame rejection
+    invalid DR ratio rejection
+    generation change invalidation
+
+Include a bad matrix case that must fail closed.
+
+======================================================================
+71. DEPTH HIERARCHY HARNESS
+======================================================================
+
+Synthetic depth scene should include:
+
+    flat planes
+    sloped plane
+    background
+    a thin foreground edge
+    mixed valid/background 2x2 blocks
+
+Prove:
+
+    R24 native depth typed SRV
+    correct view-space conversion
+    positive view depth
+    background -> 0
+    full mip count
+    exact dimensions for odd sizes
+    mip0 numerical correctness
+    WeightedFar produces finite stable outputs
+    LinearAverage reference mode works
+    invalid zero samples are ignored
+    all-invalid reduction outputs zero
+    full chain reaches 1x1
+
+Use WARP for correctness.
+
+Do not require WARP performance.
+
+======================================================================
+72. MOTION / DYNAMIC RESOLUTION HARNESS
+======================================================================
+
+Required exact tests:
+
+A. ZERO MOTION
+
+    motion = (0,0)
+    previousUV == currentUV
+
+B. POSITIVE X
+
+    previousUV.x = currentUV.x + motion.x
+
+C. Y SIGN
+
+    prove no second Y flip
+
+D. OUT OF BOUNDS
+
+    previous logical UV outside [0,1] rejects
+
+E. DIFFERENT CURRENT/PREVIOUS DR
+
+Example:
+
+    current ratio = (1.0, 1.0)
+    previous ratio = (0.75, 0.75)
+
+Prove:
+
+    previousDRUV uses 0.75
+    not 1.0
+
+F. PIXEL DIAGNOSTIC
+
+    motionPixels =
+        motionUV * currentActiveSize
+
+This harness locks the exact sign/scale convention into CI.
+
+======================================================================
+73. TEMPORAL GEOMETRY HARNESS
+======================================================================
+
+Required synthetic cases:
+
+1. identical stationary geometry
+       history accepted
+
+2. translated camera + matching world surface
+       history accepted after reprojection
+
+3. previousUV outside screen
+       rejected by bounds
+
+4. depth discontinuity
+       rejected by depth
+
+5. depth passes but reconstructed world position disagrees
+       rejected by world position
+
+6. same depth but strongly different world normal
+       rejected by normal
+
+7. global camera cut
+       entire history hard reset
+
+8. frame gap
+       entire history hard reset
+
+9. semantic generation change
+       reset
+
+10. resize
+       reset
+
+11. ordinary DR ratio change with valid mapping
+       no forced resource reallocation
+       mapping remains correct
+
+12. confidence accumulation
+       increments toward cap
+
+13. high motion
+       lower cap than still frame
+
+14. global reset
+       confidence returns to zero
+
+======================================================================
+74. HISTORY CLAMP HARNESS
+======================================================================
+
+Synthetic neighborhood:
+
+    current neighborhood min/max known exactly
+    reprojected value below range
+    reprojected value inside range
+    reprojected value above range
+
+Prove:
+
+    below clamps to min
+    inside remains unchanged
+    above clamps to max
+
+This can be part of temporal_core harness.
+
+No production GI output is required.
+
+======================================================================
+75. WAVE 3 INTEGRATION HARNESS
+======================================================================
+
+Simulate the key stage sequence:
+
+    main MRT
+    ->
+    CameraZ producer begins
+    ->
+    AfterOpaqueWorldMRT callback
+    ->
+    GZFX owned command list
+    ->
+    CameraZ completes
+    ->
+    AfterCameraZ capture comparison
+
+Prove:
+
+    GZFX hierarchy executes once at AfterOpaqueWorldMRT
+    it executes before CameraZ producer work
+    main depth is not simultaneously bound as DSV while sampled by GZFX
+    GZFX command list is tagged owned
+    semantic authority does not reclassify GZFX outputs as Skyrim semantics
+    stage schedule remains correct
+    no opaque-command-list false positive
+    surrounding immediate context state survives
+
+======================================================================
+76. CI REGRESSION REQUIREMENTS
+======================================================================
+
+All pre-existing tests must remain green.
+
+Specifically preserve proof for:
+
+    runtime smoke
+    D3D11 lifecycle
+    renderer forensics
+    resource intelligence
+    visible pass
+    menu only
+    pre-UI effects
+    ambient depth AO harness
+    ambient depth SSIL harness
+    ambient visibility neutrality
+    semantic probe
+    semantic authority
+    native surface temporal
+
+Wave 3 is an extension.
+
+It is not permission to erase old regression evidence.
+
+======================================================================
+77. SOURCE / BUILD VERSION
+======================================================================
+
+On authorized implementation:
+
+CMake project version:
+
+    0.0.21
+Recommended runtime string:
+
+    0.0.21-native-input-temporal-core
+
+The exact suffix may be adjusted slightly if repository naming convention
+requires it.
+
+The version must clearly distinguish the Wave 3 package from 0.0.20.
+
+======================================================================
+78. IMPLEMENTATION BRANCH / PR
+======================================================================
+
+Once engineering is later authorized:
+
+Recommended branch:
+
+    feat/wave3-native-input-temporal-core
+
+One coherent Wave 3 PR.
+
+Do NOT create separate public PRs for:
+
+    broker
+    hierarchy
+    camera
+    temporal history
+    disocclusion
+    diagnostics
+
+unless an unforeseen repository blocker requires an emergency split.
+
+Internal commits may remain logically separated.
+
+The product unit is Wave 3.
+
+======================================================================
+79. IMPLEMENTATION ORDER
+======================================================================
+
+Inside the one Wave 3 engineering branch:
+
+PHASE A - PRODUCTION OWNERSHIP
+
+    Renderer Execution Service
+    semantic strong resource acquisition
+    camera production provider
+    Native Semantic Broker
+
+PHASE B - DEPTH FOUNDATION
+
+    shared camera/depth math
+    GZFXSceneDepthHierarchy
+    hierarchy GPU timing
+    hierarchy CI
+
+PHASE C - TEMPORAL FOUNDATION
+
+    TemporalHistoryManager
+    world-normal helper
+    temporal geometry ping-pong
+    motion / DR reprojection
+    disocclusion
+    confidence
+
+PHASE D - DIAGNOSTICS
+
+    GZFX-owned command-list tags
+    accessible debug views
+    stock CameraZ comparison
+    capture package
+    GPU timing reports
+
+PHASE E - INTEGRATION / CI
+
+    callback wiring
+    resize/device lifetime
+    all harnesses
+    full Windows x64 gate
+
+PHASE F - MERGE / PACKAGE PROOF
+
+    PR
+    merge
+    merged-main CI
+    Lance ZIP refresh
+    package-only refresh proof
+    engineering report
+
+These are internal execution phases.
+
+They are NOT separate user field versions.
+
+======================================================================
+80. INTERNAL GATE A - RENDERER EXECUTION SERVICE
+======================================================================
+
+PASS requires:
+
+    correct primary device/context ownership
+    generation logic
+    no diagnostics-global dependency from production modules
+    owned command-list tags
+    ExecuteCommandList(TRUE) state restoration proof
+    resize/device lifetime test
+
+No field run yet.
+
+======================================================================
+81. INTERNAL GATE B - NATIVE INPUT BROKER
+======================================================================
+
+PASS requires:
+
+    current-frame MAIN_DEPTH_CURRENT
+    current-frame MOTION
+    current-frame NORMAL_MASK_CURRENT
+    current valid camera b12
+    typed views
+    strong resource lifetime
+    stale query fail
+    stage invalid fail
+    generation replacement
+    atomic input bundle
+    no heuristic resource scoring in production path
+
+======================================================================
+82. INTERNAL GATE C - GZFXSCENEDEPTHHIERARCHY
+======================================================================
+
+PASS requires:
+
+    AfterOpaqueWorldMRT execution
+    R32_FLOAT
+    full mip chain
+    positive view depth
+    correct background handling
+    valid mip dimensions
+    compute implementation
+    WeightedFar + LinearAverage reference
+    no GenerateMips
+    timestamp evidence
+    synthetic depth numerical pass
+
+Real Skyrim acceptance additionally requires:
+
+    stock CameraZ common-geometry scale agreement
+    visible/countable GZFX-only post-opaque geometry
+    no D3D hazard/device removal
+
+======================================================================
+83. INTERNAL GATE D - MOTION CONVENTION
+======================================================================
+
+PASS requires CI proof that:
+
+    previousUV = currentUV + motion
+
+and field evidence that:
+
+    stationary camera is near-zero motion
+    slow pan moves reprojection in the correct direction
+    strafe moves reprojection in the correct direction
+    fast turn reduces temporal acceptance/confidence without sign inversion
+    Y is not double-flipped
+    previous DR ratio is used
+
+======================================================================
+84. INTERNAL GATE E - TEMPORAL GEOMETRY
+======================================================================
+
+PASS requires:
+
+    previous depth history
+    previous world normal history
+    confidence history
+    ping-pong generation
+    bilinear reprojection
+    depth early rejection
+    world-position rejection
+    world-normal rejection
+    no stale geometry use
+    current geometry written even when previous history is rejected, where safe
+
+======================================================================
+85. INTERNAL GATE F - HISTORY LIFECYCLE
+======================================================================
+
+PASS requires explicit reset evidence for:
+
+    first frame
+    frame gap
+    resize
+    device generation
+    semantic generation
+    camera invalid
+    camera cut
+    environment/load transition
+    developer reset
+
+And proof that an ordinary valid DR ratio change does not automatically force
+resource reallocation.
+
+======================================================================
+86. INTERNAL GATE G - GPU / STATE SAFETY
+======================================================================
+
+PASS requires:
+
+    independent GPU timing values
+    no D3D11 device removal
+    no read/write hazard on MAIN_DEPTH_CURRENT
+    no state corruption
+    no GZFX-owned work misclassified as Skyrim
+    command-list tags bounded/retired
+    no unbounded query/readback growth
+    normal runtime remains visual-neutral
+
+All gates are delivered in the one Wave 3 engineering build.
+
+======================================================================
+87. REAL-SKYRIM FIELD CAMPAIGN
+======================================================================
+
+The Wave 3 field campaign is intentionally compact.
+
+Target:
+
+    9 to 12 manual captures
+
+Preferred complete campaign:
+
+    12 captures
+
+DAY EXTERIOR - 4
+
+    1. stationary
+    2. slow pan
+    3. fast turn
+    4. forward movement + lateral strafe
+
+INTERIOR - 4
+
+    5. first stable frame/capture after exterior -> interior transition
+    6. stationary
+    7. slow pan
+    8. fast turn + movement
+
+NIGHT EXTERIOR - 4
+
+    9. first stable capture after load/teleport back outdoors
+    10. stationary
+    11. slow pan / strafe
+    12. fast turn / forward movement
+
+The exact locations, buttons, waiting period and capture procedure MUST be
+written directly in chat after implementation.
+
+Do not bury the actual user test instructions inside the engineering TXT.
+
+======================================================================
+88. FIELD GATE - DEPTH
+======================================================================
+
+PASS requires:
+
+    hierarchy produced on every valid tested world frame
+    correct dimensions/mips
+    no invalid sign/scale
+    common geometry broadly agrees with stock CameraZ scale
+    expected GZFX-only geometry is present where stock early hierarchy misses
+    no systemic stock-only geometry anomaly without explanation
+    no horizontal banding caused by hierarchy construction
+    no temporal crawl attributable to broken depth conversion
+    no NaN/INF output
+
+Do not require stock and GZFX depth to be identical.
+
+They represent different epochs.
+
+======================================================================
+89. FIELD GATE - MOTION
+======================================================================
+
+PASS requires:
+
+STATIONARY
+
+    motion near zero except expected object/renderer movement
+    previousUV mostly valid
+
+SLOW PAN
+
+    reprojection moves in correct direction
+    no sign reversal
+
+STRAFE
+
+    reprojection moves in correct direction
+    no axis inversion
+
+FAST TURN
+
+    motion magnitude rises
+    history acceptance/confidence responds downward
+    no long stale trails in diagnostic geometry
+
+No hue interpretation is required.
+
+======================================================================
+90. FIELD GATE - DISOCCLUSION
+======================================================================
+
+PASS requires:
+
+    newly revealed geometry rejects history
+    depth edges do not smear confidence indefinitely
+    normal disagreement rejects where appropriate
+    stationary continuous surfaces retain history
+    rejection masks correspond to visible geometry/motion
+    no widespread false rejection caused by wrong world reconstruction
+
+Exact percentages are evidence, not predetermined magic targets.
+
+The goal is coherent behavior across the movement classes.
+
+======================================================================
+91. FIELD GATE - HISTORY RESET
+======================================================================
+
+PASS requires positive reset proof on:
+
+    exterior -> interior
+    load/teleport or equivalent discontinuity
+    deliberate fast enough camera cut if threshold is crossed
+    resize, if a practical resize test is included
+
+PASS also requires:
+
+    no reset spam during ordinary stationary frames
+    no reset spam during normal slow pan
+    frame gaps never reuse old history
+
+If a true resize test is impractical in the first field session, CI proof plus
+a later targeted resize capture is acceptable before Wave 3 is formally
+closed.
+
+======================================================================
+92. FIELD GATE - STATE / STABILITY
+======================================================================
+
+PASS requires:
+
+    no crash
+    no device removal
+    no persistent visual corruption
+    no UI corruption
+    no stock renderer state corruption
+    no opaque Skyrim command-list false alarm caused by GZFX
+    no unexpected semantic authority regression
+    common stage scheduler remains intact
+
+Wave 1 / Wave 2 must remain closed.
+
+Wave 3 may not "pass" by breaking the foundation.
+
+======================================================================
+93. FIELD GATE - PERFORMANCE
+======================================================================
+
+Capture and report, at 2560x1440 reference resolution when available:
+
+    hierarchy base/early mip ms
+    hierarchy tail ms
+    temporal geometry ms
+    capture-only diagnostic ms
+    total normal-runtime Wave 3 ms
+
+No arbitrary millisecond number is allowed to force architectural damage.
+
+However:
+
+    sustained unexplained multi-millisecond cost for this infrastructure is a
+    real engineering failure to investigate.
+
+Optimization order:
+
+    1. remove stalls / synchronization
+    2. remove redundant dispatch/bind work
+    3. reduce unnecessary capture/debug work in normal runtime
+    4. optimize hierarchy tail
+    5. optimize memory bandwidth
+    6. only then evaluate lower precision with evidence
+
+Do not jump directly to R16 depth.
+
+======================================================================
+94. BOUNDED LOGGING
+======================================================================
+
+Normal runtime logs must not write one giant row every frame forever.
+
+Use:
+
+    state-change logging
+    periodic compact summary
+    bounded ring/last-event data
+    manual-capture detailed logs
+
+Repeated identical missing-input failures should be rate-limited.
+
+Manual capture may be detailed because it is explicitly bounded.
+
+======================================================================
+95. THREAD / LOCK SAFETY
+======================================================================
+
+Stage Scheduler callbacks are synchronous.
+
+Current Signal behavior releases the scheduler mutex before invoking callbacks.
+
+Preserve that property.
+
+Semantic Authority query callbacks must not call back into the authority while
+holding an authority mutex that would deadlock.
+
+RendererExecutionService, broker, history manager and diagnostics should use
+small ownership locks and avoid holding them across D3D11 calls where
+unnecessary.
+
+Do not introduce a global "renderer everything" mutex.
+
+======================================================================
+96. REENTRANCY / GZFX COMMAND LISTS
+======================================================================
+
+Executing a GZFX command list on the hooked immediate context can cause hook
+observation.
+
+The owned-pass tag must therefore be active BEFORE execution.
+
+Hook behavior for GZFX-owned execution must be deterministic:
+
+    native semantic classifier:
+        ignore GZFX-owned pass mutation as native evidence
+
+    pipeline cartography:
+        record owned execution if useful
+        do not call it unknown Skyrim work
+
+    global statistics:
+        may count GZFX work separately
+
+    Stage Scheduler:
+        must not recursively produce native stage boundaries from GZFX output
+
+This is mandatory.
+
+======================================================================
+97. CAMERA CPU-SHADOW EDGE CASE
+======================================================================
+
+The camera candidate might be updated before its first b12 bind is recognized.
+
+Therefore the provider should retain a small bounded record for recent
+720-byte constant-buffer writes keyed by buffer identity.
+
+Once a 720-byte buffer is seen at the required native slots:
+
+    promote its already-captured current payload if frame-valid.
+
+Do not retain arbitrary buffer payloads indefinitely.
+
+Suggested bound:
+
+    only 720-byte candidates
+    current frame + immediately previous frame during acquisition
+    evict everything else
+
+After stable camera promotion:
+
+    track the selected buffer directly.
+
+======================================================================
+98. CAMERA GENERATION
+======================================================================
+
+Camera generation changes when:
+
+    selected camera buffer identity changes
+    device generation changes
+    validated layout contract changes
+
+A mere new frame does not create a new camera generation.
+
+Each CameraFrameData sample carries:
+
+    frame
+    cameraGeneration
+    deviceGeneration
+
+Temporal history records the camera generation used to produce it.
+
+Generation change causes conservative reset.
+
+======================================================================
+99. SEMANTIC GENERATION TOKEN
+======================================================================
+
+Temporal history should retain the exact generations of critical native
+inputs used to produce the prior frame:
+
+    mainDepthGeneration
+    motionGeneration
+    normalGeneration
+    cameraGeneration
+    deviceGeneration
+    surfaceGeneration
+
+On next frame:
+
+    if any critical generation changes unexpectedly:
+        global temporal reset
+
+This prevents resource recreation from being mistaken for continuous history.
+
+======================================================================
+100. DEPTH HIERARCHY GENERATION TOKEN
+======================================================================
+
+GZFXSceneDepthHierarchy has its own generation.
+
+Increment when:
+
+    device changes
+    dimensions change
+    format/layout changes
+    shader layout/reduction contract changes
+
+Do not increment merely because another frame was built.
+
+Each produced hierarchy view carries:
+
+    hierarchyGeneration
+    producedFrame
+
+Consumers require both.
+
+======================================================================
+101. HISTORY GENERATION TOKEN
+======================================================================
+
+TemporalHistoryManager increments global historyGeneration on hard reset.
+
+Per-domain history records:
+
+    generation
+    lastProducedFrame
+    valid
+
+A consumer may reuse previous data only when:
+
+    history generation matches
+    lastProducedFrame == currentFrame - 1
+    global history valid
+    required semantic generations match
+
+No special-case stale reuse.
+
+======================================================================
+102. SHADER PARAMETER BUFFER
+======================================================================
+
+Create a compact Wave 3 constant buffer for production compute passes.
+
+Conceptual contents:
+
+    uint2 ResourceSize
+    uint2 CurrentActiveSize
+
+    uint2 PreviousActiveSize
+    uint MipCount
+    uint FrameIndexLow
+
+    float2 CurrentRatio
+    float2 PreviousRatio
+
+    float2 InvResourceSize
+    float2 InvCurrentActiveSize
+
+    float DepthDisocclusion
+    float NormalDotThreshold
+    float HistoryMaxFrames
+    float MotionHighPixels
+
+    uint GlobalHistoryValid
+    uint HistoryGenerationLow
+    uint DebugFlags
+    uint ReductionMode
+
+Camera matrices/data may be supplied either:
+
+    directly from the native b12 buffer when safely bound
+
+or:
+
+    copied into a GZFX-owned validated camera constant buffer
+
+Preferred production design:
+
+    GZFX-owned camera constant buffer populated from validated CameraFrameData
+
+Reason:
+
+    clear lifetime
+    explicit current/previous snapshot
+    no dependency on native b12 remaining unchanged during GZFX execution
+
+======================================================================
+103. GZFX-OWNED CAMERA CONSTANT BUFFER
+======================================================================
+
+At AfterOpaqueWorldMRT:
+
+    validated CameraFrameData exists on CPU
+
+Upload one GZFX-owned current/previous camera parameter buffer into the
+deferred command list.
+
+This buffer should contain only the fields the Wave 3 shaders need, including:
+
+    current projection/inverse
+    current inverse view
+    previous projection/inverse
+    previous inverse view
+    current/previous unjittered transforms
+    current/previous position adjustment
+    current/previous DR ratios
+
+Do not bind Skyrim's b12 as the long-term Wave 3 shader contract if the same
+information can be captured into a stable GZFX-owned layout.
+
+The native b12 remains the source of truth.
+
+The GZFX CB is the validated production snapshot.
+
+======================================================================
+104. CURRENT / PREVIOUS CAMERA SNAPSHOT
+======================================================================
+
+TemporalHistoryManager stores the prior accepted CameraFrameData snapshot.
+
+On current frame:
+
+    Native camera b12 supplies current camera
+    its embedded previous fields are also available
+    GZFX prior accepted snapshot supplies an independent continuity cross-check
+
+Required diagnostic:
+
+    compare native current-frame "previous" matrix
+    against GZFX stored prior-frame current matrix
+
+Large disagreement contributes to:
+
+    CameraMatrixDiscontinuity
+
+This is one of the strongest renderer-only cut/load signals available.
+
+======================================================================
+105. MOTION VALIDATION AGAINST CAMERA
+======================================================================
+
+The field campaign should not rely only on visual motion textures.
+
+For stationary/static geometry samples where camera transform is known:
+
+    native motion direction
+    and
+    matrix-predicted screen displacement
+
+should agree in sign and approximate magnitude.
+
+This is a diagnostic cross-check only.
+
+Native motion remains the production motion source.
+
+Do not replace native motion with reconstructed camera-only motion.
+
+======================================================================
+106. OBJECT MOTION
+======================================================================
+
+Native motion may contain more than camera motion.
+
+Therefore:
+
+    camera transform is useful for continuity/cuts
+    native motion is required for per-pixel temporal reprojection
+
+Do not infer that a stationary camera means every pixel must have exactly
+zero native motion.
+
+Diagnostics should report distributions rather than fail on one moving actor.
+
+======================================================================
+107. HISTORY COMMIT RULE
+======================================================================
+
+CPU-side history state may be committed only after:
+
+    required inputs validated
+    command recording succeeded
+    FinishCommandList succeeded
+    command list submitted to immediate context
+
+If recording fails:
+
+    do not advance lastProducedFrame
+    reset/invalid next reuse
+
+If a device removal is detected afterward:
+
+    device-generation reset invalidates history.
+
+======================================================================
+108. QUERY / GPU TIMING RING
+======================================================================
+
+Use a small ring of query slots, similar to existing ambient-depth timing.
+
+Suggested:
+
+    4 to 8 slots
+
+Each slot stores:
+
+    disjoint query
+    timestamps for pass boundaries
+    frame
+    pending flag
+
+Resolve with:
+
+    D3D11_ASYNC_GETDATA_DONOTFLUSH
+
+Never force a GPU flush solely to obtain timing immediately.
+
+Stale pending timing may be dropped/retired safely during resize/device reset.
+
+======================================================================
+109. ON-DEMAND DEBUG RESOURCES
+======================================================================
+
+Large diagnostic masks/previews should be:
+
+    allocated lazily when capture is armed
+    reused within the capture
+    released or kept in a small reusable cache after capture
+
+Normal Wave 3 gameplay should not permanently allocate every debug mask if
+the only consumer is manual evidence.
+
+Production persistent resources are:
+
+    hierarchy
+    temporal geometry ping-pong
+    small buffers/shaders/queries
+
+======================================================================
+110. NORMALIZED DEPTH PREVIEW
+======================================================================
+
+A raw R32 view depth texture cannot be meaningfully displayed as literal
+grayscale across Skyrim outdoor distances.
+
+Diagnostic preview should use a labeled monotonic transform such as:
+
+    value =
+        log2(1 + depth * scale)
+        normalized by a logged preview range
+
+or equivalent.
+
+The preview transform must be printed in the capture metadata.
+
+The underlying hierarchy remains unmodified R32 view depth.
+
+======================================================================
+111. DEBUG MASK SEMANTICS
+======================================================================
+
+When multiple rejection classes exist, every pixel should be assigned a
+single first-failure reason for summary accounting:
+
+Suggested priority:
+
+    1. global history invalid
+    2. previous UV out of bounds
+    3. no previous valid geometry
+    4. depth reject
+    5. world-position reject
+    6. normal reject
+    7. accepted
+
+This makes percentages add coherently.
+
+Separate binary masks may still be produced.
+
+======================================================================
+112. HISTORY CONFIDENCE STORAGE
+======================================================================
+
+R8_UNORM confidence maps:
+
+    0.0 -> no usable history
+    1.0 -> maximum configured accumulation
+
+Convert to frame count approximately as:
+
+    historyFrames =
+        round(confidence * maxHistoryFrames)
+
+When motion-dependent cap changes:
+
+    clamp decoded frame count to current cap before incrementing.
+
+This is sufficient for Wave 3 infrastructure.
+
+Later feature domains may register richer history metadata if required.
+
+======================================================================
+113. SOFT DECAY
+======================================================================
+
+Soft decay is allowed for marginal but not clearly wrong history.
+
+Examples:
+
+    moderate motion
+    near-threshold world-position mismatch
+    near-threshold normal mismatch
+
+Hard geometry disagreement remains a hard reject.
+
+Initial rule may be simple:
+
+    if all geometry tests pass:
+        accumulate
+
+    if a test clearly fails:
+        reset pixel confidence
+
+    motion alone:
+        caps maximum frames rather than invalidating geometry
+
+Do not invent complicated fuzzy weighting before field evidence needs it.
+
+======================================================================
+114. NO GLOBAL TAA DEPENDENCY
+======================================================================
+
+Exact Skyrim global TAA placement remains unresolved.
+
+Wave 3 does not solve it.
+
+Native motion is already valid in the pre-final-post domain.
+
+Wave 3 must remain independent of exact global TAA ownership.
+
+Do not pause implementation to map global TAA.
+
+Do not add guessed:
+
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+execution dependencies merely because those enum values exist.
+
+They remain future renderer work.
+
+======================================================================
+115. NO WATER DEPENDENCY
+======================================================================
+
+Wave 3 does not require:
+
+    kPOST_WATER_COPY identity
+    water TAA
+    water temporal history
+    exact refraction boundary
+    exact reflection boundary
+
+Do not reopen those paths.
+
+They belong to future water/reflection waves.
+
+======================================================================
+116. NO RT2.B / RT3 GUESSING
+======================================================================
+
+RT2.B remains unresolved.
+
+RT3 R/G remain unresolved.
+
+Wave 3 must use:
+
+    native normal R/G
+    native motion
+    main depth
+    camera
+
+only as required.
+
+Do not reverse-engineer unrelated channels during this wave unless live
+implementation discovers a direct blocking dependency.
+
+If that rare blocker occurs:
+
+    investigate only the blocking question
+    document evidence
+    do not launch broad cartography.
+
+======================================================================
+117. NO AO/GI OUTPUT IN WAVE 3
+======================================================================
+
+Wave 3 is complete when the infrastructure is correct.
+
+It does not need to make the game prettier.
+
+This is intentional.
+
+The next production graphics feature is:
+
+    WAVE 4
+    AMBIENT VISIBILITY v2
+
+Wave 4 should consume:
+
+    GZFXSceneDepthHierarchy
+    native normal
+    temporal core
+    history clamp
+    GPU timing
+
+without re-solving renderer identity.
+
+======================================================================
+118. WAVE 4 HANDOFF CONTRACT
+======================================================================
+
+If Wave 3 passes field acceptance, Wave 4 should be able to request:
+
+    DepthInputs
+    SurfaceInputs
+    TemporalInputs
+
+through the broker/core.
+
+Suggested future typed groups:
+
+    struct DepthInputs
+    {
+        GZFXSceneDepthHierarchy hierarchy;
+        optional StockCameraZ diagnostic;
+    };
+
+    struct SurfaceInputs
+    {
+        native motion;
+        native normal;
+        CameraFrameData;
+        dynamic resolution;
+    };
+
+    struct TemporalInputs
+    {
+        history generation;
+        history validity;
+        reset reason;
+        reprojection helpers;
+        previous geometry;
+    };
+
+Wave 4 should not know how Skyrim resource archaeology works.
+
+That is the point of Wave 3.
+
+======================================================================
+119. PACKAGE / MERGE REQUIREMENTS
+======================================================================
+
+After all authorized engineering and CI gates pass:
+
+1. open one Wave 3 PR
+2. verify Windows x64 PR CI
+3. fix real failures
+4. merge5. verify merged-main CI
+6. verify auto-refreshed Lance ZIP exists
+7. verify package refresh commit changes ONLY:
+       LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+8. record final source merge SHA
+9. record final main/package-refresh SHA
+10. record ZIP blob SHA and size
+11. record final test count/pass
+12. create full Wave 3 engineering result TXT
+13. provide actual in-game test instructions IN CHAT
+
+No false pass.
+
+No hidden source change in package refresh.
+
+======================================================================
+120. WAVE 3 ENGINEERING RESULT TXT
+======================================================================
+
+After implementation, create a detailed report such as:
+
+    GZFX_0.0.21_WAVE3_ENGINEERING_RESULT.txt
+
+It must contain:
+
+    source baseline
+    branch
+    commits
+    PR
+    merge SHA
+    package SHA
+    file changes
+    architecture implemented
+    exact APIs
+    resource formats
+    temporal math
+    CI results
+    GPU synthetic results
+    known unresolved parameters
+    field package path
+    user test intent
+    failures/retries if any
+    proof that repository/package state is coherent
+
+Do not dump this giant report into normal chat.
+
+======================================================================
+121. USER-FACING FIELD INSTRUCTIONS
+======================================================================
+
+After implementation, chat must contain the exact test procedure.
+
+It must explicitly tell the user:
+
+    where to stand/go
+    what movement to perform
+    what key to press
+    how many captures to make
+    when to wait after a load
+    how to name/collect the output bundle
+    what NOT to change during the run
+
+The final exact procedure is generated from the implemented build.
+
+This blueprint intentionally does not pretend to know a button/path that
+engineering has not yet produced.
+
+The current intended capture trigger is:
+
+    Shift + Numpad5
+
+because it already exists for semantic capture and should be extended for
+Wave 3.
+
+======================================================================
+122. NOT AUTHORIZED
+======================================================================
+
+Wave 3 DOES NOT authorize:
+
+- broad renderer cartography
+- reopening Wave 1
+- reopening Wave 2
+- resurrecting OPAQUE_FINAL_DEPTH
+- hardcoding known ordinal distances
+- tuning old AO/HBAO
+- tuning old SSIL
+- promoting Local Glow into "GI"
+- production Ambient Visibility v2
+- production indirect radiance / GI
+- lighting composition rewrite
+- global TAA cartography
+- water/post-water cartography
+- kPOST_WATER_COPY guessing
+- reflection branch cartography
+- RT2.B reverse engineering
+- RT3 R/G reverse engineering
+- HDR/tonemap replacement
+- ENB/ReShade compatibility expansion unrelated to Wave 3
+- SKSE dependency
+- animation/gameplay hooks
+- R16 depth hierarchy downgrade without evidence
+- packed temporal history optimization before correctness proof
+- depth-derived normal as silent production fallback
+- per-frame staging camera readback as normal architecture
+- unbounded diagnostic capture/logging
+- hue-only required diagnostics
+- repository changes before the user reuploads this blueprint in the authority
+  folder and explicitly authorizes engineering
+
+======================================================================
+123. AUTHORIZED LATER, AFTER USER COMMAND
+======================================================================
+
+Once the user reuploads the full authority folder containing this blueprint
+and explicitly says to begin repository work, the engineering chat is
+authorized to:
+
+- inspect current main comprehensively
+- reconcile any legitimate main movement since this blueprint
+- create the Wave 3 branch
+- implement the full coherent architecture
+- refactor existing source where necessary to support the architecture
+- add files/modules
+- add/modify hooks required for production ownership
+- expand CI
+- run tests
+- fix failures
+- tune implementation-time engineering constants using evidence
+- open/merge the Wave 3 PR
+- verify merged-main CI
+- verify package refresh
+- create engineering result TXT
+- provide compact real-game field instructions
+
+The engineering chat should use senior-engineer discretion inside this scope.
+
+Do not turn the blueprint into a prison of cosmetic file names.
+
+The architecture, contracts, safety rules and acceptance gates are the lock.
+
+======================================================================
+124. ARCHITECTURE SUMMARY
+======================================================================
+
+Final Wave 3 runtime spine:
+
+    Skyrim native renderer
+    ->
+    existing D3D11 observation hooks
+    ->
+    Semantic Authority
+    +
+    production Camera Provider
+    +
+    Renderer Execution Service
+    ->
+    Native Semantic Broker
+    ->
+    Stage Scheduler: AfterOpaqueWorldMRT
+    ->
+    Wave3Pipeline
+    ->
+    GZFXSceneDepthHierarchy
+    ->
+    TemporalHistoryManager
+    ->
+    TemporalGeometry
+    ->
+    GZFX-owned command list
+    ->
+    ExecuteCommandList(..., TRUE)
+
+Manual capture-only branch:
+
+    AfterCameraZ
+    ->
+    STOCK_CAMERAZ
+    +
+    already-built GZFXSceneDepthHierarchy
+    ->
+    comparison diagnostics
+
+Normal runtime output:
+
+    visual-neutral infrastructure
+
+Next production consumer:
+
+    Wave 4 Ambient Visibility v2
+
+======================================================================
+125. LOCKED MATHEMATICAL SUMMARY
+======================================================================
+
+MOTION:
+
+    prevUV =
+        currUV + nativeMotion.xy
+
+CURRENT DYNAMIC RESOLUTION:
+
+    currDRUV =
+        currentRatio * currUV
+
+PREVIOUS DYNAMIC RESOLUTION:
+
+    prevDRUV =
+        previousRatio * prevUV
+
+MOTION PIXELS FOR DIAGNOSTICS:
+
+    motionPixels =
+        nativeMotionUV * currentActiveRenderSize
+
+DEPTH:
+
+    native raw depth
+    ->
+    CameraProjInverse reconstruction
+    ->
+    positive view-space depth
+
+BACKGROUND:
+
+    viewDepth = 0
+
+WORLD NORMAL:
+
+    native RG
+    ->
+    native decode
+    ->
+    current view normal
+    ->
+    CameraViewInverse
+    ->
+    current world normal
+    ->
+    GZFX oct history
+
+DEPTH EARLY REJECT:
+
+    abs(currDepth - prevDepth)
+    >
+    currDepth * DepthDisocclusion * 3
+
+WORLD POSITION ACCEPT:
+
+    distance(currWorld, prevWorld)
+    <
+    currDepth * DepthDisocclusion
+
+NORMAL ACCEPT:
+
+    dot(currWorldNormal, prevWorldNormal)
+    >= NormalDotThreshold
+
+INITIAL ENGINEERING CONSTANTS:
+
+    DepthDisocclusion = 0.02
+    NormalDotThreshold = 0.75
+    MaxHistoryStill = 16
+    MaxHistoryFast = 4
+
+These constants are field-tunable.
+
+The formulas and coordinate conventions are not.
+
+======================================================================
+126. LOCKED RESOURCE SUMMARY
+======================================================================
+
+NATIVE INPUTS:
+
+MAIN_DEPTH_CURRENT
+    R24G8_TYPELESS
+    SRV R24_UNORM_X8_TYPELESS
+
+MOTION
+    R16G16_FLOAT
+
+NORMAL_MASK_CURRENT
+    R8G8B8A8_UNORM
+    use R/G only
+
+CAMERA
+    720-byte b12
+
+GZFX OWNED:
+
+GZFXSceneDepthHierarchy
+    R32_FLOAT
+    full mip chain
+    SRV + per-mip UAV
+
+TemporalDepth[2]
+    R32_FLOAT
+
+TemporalWorldNormal[2]
+    R8G8_UNORM
+    fallback R16G16_FLOAT if typed UAV support requires
+
+TemporalConfidence[2]
+    R8_UNORM
+    fallback R16_FLOAT if typed UAV support requires
+
+Capture-only debug surfaces
+    lazy / bounded
+
+======================================================================
+127. ACCEPTANCE SUMMARY
+======================================================================
+
+Wave 3 is CLOSED only when all of the following are true:
+
+CODE:
+
+    architecture implemented as one coherent production system
+
+CI:
+
+    all prior tests green
+    new Wave 3 synthetic tests green
+
+DEPTH:
+
+    hierarchy correct
+    full chain correct
+    stock comparison coherent
+    post-opaque geometry advantage demonstrated
+
+MOTION:
+
+    sign/scale/DR convention correct in CI and Skyrim
+
+TEMPORAL:
+
+    previous geometry valid
+    disocclusion correct
+    confidence lifecycle correct
+    camera/load/reset behavior correct
+
+STATE:
+
+    no Skyrim state corruption
+    no GZFX/native semantic cross-contamination
+    no command-list blind-spot regression
+
+PERFORMANCE:
+
+    independently measured
+    no unexplained pathological infrastructure cost
+
+ACCESSIBILITY:
+
+    all required evidence usable without color discrimination
+
+FIELD:
+
+    compact day/interior/night motion campaign passes
+
+PACKAGING:
+
+    merged main green
+    Lance ZIP refreshed
+    package-only refresh proof clean
+
+DOCUMENTATION:
+
+    engineering result TXT produced
+    actual test steps visible in chat
+
+Only then:
+
+    Wave 3 CLOSED
+
+Next:
+
+    Wave 4 Ambient Visibility v2
+
+======================================================================
+128. FINAL IMPLEMENTATION COMMAND FOR THE FUTURE ENGINEERING CHAT
+======================================================================
+
+WHEN, AND ONLY WHEN, THE USER REUPLOADS THE AUTHORITY FOLDER CONTAINING THIS
+BLUEPRINT AND EXPLICITLY AUTHORIZES REPOSITORY ENGINEERING:
+
+Implement GZFX 0.0.21 as one coherent Wave 3 production pass.
+
+Do not restart renderer archaeology.
+
+Do not build another throwaway probe version.
+
+Promote the closed semantic foundation into production ownership.
+
+Build the post-opaque R32 view-space hierarchy.
+
+Use Skyrim motion exactly as:
+
+    prevUV = currUV + motion.xy
+
+Use current/previous dynamic-resolution mappings correctly.
+
+Centralize temporal history.
+
+Fail closed.
+
+Tag GZFX-owned work.
+
+Embed the diagnostics inside the real system.
+
+Prove the architecture in CI.
+
+Merge only when green.
+
+Then give the user one compact, movement-focused Skyrim field campaign.
+
+The renderer foundation is closed.
+
+Engineering leads again.
+
+======================================================================
+END OF GZFX WAVE 3 BLUEPRINT
+======================================================================
