@@ -777,6 +777,12 @@ int wmain(
         return 29;
     }
 
+    context->IASetInputLayout(
+        nullptr);
+
+    context->IASetPrimitiveTopology(
+        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
     D3D11_VIEWPORT viewport{};
     viewport.Width = 640.0f;
     viewport.Height = 360.0f;
