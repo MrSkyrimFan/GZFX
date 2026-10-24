@@ -5715,6 +5715,43 @@ namespace gzfx::diagnostics::pipeline_cartography
         }
     }
 
+    std::vector<Landmark>
+    GetCaptureLandmarks() noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(
+                g_mutex);
+
+            if (!g_captureActive)
+            {
+                return {};
+            }
+
+            return
+                IdentifyLandmarksLocked();
+        }
+        catch (...)
+        {
+            return {};
+        }
+    }
+
+    const char*
+    LandmarkName(
+        const LandmarkKind kind) noexcept
+    {
+        try
+        {
+            return
+                LandmarkNameInternal(kind);
+        }
+        catch (...)
+        {
+            return "unknown";
+        }
+    }
+
     bool AttachDevice(
         ID3D11Device* device) noexcept
     {
