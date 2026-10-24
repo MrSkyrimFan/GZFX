@@ -1402,6 +1402,341 @@ float4 PSMain(V input) : SV_TARGET
                 1.0f);
         }
 
+        void CaptureLandmarkSurfaces(
+            ID3D11Device* device,
+            ID3D11DeviceContext* context,
+            const std::wstring& suffix)
+        {
+            const fs::path root =
+                gzfx::paths::DiagnosticsRoot();
+
+            if (root.empty())
+            {
+                return;
+            }
+
+            const auto landmarks =
+                pipeline_cartography::
+                    GetCaptureLandmarks();
+
+            std::ofstream report(
+                root /
+                    (
+                        std::wstring(
+                            L"atlas_surfaces") +
+                        suffix +
+                        L".txt"
+                    ),
+                std::ios::out |
+                    std::ios::trunc);
+
+            if (!report)
+            {
+                return;
+            }
+
+            report
+                << "GZFX structural landmark surface atlas\n"
+                << "version="
+                << gzfx::kVersion
+                << "\n"
+                << "landmarks="
+                << landmarks.size()
+                << "\n\n";
+
+            std::map<
+                std::pair<
+                    std::uint32_t,
+                    std::uintptr_t>,
+                std::uint32_t>
+                    seen;
+
+            std::map<std::uint32_t, std::uint32_t>
+                kindIndex;
+
+            const auto writeStats =
+                [&](const char* label,
+                    const std::uintptr_t id,
+                    const std::uint64_t passId,
+                    const std::uint32_t confidence,
+                    const std::uint32_t mode,
+                    const float scale,
+                    const fs::path& path)
+                {
+                    const auto found =
+                        g_resources.find(id);
+
+                    report
+                        << "surface="
+                        << label
+                        << " id="
+                        << Ptr(id)
+                        << " pass="
+                        << passId
+                        << " confidence="
+                        << confidence
+                        << " mode="
+                        << mode;
+
+                    if (found == g_resources.end() ||
+                        found->second.texture ==
+                            nullptr)
+                    {
+                        report
+                            << " status=not_available_as_texture2d\n";
+
+                        return false;
+                    }
+
+                    PreviewStats stats{};
+
+                    const bool wrote =
+                        RenderPreview(
+                            device,
+                            context,
+                            found->second,
+                            mode,
+                            scale,
+                            path,
+                            &stats);
+
+                    report
+                        << " status="
+                        << (wrote
+                            ? "ok"
+                            : "failed")
+                        << " format="
+                        << static_cast<
+                            std::uint32_t>(
+                                found->second.desc.Format)
+                        << " size="
+                        << found->second.desc.Width
+                        << "x"
+                        << found->second.desc.Height;
+
+                    if (wrote &&
+                        stats.pixels != 0)
+                    {
+                        report
+                            << std::fixed
+                            << std::setprecision(6);
+
+                        for (std::size_t channel = 0;
+                             channel < 4;
+                             ++channel)
+                        {
+                            const double mean =
+                                static_cast<double>(
+                                    stats.sums[channel]) /
+                                (
+                                    static_cast<double>(
+                                        stats.pixels) *
+                                    255.0
+                                );
+
+                            const double fraction =
+                                static_cast<double>(
+                                    stats.nonzero[channel]) /
+                                static_cast<double>(
+                                    stats.pixels);
+
+                            report
+                                << " c"
+                                << channel
+                                << "_mean="
+                                << mean
+                                << " c"
+                                << channel
+                                << "_nonzero="
+                                << fraction
+                                << " c"
+                                << channel
+                                << "_min="
+                                << static_cast<unsigned>(
+                                    stats.minimum[channel])
+                                << " c"
+                                << channel
+                                << "_max="
+                                << static_cast<unsigned>(
+                                    stats.maximum[channel]);
+                        }
+                    }
+
+                    report << "\n";
+                    return wrote;
+                };
+
+            for (const auto& landmark :
+                 landmarks)
+            {
+                const auto kindValue =
+                    static_cast<std::uint32_t>(
+                        landmark.kind);
+
+                const auto key =
+                    std::make_pair(
+                        kindValue,
+                        landmark.resource);
+
+                if (!seen.emplace(
+                        key,
+                        1).second)
+                {
+                    continue;
+                }
+
+                const char* label =
+                    pipeline_cartography::
+                        LandmarkName(
+                            landmark.kind);
+
+                const auto found =
+                    g_resources.find(
+                        landmark.resource);
+
+                if (found == g_resources.end() ||
+                    found->second.texture ==
+                        nullptr)
+                {
+                    report
+                        << "surface="
+                        << label
+                        << " id="
+                        << Ptr(
+                            landmark.resource)
+                        << " pass="
+                        << landmark.passId
+                        << " confidence="
+                        << landmark.confidence
+                        << " status=not_available_as_texture2d\n";
+
+                    continue;
+                }
+
+                const auto format =
+                    found->second.desc.Format;
+
+                std::uint32_t mode = 0;
+                float scale = 1.0f;
+
+                if (format ==
+                        DXGI_FORMAT_R32_FLOAT ||
+                    format ==
+                        DXGI_FORMAT_R16_FLOAT ||
+                    format ==
+                        DXGI_FORMAT_R16_UNORM ||
+                    format ==
+                        DXGI_FORMAT_R24G8_TYPELESS ||
+                    format ==
+                        DXGI_FORMAT_R16_TYPELESS)
+                {
+                    mode = 3;
+                }
+                else if (
+                    format ==
+                        DXGI_FORMAT_R8G8B8A8_UNORM ||
+                    format ==
+                        DXGI_FORMAT_R8G8_UNORM)
+                {
+                    mode = 8;
+                }
+
+                const std::uint32_t index =
+                    ++kindIndex[kindValue];
+
+                std::wostringstream base;
+                base
+                    << L"atlas_surface"
+                    << suffix
+                    << L"_"
+                    << label
+                    << L"_"
+                    << std::setw(2)
+                    << std::setfill(L'0')
+                    << index;
+
+                const fs::path combined =
+                    root /
+                    (
+                        base.str() +
+                        L".bmp"
+                    );
+
+                writeStats(
+                    label,
+                    landmark.resource,
+                    landmark.passId,
+                    landmark.confidence,
+                    mode,
+                    scale,
+                    combined);
+
+                const bool splitChannels =
+                    format ==
+                        DXGI_FORMAT_R8G8B8A8_UNORM &&
+                    (
+                        landmark.kind ==
+                            pipeline_cartography::
+                                LandmarkKind::ShadowMask ||
+                        landmark.kind ==
+                            pipeline_cartography::
+                                LandmarkKind::ReflectionMask ||
+                        landmark.kind ==
+                            pipeline_cartography::
+                                LandmarkKind::SaoRawAo ||
+                        landmark.kind ==
+                            pipeline_cartography::
+                                LandmarkKind::SaoBlurred
+                    );
+
+                if (!splitChannels)
+                {
+                    continue;
+                }
+
+                const wchar_t channelNames[4] =
+                {
+                    L'r', L'g', L'b', L'a'
+                };
+
+                for (std::uint32_t channel = 0;
+                     channel < 4;
+                     ++channel)
+                {
+                    const fs::path channelPath =
+                        root /
+                        (
+                            base.str() +
+                            L"_" +
+                            std::wstring(
+                                1,
+                                channelNames[channel]) +
+                            L".bmp"
+                        );
+
+                    const char channelChars[4] =
+                    {
+                        'r', 'g', 'b', 'a'
+                    };
+
+                    std::string channelLabel =
+                        std::string(label) +
+                        "_" +
+                        channelChars[channel];
+
+                    // Explicit channel mode mapping is R=4,G=5,B=6,A=7.
+                    writeStats(
+                        channelLabel.c_str(),
+                        landmark.resource,
+                        landmark.passId,
+                        landmark.confidence,
+                        4u + channel,
+                        1.0f,
+                        channelPath);
+                }
+            }
+        }
+
         void CaptureCandidates(
             ID3D11Device* device,
             ID3D11DeviceContext* context,
@@ -2138,6 +2473,11 @@ float4 PSMain(V input) : SV_TARGET
                     suffix);
 
                 CaptureKnownSurfaces(
+                    device,
+                    context,
+                    suffix);
+
+                CaptureLandmarkSurfaces(
                     device,
                     context,
                     suffix);
