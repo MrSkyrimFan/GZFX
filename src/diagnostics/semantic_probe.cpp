@@ -92,6 +92,17 @@ namespace gzfx::diagnostics::semantic_probe
             float padding[2]{};
         };
 
+        struct PreviewStats
+        {
+            std::uint64_t pixels = 0;
+            std::array<std::uint64_t, 4> sums{};
+            std::array<std::uint64_t, 4> nonzero{};
+            std::array<std::uint8_t, 4> minimum{
+                255, 255, 255, 255
+            };
+            std::array<std::uint8_t, 4> maximum{};
+        };
+
         std::mutex g_mutex;
         std::unordered_map<std::uintptr_t, ResourceStats> g_resources;
         std::vector<Event> g_events;
@@ -109,6 +120,9 @@ namespace gzfx::diagnostics::semantic_probe
 
         std::uintptr_t g_knownDepth = 0;
         std::uintptr_t g_knownSceneColor = 0;
+        std::uintptr_t g_knownMotion = 0;
+        std::uintptr_t g_knownNormal = 0;
+        std::uintptr_t g_knownAux = 0;
 
         std::uint64_t g_stableGameplay = 0;
         bool g_traceActive = false;
@@ -524,6 +538,30 @@ float4 PSMain(V input) : SV_TARGET
                 1);
     }
 
+    if (Mode >= 4 && Mode <= 7)
+    {
+        float channel =
+            Mode == 4 ? value.r :
+            Mode == 5 ? value.g :
+            Mode == 6 ? value.b :
+                        value.a;
+
+        channel = saturate(channel);
+
+        return float4(
+            channel,
+            channel,
+            channel,
+            1);
+    }
+
+    if (Mode == 8)
+    {
+        return float4(
+            saturate(value.rgb),
+            1);
+    }
+
     float3 color =
         max(
             value.rgb,
@@ -645,7 +683,8 @@ float4 PSMain(V input) : SV_TARGET
             ID3D11Texture2D* staging,
             ID3D11DeviceContext* context,
             const UINT width,
-            const UINT height)
+            const UINT height,
+            PreviewStats* stats = nullptr)
         {
             D3D11_MAPPED_SUBRESOURCE mapped{};
 
@@ -737,17 +776,46 @@ float4 PSMain(V input) : SV_TARGET
                      x < width;
                      ++x)
                 {
-                    row[x * 4 + 0] =
-                        source[x * 4 + 2];
+                    const std::uint8_t rgba[4] =
+                    {
+                        source[x * 4 + 0],
+                        source[x * 4 + 1],
+                        source[x * 4 + 2],
+                        source[x * 4 + 3]
+                    };
 
-                    row[x * 4 + 1] =
-                        source[x * 4 + 1];
+                    if (stats != nullptr)
+                    {
+                        ++stats->pixels;
 
-                    row[x * 4 + 2] =
-                        source[x * 4 + 0];
+                        for (std::size_t channel = 0;
+                             channel < 4;
+                             ++channel)
+                        {
+                            stats->sums[channel] +=
+                                rgba[channel];
 
-                    row[x * 4 + 3] =
-                        source[x * 4 + 3];
+                            if (rgba[channel] != 0)
+                            {
+                                ++stats->nonzero[channel];
+                            }
+
+                            stats->minimum[channel] =
+                                (std::min)(
+                                    stats->minimum[channel],
+                                    rgba[channel]);
+
+                            stats->maximum[channel] =
+                                (std::max)(
+                                    stats->maximum[channel],
+                                    rgba[channel]);
+                        }
+                    }
+
+                    row[x * 4 + 0] = rgba[2];
+                    row[x * 4 + 1] = rgba[1];
+                    row[x * 4 + 2] = rgba[0];
+                    row[x * 4 + 3] = rgba[3];
                 }
 
                 out.write(
@@ -772,7 +840,8 @@ float4 PSMain(V input) : SV_TARGET
             ResourceStats& resource,
             const std::uint32_t mode,
             const float scale,
-            const fs::path& path)
+            const fs::path& path,
+            PreviewStats* stats = nullptr)
         {
             if (!EnsurePreviewRuntime(device) ||
                 resource.texture == nullptr)
@@ -957,7 +1026,8 @@ float4 PSMain(V input) : SV_TARGET
                             staging,
                             context,
                             width,
-                            height)
+                            height,
+                            stats)
                         ? S_OK
                         : E_FAIL;
                 }
@@ -1345,6 +1415,10 @@ float4 PSMain(V input) : SV_TARGET
                 knownAux =
                     CanonicalId(
                         inputs.nativeAuxTexture);
+
+                g_knownMotion = knownMotion;
+                g_knownNormal = knownNormal;
+                g_knownAux = knownAux;
 
                 resource_intelligence::
                     ReleaseLiveInputs(
