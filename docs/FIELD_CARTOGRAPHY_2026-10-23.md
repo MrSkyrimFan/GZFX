@@ -295,7 +295,109 @@ The next targeted atlas must preview these resources directly.
 
 ---
 
-# 7. HDR reduction / exposure chain
+# 7. Stock temporal AA — IDENTIFIED
+
+Compute shader:
+
+`0x22D4AAA1340`
+
+Reads each frame:
+
+- current main HDR scene `0x22CCE6BED50`;
+- one full-resolution RGBA16F temporal-history surface;
+- motion vectors `0x22CCE6C7BB0`.
+
+Writes the alternate full-resolution RGBA16F temporal-history surface.
+
+History pair:
+
+- `0x22CCE714FD0`
+- `0x22CCE715290`
+
+The resources alternate read/write every frame in exterior and interior captures.
+
+Example, manual `0001`:
+
+- frame 3590 reads `714FD0`, writes `715290`;
+- frame 3591 reads `715290`, writes `714FD0`;
+- frame 3592 reads `714FD0`, writes `715290`.
+
+This is direct stock temporal-AA history behavior: current HDR + previous history + motion → next history.
+
+---
+
+# 8. Shadow-map families
+
+## Exterior directional / volumetric source array — STRONG MATCH
+
+Resource:
+
+`0x22CCE6E9E60`
+
+Descriptor:
+
+- 4096x4096
+- R16 typeless depth
+- array size 2
+
+It is heavily written outdoors and read directly by the identified exterior volumetric-light generator.
+
+This is a strong match for the directional shadow-map/cascade source used by volumetric lighting.
+
+## Volumetric-lighting shadow array — STRONG MATCH
+
+Resource:
+
+`0x22CCE6E85A0`
+
+Descriptor:
+
+- 512x512
+- R16 typeless depth
+- array size 2
+
+It is also read directly by the exterior volumetric-light generator.
+
+Public Skyrim renderer research exposes a dedicated `kVOLUMETRIC_LIGHTING_SHADOWMAPS_ESRAM` depth target. Keep the exact enum assignment provisional until one more targeted proof, but the family relationship is strong.
+
+## Local-light shadow array — STRONG MATCH
+
+Resource:
+
+`0x22CCE6E7520`
+
+Descriptor:
+
+- 4096x4096
+- R16 typeless depth
+- array size 8
+
+Behavior is highly state-dependent:
+
+- exterior manual captures: only ~45 DSV-write observations over three frames;
+- interior manual `0007`: ~4,293 DSV-write observations over three frames.
+
+Public Skyrim renderer research uses an array-sliced `kSHADOWMAPS` target for shadowed local lights.
+
+The live interior/exterior behavior makes this a strong local-light shadow-map-array match.
+
+## Remaining 512x512 depth target — UNKNOWN exact role
+
+Resource:
+
+`0x22CCE6E8860`
+
+Descriptor:
+
+- 512x512
+- R24G8 typeless depth
+- single slice
+
+It is clearly shadow/depth-related but should remain unnamed until its consumers and visual contents are isolated.
+
+---
+
+# 9. HDR reduction / exposure chain
 
 ## Luminance/exposure reduction — IDENTIFIED at family level
 
@@ -316,7 +418,7 @@ Exact individual shader names remain to be assigned.
 
 ---
 
-# 8. Interior control
+# 10. Interior control
 
 Manual `0007`:
 
@@ -336,7 +438,7 @@ This cleanly separates an interior-class renderer path from exterior states.
 
 ---
 
-# 9. Probe defects exposed by this run
+# 11. Probe defects exposed by this run
 
 These are tooling defects, not Skyrim semantics.
 
@@ -378,7 +480,7 @@ Fix:
 
 ---
 
-# 10. Next evidence priorities
+# 12. Next evidence priorities
 
 The next field pass should visually confirm the resources already structurally mapped, not repeat broad blind discovery.
 
