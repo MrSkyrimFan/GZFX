@@ -4,6 +4,7 @@
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
+#include "gzfx/render/wave3_pipeline.hpp"
 
 #include <Windows.h>
 
@@ -67,6 +68,9 @@ namespace
         const bool rendererForensicsArmed =
             gzfx::diagnostics::ArmRendererForensics();
 
+        const bool wave3Initialized =
+            gzfx::render::wave3::Initialize();
+
         const fs::path logPath = runtimeRoot / L"GZFX.log";
         std::ofstream log(logPath, std::ios::out | std::ios::app);
         if (!log)
@@ -93,6 +97,9 @@ namespace
             << "\n";
         log << "renderer_forensics="
             << (rendererForensicsArmed ? "armed" : "failed")
+            << "\n";
+        log << "wave3_pipeline="
+            << (wave3Initialized ? "initialized" : "failed")
             << "\n";
         log << "status=initialized\n";
         log << "===============================\n";
