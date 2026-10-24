@@ -1,0 +1,1262 @@
+GZFX 0.0.20 FIELD FINDINGS
+Corrected Foundation Acceptance + Acceleration Decision
+Evidence bundle: GZFX44rffredas.zip
+Date: October 24, 2026
+
+STATUS:
+DATA QUALITY = EXCELLENT
+WAVE 1 = FIELD PASS / CLOSED
+WAVE 2 = FIELD PASS / CLOSED
+BROAD FOUNDATION CARTOGRAPHY = COMPLETE
+NEXT PHASE = TARGETED WAVE 3 RESEARCH / BLUEPRINT / IMPLEMENTATION
+
+REPOSITORY STATUS DURING THIS REVIEW:
+UNTOUCHED
+
+======================================================================
+1. EXECUTIVE VERDICT
+======================================================================
+
+Yes.
+
+For the renderer foundation GZFX has been trying to establish, this run found
+what we were looking for.
+
+The corrected 0.0.20 model survives real Skyrim across:
+
+- daylight exterior
+- interior
+- nighttime exterior
+
+with deterministic stage ordering and correct environment-specific behavior.
+
+The project no longer needs another broad "map the renderer again" campaign
+before moving into Wave 3.
+
+The remaining renderer unknowns are now narrower feature-domain questions:
+
+- exact global TAA placement
+- water/post-water domain
+- exact reflection substage ownership
+- RT2.B semantics
+- RT3 R/G semantics
+- some later post/HDR details
+
+Those unknowns do NOT block:
+
+- Native Input Broker
+- GZFX temporal core
+- GZFX-owned post-opaque depth hierarchy prototype
+- later Ambient Visibility v2 development
+
+The workflow should now accelerate.
+
+Recommended strategy after the normal Research -> Blueprint steps:
+
+BUILD REAL SYSTEMS WHILE AGGRESSIVE TARGETED PROBES RIDE INSIDE THEM.
+
+Do not return to serial broad cartography unless a future feature actually
+hits a renderer-domain blocker.
+
+======================================================================
+2. BUNDLE INTEGRITY
+======================================================================
+
+Archive:
+
+GZFX44rffredas.zip
+
+ZIP entries:
+
+1,189
+
+Runtime:
+
+0.0.20-foundation-epochs-stage-correctness
+
+Visible runtime:
+
+mode=0 (off)
+world_active=true
+
+The bundle contains:
+
+18 manual semantic captures
+
+manual0001 through manual0018
+
+plus:
+
+- automatic startup semantic evidence
+- full pipeline cartography
+- semantic authority reports
+- stage schedules
+- semantic previews
+- renderer lifecycle evidence
+- frame/resource/pass/buffer evidence
+
+No opaque deferred-command-list blind spot was reported in any manual capture.
+
+Every manual pipeline summary reports:
+
+opaque_command_lists=0
+
+No crash/device-removal/fatal renderer evidence was found.
+
+======================================================================
+3. SESSION NOTE
+======================================================================
+
+GZFX.log and d3d11_lifecycle.txt contain two initialization entries:
+
+00:46:15
+00:47:01
+
+The manual evidence itself is internally coherent as one later session:
+
+- one stable resource-identity set
+- monotonically increasing capture frames
+- one consistent stage sequence
+- capture frames from 3104 through 8202
+
+Therefore the first initialization does not contaminate the manual evidence
+set.
+
+======================================================================
+4. ACTUAL CAPTURE GROUPS
+======================================================================
+
+The renderer behavior and semantic scene previews agree on the campaign split.
+
+CAPTURES 0001-0006
+
+DAYLIGHT EXTERIOR
+
+Representative visible content includes:
+
+- river / shoreline
+- trees
+- terrain
+- buildings
+- rocks
+- character
+- broad exterior depth
+
+
+CAPTURES 0007-0012
+
+INTERIOR
+
+Normal interior environment with:
+
+- stone walls
+- furniture
+- NPCs
+- local lights
+- clutter
+- close and wide views
+
+
+CAPTURES 0013-0018
+
+NIGHTTIME EXTERIOR RIVERWOOD
+
+Exterior architecture remains active at night.
+
+This is exactly the control we needed to distinguish:
+
+EXTERIOR / INTERIOR
+
+from:
+
+DAY / NIGHT
+
+======================================================================
+5. PIPELINE LOAD SPLIT
+======================================================================
+
+Every tested exterior manual capture:
+
+294 compute dispatches per 3-frame window
+
+Every tested interior manual capture:
+
+15 compute dispatches per 3-frame window
+
+
+DAY EXTERIOR:
+
+0001 294
+0002 294
+0003 294
+0004 294
+0005 294
+0006 294
+
+
+INTERIOR:
+
+0007 15
+0008 15
+0009 15
+0010 15
+0011 15
+0012 15
+
+
+NIGHT EXTERIOR:
+
+0013 294
+0014 294
+0015 294
+0016 294
+0017 294
+0018 294
+
+
+This continues to be a very strong independent proof of the major renderer
+environment split.
+
+======================================================================
+6. COMMON STAGE SPINE
+======================================================================
+
+There are:
+
+18 manual captures
+x
+3 captured frames each
+=
+54 captured frames
+
+The corrected common renderer-stage spine appears in:
+
+54 / 54 frames
+
+with no missing event.
+
+
+Per-frame common sequence:
+
+1. after_depth_prepass
+
+2. after_opaque_world_mrt
+
+3. after_cameraz
+
+4. after_stock_ao
+
+5. before_ambient_screen_space_composite
+
+6. at_ambient_screen_space_composite
+
+7. after_ambient_screen_space_composite
+
+8. ui_present
+
+
+Total event counts:
+
+after_depth_prepass:
+54
+
+after_opaque_world_mrt:
+54
+
+after_cameraz:
+54
+
+after_stock_ao:
+54
+
+before_ambient_screen_space_composite:
+54
+
+at_ambient_screen_space_composite:
+54
+
+after_ambient_screen_space_composite:
+54
+
+ui_present:
+54
+
+
+FIELD VERDICT:
+
+COMMON STAGE SCHEDULER = PASS
+
+======================================================================
+7. AFTER_OPAQUE_WORLD_MRT
+======================================================================
+
+The new boundary works in all 54 captured frames.
+
+It occurs after the main opaque MRT activity and immediately before the stock
+CameraZ producer family.
+
+The most important structural observation:
+
+AfterOpaqueWorldMRT -> AfterCameraZ
+
+gap:
+
+EXACTLY 11 draw ordinals
+
+in:
+
+54 / 54 captured frames
+
+
+This does NOT mean GZFX should hardcode 11.
+
+It means the structural state machine is recognizing an extremely stable
+real renderer transition.
+
+FIELD VERDICT:
+
+AfterOpaqueWorldMRT = PASS
+
+This is now a credible Wave 3 integration landmark for building a GZFX-owned
+post-opaque scene-depth hierarchy.
+
+======================================================================
+8. AFTER_CAMERAZ
+======================================================================
+
+The 0.0.19 field failure is fixed.
+
+0.0.19 result:
+
+CameraZ resource existed and rebuilt every frame
+but:
+AfterCameraZ = 0 events
+
+0.0.20 result:
+
+AfterCameraZ = 54 events
+
+exactly:
+
+1 per captured frame
+
+
+The common ordinal relationship is also exact:
+
+AfterOpaqueWorldMRT
+->
+AfterCameraZ
+
+=
+11 ordinals
+
+for all 54 frames.
+
+
+AfterCameraZ
+->
+AfterStockAO
+
+=
+3 ordinals
+
+for all 54 frames.
+
+
+The event is therefore functioning as a real per-frame hierarchy-completion
+boundary rather than a one-time resource-discovery signal.
+
+FIELD VERDICT:
+
+STOCK_CAMERAZ RESOURCE = PASS
+
+AFTER_CAMERAZ PER-FRAME CONTRACT = PASS
+
+======================================================================
+9. STOCK AO BOUNDARY
+======================================================================
+
+AfterStockAO appears:
+
+54 / 54 frames
+
+The ordering is exact:
+
+AfterCameraZ
+->
+AfterStockAO
+
+=
+3 ordinals
+
+in all 54 frames.
+
+Stock temporal RawAO and filtering remain structurally stable across:
+
+- day exterior
+- interior
+- night exterior
+
+FIELD VERDICT:
+
+AfterStockAO = PASS
+
+======================================================================
+10. AMBIENT SCREEN-SPACE COMPOSITE
+======================================================================
+
+The corrected neutral scheduler vocabulary works.
+
+Per captured frame:
+
+before_ambient_screen_space_composite
+at_ambient_screen_space_composite
+after_ambient_screen_space_composite
+
+all appear exactly once.
+
+Counts:
+
+54
+54
+54
+
+
+Execution sequence is correct:
+
+before
+->
+at
+->
+after
+
+
+AfterStockAO
+->
+BeforeAmbientScreenSpaceComposite
+
+=
+EXACTLY 2 ordinals
+
+in:
+
+54 / 54 frames
+
+
+No old generic stage names appear anywhere in the evidence:
+
+after_opaque_geometry_final_depth:
+0
+
+before_indirect_lighting_composite:
+0
+
+at_lighting_composite:
+0
+
+after_lighting_composite:
+0
+
+
+FIELD VERDICT:
+
+AMBIENT SCREEN-SPACE COMPOSITE BOUNDARY = PASS
+
+======================================================================
+11. EXTERIOR VOLUMETRIC BRANCH
+======================================================================
+
+Exterior captured frames:
+
+12 captures
+x 3 frames
+=
+36 frames
+
+Interior captured frames:
+
+6 captures
+x 3 frames
+=
+18 frames
+
+
+Exterior branch events:
+
+before_volumetric_apply:
+36
+
+after_volumetric_apply:
+36
+
+publish_pre_water_depth:
+36
+
+
+Interior branch events:
+
+before_volumetric_apply:
+0
+
+after_volumetric_apply:
+0
+
+publish_pre_water_depth:
+0
+
+
+This is perfect environment-domain separation.
+
+It appears in:
+
+all daylight exterior frames
+
+and:
+
+all nighttime exterior frames
+
+It disappears in:
+
+all interior frames
+
+
+FIELD VERDICT:
+
+EXTERIOR VOLUMETRIC APPLY DOMAIN = PASS
+
+======================================================================
+12. VOLUMETRIC PREVIOUS DEPTH
+======================================================================
+
+Every exterior captured frame records:
+
+VOLUMETRIC_PREVIOUS_DEPTH
+
+with:
+
+produced=0
+consumed=1
+current_available=0
+previous_available=1
+epoch_kind=previous_frame_history
+
+
+This happens exactly:
+
+36 times
+
+once per exterior captured frame.
+
+
+Interior captures:
+
+0 VOLUMETRIC_PREVIOUS_DEPTH observations
+
+
+This directly validates the Research Pass 2 interpretation.
+
+FIELD VERDICT:
+
+VOLUMETRIC_PREVIOUS_DEPTH = PASS
+
+======================================================================
+13. SAME-RESOURCE CONTENT EPOCH TRANSITION
+======================================================================
+
+The same physical resource identity is used for both:
+
+VOLUMETRIC_PREVIOUS_DEPTH
+
+and:
+
+PRE_WATER_DEPTH_CURRENT
+
+
+Session identity:
+
+0x1EF610716C0
+
+
+Every exterior captured frame records:
+
+VOLUMETRIC_PREVIOUS_DEPTH
+->
+PRE_WATER_DEPTH_CURRENT
+
+event:
+
+MAIN_DEPTH_COPY
+
+
+Exterior transition count:
+
+36
+
+
+Interior transition count:
+
+0
+
+
+Before transition:
+
+previous-frame history semantic is valid.
+
+After transition:
+
+PRE_WATER_DEPTH_CURRENT is produced and current-frame available.
+
+
+This is exactly the behavior the revised architecture was designed to model.
+
+FIELD VERDICT:
+
+CONTENT-EPOCH MODEL = PASS
+
+======================================================================
+14. PRE_WATER_DEPTH_CURRENT
+======================================================================
+
+Every exterior captured frame records:
+
+PRE_WATER_DEPTH_CURRENT
+
+with:
+
+produced=1
+current_available=1
+previous_available=0
+epoch_kind=pre_water_current
+
+
+Interior captures:
+
+0 current observations
+
+
+The scheduler event:
+
+publish_pre_water_depth
+
+follows:
+
+after_volumetric_apply
+
+in every exterior frame.
+
+Because CopyResource does not increment the draw ordinal, the two can share an
+ordinal value.
+
+The scheduler sequence field correctly preserves execution order:
+
+BeforeVolumetricApply
+->
+AfterVolumetricApply
+->
+PublishPreWaterDepth
+
+
+FIELD VERDICT:
+
+PRE-WATER DEPTH PUBLICATION = PASS
+
+======================================================================
+15. STALE RESOURCE FAIL-CLOSED BEHAVIOR
+======================================================================
+
+The 0.0.19 field run showed that persistent exterior resource identities
+remained stored inside interiors.
+
+0.0.20 intentionally keeps persistent identity knowledge but clears current
+availability.
+
+This works.
+
+During all interior captures:
+
+VOLUMETRIC_DENSITY_A:
+known persistently
+current_available=0
+
+VOLUMETRIC_DENSITY_B:
+known persistently
+current_available=0
+
+VOLUMETRIC_PREVIOUS_DEPTH:
+known persistently
+current_available=0
+
+PRE_WATER_DEPTH_CURRENT:
+known persistently
+current_available=0
+
+
+No capture-local observations for those exterior-only semantics occur inside
+the interior group.
+
+FIELD VERDICT:
+
+PERSISTENT IDENTITY VS CURRENT AVAILABILITY = PASS
+
+FAIL-CLOSED ENVIRONMENT-SCOPED SEMANTICS = PASS
+
+======================================================================
+16. CAPTURE-LOCAL REPORTING
+======================================================================
+
+The corrected report format separates:
+
+[session_identity_registry]
+
+[current_frame_semantic_views]
+
+[capture_local_observations]
+
+[capture_local_promotions]
+
+[content_epoch_transitions]
+
+
+All capture-local observations and epoch transitions inspected are bounded to:
+
+capture_start
+through
+capture_end
+
+No capture-local row escaped its declared capture window.
+
+FIELD VERDICT:
+
+CAPTURE-LOCAL EVIDENCE BOUNDS = PASS
+
+======================================================================
+17. CURRENT-FRAME SNAPSHOT TIMING NOTE
+======================================================================
+
+The current-frame semantic-view table is intentionally written at evidence
+finalization time.
+
+As in prior versions, this can represent the frame immediately following:
+
+capture_end
+
+Example:
+
+capture window:
+3104-3106
+
+top capture metadata frame:
+3106
+
+current semantic views:
+frame 3107
+
+
+This is no longer ambiguous because the report explicitly separates:
+
+session/current state
+
+from:
+
+strictly capture-local observations.
+
+
+No foundation blocker remains here.
+
+======================================================================
+18. CORE SEMANTIC REACQUISITION
+======================================================================
+
+The session maintains coherent structural identities for:
+
+MAIN_HDR
+
+MAIN_DEPTH_CURRENT
+
+MOTION
+
+NORMAL_MASK_CURRENT
+
+AUXILIARY_RT3
+
+DEPTH_EARLY_COPY
+
+STOCK_CAMERAZ
+
+SAO_RAWAO_CURRENT
+
+SAO_RAWAO_PREVIOUS
+
+SAO_FILTER_TEMP
+
+SAO_FILTERED
+
+RAW_INDIRECT
+
+SHADOW_MASK
+
+
+Capture-local observations show the required common semantic family in every
+captured frame.
+
+FIELD VERDICT:
+
+CORE SEMANTIC AUTHORITY = PASS
+
+======================================================================
+19. RETIRED BAD MODEL STAYS DEAD
+======================================================================
+
+Search across text/CSV evidence found:
+
+OPAQUE_FINAL_DEPTH:
+0 occurrences
+
+after_opaque_geometry_final_depth:
+0
+
+before_indirect_lighting_composite:
+0
+
+at_lighting_composite:
+0
+
+after_lighting_composite:
+0
+
+
+The corrected model has fully replaced the known-bad 0.0.19 vocabulary.
+
+FIELD VERDICT:
+
+OLD FOUNDATION ASSUMPTIONS = SUCCESSFULLY RETIRED
+
+======================================================================
+20. ENVIRONMENT CLASSIFICATION
+======================================================================
+
+The semantic authority reports:
+
+0001 exterior
+0002 exterior
+0003 exterior
+0004 exterior
+0005 exterior
+0006 exterior
+
+0007 interior
+0008 interior
+0009 interior
+0010 interior
+0011 interior
+0012 interior
+
+0013 exterior
+0014 exterior
+0015 exterior
+0016 exterior
+0017 exterior
+0018 exterior
+
+
+18 / 18 classifications agree with the renderer topology and scene evidence.
+
+Night exterior remains:
+
+Exterior
+
+not a separate architecture class.
+
+FIELD VERDICT:
+
+ENVIRONMENT CLASSIFICATION = PASS
+
+======================================================================
+21. NO EVIDENCE OF FOUNDATION INSTABILITY
+======================================================================
+
+All manual captures completed.
+
+No capture reports:
+
+opaque command list blind spot
+
+Every manual pipeline summary:
+
+opaque_command_lists=0
+
+Runtime remains:
+
+mode=0
+world_active=true
+
+No device-removed or crash evidence was identified.
+
+This does NOT constitute a formal controlled performance benchmark.
+
+It does show the always-on corrected foundation survived a long multi-scene
+session and eighteen manual captures without obvious renderer failure.
+
+FIELD VERDICT:
+
+STABILITY = PASS FOR FOUNDATION ACCEPTANCE
+
+======================================================================
+22. WAVE 1 ACCEPTANCE
+======================================================================
+
+Wave 1:
+
+Semantic Authority Layer
+
+Required corrected capabilities:
+
+- persistent identity
+- current-frame availability
+- stage validity
+- environment validity
+- semantic views
+- content epochs
+- stale-resource fail-closed behavior
+- corrected depth semantics
+- revised diagnostic reporting
+
+
+REAL-SKYRIM RESULT:
+
+PASS
+
+
+WAVE 1 FIELD STATUS:
+
+CLOSED
+
+======================================================================
+23. WAVE 2 ACCEPTANCE
+======================================================================
+
+Wave 2:
+
+Stage Scheduler / No-Op Integration
+
+
+Required common events:
+
+AfterDepthPrepass
+PASS
+
+AfterOpaqueWorldMRT
+PASS
+
+AfterCameraZ
+PASS
+
+AfterStockAO
+PASS
+
+BeforeAmbientScreenSpaceComposite
+PASS
+
+AtAmbientScreenSpaceComposite
+PASS
+
+AfterAmbientScreenSpaceComposite
+PASS
+
+
+Required exterior events:
+
+BeforeVolumetricApply
+PASS
+
+AfterVolumetricApply
+PASS
+
+PublishPreWaterDepth
+PASS
+
+
+UiPresent
+PASS
+
+
+REAL-SKYRIM RESULT:
+
+PASS
+
+
+WAVE 2 FIELD STATUS:
+
+CLOSED
+
+======================================================================
+24. HAVE WE FOUND WHAT WE WERE LOOKING FOR?
+======================================================================
+
+For the foundation:
+
+YES.
+
+We now have a reliable real-Skyrim map for the core domain needed to startbuilding GZFX's production screen-space lighting foundation.
+
+We know and can schedule around:
+
+- main opaque MRT
+- current main depth
+- early stock depth copy
+- stock CameraZ
+- temporal AO
+- AO filtering
+- raw indirect
+- ambient screen-space composite
+- exterior volumetric apply
+- volumetric previous-depth history
+- pre-water depth publication
+- interior/exterior domain separation
+- current-vs-persistent semantic availability
+- same-resource content epochs
+
+This is enough to advance.
+
+======================================================================
+25. WHAT WE HAVE NOT FOUND YET
+======================================================================
+
+The following remain unresolved:
+
+- exact global Skyrim TAA stage
+- exact water temporal/history chain field identity
+- exact kPOST_WATER_COPY mapping
+- exact reflection/reduced-lighting substage ownership
+- RT2.B exact meaning
+- RT3 R/G exact meanings
+- some later HDR/post-domain identities
+
+These are real unknowns.
+
+They are no longer blockers for Wave 3.
+
+They should be solved when the corresponding production feature actually
+needs them.
+
+======================================================================
+26. WHY THE PROJECT FELT TOO SLOW
+======================================================================
+
+The project spent several versions solving the difference between:
+
+"a texture that looks plausible"
+
+and:
+
+"a resource whose meaning and execution boundary are safe enough for a
+production renderer."
+
+That work was necessary because earlier AO/SSIL prototypes proved that merely
+having depth, HDR, normals and motion was not enough to produce stable,
+correct integration.
+
+However:
+
+the foundation problem is now sufficiently solved.
+
+Continuing the same broad cartography workflow from here WOULD be too slow.
+
+The workflow should change.
+
+======================================================================
+27. ACCELERATION DECISION
+======================================================================
+
+DO NOT run another broad renderer mapping campaign before Wave 3.
+
+DO NOT spend another version merely naming textures.
+
+DO NOT stop real implementation every time one unrelated renderer resource is
+unknown.
+
+New acceleration rule:
+
+IMPLEMENT THE ACTUAL SYSTEM
++
+EMBED TARGETED FORENSIC PROBES IN THE SAME BUILD
+
+Examples:
+
+While building GZFXSceneDepthHierarchy:
+
+probe exactly the post-opaque depth correctness and alpha-tested geometry
+question.
+
+While building temporal core:
+
+probe exact motion convention, camera cuts, disocclusion and later TAA
+relationship.
+
+While building reflections:
+
+probe the exact reflection family then.
+
+While building water:
+
+probe post-water depth and water histories then.
+
+This makes unknowns pay rent by directly supporting a feature under
+construction.
+
+======================================================================
+28. NEXT RESEARCH SHOULD BE SHORT AND TARGETED
+======================================================================
+
+The next research phase should not reopen Skyrim's entire renderer.
+
+Research only what Wave 3 needs immediately:
+
+1. Best hierarchy format / mip strategy for GZFX-owned post-opaque depth.
+
+2. Exact native motion-vector convention and reprojection sign/scale.
+
+3. Temporal rejection strategy:
+   - current vs previous depth
+   - normal rejection
+   - disocclusion
+   - camera-cut detection
+   - dynamic-resolution invalidation
+
+4. How to create and bind the GZFX depth hierarchy at AfterOpaqueWorldMRT
+   without corrupting Skyrim state.
+
+5. Whether to build the hierarchy with graphics draws, compute, or a hybrid
+   given D3D11 and the RTX 4060 Laptop reference system.
+
+6. Diagnostic views needed to prove it in one compact field run.
+
+That research should lead directly into a Wave 3 blueprint.
+
+======================================================================
+29. NEXT BLUEPRINT SHOULD EMPHASIZE THROUGHPUT
+======================================================================
+
+The next blueprint should authorize a broad Wave 3 implementation rather than
+one tiny probe at a time.
+
+Recommended Wave 3 implementation bundle:
+
+- Native Semantic Broker using the now-field-proven authority
+- GZFXSceneDepthHierarchy
+- native normal decoder
+- verified native motion decoder/convention
+- Temporal History Manager
+- resize/camera-cut/environment-transition invalidation
+- depth/normal disocclusion utilities
+- motion-reprojection debug visualization
+- current/previous depth debug visualization
+- GPU timing
+- targeted probe outputs for any remaining uncertainty
+
+This should be one coherent engineering pass with internal gates, not six
+separate micro-builds.
+
+======================================================================
+30. WHAT COMES AFTER WAVE 3
+======================================================================
+
+If Wave 3 field validation passes:
+
+move directly into:
+
+Wave 4
+Ambient Visibility v2
+
+Then:
+
+Wave 5
+Indirect Radiance v1
+
+Then:
+
+Wave 6
+Lighting Composition
+
+
+The project should now start producing actual production graphics systems
+again.
+
+======================================================================
+31. CURRENT PROJECT STATUS
+======================================================================
+
+0.0.20:
+
+CODE:
+PASS
+
+CI:
+PASS
+
+FIELD:
+PASS
+
+
+Wave 1:
+CLOSED
+
+Wave 2:
+CLOSED
+
+
+Broad foundation renderer cartography:
+
+COMPLETE
+
+
+Current frontier:
+
+Wave 3
+Native Input Broker + Temporal Core
+
+
+Production AO/GI:
+
+still intentionally frozen until Wave 3 is stable
+
+
+But:
+
+NO ADDITIONAL BROAD FOUNDATION PROBE BUILD IS REQUIRED.
+
+======================================================================
+32. FINAL ANSWER
+======================================================================
+
+Have we found what we were looking for?
+
+YES, for the foundation.
+
+This evidence is strong enough to stop repeatedly proving the same common
+renderer spine.
+
+The correct way to move faster now is not "probe everything even harder before
+coding."
+
+The correct way is:
+
+TARGETED RESEARCH
+->
+WAVE 3 BLUEPRINT
+->
+LARGE COHERENT WAVE 3 IMPLEMENTATION WITH EMBEDDED AGGRESSIVE PROBES
+->
+ONE COMPACT FIELD GATE
+->
+AMBIENT VISIBILITY v2
+
+The renderer map is finally mature enough to let engineering lead again.
+
+REPOSITORY:
+UNTOUCHED DURING THIS REVIEW
+
+NEXT PHASE:
+TARGETED WAVE 3 RESEARCH
+
+END OF FINDINGS
