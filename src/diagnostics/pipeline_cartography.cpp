@@ -3276,8 +3276,33 @@ namespace gzfx::diagnostics::pipeline_cartography
                 std::uint64_t>
                     lastPass;
 
+            std::set<std::uintptr_t>
+                captureResources;
+
+            std::set<std::uintptr_t>
+                captureShaders;
+
             for (const auto& pass : g_passes)
             {
+                for (const auto& shader :
+                     pass.shaders)
+                {
+                    if (shader.id != 0)
+                    {
+                        captureShaders.insert(
+                            shader.id);
+                    }
+                }
+
+                for (const auto& use :
+                     pass.constantBuffers)
+                {
+                    if (use.buffer.id != 0)
+                    {
+                        captureResources.insert(
+                            use.buffer.id);
+                    }
+                }
                 for (const auto& access :
                      pass.accesses)
                 {
@@ -3285,6 +3310,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                     {
                         continue;
                     }
+
+                    captureResources.insert(
+                        access.binding.resource);
 
                     if (access.mode == 'R')
                     {
@@ -3309,6 +3337,34 @@ namespace gzfx::diagnostics::pipeline_cartography
                     lastPass[
                         access.binding.resource] =
                         pass.id;
+                }
+            }
+
+            for (const auto& update :
+                 g_bufferUpdates)
+            {
+                if (update.resource != 0)
+                {
+                    captureResources.insert(
+                        update.resource);
+                }
+            }
+
+            const std::uintptr_t knownResources[] =
+            {
+                g_knownSceneColor,
+                g_knownDepth,
+                g_knownMotion,
+                g_knownNormal,
+                g_knownAux
+            };
+
+            for (const auto id :
+                 knownResources)
+            {
+                if (id != 0)
+                {
+                    captureResources.insert(id);
                 }
             }
 
@@ -3915,7 +3971,12 @@ namespace gzfx::diagnostics::pipeline_cartography
                     for (const auto& [id, meta] :
                          g_resources)
                     {
-                        (void)id;
+                        if (captureResources.find(id) ==
+                            captureResources.end())
+                        {
+                            continue;
+                        }
+
                         resources.push_back(meta);
                     }
 
@@ -4036,7 +4097,12 @@ namespace gzfx::diagnostics::pipeline_cartography
                     for (const auto& [id, meta] :
                          g_shaders)
                     {
-                        (void)id;
+                        if (captureShaders.find(id) ==
+                            captureShaders.end())
+                        {
+                            continue;
+                        }
+
                         shaders.push_back(meta);
                     }
 
@@ -4311,10 +4377,16 @@ namespace gzfx::diagnostics::pipeline_cartography
                         << "opaque_command_lists="
                         << commandLists
                         << "\n"
-                        << "resources_seen="
+                        << "resources_touched_capture="
+                        << captureResources.size()
+                        << "\n"
+                        << "resources_known_session="
                         << g_resources.size()
                         << "\n"
-                        << "shaders_seen="
+                        << "shaders_used_capture="
+                        << captureShaders.size()
+                        << "\n"
+                        << "shaders_known_session="
                         << g_shaders.size()
                         << "\n"
                         << "buffer_updates_seen="
