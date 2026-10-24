@@ -1,0 +1,661 @@
+Yep. **0019–0024 is now locked as nighttime exterior Riverwood**, specifically the wood-chopping/logging area and little bridge beside Alvor's blacksmith. That actually makes the dataset stronger because we now have daylight exterior, interior, and nighttime exterior controls instead of some mysterious blue Skyrim dimension. 😆
+
+I have **not touched the GZFX repo**. This is the first research memo built from `GZFX77676.zip` + public Skyrim renderer research.
+
+# GZFX Renderer Research Pass 1
+## Stock Skyrim Image-Space Architecture and Crosswalk to GZFX Field Evidence
+
+**Research date:** October 23, 2026  
+**Field evidence:** `GZFX77676.zip`  
+**Field runtime:** `0.0.18-cartography-semantic-atlas`  
+**Repository modification during this phase:** NONE  
+**Status:** Research only. Blueprint and implementation are separate later phases.
+
+---
+
+# 1. Evidence-control rule
+
+This document deliberately distinguishes three different kinds of information.
+
+| Classification | Meaning |
+|---|---|
+| **FIELD IDENTIFIED** | Directly established by GZFX's own Skyrim captures and repeated behavior. |
+| **PUBLIC RE CORROBORATED** | Supported by public Skyrim reverse-engineering, CommonLibSSE-NG, or current Community Shaders renderer/shader work. |
+| **HYPOTHESIS / UNRESOLVED** | Plausible interpretation requiring additional structural proof before being treated as architecture. |
+
+Public Community Shaders code is useful because the project currently contains reconstructed/decompile-transcription versions of many Skyrim image-space shaders, renderer target names, and stage hooks. It is used here as public reverse-engineering reference material, not as GZFX implementation code.
+
+---
+
+# 2. Correct field-capture taxonomy
+
+The latest capture set must be interpreted as follows.
+
+| Captures | Environment |
+|---|---|
+| `0001–0009` | Exterior/daytime or daylight-class outdoor scenes |
+| `0010–0018` | Interior scenes |
+| `0019–0024` | **Nighttime exterior Riverwood**, beside Alvor's blacksmith, the small bridge, and wood-chopping/logging area |
+
+This matters because the third group is now a clean **night exterior control**.
+
+The 294-dispatch exterior compute topology present in daylight also survives in `0019–0024`, while it collapses to only 15 dispatches in interiors. Therefore the large renderer difference previously observed is primarily **exterior versus interior**, not simply bright versus dark or day versus night.
+
+---
+
+# 3. Skyrim exposes a much richer native render-target system than GZFX originally assumed
+
+CommonLibSSE-NG publicly exposes Skyrim's native render-target enumeration.
+
+The names are extraordinarily informative. They include:
+
+`kNORMAL_TAAMASK_SSRMASK`  
+`kNORMAL_TAAMASK_SSRMASK_SWAP`  
+`kMOTION_VECTOR`  
+`kWATER_REFLECTIONS`  
+`kUNDERWATER_MASK`  
+`kREFRACTION_NORMALS`  
+`kSHADOW_MASK`
+
+and a complete SAO/indirect family:
+
+`kSAO`  
+`kSAO_CAMERAZ`  
+`kSAO_CAMERAZ_MIP_LEVEL_0...11`  
+`kSAO_RAWAO`  
+`kSAO_RAWAO_PREVIOUS`  
+`kSAO_TEMP_BLUR`  
+`kINDIRECT`  
+`kRAWINDIRECT`  
+`kRAWINDIRECT_PREVIOUS`  
+`kRAWINDIRECT_SWAP`
+
+The same enum also exposes full half/quarter-resolution volumetric families, two global TAA accumulation targets, two UI-TAA targets, dedicated TAA mask, dedicated water-TAA targets, and SSR/SSR_RAW/SSR_BLURRED resources. :chatgpt-content-reference{index="0"}
+
+The native depth-stencil enumeration separately exposes:
+
+`kMAIN`  
+`kMAIN_COPY`  
+`kSHADOWMAPS_ESRAM`  
+`kVOLUMETRIC_LIGHTING_SHADOWMAPS_ESRAM`  
+`kSHADOWMAPS`  
+`kPOST_ZPREPASS_COPY`  
+`kPOST_WATER_COPY`
+
+and the native 3D-target enumeration exposes the volumetric accumulation pair and volumetric noise target. :chatgpt-content-reference{index="1"}
+
+### Research conclusion
+
+GZFX should stop thinking of Skyrim as a renderer that merely provides:
+
+> HDR + depth + camera
+
+It actually exposes a fairly sophisticated native temporal/image-space architecture already containing the conceptual building blocks for:
+
+AO, hierarchical depth, temporal AO history, indirect lighting, reflection, motion reprojection, TAA, water history, volumetric history, shadows, and exposure.
+
+This does **not** mean GZFX should simply reuse all vanilla effects.
+
+It means GZFX needs to understand where those systems live before replacing or augmenting them.
+
+---
+
+# 4. Depth chronology is now externally corroborated
+
+GZFX field evidence repeatedly identified at least two meaningful depth snapshots:
+
+**early/pre-opaque depth**
+
+and
+
+**later/final opaque depth**
+
+Current Community Shaders renderer work independently makes exactly this distinction.
+
+Its deferred renderer explicitly publishes a finished opaque depth after geometry because the earlier z-prepass may omit alpha-tested geometry such as rocks, cliffs, and road edges. The finished depth is published before later post-geometry processing, and water also needs the later depth for edge fade/refraction. :chatgpt-content-reference{index="2"}
+
+CommonLib independently names a dedicated depth target:
+
+`kPOST_ZPREPASS_COPY` :chatgpt-content-reference{index="3"}
+
+### Architectural significance
+
+This may be one of the most important explanations for why earlier GZFX screen-space effects could be technically valid but visually unstable.
+
+A depth resource can be:
+
+- valid D3D11 depth,
+- correctly sized,
+- correctly sampled,
+- numerically coherent,
+
+and still be the **wrong semantic depth for that stage**.
+
+For future AO/GI work, “which depth texture?” is therefore insufficient.
+
+The real question is:
+
+> **Depth representing the scene at what point in Skyrim's frame?**
+
+That requirement should become a hard architectural rule in the future blueprint.
+
+---
+
+# 5. CameraZ is not merely a depth copy
+
+GZFX field evidence identified the full-resolution 12-mip R32_FLOAT resource:
+
+2560×1440  
+1280×720  
+640×360  
+320×180  
+...  
+1×1
+
+CommonLib names precisely this family:
+
+`kSAO_CAMERAZ` plus `kSAO_CAMERAZ_MIP_LEVEL_0` through `_11`. :chatgpt-content-reference{index="4"}
+
+Community Shaders' reconstructed `ISSAOCameraZ.hlsl` also shows that CameraZ is generated from the scene depth by applying camera clip information rather than simply copying the raw hardware depth value.
+
+### Architectural significance
+
+CameraZ should be treated as a **stock screen-space analysis representation**, not merely another depth texture.
+
+For GZFX, this opens two possible future paths:
+
+| Strategy | Meaning |
+|---|---|
+| Consume Skyrim CameraZ | Use the hierarchy Skyrim already constructs. |
+| Build a GZFX-owned equivalent | Reconstruct it at the correct stage if independence/control demands it. |
+
+What GZFX should **not** do again is blindly build expensive neighborhood analysis from flat depth while Skyrim already maintains an appropriate multiscale hierarchy.
+
+Which of those two strategies is preferable belongs in the blueprint stage.
+
+---
+
+# 6. Stock Skyrim AO is a temporal system, not simple SSAO
+
+The native target enum itself exposes:
+
+`SAO_RAWAO`  
+`SAO_RAWAO_PREVIOUS`  
+`SAO_TEMP_BLUR`
+
+alongside CameraZ. :chatgpt-content-reference{index="5"}
+
+That lines up exactly with GZFX field evidence.
+
+The 24-capture run proves a stock AO stage consuming:
+
+CameraZ + current normal + motion + previous AO/history
+
+and alternating two full-resolution AO/history surfaces frame-to-frame.
+
+Two filtering passes immediately follow it.
+
+More importantly, the field data showed that changes between those history surfaces correlate strongly with actual camera/player motion.
+
+This means temporal behavior is not merely inferred from target names.
+
+It is **observed behavior**.
+
+### The AO blur itself carries more information than a scalar AO field
+
+Current public reconstruction of Skyrim's SAO blur performs a separable seven-tap blur. Importantly, the intermediate color contains additional components used to strongly reject samples across discontinuities, rather than being treated as one anonymous grayscale field.
+
+That fits the structural behavior GZFX saw in the full-resolution RGBA8 AO intermediates.
+
+### Architectural significance
+
+The failed GZFX Horizon approach was fundamentally less informed than the stock architecture in several ways.
+
+It was trying to stabilize AO after the fact while Skyrim's stock architecture already has:
+
+Camera-space hierarchical depth → native normals → motion → previous AO → temporal reconstruction → edge-aware filtering.
+
+This does not establish that vanilla Skyrim AO is visually better than what GZFX can eventually build.
+
+It establishes that **our replacement should at least match the sophistication of the dataflow before trying to exceed its quality**.
+
+---
+
+# 7. The native normal target finally has a credible channel interpretation
+
+CommonLib calls the target:
+
+`kNORMAL_TAAMASK_SSRMASK`. :chatgpt-content-reference{index="6"}
+
+That name alone is suggestive, but field evidence previously prevented us from simply declaring:
+
+> RG = normal, B = TAA, A = SSR
+
+because the observed channels did not behave that cleanly.
+
+The public shader evidence now explains why.
+
+Current reconstructed Skyrim-compatible forward lighting code writes encoded screen-space normal data to R/G. In the ordinary path, B can be zero while A is calculated from SSR parameters and material/normal conditions. A separate engine-controlled path can instead repurpose that auxiliary output to carry scene/diffuse color, meaning B can suddenly contain meaningful scene information. :chatgpt-content-reference{index="7"}
+
+Even stronger, reconstructed `ISSAOComposite` treats the Z/W portion of the normal/SSR texture as SSR mask information when composing screen-space reflections.
+
+That fits the new field evidence remarkably well:
+
+| Channel | GZFX field behavior | Public renderer evidence |
+|---|---|---|
+| R/G | Coherent native normal | Encoded screen-space normal |
+| B | Structured outdoors, exactly zero throughout tested interiors | May be zero in ordinary normal path; other paths can repurpose auxiliary output |
+| A | Structured exterior **and interior** | Explicit SSR-related mask production exists |
+
+### Current conclusion
+
+**RT2.RG = encoded native normal: IDENTIFIED**
+
+**RT2.A = SSR-related mask/eligibility: now STRONG**
+
+**RT2.B = still unresolved**
+
+It would still be premature to rename B as “TAA mask.”
+
+The field behavior suggests B may be more path-dependent than the enum's historical name implies.
+
+That question belongs in the targeted blueprint/probe design.
+
+---
+
+# 8. RT3 R8G8 remains the major mystery
+
+The most stubborn resource is GZFX's full-resolution R8G8 auxiliary MRT.
+
+Field behavior is now strong:
+
+- R/G are sparse outdoors.
+- G is often more active.
+- activity varies with environment.
+- both channels become **completely zero throughout tested interiors**.
+- stock CameraZ, temporal AO and later indirect/composition still operate inside.
+
+Therefore RT3 is **not a universal prerequisite** for basic depth, normal, AO, or interior lighting.
+
+The native CommonLib target list does not provide an obvious first-order R8G8 target whose name lets us simply solve this by inspection. :chatgpt-content-reference{index="8"}
+
+Current public rendering projects also use R8G8 surfaces for several unrelated purposes, demonstrating that the format itself cannot identify semantics.
+
+### Research conclusion
+
+RT3 should remain:
+
+> **exterior/environment-sensitive auxiliary data, exact semantics unresolved**
+
+No blueprint should consume RT3 blindly.
+
+The next diagnostic architecture should identify it from **producer shader + output slot + consumer stages + controlling constant values**, not from appearance or format.
+
+---
+
+# 9. Skyrim has a real screen-space indirect-lighting architecture
+
+CommonLib contains an entire native indirect family:
+
+`INDIRECT`  
+`INDIRECT_DOWNSCALED`  
+`RAWINDIRECT`  
+`RAWINDIRECT_DOWNSCALED`  
+`RAWINDIRECT_PREVIOUS`  
+`RAWINDIRECT_PREVIOUS_DOWNSCALED`  
+`RAWINDIRECT_SWAP`. :chatgpt-content-reference{index="9"}
+
+Community Shaders' frame annotations also recognize real stock image-space stages named `ISSILRawInd` and `ISSILComposite`.
+
+Its reconstructed `ISSILComposite.hlsl` is especially revealing.
+
+The conceptual operation is simply:
+
+**scene radiance + indirect radiance → resulting scene**
+
+In other words, Skyrim's indirect-light contribution is treated as a radiance field that gets **additively composed** at an image-space lighting stage.
+
+### Connection to GZFX field evidence
+
+GZFX found:
+
+- a full-resolution R11G11B10_FLOAT candidate produced from scene/depth/auxiliary information;
+- a later composition stage that reads that candidate together with AO, depth, normals, auxiliary masks, shadow information, and reduced-resolution lighting information;
+- that stage writes back to main HDR.
+
+This is a very strong structural match for the native SIL/raw-indirect family.
+
+### Architectural significance
+
+This is likely the single biggest lesson for the dead GZFX "bounce" system.
+
+Our prototype treated indirect illumination more like an after-the-fact brightening/glow effect.
+
+The stock renderer treats indirect lighting as an **actual lighting contribution inside the image-space lighting architecture**.
+
+Future GZFX GI/SSIL should therefore almost certainly be designed as:
+
+**radiance generation → temporal/spatial validation → radiance composition**
+
+rather than:
+
+**find bright pixels → smear them → call it bounce**
+
+The exact integration point remains a blueprint decision.
+
+---
+
+# 10. Skyrim's global TAA now has a recognizable signature
+
+CommonLib separately defines:
+
+`kTEMPORAL_AA_ACCUMULATION_1`  
+`kTEMPORAL_AA_ACCUMULATION_2`  
+`kTEMPORAL_AA_UI_ACCUMULATION_1`  
+`kTEMPORAL_AA_UI_ACCUMULATION_2`  
+`kTEMPORAL_AA_MASK`. :chatgpt-content-reference{index="10"}
+
+Community Shaders explicitly treats `ISTemporalAA.hlsl` as a decompile-transcription shader and has tooling to compare refactors against Skyrim shader behavior. :chatgpt-content-reference{index="11"}
+
+The reconstructed shader architecture uses distinct inputs corresponding to:
+
+current frame, history, velocity, depth, mask, and alpha information,
+
+and produces both current resolved color and a feedback/history result.
+
+### Important correction to previous GZFX reasoning
+
+This gives us a far better fingerprint for finding **actual global TAA**.
+
+The mysterious GZFX 640×360 RGBA16F temporal pair:
+
+- survives inside interiors,
+- reads HDR/history/motion,
+- is quarter-resolution relative to the 2560×1440 framebuffer,
+
+but has not yet demonstrated the larger resource signature expected from global Skyrim TAA.
+
+Therefore:
+
+**Do not identify the 640×360 temporal pair as global TAA.**
+
+And because it survives when exterior volumetric generation disappears:
+
+**Do not identify it as exclusively volumetric either.**
+
+Current status remains:
+
+> **quarter-resolution temporal reduced-lighting/history system, exact stock family unresolved**
+
+This is now a much narrower research problem.
+
+---
+
+# 11. Candidate identities for that unresolved quarter-resolution temporal system
+
+At 2560×1440, 640×360 is exactly quarter-resolution in each axis.
+
+Skyrim's native target inventory contains several candidate families capable of matching that scale:
+
+| Candidate family | Why plausible |
+|---|---|
+| `RAWINDIRECT_DOWNSCALED / PREVIOUS_DOWNSCALED` | Has explicit previous-frame history and belongs to indirect lighting. |
+| `VOLUMETRIC_LIGHTING_QUARTER_RES / BLUR_QUARTER_RES` | Exact quarter-res image-space volumetric resources exist. |
+| another reduced reflection/image-space history path | GZFX sees motion/history involvement and later lighting consumption. |
+
+The fact that the temporal stage **continues indoors** makes a purely exterior-volumetric identity less plausible.
+
+The raw-indirect previous/downscaled family becomes particularly interesting because it has exactly the kind of historical resource naming needed by the observed ping-pong.
+
+However:
+
+**This is not yet proven.**
+
+The blueprint should specify a deterministic way to resolve it by matching precise output/resource chronology rather than another visual guess.
+
+---
+
+# 12. Reflections are a first-class native pipeline, not an AO side effect
+
+The native target table contains:
+
+`SSR`  
+`SSR_RAW`  
+`SSR_BLURRED0`
+
+as well as water reflections and the combined normal/TAA/SSR mask surface. :chatgpt-content-reference{index="12"}
+
+Public Community Shaders research has dedicated reconstructed stages including reflection ray tracing, reflection blur, and reflection application. A documented vanilla SSR issue explicitly discusses `kSSR_RAW`, the blurred `kSSR` target, and the way reflection results feed water/image-space composition. :chatgpt-content-reference{index="13"}
+
+This maps well to the half-resolution/reduced-lighting family seen by GZFX:
+
+graphics production → H/V depth-aware compute filtering → later consumption by the full-resolution lighting composite.
+
+### Current conclusion
+
+The GZFX half-resolution HDR branch is **very likely connected to Skyrim's reflection/reduced-lighting architecture**.
+
+But it should not be named exclusively "SSR" until we correlate its exact producer/consumer shader with the native reflection stages.
+
+That will be a blueprint target.
+
+---
+
+# 13. Water has its own temporal history system
+
+CommonLib exposes:
+
+`kTEMPORAL_AA_WATER_1`  
+`kTEMPORAL_AA_WATER_2`  
+`kRAW_WATER`  
+`kWATER_1`  
+`kWATER_2`. :chatgpt-content-reference{index="14"}
+
+The current public `ISWaterBlend` reconstruction shows a dedicated temporal water process that uses:
+
+water source + previous water history + motion + depth + water mask.
+
+The history is reprojected with motion, and the output history carries coverage information in alpha.
+
+Current Community Shaders renderer setup likewise explicitly requires RGBA16F water-history buffers because alpha stores the history/coverage information.
+
+### Architectural significance
+
+This gives GZFX a deterministic signature for recognizing stock water history later.
+
+Water should **not** share an anonymous global temporal path with general scene GI/AO.
+
+If GZFX eventually implements enhanced water lighting/reflections, its temporal logic should respect this separate renderer domain.
+
+---
+
+# 14. Exterior volumetric lighting field evidence matches public reconstruction almost component-for-component
+
+The match here is remarkably strong.
+
+GZFX independently observed an exterior compute stage reading:
+
+4096² shadow array  
+512² shadow array  
+4096×1 R32 lookup  
+32³ noise
+
+and writing a pair of 320×192×90 scalar 3D volumes.
+
+Current public volumetric-generation HLSL declares:
+
+- primary shadow-map Texture2DArray,
+- volumetric shadow-map Texture2DArray,
+- Texture1D inverse-repartition lookup,
+- Texture3D noise,
+- RWTexture3D density output. :chatgpt-content-reference{index="15"}
+
+The shader also contains explicit interior/exterior handling and directional-shadow cascade logic. :chatgpt-content-reference{index="16"}
+
+That independently explains why GZFX sees the giant 3D compute family outdoors and sees it disappear throughout the interior captures.
+
+### Conclusion
+
+The **exterior volumetric generation subsystem is effectively solved at architecture level**.
+
+Further work should focus on exact integration points and resource identity, not proving that this is volumetric lighting yet again.
+
+---
+
+# 15. HDR/exposure is also a genuine multistage renderer subsystem
+
+The native target list contains a long sequence:
+
+`HDR_DOWNSAMPLE0 ... HDR_DOWNSAMPLE13` plus `HDR_BLOOM`. :chatgpt-content-reference{index="17"}
+
+Public reconstructed HDR shader logic includes downsampling, RGB-to-luminance conversion, luminance handling, adaptive exposure behavior, bloom contribution and final tonemap/color treatment.
+
+This agrees with GZFX's captured reduction chain:
+
+large HDR → progressively smaller surfaces → tiny adaptation surfaces → later image-space reuse.
+
+### Architectural significance
+
+Exposure/bloom/tonemap should eventually be treated as their own post-lighting domain.
+
+GZFX's future HDR work should not be entangled with the AO/GI integration stage.
+
+This is another reason a renderer-stage blueprint is needed before adding more features.
+
+---
+
+# 16. Current high-confidence crosswalk
+
+| GZFX field structure | Public Skyrim architecture | Confidence |
+|---|---|---:|
+| Main HDR R16G16B16A16 | `kMAIN` | **Very high** |
+| Full-res R16G16 motion | `kMOTION_VECTOR` | **Identified** |
+| RG normal + extra B/A | `kNORMAL_TAAMASK_SSRMASK` family | **Very high family match** |
+| RT2 A | SSR eligibility/mask | **Strong** |
+| RT2 B | Additional/path-dependent data | **Unresolved** |
+| RT3 R8G8 | Environment-sensitive auxiliary | **Unresolved exact enum/role** |
+| Early depth snapshot | pre/finalization depth family | **Identified behavior** |
+| Later opaque depth copy | `kPOST_ZPREPASS_COPY` | **Very strong** |
+| 12-mip R32 hierarchy | `kSAO_CAMERAZ` | **Identified** |
+| Temporal AO pair | `kSAO_RAWAO / PREVIOUS` | **Identified family** |
+| AO two-pass filtering | `kSAO_TEMP_BLUR` / SAO blur stages | **Very strong** |
+| Full-res raw radiance | `kRAWINDIRECT` family | **Very strong** |
+| Later indirect composition | SIL/lighting composition | **Very strong** |
+| 4096² exterior shadow array | directional/exterior shadow family | **Very strong** |
+| 512² exterior shadow array | volumetric-light shadow family | **Very strong** |
+| 4096² ×8 interior-heavy array | local-light `kSHADOWMAPS` family | **Very strong** |
+| 320×192×90 volumes | volumetric 3D accumulation | **Identified** |
+| full-res R16 volumetric filtering | volumetric lighting blur/apply family | **Very strong** |
+| 1280×720 HDR filtered branch | reflection/reduced-lighting family | **Strong** |
+| 640×360 temporal history | reduced temporal lighting family | **Unresolved exact target** |
+| HDR reduction chain | HDR downsample/luminance/adaptation | **Identified family** |
+| Global scene TAA | TAA accumulation/mask family | **Known publicly, not yet mapped by GZFX** |
+| Water temporal history | water TAA/history family | **Known publicly, not yet fully mapped by GZFX** |
+
+---
+
+# 17. What this research changes about GZFX's earlier architecture
+
+The current GZFX prototype effectively grew through:
+
+**find scene HDR → find depth → inject effect → improve effect inputs**
+
+That was appropriate for proving access.
+
+It is no longer appropriate for designing the final renderer.
+
+The research and field evidence now indicate a more correct mental model:
+
+**geometry/depth construction  
+→ finished opaque semantic surfaces  
+→ CameraZ / screen-space analysis  
+→ temporal AO  
+→ shadow/reflection/indirect production  
+→ lighting composition  
+→ volumetric/water specialized paths  
+→ TAA/history domains  
+→ HDR exposure/bloom/tonemap  
+→ UI/final presentation**
+
+The biggest conceptual error in the old AO/SSIL prototypes may therefore not simply be bad AO math.
+
+It may be:
+
+> **performing approximately the right kind of calculation at the wrong semantic stage with the wrong temporal/depth representation.**
+
+That question must be answered before tuning resumes.
+
+---
+
+# 18. Constraints that should carry into the formal blueprint
+
+The next blueprint should preserve these requirements:
+
+1. **Stage correctness before effect quality.** Every major effect must have a declared renderer integration boundary.
+
+2. **Depth must be semantic.** Never accept “we have depth” without identifying which stage produced it.
+
+3. **Native semantic surfaces should be reused or deliberately replaced, never accidentally duplicated.**
+
+4. **AO must be designed as a temporal, multiscale visibility system**, not as static screen-space darkening.
+
+5. **Indirect light must be represented as radiance** and composited at a lighting-appropriate stage.
+
+6. **Temporal domains must remain distinct:** AO history, indirect history, global TAA, water history, and volumetric history are not interchangeable.
+
+7. **Exterior and interior renderer paths must be explicit architectural cases.** The field evidence proves they are materially different.
+
+8. **Probe identities must become structural.** Diagnostic files should eventually say `SAO_RAWAO_HISTORY_A`, `CAMERAZ`, `RAWINDIRECT`, etc., not merely `candidate_08`.
+
+9. **Public names are hypotheses until cross-mapped against GZFX's own runtime chronology.** An enum name is powerful evidence, but not permission to skip verification.
+
+10. **GZFX must remain independent.** Public reverse-engineering tells us what Skyrim exposes and how its renderer behaves; GZFX's implementation architecture remains its own.
+
+---
+
+# 19. Highest-priority unresolved research questions
+
+The remaining research phase should resolve, in this order:
+
+- exact RT2 B semantics and when the auxiliary-color path activates;
+- exact RT3 R/G producer and consumers;
+- exact native identity of the 640×360 temporal pair;
+- exact identity of the 1280×720 reduced-light/reflection chain;
+- precise separation between `ISSILComposite`, SAO composite, reflection application, and general `ISLightingComposite`;
+- exact global `ISTemporalAA` placement relative to those composites;
+- exact water rendering boundary relative to final opaque depth and TAA;
+- which stock AO/indirect systems GZFX should consume, bypass, replace, or disable;
+- which existing GZFX pre-UI injection point corresponds to the renderer stages now mapped;
+- whether GZFX should intercept native stock resources directly or construct owned equivalents from earlier semantic anchors.
+
+Those questions should be answered before the implementation blueprint is locked.
+
+---
+
+# 20. Research Pass 1 conclusion
+
+`GZFX77676.zip` changed the project from renderer exploration into renderer architecture work.
+
+The combination of repeated field evidence and public renderer research now supports a coherent model of Skyrim's:
+
+**depth chronology, semantic MRT, hierarchical CameraZ, temporal AO, indirect-light family, shadow architecture, reflections, exterior volumetrics, specialized water history, global TAA resources, and HDR exposure chain.**
+
+The most consequential finding is that Skyrim's stock renderer already contains **separate temporal and semantic domains for the exact classes of effects GZFX has been trying to build**.
+
+GZFX therefore should not proceed by improving the existing AO/Bounce shader in isolation.
+
+The next architecture must first decide:
+
+> **which stock renderer stage each GZFX system belongs to, which native information should be consumed, and which vanilla system is being augmented or replaced.**
+
+No further effect tuning or repository implementation should occur until that blueprint exists.
+
+**Research Pass 1 status: COMPLETE.**  
+**Repository status: UNTOUCHED.**  
+**Next formal phase: remaining semantic research → renderer blueprint → implementation only after blueprint approval.**
+
+That gives you a clean **Research Pass 1 document** to start the GZFX docs tree with.
+
+And the Riverwood correction was genuinely valuable. It means `0019–0024` proves the huge exterior renderer architecture survives **nighttime**, which separates *exterior/interior* behavior from merely *day/night lighting* behavior.
+
+Next I’ll stay in the **research lane**, dig into those remaining unresolved semantics, and build **Research Pass 2** before we even think about the blueprint, much less touching code.
