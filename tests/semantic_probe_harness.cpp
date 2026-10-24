@@ -408,6 +408,111 @@ int wmain(
         return 18;
     }
 
+    const auto createColorSurface =
+        [&](const D3D11_TEXTURE2D_DESC& desc,
+            ID3D11Texture2D** texture,
+            ID3D11RenderTargetView** rtv,
+            ID3D11ShaderResourceView** srv)
+        {
+            return
+                SUCCEEDED(
+                    device->CreateTexture2D(
+                        &desc,
+                        nullptr,
+                        texture)) &&
+                SUCCEEDED(
+                    device->CreateRenderTargetView(
+                        *texture,
+                        nullptr,
+                        rtv)) &&
+                SUCCEEDED(
+                    device->CreateShaderResourceView(
+                        *texture,
+                        nullptr,
+                        srv));
+        };
+
+    D3D11_TEXTURE2D_DESC rawAoDesc =
+        normalDesc;
+
+    ID3D11Texture2D* rawAo = nullptr;
+    ID3D11RenderTargetView* rawAoRtv = nullptr;
+    ID3D11ShaderResourceView* rawAoSrv = nullptr;
+
+    ID3D11Texture2D* aoIntermediate = nullptr;
+    ID3D11RenderTargetView* aoIntermediateRtv = nullptr;
+    ID3D11ShaderResourceView* aoIntermediateSrv = nullptr;
+
+    ID3D11Texture2D* aoBlurred = nullptr;
+    ID3D11RenderTargetView* aoBlurredRtv = nullptr;
+    ID3D11ShaderResourceView* aoBlurredSrv = nullptr;
+
+    ID3D11Texture2D* shadowMask = nullptr;
+    ID3D11RenderTargetView* shadowMaskRtv = nullptr;
+    ID3D11ShaderResourceView* shadowMaskSrv = nullptr;
+
+    if (!createColorSurface(
+            rawAoDesc,
+            &rawAo,
+            &rawAoRtv,
+            &rawAoSrv) ||
+        !createColorSurface(
+            rawAoDesc,
+            &aoIntermediate,
+            &aoIntermediateRtv,
+            &aoIntermediateSrv) ||
+        !createColorSurface(
+            rawAoDesc,
+            &aoBlurred,
+            &aoBlurredRtv,
+            &aoBlurredSrv) ||
+        !createColorSurface(
+            rawAoDesc,
+            &shadowMask,
+            &shadowMaskRtv,
+            &shadowMaskSrv))
+    {
+        return 25;
+    }
+
+    D3D11_TEXTURE2D_DESC rawIndirectDesc =
+        normalDesc;
+
+    rawIndirectDesc.Format =
+        DXGI_FORMAT_R11G11B10_FLOAT;
+
+    ID3D11Texture2D* rawIndirect = nullptr;
+    ID3D11RenderTargetView* rawIndirectRtv = nullptr;
+    ID3D11ShaderResourceView* rawIndirectSrv = nullptr;
+
+    if (!createColorSurface(
+            rawIndirectDesc,
+            &rawIndirect,
+            &rawIndirectRtv,
+            &rawIndirectSrv))
+    {
+        return 26;
+    }
+
+    D3D11_TEXTURE2D_DESC reflectionDesc =
+        sceneDesc;
+
+    reflectionDesc.Width = 320;
+    reflectionDesc.Height = 180;
+
+    ID3D11Texture2D* reflection = nullptr;
+    ID3D11RenderTargetView* reflectionRtv = nullptr;
+    ID3D11ShaderResourceView* reflectionSrv = nullptr;
+
+    if (!createColorSurface(
+            reflectionDesc,
+            &reflection,
+            &reflectionRtv,
+            &reflectionSrv))
+    {
+        return 27;
+    }
+
     D3D11_TEXTURE2D_DESC depthDesc{};
     depthDesc.Width = 640;
     depthDesc.Height = 360;
@@ -676,6 +781,151 @@ int wmain(
             1,
             &nullDepthSrv);
 
+        ID3D11ShaderResourceView*
+            rawAoInputs[3] =
+        {
+            scalarSrv,
+            motionSrv,
+            normalSrv
+        };
+
+        context->PSSetShaderResources(
+            0,
+            3,
+            rawAoInputs);
+
+        context->OMSetRenderTargets(
+            1,
+            &rawAoRtv,
+            nullptr);
+
+        context->Draw(
+            3,
+            0);
+
+        context->OMSetRenderTargets(
+            0,
+            nullptr,
+            nullptr);
+
+        ID3D11ShaderResourceView*
+            blurInput = rawAoSrv;
+
+        context->PSSetShaderResources(
+            0,
+            1,
+            &blurInput);
+
+        context->OMSetRenderTargets(
+            1,
+            &aoIntermediateRtv,
+            nullptr);
+
+        context->Draw(
+            3,
+            0);
+
+        context->OMSetRenderTargets(
+            0,
+            nullptr,
+            nullptr);
+
+        blurInput = aoIntermediateSrv;
+
+        context->PSSetShaderResources(
+            0,
+            1,
+            &blurInput);
+
+        context->OMSetRenderTargets(
+            1,
+            &aoBlurredRtv,
+            nullptr);
+
+        context->Draw(
+            3,
+            0);
+
+        context->OMSetRenderTargets(
+            0,
+            nullptr,
+            nullptr);
+
+        ID3D11ShaderResourceView*
+            indirectInputs[3] =
+        {
+            scalarSrv,
+            sceneSrv,
+            auxSrv
+        };
+
+        context->PSSetShaderResources(
+            0,
+            3,
+            indirectInputs);
+
+        context->OMSetRenderTargets(
+            1,
+            &rawIndirectRtv,
+            nullptr);
+
+        context->Draw(
+            3,
+            0);
+
+        context->OMSetRenderTargets(
+            0,
+            nullptr,
+            nullptr);
+
+        ID3D11ShaderResourceView*
+            compositeInputs[7] =
+        {
+            rawIndirectSrv,
+            aoBlurredSrv,
+            depthSrv,
+            normalSrv,
+            auxSrv,
+            shadowMaskSrv,
+            reflectionSrv
+        };
+
+        context->PSSetShaderResources(
+            0,
+            7,
+            compositeInputs);
+
+        context->OMSetRenderTargets(
+            1,
+            &sceneRtv,
+            nullptr);
+
+        context->Draw(
+            3,
+            0);
+
+        context->OMSetRenderTargets(
+            0,
+            nullptr,
+            nullptr);
+
+        ID3D11ShaderResourceView*
+            clearCompositeInputs[7] =
+        {
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr
+        };
+
+        context->PSSetShaderResources(
+            0,
+            7,
+            clearCompositeInputs);
+
         context->CopyResource(
             scalarCopy,
             scalar);
@@ -874,6 +1124,9 @@ int wmain(
     const std::string pipelineLandmarksText =
         ReadAll(pipelineLandmarks);
 
+    const std::string manualPipelineLandmarksText =
+        ReadAll(manualPipelineLandmarks);
+
     const std::string knownSurfacesText =
         ReadAll(knownSurfaces);
 
@@ -936,6 +1189,21 @@ int wmain(
         pipelineLandmarksText.find(
             "sao_camera_z") ==
             std::string::npos ||
+        manualPipelineLandmarksText.find(
+            "sao_raw_ao") ==
+            std::string::npos ||
+        manualPipelineLandmarksText.find(
+            "sao_blurred") ==
+            std::string::npos ||
+        manualPipelineLandmarksText.find(
+            "sil_raw_indirect") ==
+            std::string::npos ||
+        manualPipelineLandmarksText.find(
+            "lighting_composite_hdr") ==
+            std::string::npos ||
+        manualPipelineLandmarksText.find(
+            "shadowmask") ==
+            std::string::npos ||
         manualPipelineResourcesText.find(
             "known_scene_color") ==
             std::string::npos ||
@@ -984,6 +1252,8 @@ int wmain(
             << pipelineBufferUpdatesText
             << "\n"
             << pipelineLandmarksText
+            << "\n"
+            << manualPipelineLandmarksText
             << "\n"
             << manualPipelineResourcesText
             << "\n"
@@ -1039,6 +1309,30 @@ int wmain(
     if (motionSrv) motionSrv->Release();
     if (motionRtv) motionRtv->Release();
     if (motion) motion->Release();
+
+    if (reflectionSrv) reflectionSrv->Release();
+    if (reflectionRtv) reflectionRtv->Release();
+    if (reflection) reflection->Release();
+
+    if (rawIndirectSrv) rawIndirectSrv->Release();
+    if (rawIndirectRtv) rawIndirectRtv->Release();
+    if (rawIndirect) rawIndirect->Release();
+
+    if (shadowMaskSrv) shadowMaskSrv->Release();
+    if (shadowMaskRtv) shadowMaskRtv->Release();
+    if (shadowMask) shadowMask->Release();
+
+    if (aoBlurredSrv) aoBlurredSrv->Release();
+    if (aoBlurredRtv) aoBlurredRtv->Release();
+    if (aoBlurred) aoBlurred->Release();
+
+    if (aoIntermediateSrv) aoIntermediateSrv->Release();
+    if (aoIntermediateRtv) aoIntermediateRtv->Release();
+    if (aoIntermediate) aoIntermediate->Release();
+
+    if (rawAoSrv) rawAoSrv->Release();
+    if (rawAoRtv) rawAoRtv->Release();
+    if (rawAo) rawAo->Release();
 
     if (auxSrv) auxSrv->Release();
     if (auxRtv) auxRtv->Release();
