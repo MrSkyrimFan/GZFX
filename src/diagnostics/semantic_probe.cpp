@@ -1407,10 +1407,18 @@ float4 PSMain(V input) : SV_TARGET
                                         L".bmp"
                                     ));
 
+                        constexpr std::array<char, 4>
+                            channelLabels =
+                        {
+                            'R',
+                            'G',
+                            'B',
+                            'A'
+                        };
+
                         report
                             << "  channel="
-                            << static_cast<char>(
-                                'R' + channel)
+                            << channelLabels[channel]
                             << " preview="
                             << (channelWrote
                                 ? "ok"
