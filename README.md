@@ -584,7 +584,7 @@ R16G16_FLOAT
 
 SV_Target2
 R8G8B8A8_UNORM
-→ native Skyrim encoded view-space normal + TAA/SSR masks
+→ native Skyrim encoded view-space normal target (R/G normal proven; B/A unresolved)
 
 SV_Target3
 R8G8_UNORM
@@ -613,7 +613,7 @@ R24G8_TYPELESS
   - trees;
   - actors/player;
 - ping-pongs across frames;
-- public Skyrim renderer knowledge matches a normal/TAA/SSR-mask target in this role.
+- public Skyrim renderer work confirms a normal-bearing target in this role, but GZFX field evidence has not yet proven the B/A channel semantics.
 
 THIS IS A MAJOR ARCHITECTURAL RESULT.
 
