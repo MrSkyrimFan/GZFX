@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gzfx/render/stage_scheduler.hpp"
+
 #include <d3d11.h>
 
 #include <array>
@@ -26,13 +28,12 @@ namespace gzfx::render::semantic_authority
     enum class Semantic : std::uint32_t
     {
         SceneColorHDR = 0,
-        MainDepth,
+        MainDepthCurrent,
         MotionVectors,
         NativeNormalMask,
         AuxiliaryRT3,
         DepthEarlyCopy,
-        OpaqueFinalDepth,
-        CameraZ,
+        StockCameraZ,
         RawAOCurrent,
         RawAOPrevious,
         AOFilterTemp,
@@ -41,9 +42,27 @@ namespace gzfx::render::semantic_authority
         ShadowMask,
         VolumetricDensityA,
         VolumetricDensityB,
+        VolumetricPreviousDepth,
+        PreWaterDepthCurrent,
         ReducedReflectionLighting,
         ReducedTemporalLightingHistory,
         Count
+    };
+
+    enum class QueryMode : std::uint32_t
+    {
+        CurrentFrame = 0,
+        PreviousFrameHistory,
+        PersistentIdentity,
+        DiagnosticAnyKnown
+    };
+
+    enum class ContentEpochKind : std::uint32_t
+    {
+        Unknown = 0,
+        CurrentFrame,
+        PreviousFrameHistory,
+        PreWaterCurrent
     };
 
     enum class ShaderStage : std::uint32_t
@@ -78,6 +97,42 @@ namespace gzfx::render::semantic_authority
         UINT bindFlags = 0;
     };
 
+    struct AvailabilityInfo
+    {
+        bool observedThisFrame = false;
+        bool producedThisFrame = false;
+        bool consumedThisFrame = false;
+        bool currentFrameAvailable = false;
+        bool previousFrameAvailable = false;
+
+        std::uint64_t frame = 0;
+        std::uint64_t lastObservedFrame = 0;
+        std::uint64_t lastProducedFrame = 0;
+        std::uint64_t lastConsumedFrame = 0;
+        std::uint64_t contentEpoch = 0;
+
+        ContentEpochKind epochKind =
+            ContentEpochKind::Unknown;
+
+        EnvironmentClass environmentScope =
+            EnvironmentClass::UnknownTransition;
+
+        stage_scheduler::Boundary validFromStage =
+            stage_scheduler::Boundary::Unknown;
+
+        stage_scheduler::Boundary validUntilStage =
+            stage_scheduler::Boundary::Unknown;
+    };
+
+    struct SemanticView
+    {
+        Semantic semantic = Semantic::SceneColorHDR;
+        QueryMode queryMode = QueryMode::CurrentFrame;
+        ResourceInfo resource{};
+        AvailabilityInfo availability{};
+        bool available = false;
+    };
+
     struct Snapshot
     {
         std::uint64_t frame = 0;
@@ -85,10 +140,16 @@ namespace gzfx::render::semantic_authority
             EnvironmentClass::UnknownTransition;
         UINT screenWidth = 0;
         UINT screenHeight = 0;
+
         std::array<
             ResourceInfo,
             static_cast<std::size_t>(Semantic::Count)>
                 resources{};
+
+        std::array<
+            AvailabilityInfo,
+            static_cast<std::size_t>(Semantic::Count)>
+                availability{};
     };
 
     void SetShader(
@@ -160,9 +221,17 @@ namespace gzfx::render::semantic_authority
     void FinishEvidenceCapture(
         const std::wstring& suffix) noexcept;
 
+    bool QuerySemantic(
+        Semantic semantic,
+        QueryMode mode,
+        std::uint64_t frame,
+        SemanticView* outView) noexcept;
+
     Snapshot GetSnapshot() noexcept;
 
     const char* SemanticName(Semantic semantic) noexcept;
     const char* ConfidenceName(Confidence confidence) noexcept;
     const char* EnvironmentName(EnvironmentClass environment) noexcept;
+    const char* QueryModeName(QueryMode mode) noexcept;
+    const char* ContentEpochName(ContentEpochKind epoch) noexcept;
 }
