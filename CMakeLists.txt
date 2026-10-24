@@ -173,6 +173,7 @@ target_link_libraries(
     GZFXSemanticProbeHarness
     PRIVATE
         d3d11
+        d3dcompiler
         dxgi
         user32
 )
