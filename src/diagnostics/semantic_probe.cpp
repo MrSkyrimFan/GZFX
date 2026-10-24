@@ -2,6 +2,7 @@
 
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
+#include "gzfx/render/semantic_authority.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
 
@@ -1845,6 +1846,11 @@ float4 PSMain(V input) : SV_TARGET
                 g_knownNormal,
                 g_knownAux);
 
+            gzfx::render::semantic_authority::
+                BeginEvidenceCapture(
+                    g_traceStartFrame,
+                    g_traceEndFrame);
+
             g_traceActive = true;
         }
     }
@@ -2264,6 +2270,10 @@ float4 PSMain(V input) : SV_TARGET
 
                 pipeline_cartography::FinishCapture(
                     suffix);
+
+                gzfx::render::semantic_authority::
+                    FinishEvidenceCapture(
+                        suffix);
 
                 if (g_manualTrace)
                 {

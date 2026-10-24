@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.18
+    VERSION 0.0.19
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -69,6 +69,8 @@ add_library(GZFX SHARED
     src/diagnostics/resource_intelligence.cpp
     src/diagnostics/semantic_probe.cpp
     src/render/runtime_state.cpp
+    src/render/semantic_authority.cpp
+    src/render/stage_scheduler.cpp
     src/render/ambient_visibility_stack.cpp
     src/render/scene_effects.cpp
     src/render/visible_pass.cpp
@@ -178,6 +180,19 @@ target_link_libraries(
         user32
 )
 gzfx_apply_common(GZFXSemanticProbeHarness)
+
+add_executable(GZFXSemanticAuthorityHarness
+    tests/semantic_authority_harness.cpp
+)
+target_link_libraries(
+    GZFXSemanticAuthorityHarness
+    PRIVATE
+        d3d11
+        d3dcompiler
+        dxgi
+        user32
+)
+gzfx_apply_common(GZFXSemanticAuthorityHarness)
 
 add_executable(GZFXNativeSurfaceTemporalHarness
     tests/native_surface_temporal_harness.cpp
@@ -294,6 +309,14 @@ add_test(
         "${CMAKE_BINARY_DIR}/semantic-probe-output"
 )
 
+
+add_test(
+    NAME semantic_authority_foundation
+    COMMAND
+        "$<TARGET_FILE:GZFXSemanticAuthorityHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/semantic-authority-output"
+)
 
 add_test(
     NAME native_surface_temporal
