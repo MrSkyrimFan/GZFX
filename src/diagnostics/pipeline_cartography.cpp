@@ -2036,6 +2036,13 @@ namespace gzfx::diagnostics::pipeline_cartography
             SnapshotShadersAndStateLocked(
                 pass);
 
+            if (kind != PassKind::Draw &&
+                kind != PassKind::Dispatch)
+            {
+                pass.shaders.fill(
+                    ShaderBinding{});
+            }
+
             g_passes.push_back(
                 std::move(pass));
 
@@ -3248,8 +3255,34 @@ namespace gzfx::diagnostics::pipeline_cartography
                 std::uint64_t>
                     lastPass;
 
+            std::set<std::uintptr_t>
+                captureResources;
+
+            std::set<std::uintptr_t>
+                captureShaders;
+
             for (const auto& pass : g_passes)
             {
+                for (const auto& shader :
+                     pass.shaders)
+                {
+                    if (shader.id != 0)
+                    {
+                        captureShaders.insert(
+                            shader.id);
+                    }
+                }
+
+                for (const auto& use :
+                     pass.constantBuffers)
+                {
+                    if (use.buffer.id != 0)
+                    {
+                        captureResources.insert(
+                            use.buffer.id);
+                    }
+                }
+
                 for (const auto& access :
                      pass.accesses)
                 {
@@ -3257,6 +3290,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                     {
                         continue;
                     }
+
+                    captureResources.insert(
+                        access.binding.resource);
 
                     if (access.mode == 'R')
                     {
@@ -3281,6 +3317,16 @@ namespace gzfx::diagnostics::pipeline_cartography
                     lastPass[
                         access.binding.resource] =
                         pass.id;
+                }
+            }
+
+            for (const auto& update :
+                 g_bufferUpdates)
+            {
+                if (update.resource != 0)
+                {
+                    captureResources.insert(
+                        update.resource);
                 }
             }
 
@@ -3874,7 +3920,12 @@ namespace gzfx::diagnostics::pipeline_cartography
                     for (const auto& [id, meta] :
                          g_resources)
                     {
-                        (void)id;
+                        if (captureResources.find(id) ==
+                            captureResources.end())
+                        {
+                            continue;
+                        }
+
                         resources.push_back(meta);
                     }
 
@@ -3995,7 +4046,12 @@ namespace gzfx::diagnostics::pipeline_cartography
                     for (const auto& [id, meta] :
                          g_shaders)
                     {
-                        (void)id;
+                        if (captureShaders.find(id) ==
+                            captureShaders.end())
+                        {
+                            continue;
+                        }
+
                         shaders.push_back(meta);
                     }
 
@@ -4271,10 +4327,10 @@ namespace gzfx::diagnostics::pipeline_cartography
                         << commandLists
                         << "\n"
                         << "resources_seen="
-                        << g_resources.size()
+                        << captureResources.size()
                         << "\n"
                         << "shaders_seen="
-                        << g_shaders.size()
+                        << captureShaders.size()
                         << "\n"
                         << "buffer_updates_seen="
                         << g_bufferUpdates.size()
@@ -4555,15 +4611,35 @@ namespace gzfx::diagnostics::pipeline_cartography
                 g_captureActive = true;
 
                 g_knownSceneColor =
-                    knownSceneColor;
+                    knownSceneColor != 0
+                        ? CanonicalId(
+                            reinterpret_cast<IUnknown*>(
+                                knownSceneColor))
+                        : 0;
                 g_knownDepth =
-                    knownDepth;
+                    knownDepth != 0
+                        ? CanonicalId(
+                            reinterpret_cast<IUnknown*>(
+                                knownDepth))
+                        : 0;
                 g_knownMotion =
-                    knownMotion;
+                    knownMotion != 0
+                        ? CanonicalId(
+                            reinterpret_cast<IUnknown*>(
+                                knownMotion))
+                        : 0;
                 g_knownNormal =
-                    knownNormal;
+                    knownNormal != 0
+                        ? CanonicalId(
+                            reinterpret_cast<IUnknown*>(
+                                knownNormal))
+                        : 0;
                 g_knownAux =
-                    knownAux;
+                    knownAux != 0
+                        ? CanonicalId(
+                            reinterpret_cast<IUnknown*>(
+                                knownAux))
+                        : 0;
 
                 g_passes.reserve(
                     kMaxPasses);
@@ -5205,6 +5281,11 @@ namespace gzfx::diagnostics::pipeline_cartography
                     drawOrdinal,
                     PassKind::Draw);
 
+            pass.shaders[
+                StageIndex(
+                    ShaderStage::Compute)] =
+                ShaderBinding{};
+
             pass.drawKind = kind;
             pass.arg0 = a;
             pass.arg1 = b;
@@ -5261,6 +5342,16 @@ namespace gzfx::diagnostics::pipeline_cartography
                     frame,
                     drawOrdinal,
                     PassKind::Dispatch);
+
+            for (std::size_t stage = 0;
+                 stage <
+                    StageIndex(
+                        ShaderStage::Compute);
+                 ++stage)
+            {
+                pass.shaders[stage] =
+                    ShaderBinding{};
+            }
 
             pass.arg0 = x;
             pass.arg1 = y;

@@ -32,7 +32,7 @@ namespace gzfx::diagnostics::semantic_probe
         constexpr std::size_t kMaxEvents = 24000;
         constexpr std::uint64_t kStableGameplayFrames = 30;
         constexpr std::uint64_t kTraceFrames = 3;
-        constexpr std::size_t kMaxPreviewCandidates = 14;
+        constexpr std::size_t kMaxPreviewCandidates = 28;
 
         enum class EventKind : std::uint32_t
         {
@@ -109,6 +109,9 @@ namespace gzfx::diagnostics::semantic_probe
 
         std::uintptr_t g_knownDepth = 0;
         std::uintptr_t g_knownSceneColor = 0;
+        std::uintptr_t g_knownMotion = 0;
+        std::uintptr_t g_knownNormal = 0;
+        std::uintptr_t g_knownAux = 0;
 
         std::uint64_t g_stableGameplay = 0;
         bool g_traceActive = false;
@@ -122,6 +125,7 @@ namespace gzfx::diagnostics::semantic_probe
         bool g_manualTestTriggered = false;
 
         PreviewRuntime g_preview{};
+        std::string g_lastPreviewError;
 
         bool FastTestMode()
         {
@@ -155,6 +159,20 @@ namespace gzfx::diagnostics::semantic_probe
                 << std::hex
                 << std::uppercase
                 << value;
+
+            return stream.str();
+        }
+
+        std::string HResultText(
+            const HRESULT value)
+        {
+            std::ostringstream stream;
+            stream
+                << "0x"
+                << std::hex
+                << std::uppercase
+                << static_cast<std::uint32_t>(
+                    value);
 
             return stream.str();
         }
@@ -216,7 +234,14 @@ namespace gzfx::diagnostics::semantic_probe
             }
             else
             {
-                it->second.lastFrame = frame;
+                if (it->second.firstFrame == 0)
+                {
+                    it->second.firstFrame =
+                        frame;
+                }
+
+                it->second.lastFrame =
+                    frame;
             }
 
             texture->Release();
@@ -496,6 +521,21 @@ float4 PSMain(V input) : SV_TARGET
                 1);
     }
 
+    if (Mode >= 4 && Mode <= 7)
+    {
+        float scalar =
+            Mode == 4 ? value.r :
+            Mode == 5 ? value.g :
+            Mode == 6 ? value.b :
+                        value.a;
+
+        return float4(
+            scalar,
+            scalar,
+            scalar,
+            1);
+    }
+
     float3 color =
         max(
             value.rgb,
@@ -524,14 +564,23 @@ float4 PSMain(V input) : SV_TARGET
                     shaderSource,
                     "VSMain",
                     "vs_5_0",
-                    &vsBlob) ||
-                !Compile(
+                    &vsBlob))
+            {
+                g_lastPreviewError =
+                    "compile_vs_failed";
+                if (vsBlob) vsBlob->Release();
+                return false;
+            }
+
+            if (!Compile(
                     device,
                     shaderSource,
                     "PSMain",
                     "ps_5_0",
                     &psBlob))
             {
+                g_lastPreviewError =
+                    "compile_ps_failed";
                 if (vsBlob) vsBlob->Release();
                 if (psBlob) psBlob->Release();
                 return false;
@@ -542,6 +591,13 @@ float4 PSMain(V input) : SV_TARGET
                     0,
                     &g_preview.deferred);
 
+            if (FAILED(result))
+            {
+                g_lastPreviewError =
+                    "CreateDeferredContext=" +
+                    HResultText(result);
+            }
+
             if (SUCCEEDED(result))
             {
                 result =
@@ -550,6 +606,13 @@ float4 PSMain(V input) : SV_TARGET
                         vsBlob->GetBufferSize(),
                         nullptr,
                         &g_preview.vertexShader);
+
+                if (FAILED(result))
+                {
+                    g_lastPreviewError =
+                        "CreateVertexShader=" +
+                        HResultText(result);
+                }
             }
 
             if (SUCCEEDED(result))
@@ -560,6 +623,13 @@ float4 PSMain(V input) : SV_TARGET
                         psBlob->GetBufferSize(),
                         nullptr,
                         &g_preview.pixelShader);
+
+                if (FAILED(result))
+                {
+                    g_lastPreviewError =
+                        "CreatePixelShader=" +
+                        HResultText(result);
+                }
             }
 
             D3D11_SAMPLER_DESC sampler{};
@@ -580,6 +650,13 @@ float4 PSMain(V input) : SV_TARGET
                     device->CreateSamplerState(
                         &sampler,
                         &g_preview.sampler);
+
+                if (FAILED(result))
+                {
+                    g_lastPreviewError =
+                        "CreateSamplerState=" +
+                        HResultText(result);
+                }
             }
 
             D3D11_BUFFER_DESC buffer{};
@@ -597,6 +674,13 @@ float4 PSMain(V input) : SV_TARGET
                         &buffer,
                         nullptr,
                         &g_preview.parameters);
+
+                if (FAILED(result))
+                {
+                    g_lastPreviewError =
+                        "CreateParameterBuffer=" +
+                        HResultText(result);
+                }
             }
 
             vsBlob->Release();
@@ -604,6 +688,13 @@ float4 PSMain(V input) : SV_TARGET
 
             if (FAILED(result))
             {
+                if (g_lastPreviewError.empty())
+                {
+                    g_lastPreviewError =
+                        "preview_runtime_unknown=" +
+                        HResultText(result);
+                }
+
                 return false;
             }
 
@@ -744,11 +835,26 @@ float4 PSMain(V input) : SV_TARGET
             ResourceStats& resource,
             const std::uint32_t mode,
             const float scale,
+            const UINT mip,
             const fs::path& path)
         {
-            if (!EnsurePreviewRuntime(device) ||
-                resource.texture == nullptr)
+            g_lastPreviewError.clear();
+
+            if (resource.texture == nullptr)
             {
+                g_lastPreviewError =
+                    "source_texture_null";
+                return false;
+            }
+
+            if (!EnsurePreviewRuntime(device))
+            {
+                if (g_lastPreviewError.empty())
+                {
+                    g_lastPreviewError =
+                        "ensure_preview_runtime_failed";
+                }
+
                 return false;
             }
 
@@ -762,27 +868,46 @@ float4 PSMain(V input) : SV_TARGET
                 (resource.desc.BindFlags &
                     D3D11_BIND_SHADER_RESOURCE) == 0)
             {
+                g_lastPreviewError =
+                    "unsupported_srv_format_or_missing_srv_bind";
+                return false;
+            }
+
+            if (mip >=
+                std::max<UINT>(
+                    1,
+                    resource.desc.MipLevels))
+            {
+                g_lastPreviewError =
+                    "invalid_mip";
                 return false;
             }
 
             srvDesc.ViewDimension =
                 D3D11_SRV_DIMENSION_TEXTURE2D;
+            srvDesc.Texture2D.MostDetailedMip =
+                mip;
             srvDesc.Texture2D.MipLevels = 1;
 
             ID3D11ShaderResourceView* srv = nullptr;
 
-            if (FAILED(
-                    device->CreateShaderResourceView(
-                        resource.texture,
-                        &srvDesc,
-                        &srv)) ||
+            const HRESULT srvResult =
+                device->CreateShaderResourceView(
+                    resource.texture,
+                    &srvDesc,
+                    &srv);
+
+            if (FAILED(srvResult) ||
                 srv == nullptr)
             {
+                g_lastPreviewError =
+                    "CreateShaderResourceView=" +
+                    HResultText(srvResult);
                 return false;
             }
 
-            constexpr UINT width = 640;
-            constexpr UINT height = 360;
+            constexpr UINT width = 320;
+            constexpr UINT height = 180;
 
             D3D11_TEXTURE2D_DESC outputDesc{};
             outputDesc.Width = width;
@@ -935,6 +1060,14 @@ float4 PSMain(V input) : SV_TARGET
                 }
             }
 
+            if (FAILED(result) &&
+                g_lastPreviewError.empty())
+            {
+                g_lastPreviewError =
+                    "preview_pipeline=" +
+                    HResultText(result);
+            }
+
             if (staging) staging->Release();
             if (rtv) rtv->Release();
             if (output) output->Release();
@@ -1070,9 +1203,62 @@ float4 PSMain(V input) : SV_TARGET
                     stats.rtvWrites > 0 ||
                     stats.csUavWrites > 0;
 
+                const bool rendererIntermediate =
+                    (stats.desc.BindFlags &
+                        (D3D11_BIND_RENDER_TARGET |
+                         D3D11_BIND_UNORDERED_ACCESS)) !=
+                    0;
+
+                const bool reducedResolution =
+                    g_screenWidth != 0 &&
+                    g_screenHeight != 0 &&
+                    stats.desc.Width > 0 &&
+                    stats.desc.Height > 0 &&
+                    stats.desc.Width <=
+                        g_screenWidth &&
+                    stats.desc.Height <=
+                        g_screenHeight &&
+                    stats.desc.Width >=
+                        std::max<UINT>(
+                            1,
+                            g_screenWidth / 8) &&
+                    stats.desc.Height >=
+                        std::max<UINT>(
+                            1,
+                            g_screenHeight / 8);
+
+                const bool reductionFormat =
+                    stats.desc.Format ==
+                        DXGI_FORMAT_R16_FLOAT ||
+                    stats.desc.Format ==
+                        DXGI_FORMAT_R32_FLOAT ||
+                    stats.desc.Format ==
+                        DXGI_FORMAT_R11G11B10_FLOAT ||
+                    stats.desc.Format ==
+                        DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+                const bool reductionChain =
+                    rendererIntermediate &&
+                    imageSpaceLike &&
+                    reductionFormat &&
+                    stats.desc.Width > 0 &&
+                    stats.desc.Height > 0 &&
+                    stats.desc.Width <=
+                        std::max<UINT>(
+                            1,
+                            g_screenWidth / 4) &&
+                    stats.desc.Height <=
+                        std::max<UINT>(
+                            1,
+                            g_screenHeight / 4);
+
                 if ((fullResolution &&
                      imageSpaceLike) ||
-                    shadowLike)
+                    shadowLike ||
+                    (reducedResolution &&
+                     rendererIntermediate &&
+                     imageSpaceLike) ||
+                    reductionChain)
                 {
                     candidates.emplace_back(
                         id,
@@ -1080,27 +1266,157 @@ float4 PSMain(V input) : SV_TARGET
                 }
             }
 
+            const auto candidateScore =
+                [&](const std::uintptr_t id,
+                    const ResourceStats* stats)
+                {
+                    const bool known =
+                        id == g_knownDepth ||
+                        id == g_knownSceneColor ||
+                        id == g_knownMotion ||
+                        id == g_knownNormal ||
+                        id == g_knownAux;
+
+                    const std::uint64_t anchorBonus =
+                        known
+                            ? (1ull << 60)
+                            : 0ull;
+
+                    const bool fullResolution =
+                        stats->desc.Width ==
+                            g_screenWidth &&
+                        stats->desc.Height ==
+                            g_screenHeight;
+
+                    const bool halfResolution =
+                        stats->desc.Width ==
+                            std::max<UINT>(
+                                1,
+                                g_screenWidth / 2) &&
+                        stats->desc.Height ==
+                            std::max<UINT>(
+                                1,
+                                g_screenHeight / 2);
+
+                    std::uint64_t semanticBonus = 0;
+
+                    if (fullResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R32_FLOAT &&
+                        stats->desc.MipLevels > 1)
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 57);
+                    }
+
+                    if (fullResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R11G11B10_FLOAT)
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 56);
+                    }
+
+                    if (fullResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R8G8B8A8_UNORM &&
+                        (stats->desc.BindFlags &
+                            D3D11_BIND_UNORDERED_ACCESS) !=
+                            0)
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 55);
+                    }
+
+                    if (fullResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R8G8B8A8_UNORM &&
+                        stats->psReads >= 100 &&
+                        stats->rtvWrites > 0)
+                    {
+                        // High-read/low-write full-resolution mask surfaces
+                        // include the field-proven stock shadowmask family.
+                        // This is only a preview-priority rule, not a semantic
+                        // promotion by itself.
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 54);
+                    }
+
+                    if (halfResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R16G16B16A16_FLOAT)
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 54);
+                    }
+
+                    if (fullResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R16_FLOAT)
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 53);
+                    }
+
+                    if (stats->desc.Width > 0 &&
+                        stats->desc.Height > 0 &&
+                        stats->desc.Width <=
+                            std::max<UINT>(
+                                1,
+                                g_screenWidth / 4) &&
+                        stats->desc.Height <=
+                            std::max<UINT>(
+                                1,
+                                g_screenHeight / 4) &&
+                        (stats->desc.Format ==
+                            DXGI_FORMAT_R16_FLOAT ||
+                         stats->desc.Format ==
+                            DXGI_FORMAT_R32_FLOAT ||
+                         stats->desc.Format ==
+                            DXGI_FORMAT_R16G16B16A16_FLOAT))
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 52);
+                    }
+
+                    return
+                        anchorBonus +
+                        semanticBonus +
+                        stats->rtvWrites * 4 +
+                        stats->csUavWrites * 4 +
+                        stats->psReads * 2 +
+                        stats->csReads * 2 +
+                        stats->coReadWithMainDepth * 8 +
+                        stats->dsvWrites;
+                };
+
             std::sort(
                 candidates.begin(),
                 candidates.end(),
-                [](const auto& left,
-                   const auto& right)
+                [&](const auto& left,
+                    const auto& right)
                 {
-                    const auto score =
-                        [](const ResourceStats* stats)
-                        {
-                            return
-                                stats->rtvWrites * 4 +
-                                stats->csUavWrites * 4 +
-                                stats->psReads * 2 +
-                                stats->csReads * 2 +
-                                stats->coReadWithMainDepth * 8 +
-                                stats->dsvWrites;
-                        };
-
                     return
-                        score(left.second) >
-                        score(right.second);
+                        candidateScore(
+                            left.first,
+                            left.second) >
+                        candidateScore(
+                            right.first,
+                            right.second);
                 });
 
             std::ofstream report(
@@ -1135,6 +1451,15 @@ float4 PSMain(V input) : SV_TARGET
                 << "known_scene_color="
                 << Ptr(g_knownSceneColor)
                 << "\n"
+                << "known_motion="
+                << Ptr(g_knownMotion)
+                << "\n"
+                << "known_normal="
+                << Ptr(g_knownNormal)
+                << "\n"
+                << "known_aux="
+                << Ptr(g_knownAux)
+                << "\n"
                 << "trace_frames="
                 << g_traceStartFrame
                 << "-"
@@ -1143,7 +1468,10 @@ float4 PSMain(V input) : SV_TARGET
                 << "events="
                 << g_events.size()
                 << "\n"
-                << "resources="
+                << "resources_active="
+                << candidates.size()
+                << "\n"
+                << "resources_catalogued="
                 << g_resources.size()
                 << "\n\n";
 
@@ -1220,14 +1548,11 @@ float4 PSMain(V input) : SV_TARGET
                 std::uint32_t mode = 0;
                 float scale = 1.0f;
 
-                if (stats->desc.Format ==
-                    DXGI_FORMAT_R8G8B8A8_UNORM)
+                if (id == g_knownNormal)
                 {
                     mode = 1;
                 }
-                else if (
-                    stats->desc.Format ==
-                    DXGI_FORMAT_R16G16_FLOAT)
+                else if (id == g_knownMotion)
                 {
                     mode = 2;
                     scale = 24.0f;
@@ -1255,6 +1580,7 @@ float4 PSMain(V input) : SV_TARGET
                         *stats,
                         mode,
                         scale,
+                        0,
                         root /
                             (
                                 base.str() +
@@ -1268,15 +1594,169 @@ float4 PSMain(V input) : SV_TARGET
                         : "failed")
                     << " mode="
                     << mode
+                    << " mip=0"
+                    << (wrote ||
+                        g_lastPreviewError.empty()
+                        ? ""
+                        : " error=" +
+                            g_lastPreviewError)
                     << "\n";
+
+                const bool channelTarget =
+                    id == g_knownNormal ||
+                    id == g_knownAux ||
+                    (stats->desc.Format ==
+                        DXGI_FORMAT_R8G8B8A8_UNORM &&
+                     captured < 8);
+
+                if (channelTarget)
+                {
+                    const std::array<std::pair<
+                        std::uint32_t,
+                        const wchar_t*>, 4>
+                            channels =
+                    {{
+                        {4, L"_r"},
+                        {5, L"_g"},
+                        {6, L"_b"},
+                        {7, L"_a"}
+                    }};
+
+                    const std::size_t channelCount =
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R8G8_UNORM
+                            ? 2
+                            : 4;
+
+                    for (std::size_t channel = 0;
+                         channel < channelCount;
+                         ++channel)
+                    {
+                        const bool channelWrote =
+                            RenderPreview(
+                                device,
+                                context,
+                                *stats,
+                                channels[channel].first,
+                                1.0f,
+                                0,
+                                root /
+                                    (
+                                        base.str() +
+                                        channels[channel].second +
+                                        L".bmp"
+                                    ));
+
+                        constexpr std::array<char, 4>
+                            channelLabels =
+                        {
+                            'R',
+                            'G',
+                            'B',
+                            'A'
+                        };
+
+                        report
+                            << "  channel="
+                            << channelLabels[channel]
+                            << " preview="
+                            << (channelWrote
+                                ? "ok"
+                                : "failed")
+                            << (channelWrote ||
+                                g_lastPreviewError.empty()
+                                ? ""
+                                : " error=" +
+                                    g_lastPreviewError)
+                            << "\n";
+                    }
+                }
+
+                if (stats->desc.MipLevels > 1 &&
+                    (id == g_knownDepth ||
+                     stats->desc.Format ==
+                        DXGI_FORMAT_R32_FLOAT))
+                {
+                    const std::array<UINT, 5>
+                        requestedMips =
+                    {
+                        0,
+                        3,
+                        6,
+                        9,
+                        stats->desc.MipLevels - 1
+                    };
+
+                    std::array<UINT, 5>
+                        emittedMips{};
+                    std::size_t emittedCount = 0;
+
+                    for (const UINT mip :
+                         requestedMips)
+                    {
+                        if (mip >=
+                                stats->desc.MipLevels ||
+                            std::find(
+                                emittedMips.begin(),
+                                emittedMips.begin() +
+                                    emittedCount,
+                                mip) !=
+                                emittedMips.begin() +
+                                    emittedCount)
+                        {
+                            continue;
+                        }
+
+                        emittedMips[emittedCount++] =
+                            mip;
+
+                        if (mip == 0)
+                        {
+                            continue;
+                        }
+
+                        std::wostringstream mipName;
+                        mipName
+                            << base.str()
+                            << L"_mip"
+                            << mip
+                            << L".bmp";
+
+                        const bool mipWrote =
+                            RenderPreview(
+                                device,
+                                context,
+                                *stats,
+                                3,
+                                1.0f,
+                                mip,
+                                root /
+                                    mipName.str());
+
+                        report
+                            << "  mip="
+                            << mip
+                            << " preview="
+                            << (mipWrote
+                                ? "ok"
+                                : "failed")
+                            << (mipWrote ||
+                                g_lastPreviewError.empty()
+                                ? ""
+                                : " error=" +
+                                    g_lastPreviewError)
+                            << "\n";
+                    }
+                }
 
                 ++captured;
             }
 
             report
                 << "\nsemantic_hints:\n"
-                << "- Full-resolution RGBA8 candidates with high depth-co-read counts are strong stock normal/TAA/SSR candidates.\n"
-                << "- Full-resolution R16G16_FLOAT candidates are strong motion-vector candidates.\n"
+                << "- known_normal is decoded only from the independently acquired stock normal anchor; other RGBA8 targets stay raw.\n"
+                << "- known_motion is visualized only from the independently acquired stock motion anchor; other RG targets stay raw.\n"
+                << "- grayscale channel planes are emitted for known normal/aux and a bounded set of high-ranked RGBA8 intermediates.\n"
                 << "- Full-resolution R32_FLOAT/R16_FLOAT candidates may be scalar depth/mask/image-space intermediates.\n"
                 << "- 4096/512 depth-stencil candidates are likely directional/local shadow resources.\n"
                 << "- semantic_bindings.csv preserves shader/slot/output chronology for SSAO, lighting, post, water, and exposure reconstruction.\n";
@@ -1289,9 +1769,11 @@ float4 PSMain(V input) : SV_TARGET
         {
             resource_intelligence::LiveInputs inputs{};
 
-            std::uintptr_t knownMotion = 0;
-            std::uintptr_t knownNormal = 0;
-            std::uintptr_t knownAux = 0;
+            g_knownDepth = 0;
+            g_knownSceneColor = 0;
+            g_knownMotion = 0;
+            g_knownNormal = 0;
+            g_knownAux = 0;
 
             if (resource_intelligence::
                     AcquireLiveInputs(
@@ -1308,17 +1790,17 @@ float4 PSMain(V input) : SV_TARGET
                         std::uintptr_t>(
                             inputs.sceneColorTexture);
 
-                knownMotion =
+                g_knownMotion =
                     reinterpret_cast<
                         std::uintptr_t>(
                             inputs.motionVectorTexture);
 
-                knownNormal =
+                g_knownNormal =
                     reinterpret_cast<
                         std::uintptr_t>(
                             inputs.nativeNormalTexture);
 
-                knownAux =
+                g_knownAux =
                     reinterpret_cast<
                         std::uintptr_t>(
                             inputs.nativeAuxTexture);
@@ -1329,6 +1811,24 @@ float4 PSMain(V input) : SV_TARGET
             }
 
             g_events.clear();
+
+            for (auto& [id, stats] :
+                 g_resources)
+            {
+                (void)id;
+
+                stats.firstFrame = 0;
+                stats.lastFrame = 0;
+                stats.rtvWrites = 0;
+                stats.dsvWrites = 0;
+                stats.psReads = 0;
+                stats.csReads = 0;
+                stats.csUavWrites = 0;
+                stats.coReadWithMainDepth = 0;
+                stats.psSlots = 0;
+                stats.csSlots = 0;
+            }
+
             g_traceStartFrame =
                 frame + 1;
             g_traceEndFrame =
@@ -1341,9 +1841,9 @@ float4 PSMain(V input) : SV_TARGET
                 context,
                 g_knownSceneColor,
                 g_knownDepth,
-                knownMotion,
-                knownNormal,
-                knownAux);
+                g_knownMotion,
+                g_knownNormal,
+                g_knownAux);
 
             g_traceActive = true;
         }

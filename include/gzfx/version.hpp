@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.17-renderer-pipeline-cartography";
+        "0.0.18-cartography-semantic-atlas";
 }
 
 extern "C" __declspec(dllexport)
