@@ -1,6 +1,7 @@
 #include "gzfx/diagnostics/d3d11_lifecycle.hpp"
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/paths.hpp"
+#include "gzfx/render/renderer_execution_service.hpp"
 
 #include <Windows.h>
 #include <d3d11.h>
@@ -329,6 +330,15 @@ namespace gzfx::diagnostics
                 WriteDiagnostic(
                     std::string("pipeline_cartography_device=") +
                     (cartography ? "armed" : "failed"));
+
+                if (immediateContext != nullptr &&
+                    *immediateContext != nullptr)
+                {
+                    gzfx::render::execution::AttachPrimary(
+                        nullptr,
+                        *device,
+                        *immediateContext);
+                }
             }
 
             return result;
@@ -400,6 +410,15 @@ namespace gzfx::diagnostics
                 WriteDiagnostic(
                     std::string("pipeline_cartography_device=") +
                     (cartography ? "armed" : "failed"));
+
+                if (immediateContext != nullptr &&
+                    *immediateContext != nullptr)
+                {
+                    gzfx::render::execution::AttachPrimary(
+                        swapChain != nullptr ? *swapChain : nullptr,
+                        *device,
+                        *immediateContext);
+                }
             }
 
             return result;
