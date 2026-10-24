@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace gzfx::diagnostics::pipeline_cartography
 {
@@ -26,6 +27,44 @@ namespace gzfx::diagnostics::pipeline_cartography
         DrawInstancedIndirect,
         DrawIndexedInstancedIndirect
     };
+
+    enum class LandmarkKind : std::uint32_t
+    {
+        MainDepthCopyEarly = 0,
+        MainDepthCopyLate,
+        HdrSceneCopy,
+        ShadowMask,
+        ReflectionMask,
+        ReflectionColor,
+        ReflectionBlurIntermediate,
+        ReflectionBlurred,
+        SaoCameraZ,
+        SaoRawAo,
+        SaoBlurIntermediate,
+        SaoBlurred,
+        SilRawIndirect,
+        LightingCompositeHdr,
+        VolumetricVolume,
+        VolumetricTemporal,
+        VolumetricBlurIntermediate,
+        VolumetricBlurred
+    };
+
+    struct Landmark
+    {
+        LandmarkKind kind =
+            LandmarkKind::MainDepthCopyEarly;
+
+        std::uint32_t confidence = 0;
+        std::uint64_t passId = 0;
+        std::uintptr_t resource = 0;
+    };
+
+    std::vector<Landmark>
+    GetCaptureLandmarks() noexcept;
+
+    const char*
+    LandmarkName(LandmarkKind kind) noexcept;
 
     bool AttachDevice(ID3D11Device* device) noexcept;
 
