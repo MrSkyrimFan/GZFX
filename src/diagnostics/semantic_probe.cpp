@@ -125,6 +125,7 @@ namespace gzfx::diagnostics::semantic_probe
         bool g_manualTestTriggered = false;
 
         PreviewRuntime g_preview{};
+        std::string g_lastPreviewError;
 
         bool FastTestMode()
         {
@@ -158,6 +159,20 @@ namespace gzfx::diagnostics::semantic_probe
                 << std::hex
                 << std::uppercase
                 << value;
+
+            return stream.str();
+        }
+
+        std::string HResultText(
+            const HRESULT value)
+        {
+            std::ostringstream stream;
+            stream
+                << "0x"
+                << std::hex
+                << std::uppercase
+                << static_cast<std::uint32_t>(
+                    value);
 
             return stream.str();
         }
@@ -772,9 +787,19 @@ float4 PSMain(V input) : SV_TARGET
             const UINT mip,
             const fs::path& path)
         {
-            if (!EnsurePreviewRuntime(device) ||
-                resource.texture == nullptr)
+            g_lastPreviewError.clear();
+
+            if (resource.texture == nullptr)
             {
+                g_lastPreviewError =
+                    "source_texture_null";
+                return false;
+            }
+
+            if (!EnsurePreviewRuntime(device))
+            {
+                g_lastPreviewError =
+                    "ensure_preview_runtime_failed";
                 return false;
             }
 
@@ -788,6 +813,8 @@ float4 PSMain(V input) : SV_TARGET
                 (resource.desc.BindFlags &
                     D3D11_BIND_SHADER_RESOURCE) == 0)
             {
+                g_lastPreviewError =
+                    "unsupported_srv_format_or_missing_srv_bind";
                 return false;
             }
 
@@ -796,6 +823,8 @@ float4 PSMain(V input) : SV_TARGET
                     1,
                     resource.desc.MipLevels))
             {
+                g_lastPreviewError =
+                    "invalid_mip";
                 return false;
             }
 
@@ -807,13 +836,18 @@ float4 PSMain(V input) : SV_TARGET
 
             ID3D11ShaderResourceView* srv = nullptr;
 
-            if (FAILED(
-                    device->CreateShaderResourceView(
-                        resource.texture,
-                        &srvDesc,
-                        &srv)) ||
+            const HRESULT srvResult =
+                device->CreateShaderResourceView(
+                    resource.texture,
+                    &srvDesc,
+                    &srv);
+
+            if (FAILED(srvResult) ||
                 srv == nullptr)
             {
+                g_lastPreviewError =
+                    "CreateShaderResourceView=" +
+                    HResultText(srvResult);
                 return false;
             }
 
@@ -969,6 +1003,14 @@ float4 PSMain(V input) : SV_TARGET
                         ? S_OK
                         : E_FAIL;
                 }
+            }
+
+            if (FAILED(result) &&
+                g_lastPreviewError.empty())
+            {
+                g_lastPreviewError =
+                    "preview_pipeline=" +
+                    HResultText(result);
             }
 
             if (staging) staging->Release();
@@ -1360,6 +1402,11 @@ float4 PSMain(V input) : SV_TARGET
                     << " mode="
                     << mode
                     << " mip=0"
+                    << (wrote ||
+                        g_lastPreviewError.empty()
+                        ? ""
+                        : " error=" +
+                            g_lastPreviewError)
                     << "\n";
 
                 const bool channelTarget =
@@ -1423,6 +1470,11 @@ float4 PSMain(V input) : SV_TARGET
                             << (channelWrote
                                 ? "ok"
                                 : "failed")
+                            << (channelWrote ||
+                                g_lastPreviewError.empty()
+                                ? ""
+                                : " error=" +
+                                    g_lastPreviewError)
                             << "\n";
                     }
                 }
@@ -1495,6 +1547,11 @@ float4 PSMain(V input) : SV_TARGET
                             << (mipWrote
                                 ? "ok"
                                 : "failed")
+                            << (mipWrote ||
+                                g_lastPreviewError.empty()
+                                ? ""
+                                : " error=" +
+                                    g_lastPreviewError)
                             << "\n";
                     }
                 }
