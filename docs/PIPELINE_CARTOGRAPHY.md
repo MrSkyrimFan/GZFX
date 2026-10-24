@@ -47,6 +47,9 @@ Each semantic capture produces:
 - `pipeline_shaders*.csv`
 - `pipeline_edges*.csv`
 - `pipeline_signatures*.csv`
+- `pipeline_landmarks*.csv`
+- `known_surfaces*.txt` plus known MRT/depth BMP previews
+- `atlas_surfaces*.txt` plus structural landmark BMP previews
 
 The unsuffixed set belongs to the automatic startup capture. Manual Shift+Numpad5 captures receive the same `_manual_####` suffix as the existing semantic evidence.
 
@@ -61,6 +64,37 @@ Safe mode still captures the execution-level frame graph, live resource/view des
 Pass signatures in safe mode are intended for comparisons between the numbered captures from the **same Skyrim process/session**. Do not compare those signatures across separate launches as if pointer identities were globally stable.
 
 `ExecuteCommandList` remains the practical coverage boundary detector. If command-list playback is observed, the report explicitly says immediate-context cartography may not include the work originally recorded on a deferred context.
+
+## Field Cartography 001 result
+
+The first controlled 0.0.17 Skyrim campaign is preserved in:
+
+`docs/FIELD_CARTOGRAPHY_001.md`
+
+The run promoted or strongly constrained:
+
+- the stock four-target opaque MRT;
+- Camera-Z/depth-pyramid construction;
+- temporal RawAO and AO blur structure;
+- raw indirect lighting;
+- the full-resolution AO/indirect/shadow/reflection -> HDR lighting composite;
+- exterior 3D volumetric generation and temporal screen resolve;
+- reflection blur structure;
+- main-depth copy chronology;
+- the exterior/interior volumetric split.
+
+0.0.18 therefore extends cartography into a **semantic atlas** rather than adding more effect tuning.
+
+### 0.0.18 evidence corrections
+
+- semantic and cartography resource IDs use canonical COM identity;
+- semantic counters reset per capture;
+- cartography reports capture-local resources/shaders separately from session-known totals;
+- constant-buffer uses are correlated with the latest CPU update fingerprint;
+- structural landmarks are identified by resource/dependency/chronology patterns, not one-launch pointer constants;
+- mask-like landmarks and known MRT surfaces receive channel-level previews/statistics.
+
+Normal-target B/A channels and the auxiliary MRT remain unproven until this channel evidence is analyzed.
 
 ## Current known anchors
 
@@ -194,6 +228,8 @@ First answer:
 - where ambient/directional/indirect/image-space lighting is actually composed.
 
 Only then decide where GZFX effects should replace, augment, or avoid stock behavior.
+
+The current leading integration question is whether future GZFX AO/GI should enter at or around the stock full-resolution lighting-composite boundary that consumes blurred AO, raw indirect light, depth, normals, shadow information and reflections before later HDR/image-space processing. This is an architecture target to prove, not yet an implementation decision.
 
 ## Fail-soft notes
 
