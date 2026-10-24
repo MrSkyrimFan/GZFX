@@ -475,6 +475,24 @@ int wmain(
         return 14;
     }
 
+    D3D11_BUFFER_DESC cameraBufferDesc{};
+    cameraBufferDesc.ByteWidth = 720;
+    cameraBufferDesc.Usage =
+        D3D11_USAGE_DEFAULT;
+    cameraBufferDesc.BindFlags =
+        D3D11_BIND_CONSTANT_BUFFER;
+
+    ID3D11Buffer* cameraBuffer = nullptr;
+
+    if (FAILED(
+            device->CreateBuffer(
+                &cameraBufferDesc,
+                nullptr,
+                &cameraBuffer)))
+    {
+        return 24;
+    }
+
     D3D11_BUFFER_DESC dynamicBufferDesc{};
     dynamicBufferDesc.ByteWidth = 256;
     dynamicBufferDesc.Usage =
@@ -526,6 +544,16 @@ int wmain(
         context->RSSetViewports(
             1,
             &viewport);
+
+        context->VSSetConstantBuffers(
+            12,
+            1,
+            &cameraBuffer);
+
+        context->PSSetConstantBuffers(
+            12,
+            1,
+            &cameraBuffer);
 
         std::array<std::uint32_t, 64>
             mappedValues{};
@@ -995,6 +1023,8 @@ int wmain(
     if (depthSrv) depthSrv->Release();
     if (depthView) depthView->Release();
     if (depth) depth->Release();
+
+    if (cameraBuffer) cameraBuffer->Release();
 
     if (defaultBuffer) defaultBuffer->Release();
     if (dynamicBuffer) dynamicBuffer->Release();
