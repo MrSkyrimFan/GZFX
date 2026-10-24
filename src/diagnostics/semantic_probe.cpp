@@ -1220,7 +1220,7 @@ float4 PSMain(V input) : SV_TARGET
                             wideLabel.resize(
                                 static_cast<
                                     std::size_t>(
-                                        needed - 1));
+                                        needed));
 
                             MultiByteToWideChar(
                                 CP_UTF8,
@@ -1229,6 +1229,13 @@ float4 PSMain(V input) : SV_TARGET
                                 -1,
                                 wideLabel.data(),
                                 needed);
+
+                            if (!wideLabel.empty() &&
+                                wideLabel.back() ==
+                                    L'\0')
+                            {
+                                wideLabel.pop_back();
+                            }
                         }
                     }
 
