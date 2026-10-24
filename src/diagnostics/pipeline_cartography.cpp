@@ -4551,6 +4551,78 @@ namespace gzfx::diagnostics::pipeline_cartography
                     knownScene->second.height;
             }
 
+            const auto landmarks =
+                IdentifyLandmarksLocked();
+
+            {
+                std::ofstream out(
+                    file(
+                        L"pipeline_landmarks",
+                        L".csv"),
+                    std::ios::out |
+                        std::ios::trunc);
+
+                if (out)
+                {
+                    out
+                        << "kind,confidence,pass_id,resource,type,width,height,"
+                           "depth,mips,array_size,format,tags\n";
+
+                    for (const auto& landmark :
+                         landmarks)
+                    {
+                        const auto* meta =
+                            ResourceMetaLocked(
+                                landmark.resource);
+
+                        out
+                            << LandmarkNameInternal(
+                                landmark.kind)
+                            << ","
+                            << landmark.confidence
+                            << ","
+                            << landmark.passId
+                            << ","
+                            << PointerString(
+                                landmark.resource)
+                            << ",";
+
+                        if (meta != nullptr)
+                        {
+                            out
+                                << ResourceTypeName(
+                                    meta->type)
+                                << ","
+                                << meta->width
+                                << ","
+                                << meta->height
+                                << ","
+                                << meta->depth
+                                << ","
+                                << meta->mipLevels
+                                << ","
+                                << meta->arraySize
+                                << ","
+                                << static_cast<
+                                    std::uint32_t>(
+                                        meta->format)
+                                << ","
+                                << CandidateTags(
+                                    *meta,
+                                    screenWidth,
+                                    screenHeight);
+                        }
+                        else
+                        {
+                            out
+                                << "unknown,0,0,0,0,0,0,";
+                        }
+
+                        out << "\n";
+                    }
+                }
+            }
+
             {
                 std::ofstream out(
                     file(
@@ -5528,6 +5600,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                         << "\n"
                         << "unique_pass_signatures="
                         << uniqueSignatures.size()
+                        << "\n"
+                        << "structural_landmarks="
+                        << landmarks.size()
                         << "\n"
                         << "draw_passes="
                         << drawPasses
