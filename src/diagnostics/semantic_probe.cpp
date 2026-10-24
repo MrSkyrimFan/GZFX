@@ -260,6 +260,12 @@ namespace gzfx::diagnostics::semantic_probe
             }
             else
             {
+                if (it->second.firstFrame == 0)
+                {
+                    it->second.firstFrame =
+                        frame;
+                }
+
                 it->second.lastFrame = frame;
             }
 
@@ -1856,7 +1862,7 @@ float4 PSMain(V input) : SV_TARGET
                 << "events="
                 << g_events.size()
                 << "\n"
-                << "resources="
+                << "resources_known_session="
                 << g_resources.size()
                 << "\n\n";
 
@@ -1988,7 +1994,7 @@ float4 PSMain(V input) : SV_TARGET
 
             report
                 << "\nsemantic_hints:\n"
-                << "- Full-resolution RGBA8 candidates with high depth-co-read counts are strong stock normal/TAA/SSR candidates.\n"
+                << "- Full-resolution RGBA8 candidates with high depth-co-read counts can include the stock normal target; B/A channel semantics are NOT assumed.\n"
                 << "- Full-resolution R16G16_FLOAT candidates are strong motion-vector candidates.\n"
                 << "- Full-resolution R32_FLOAT/R16_FLOAT candidates may be scalar depth/mask/image-space intermediates.\n"
                 << "- 4096/512 depth-stencil candidates are likely directional/local shadow resources.\n"
@@ -2038,6 +2044,23 @@ float4 PSMain(V input) : SV_TARGET
                 resource_intelligence::
                     ReleaseLiveInputs(
                         inputs);
+            }
+
+            for (auto& [id, stats] :
+                 g_resources)
+            {
+                (void)id;
+
+                stats.firstFrame = 0;
+                stats.lastFrame = 0;
+                stats.rtvWrites = 0;
+                stats.dsvWrites = 0;
+                stats.psReads = 0;
+                stats.csReads = 0;
+                stats.csUavWrites = 0;
+                stats.coReadWithMainDepth = 0;
+                stats.psSlots = 0;
+                stats.csSlots = 0;
             }
 
             g_events.clear();
