@@ -3,6 +3,7 @@
 #include "gzfx/diagnostics/semantic_probe.hpp"
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/render/scene_effects.hpp"
+#include "gzfx/render/semantic_authority.hpp"
 #include "gzfx/render/visible_pass.hpp"
 
 #include "gzfx/paths.hpp"
@@ -757,6 +758,14 @@ namespace gzfx::diagnostics
         {
             if (context == g_primaryContext)
             {
+                gzfx::render::semantic_authority::
+                    SetShaderResources(
+                        gzfx::render::semantic_authority::
+                            ShaderStage::Vertex,
+                        startSlot,
+                        count,
+                        resources);
+
                 pipeline_cartography::SetShaderResources(
                     pipeline_cartography::ShaderStage::Vertex,
                     startSlot,
@@ -779,6 +788,14 @@ namespace gzfx::diagnostics
         {
             if (context == g_primaryContext)
             {
+                gzfx::render::semantic_authority::
+                    SetShaderResources(
+                        gzfx::render::semantic_authority::
+                            ShaderStage::Hull,
+                        startSlot,
+                        count,
+                        resources);
+
                 pipeline_cartography::SetShaderResources(
                     pipeline_cartography::ShaderStage::Hull,
                     startSlot,
@@ -801,6 +818,14 @@ namespace gzfx::diagnostics
         {
             if (context == g_primaryContext)
             {
+                gzfx::render::semantic_authority::
+                    SetShaderResources(
+                        gzfx::render::semantic_authority::
+                            ShaderStage::Domain,
+                        startSlot,
+                        count,
+                        resources);
+
                 pipeline_cartography::SetShaderResources(
                     pipeline_cartography::ShaderStage::Domain,
                     startSlot,
@@ -823,6 +848,14 @@ namespace gzfx::diagnostics
         {
             if (context == g_primaryContext)
             {
+                gzfx::render::semantic_authority::
+                    SetShaderResources(
+                        gzfx::render::semantic_authority::
+                            ShaderStage::Geometry,
+                        startSlot,
+                        count,
+                        resources);
+
                 pipeline_cartography::SetShaderResources(
                     pipeline_cartography::ShaderStage::Geometry,
                     startSlot,
@@ -853,6 +886,14 @@ namespace gzfx::diagnostics
                         startSlot,
                         count,
                         resources);
+
+                    gzfx::render::semantic_authority::
+                        SetShaderResources(
+                            gzfx::render::semantic_authority::
+                                ShaderStage::Pixel,
+                            startSlot,
+                            count,
+                            resources);
 
                     pipeline_cartography::SetShaderResources(
                         pipeline_cartography::ShaderStage::Pixel,
@@ -885,6 +926,14 @@ namespace gzfx::diagnostics
                         startSlot,
                         count,
                         resources);
+
+                    gzfx::render::semantic_authority::
+                        SetShaderResources(
+                            gzfx::render::semantic_authority::
+                                ShaderStage::Compute,
+                            startSlot,
+                            count,
+                            resources);
 
                     pipeline_cartography::SetShaderResources(
                         pipeline_cartography::ShaderStage::Compute,
@@ -1027,6 +1076,12 @@ namespace gzfx::diagnostics
                         count,
                         resources);
 
+                    gzfx::render::semantic_authority::
+                        SetComputeUavs(
+                            startSlot,
+                            count,
+                            resources);
+
                     pipeline_cartography::SetComputeUavs(
                         startSlot,
                         count,
@@ -1052,6 +1107,12 @@ namespace gzfx::diagnostics
             {
                 ++g_vsChanges;
 
+                gzfx::render::semantic_authority::
+                    SetShader(
+                        gzfx::render::semantic_authority::
+                            ShaderStage::Vertex,
+                        shader);
+
                 pipeline_cartography::SetShader(
                     pipeline_cartography::ShaderStage::Vertex,
                     shader);
@@ -1068,6 +1129,12 @@ namespace gzfx::diagnostics
         {
             if (c == g_primaryContext)
             {
+                gzfx::render::semantic_authority::
+                    SetShader(
+                        gzfx::render::semantic_authority::
+                            ShaderStage::Hull,
+                        shader);
+
                 pipeline_cartography::SetShader(
                     pipeline_cartography::ShaderStage::Hull,
                     shader);
@@ -1084,6 +1151,12 @@ namespace gzfx::diagnostics
         {
             if (c == g_primaryContext)
             {
+                gzfx::render::semantic_authority::
+                    SetShader(
+                        gzfx::render::semantic_authority::
+                            ShaderStage::Domain,
+                        shader);
+
                 pipeline_cartography::SetShader(
                     pipeline_cartography::ShaderStage::Domain,
                     shader);
@@ -1100,6 +1173,12 @@ namespace gzfx::diagnostics
         {
             if (c == g_primaryContext)
             {
+                gzfx::render::semantic_authority::
+                    SetShader(
+                        gzfx::render::semantic_authority::
+                            ShaderStage::Geometry,
+                        shader);
+
                 pipeline_cartography::SetShader(
                     pipeline_cartography::ShaderStage::Geometry,
                     shader);
@@ -1119,6 +1198,12 @@ namespace gzfx::diagnostics
                 ++g_psChanges;
                 semantic_probe::SetPixelShader(shader);
 
+                gzfx::render::semantic_authority::
+                    SetShader(
+                        gzfx::render::semantic_authority::
+                            ShaderStage::Pixel,
+                        shader);
+
                 pipeline_cartography::SetShader(
                     pipeline_cartography::ShaderStage::Pixel,
                     shader);
@@ -1137,6 +1222,12 @@ namespace gzfx::diagnostics
             {
                 ++g_csChanges;
                 semantic_probe::SetComputeShader(shader);
+
+                gzfx::render::semantic_authority::
+                    SetShader(
+                        gzfx::render::semantic_authority::
+                            ShaderStage::Compute,
+                        shader);
 
                 pipeline_cartography::SetShader(
                     pipeline_cartography::ShaderStage::Compute,
@@ -1158,6 +1249,11 @@ namespace gzfx::diagnostics
 
                 ++g_draws;
 
+                gzfx::render::semantic_authority::
+                    BeginDraw(
+                        g_frame,
+                        ordinal);
+
                 pipeline_cartography::ExecuteDraw(
                     g_frame,
                     ordinal,
@@ -1172,6 +1268,14 @@ namespace gzfx::diagnostics
             }
 
             g_draw(c, vertexCount, startVertex);
+
+            if (c == g_primaryContext)
+            {
+                gzfx::render::semantic_authority::
+                    EndDraw(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load());
+            }
         }
 
         void STDMETHODCALLTYPE HookDrawIndexed(
@@ -1187,6 +1291,11 @@ namespace gzfx::diagnostics
 
                 ++g_drawIndexedCalls;
                 ++g_drawIndexedActivityThisFrame;
+
+                gzfx::render::semantic_authority::
+                    BeginDraw(
+                        g_frame,
+                        ordinal);
 
                 pipeline_cartography::ExecuteDraw(
                     g_frame,
@@ -1208,6 +1317,14 @@ namespace gzfx::diagnostics
                 indexCount,
                 startIndex,
                 baseVertex);
+
+            if (c == g_primaryContext)
+            {
+                gzfx::render::semantic_authority::
+                    EndDraw(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load());
+            }
         }
 
         void STDMETHODCALLTYPE HookDrawInstanced(
@@ -1223,6 +1340,11 @@ namespace gzfx::diagnostics
                     ++g_drawOrdinalThisFrame;
 
                 ++g_drawInstancedCalls;
+
+                gzfx::render::semantic_authority::
+                    BeginDraw(
+                        g_frame,
+                        ordinal);
 
                 pipeline_cartography::ExecuteDraw(
                     g_frame,
@@ -1243,6 +1365,14 @@ namespace gzfx::diagnostics
                 instanceCount,
                 startVertex,
                 startInstance);
+
+            if (c == g_primaryContext)
+            {
+                gzfx::render::semantic_authority::
+                    EndDraw(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load());
+            }
         }
 
         void STDMETHODCALLTYPE HookDrawIndexedInstanced(
@@ -1259,6 +1389,11 @@ namespace gzfx::diagnostics
                     ++g_drawOrdinalThisFrame;
 
                 ++g_drawIndexedInstancedCalls;
+
+                gzfx::render::semantic_authority::
+                    BeginDraw(
+                        g_frame,
+                        ordinal);
 
                 pipeline_cartography::ExecuteDraw(
                     g_frame,
@@ -1282,6 +1417,14 @@ namespace gzfx::diagnostics
                 startIndex,
                 baseVertex,
                 startInstance);
+
+            if (c == g_primaryContext)
+            {
+                gzfx::render::semantic_authority::
+                    EndDraw(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load());
+            }
         }
 
         void STDMETHODCALLTYPE HookDrawIndexedInstancedIndirect(
@@ -1293,6 +1436,11 @@ namespace gzfx::diagnostics
             {
                 const std::uint64_t ordinal =
                     ++g_drawOrdinalThisFrame;
+
+                gzfx::render::semantic_authority::
+                    BeginDraw(
+                        g_frame,
+                        ordinal);
 
                 pipeline_cartography::ExecuteDraw(
                     g_frame,
@@ -1311,6 +1459,14 @@ namespace gzfx::diagnostics
                 c,
                 args,
                 offset);
+
+            if (c == g_primaryContext)
+            {
+                gzfx::render::semantic_authority::
+                    EndDraw(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load());
+            }
         }
 
         void STDMETHODCALLTYPE HookDrawInstancedIndirect(
@@ -1322,6 +1478,11 @@ namespace gzfx::diagnostics
             {
                 const std::uint64_t ordinal =
                     ++g_drawOrdinalThisFrame;
+
+                gzfx::render::semantic_authority::
+                    BeginDraw(
+                        g_frame,
+                        ordinal);
 
                 pipeline_cartography::ExecuteDraw(
                     g_frame,
@@ -1340,6 +1501,14 @@ namespace gzfx::diagnostics
                 c,
                 args,
                 offset);
+
+            if (c == g_primaryContext)
+            {
+                gzfx::render::semantic_authority::
+                    EndDraw(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load());
+            }
         }
 
         void STDMETHODCALLTYPE HookDispatch(
@@ -1352,6 +1521,11 @@ namespace gzfx::diagnostics
             {
                 ++g_dispatchCalls;
 
+                gzfx::render::semantic_authority::
+                    BeginDispatch(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load());
+
                 pipeline_cartography::ExecuteDispatch(
                     g_frame,
                     g_drawOrdinalThisFrame.load(),
@@ -1363,6 +1537,14 @@ namespace gzfx::diagnostics
             }
 
             g_dispatch(c, x, y, z);
+
+            if (c == g_primaryContext)
+            {
+                gzfx::render::semantic_authority::
+                    EndDispatch(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load());
+            }
         }
 
         void STDMETHODCALLTYPE HookDispatchIndirect(
@@ -1373,6 +1555,11 @@ namespace gzfx::diagnostics
             if (c == g_primaryContext)
             {
                 ++g_dispatchCalls;
+
+                gzfx::render::semantic_authority::
+                    BeginDispatch(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load());
 
                 pipeline_cartography::ExecuteDispatch(
                     g_frame,
@@ -1388,6 +1575,14 @@ namespace gzfx::diagnostics
                 c,
                 args,
                 offset);
+
+            if (c == g_primaryContext)
+            {
+                gzfx::render::semantic_authority::
+                    EndDispatch(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load());
+            }
         }
 
         HRESULT STDMETHODCALLTYPE HookMap(
@@ -1592,6 +1787,12 @@ namespace gzfx::diagnostics
                         rtvs,
                         dsv);
 
+                    gzfx::render::semantic_authority::
+                        SetRenderTargets(
+                            count,
+                            rtvs,
+                            dsv);
+
                     pipeline_cartography::SetRenderTargets(
                         count,
                         rtvs,
@@ -1652,6 +1853,15 @@ namespace gzfx::diagnostics
         {
             if (c == g_primaryContext)
             {
+                gzfx::render::semantic_authority::
+                    SetRenderTargetsAndUavs(
+                        renderTargetCount,
+                        renderTargets,
+                        depthTarget,
+                        uavStartSlot,
+                        uavCount,
+                        uavs);
+
                 pipeline_cartography::SetRenderTargetsAndUavs(
                     renderTargetCount,
                     renderTargets,
@@ -1681,6 +1891,11 @@ namespace gzfx::diagnostics
                 semantic_probe::SetViewport(
                     count,
                     v);
+
+                gzfx::render::semantic_authority::
+                    SetViewports(
+                        count,
+                        v);
 
                 pipeline_cartography::SetViewports(
                     count,
@@ -1868,6 +2083,16 @@ namespace gzfx::diagnostics
                 c,
                 destination,
                 source);
+
+            if (c == g_primaryContext)
+            {
+                gzfx::render::semantic_authority::
+                    AfterCopy(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load(),
+                        destination,
+                        source);
+            }
         }
 
         void STDMETHODCALLTYPE HookGenerateMips(
@@ -1941,6 +2166,9 @@ namespace gzfx::diagnostics
                 !restoreContextState)
             {
                 pipeline_cartography::ClearState();
+
+                gzfx::render::semantic_authority::
+                    ClearState();
             }
         }
 
@@ -1952,6 +2180,9 @@ namespace gzfx::diagnostics
             if (c == g_primaryContext)
             {
                 pipeline_cartography::ClearState();
+
+                gzfx::render::semantic_authority::
+                    ClearState();
             }
         }
 
@@ -2399,6 +2630,11 @@ namespace gzfx::diagnostics
                     g_primaryDevice,
                     g_primaryContext);
 
+                gzfx::render::semantic_authority::
+                    OnPresent(
+                        g_frame,
+                        drawIndexedActivity);
+
                 if (!semantic_probe::SuppressSceneEffects())
                 {
                     gzfx::render::RenderVisiblePass(
@@ -2450,7 +2686,22 @@ namespace gzfx::diagnostics
                 Write(L"resize_events.txt", out.str(), true);
             });
 
-            return g_resizeBuffers(swap, buffers, width, height, format, flags);
+            const HRESULT result =
+                g_resizeBuffers(
+                    swap,
+                    buffers,
+                    width,
+                    height,
+                    format,
+                    flags);
+
+            if (SUCCEEDED(result))
+            {
+                gzfx::render::semantic_authority::
+                    OnResize();
+            }
+
+            return result;
         }
 
         LRESULT CALLBACK DummyProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l)
