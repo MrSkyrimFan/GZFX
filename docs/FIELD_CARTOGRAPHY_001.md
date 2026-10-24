@@ -5,6 +5,27 @@ Runtime: GZFX 0.0.17-renderer-pipeline-cartography
 Benchmark: Guardian Standing Stones campaign plus interior  
 Evidence source: uploaded GZFX runtime diagnostics bundle
 
+## Renderer environment evidence
+
+The startup module inventory for this field run shows:
+
+- SkyrimSE.exe;
+- GZFX's root DINPUT8.dll and GZFX.dll;
+- Windows System32 `d3d11.dll`;
+- Windows System32 `dxgi.dll`;
+- NVIDIA driver/runtime modules;
+- Steam overlay/runtime modules.
+
+At GZFX initialization, no module path containing SKSE, Community Shaders, ReShade or ENB appears, and the active D3D11/DXGI modules are the Windows system binaries rather than root proxy DLLs.
+
+This is **strong evidence** that ENB/ReShade did not own the captured renderer path.
+
+It is not treated as absolute proof that no plugin could load later, because the original module inventory is taken early in process startup.
+
+0.0.18 therefore records a fresh `loaded_modules[_manual_####].txt` snapshot at every semantic capture so later-loaded renderer plugins can be ruled in or out at the actual capture time.
+
+---
+
 ## Acceptance vocabulary
 
 - **HARD** — directly established by GZFX D3D11 execution/resource evidence.
