@@ -2363,6 +2363,10 @@ namespace gzfx::diagnostics
             g_primarySwap->AddRef();
             g_primaryDevice = device;
             g_primaryContext = context;
+
+            pipeline_cartography::AttachDevice(
+                g_primaryDevice);
+
             InstallContextHooks(context);
 
             WriteRendererSummary();
