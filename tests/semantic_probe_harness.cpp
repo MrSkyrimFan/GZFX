@@ -856,9 +856,8 @@ int wmain(
              draw < 4;
              ++draw)
         {
-            context->DrawIndexed(
+            context->Draw(
                 3,
-                0,
                 0);
         }
 
