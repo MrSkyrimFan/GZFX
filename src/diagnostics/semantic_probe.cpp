@@ -1172,12 +1172,38 @@ float4 PSMain(V input) : SV_TARGET
                             1,
                             g_screenHeight / 8);
 
+                const bool reductionFormat =
+                    stats.desc.Format ==
+                        DXGI_FORMAT_R16_FLOAT ||
+                    stats.desc.Format ==
+                        DXGI_FORMAT_R32_FLOAT ||
+                    stats.desc.Format ==
+                        DXGI_FORMAT_R11G11B10_FLOAT ||
+                    stats.desc.Format ==
+                        DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+                const bool reductionChain =
+                    rendererIntermediate &&
+                    imageSpaceLike &&
+                    reductionFormat &&
+                    stats.desc.Width > 0 &&
+                    stats.desc.Height > 0 &&
+                    stats.desc.Width <=
+                        std::max<UINT>(
+                            1,
+                            g_screenWidth / 4) &&
+                    stats.desc.Height <=
+                        std::max<UINT>(
+                            1,
+                            g_screenHeight / 4);
+
                 if ((fullResolution &&
                      imageSpaceLike) ||
                     shadowLike ||
                     (reducedResolution &&
                      rendererIntermediate &&
-                     imageSpaceLike))
+                     imageSpaceLike) ||
+                    reductionChain)
                 {
                     candidates.emplace_back(
                         id,
@@ -1201,8 +1227,104 @@ float4 PSMain(V input) : SV_TARGET
                             ? (1ull << 60)
                             : 0ull;
 
+                    const bool fullResolution =
+                        stats->desc.Width ==
+                            g_screenWidth &&
+                        stats->desc.Height ==
+                            g_screenHeight;
+
+                    const bool halfResolution =
+                        stats->desc.Width ==
+                            std::max<UINT>(
+                                1,
+                                g_screenWidth / 2) &&
+                        stats->desc.Height ==
+                            std::max<UINT>(
+                                1,
+                                g_screenHeight / 2);
+
+                    std::uint64_t semanticBonus = 0;
+
+                    if (fullResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R32_FLOAT &&
+                        stats->desc.MipLevels > 1)
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 57);
+                    }
+
+                    if (fullResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R11G11B10_FLOAT)
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 56);
+                    }
+
+                    if (fullResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R8G8B8A8_UNORM &&
+                        (stats->desc.BindFlags &
+                            D3D11_BIND_UNORDERED_ACCESS) !=
+                            0)
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 55);
+                    }
+
+                    if (halfResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R16G16B16A16_FLOAT)
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 54);
+                    }
+
+                    if (fullResolution &&
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R16_FLOAT)
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 53);
+                    }
+
+                    if (stats->desc.Width > 0 &&
+                        stats->desc.Height > 0 &&
+                        stats->desc.Width <=
+                            std::max<UINT>(
+                                1,
+                                g_screenWidth / 4) &&
+                        stats->desc.Height <=
+                            std::max<UINT>(
+                                1,
+                                g_screenHeight / 4) &&
+                        (stats->desc.Format ==
+                            DXGI_FORMAT_R16_FLOAT ||
+                         stats->desc.Format ==
+                            DXGI_FORMAT_R32_FLOAT ||
+                         stats->desc.Format ==
+                            DXGI_FORMAT_R16G16B16A16_FLOAT))
+                    {
+                        semanticBonus =
+                            std::max(
+                                semanticBonus,
+                                1ull << 52);
+                    }
+
                     return
                         anchorBonus +
+                        semanticBonus +
                         stats->rtvWrites * 4 +
                         stats->csUavWrites * 4 +
                         stats->psReads * 2 +
