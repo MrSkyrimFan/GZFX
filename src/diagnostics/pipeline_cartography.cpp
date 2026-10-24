@@ -2036,6 +2036,13 @@ namespace gzfx::diagnostics::pipeline_cartography
             SnapshotShadersAndStateLocked(
                 pass);
 
+            if (kind != PassKind::Draw &&
+                kind != PassKind::Dispatch)
+            {
+                pass.shaders.fill(
+                    ShaderBinding{});
+            }
+
             g_passes.push_back(
                 std::move(pass));
 
@@ -4555,15 +4562,35 @@ namespace gzfx::diagnostics::pipeline_cartography
                 g_captureActive = true;
 
                 g_knownSceneColor =
-                    knownSceneColor;
+                    knownSceneColor != 0
+                        ? CanonicalId(
+                            reinterpret_cast<IUnknown*>(
+                                knownSceneColor))
+                        : 0;
                 g_knownDepth =
-                    knownDepth;
+                    knownDepth != 0
+                        ? CanonicalId(
+                            reinterpret_cast<IUnknown*>(
+                                knownDepth))
+                        : 0;
                 g_knownMotion =
-                    knownMotion;
+                    knownMotion != 0
+                        ? CanonicalId(
+                            reinterpret_cast<IUnknown*>(
+                                knownMotion))
+                        : 0;
                 g_knownNormal =
-                    knownNormal;
+                    knownNormal != 0
+                        ? CanonicalId(
+                            reinterpret_cast<IUnknown*>(
+                                knownNormal))
+                        : 0;
                 g_knownAux =
-                    knownAux;
+                    knownAux != 0
+                        ? CanonicalId(
+                            reinterpret_cast<IUnknown*>(
+                                knownAux))
+                        : 0;
 
                 g_passes.reserve(
                     kMaxPasses);
@@ -5205,6 +5232,11 @@ namespace gzfx::diagnostics::pipeline_cartography
                     drawOrdinal,
                     PassKind::Draw);
 
+            pass.shaders[
+                StageIndex(
+                    ShaderStage::Compute)] =
+                ShaderBinding{};
+
             pass.drawKind = kind;
             pass.arg0 = a;
             pass.arg1 = b;
@@ -5261,6 +5293,16 @@ namespace gzfx::diagnostics::pipeline_cartography
                     frame,
                     drawOrdinal,
                     PassKind::Dispatch);
+
+            for (std::size_t stage = 0;
+                 stage <
+                    StageIndex(
+                        ShaderStage::Compute);
+                 ++stage)
+            {
+                pass.shaders[stage] =
+                    ShaderBinding{};
+            }
 
             pass.arg0 = x;
             pass.arg1 = y;
