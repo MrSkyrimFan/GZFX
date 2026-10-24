@@ -32,7 +32,7 @@ namespace gzfx::diagnostics::semantic_probe
         constexpr std::size_t kMaxEvents = 24000;
         constexpr std::uint64_t kStableGameplayFrames = 30;
         constexpr std::uint64_t kTraceFrames = 3;
-        constexpr std::size_t kMaxPreviewCandidates = 14;
+        constexpr std::size_t kMaxPreviewCandidates = 28;
 
         enum class EventKind : std::uint32_t
         {
@@ -216,7 +216,14 @@ namespace gzfx::diagnostics::semantic_probe
             }
             else
             {
-                it->second.lastFrame = frame;
+                if (it->second.firstFrame == 0)
+                {
+                    it->second.firstFrame =
+                        frame;
+                }
+
+                it->second.lastFrame =
+                    frame;
             }
 
             texture->Release();
@@ -781,8 +788,8 @@ float4 PSMain(V input) : SV_TARGET
                 return false;
             }
 
-            constexpr UINT width = 640;
-            constexpr UINT height = 360;
+            constexpr UINT width = 320;
+            constexpr UINT height = 180;
 
             D3D11_TEXTURE2D_DESC outputDesc{};
             outputDesc.Width = width;
@@ -1070,9 +1077,36 @@ float4 PSMain(V input) : SV_TARGET
                     stats.rtvWrites > 0 ||
                     stats.csUavWrites > 0;
 
+                const bool rendererIntermediate =
+                    (stats.desc.BindFlags &
+                        (D3D11_BIND_RENDER_TARGET |
+                         D3D11_BIND_UNORDERED_ACCESS)) !=
+                    0;
+
+                const bool reducedResolution =
+                    g_screenWidth != 0 &&
+                    g_screenHeight != 0 &&
+                    stats.desc.Width > 0 &&
+                    stats.desc.Height > 0 &&
+                    stats.desc.Width <=
+                        g_screenWidth &&
+                    stats.desc.Height <=
+                        g_screenHeight &&
+                    stats.desc.Width >=
+                        std::max<UINT>(
+                            1,
+                            g_screenWidth / 8) &&
+                    stats.desc.Height >=
+                        std::max<UINT>(
+                            1,
+                            g_screenHeight / 8);
+
                 if ((fullResolution &&
                      imageSpaceLike) ||
-                    shadowLike)
+                    shadowLike ||
+                    (reducedResolution &&
+                     rendererIntermediate &&
+                     imageSpaceLike))
                 {
                     candidates.emplace_back(
                         id,
@@ -1223,7 +1257,10 @@ float4 PSMain(V input) : SV_TARGET
                 if (stats->desc.Format ==
                     DXGI_FORMAT_R8G8B8A8_UNORM)
                 {
-                    mode = 1;
+                    mode =
+                        stats->rtvWrites >= 100
+                            ? 1
+                            : 0;
                 }
                 else if (
                     stats->desc.Format ==
@@ -1329,6 +1366,24 @@ float4 PSMain(V input) : SV_TARGET
             }
 
             g_events.clear();
+
+            for (auto& [id, stats] :
+                 g_resources)
+            {
+                (void)id;
+
+                stats.firstFrame = 0;
+                stats.lastFrame = 0;
+                stats.rtvWrites = 0;
+                stats.dsvWrites = 0;
+                stats.psReads = 0;
+                stats.csReads = 0;
+                stats.csUavWrites = 0;
+                stats.coReadWithMainDepth = 0;
+                stats.psSlots = 0;
+                stats.csSlots = 0;
+            }
+
             g_traceStartFrame =
                 frame + 1;
             g_traceEndFrame =
