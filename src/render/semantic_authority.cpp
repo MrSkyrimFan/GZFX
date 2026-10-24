@@ -2410,7 +2410,7 @@ namespace gzfx::render::semantic_authority
             return "interior";
         case EnvironmentClass::UnknownTransition:
         default:
-            return "any_or_unknown";
+            return "unknown_transition";
         }
     }
 
