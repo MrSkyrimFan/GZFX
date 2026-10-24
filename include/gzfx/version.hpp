@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.19-semantic-authority-foundation";
+        "0.0.20-foundation-epochs-stage-correctness";
 }
 
 extern "C" __declspec(dllexport)
