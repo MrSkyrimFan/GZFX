@@ -295,34 +295,48 @@ The next targeted atlas must preview these resources directly.
 
 ---
 
-# 7. Stock temporal AA — IDENTIFIED
+# 7. Volumetric temporal/projection chain — IDENTIFIED FAMILY
 
 Compute shader:
 
 `0x22D4AAA1340`
 
-Reads each frame:
+The first true dispatch in each exterior frame reads:
 
 - current main HDR scene `0x22CCE6BED50`;
-- one full-resolution RGBA16F temporal-history surface;
-- motion vectors `0x22CCE6C7BB0`.
+- one 640x360 RGBA16F history/intermediate surface;
+- motion vectors `0x22CCE6C7BB0`;
 
-Writes the alternate full-resolution RGBA16F temporal-history surface.
+and writes the alternate 640x360 RGBA16F surface.
 
-History pair:
+Pair:
 
 - `0x22CCE714FD0`
 - `0x22CCE715290`
 
-The resources alternate read/write every frame in exterior and interior captures.
+They alternate read/write every exterior frame.
 
-Example, manual `0001`:
+Crucial correction:
 
-- frame 3590 reads `714FD0`, writes `715290`;
-- frame 3591 reads `715290`, writes `714FD0`;
-- frame 3592 reads `714FD0`, writes `715290`.
+> These are **not** full-resolution scene TAA history buffers.
 
-This is direct stock temporal-AA history behavior: current HDR + previous history + motion → next history.
+They are 640x360 at a 2560x1440 game resolution.
+
+Immediately after the dispatch, the next graphics pass reads the newly written 640x360 surface together with:
+
+- the identified 320x192x90 volumetric density volume;
+- the 4096x1 volumetric lookup;
+- the later/final-depth copy;
+- a tiny 2x2 HDR adaptation input;
+- additional noise/mask inputs;
+
+and begins the volumetric projection / resolve chain.
+
+Therefore `0x22D4AAA1340` and the 640x360 ping-pong pair belong to the **volumetric temporal/projection system**, not the global scene TAA pass.
+
+The false TAA interpretation came from the 0.0.17 cartographer retaining a stale compute-shader identity on subsequent graphics draws. The 0.0.18 cartographer explicitly removes that stale-stage attribution.
+
+Global Skyrim TAA remains **UNRESOLVED in GZFX field evidence** and must not be claimed as identified yet.
 
 ---
 
