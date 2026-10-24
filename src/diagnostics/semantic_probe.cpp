@@ -147,6 +147,35 @@ namespace gzfx::diagnostics::semantic_probe
                         std::size(value))) > 0;
         }
 
+        std::uintptr_t CanonicalId(IUnknown* value)
+        {
+            if (value == nullptr)
+            {
+                return 0;
+            }
+
+            IUnknown* identity = nullptr;
+
+            if (FAILED(
+                    value->QueryInterface(
+                        __uuidof(IUnknown),
+                        reinterpret_cast<void**>(
+                            &identity))) ||
+                identity == nullptr)
+            {
+                return
+                    reinterpret_cast<std::uintptr_t>(
+                        value);
+            }
+
+            const auto id =
+                reinterpret_cast<std::uintptr_t>(
+                    identity);
+
+            identity->Release();
+            return id;
+        }
+
         std::string Ptr(const std::uintptr_t value)
         {
             std::ostringstream stream;
@@ -193,8 +222,7 @@ namespace gzfx::diagnostics::semantic_probe
             }
 
             const auto id =
-                reinterpret_cast<std::uintptr_t>(
-                    texture);
+                CanonicalId(texture);
 
             auto it =
                 g_resources.find(id);
@@ -1299,29 +1327,24 @@ float4 PSMain(V input) : SV_TARGET
                         inputs))
             {
                 g_knownDepth =
-                    reinterpret_cast<
-                        std::uintptr_t>(
-                            inputs.depthTexture);
+                    CanonicalId(
+                        inputs.depthTexture);
 
                 g_knownSceneColor =
-                    reinterpret_cast<
-                        std::uintptr_t>(
-                            inputs.sceneColorTexture);
+                    CanonicalId(
+                        inputs.sceneColorTexture);
 
                 knownMotion =
-                    reinterpret_cast<
-                        std::uintptr_t>(
-                            inputs.motionVectorTexture);
+                    CanonicalId(
+                        inputs.motionVectorTexture);
 
                 knownNormal =
-                    reinterpret_cast<
-                        std::uintptr_t>(
-                            inputs.nativeNormalTexture);
+                    CanonicalId(
+                        inputs.nativeNormalTexture);
 
                 knownAux =
-                    reinterpret_cast<
-                        std::uintptr_t>(
-                            inputs.nativeAuxTexture);
+                    CanonicalId(
+                        inputs.nativeAuxTexture);
 
                 resource_intelligence::
                     ReleaseLiveInputs(
