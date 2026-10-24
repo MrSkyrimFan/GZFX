@@ -1064,6 +1064,10 @@ int wmain(
         diagnostics /
         L"pipeline_constant_buffers.csv";
 
+    const auto captureModules =
+        diagnostics /
+        L"loaded_modules_manual_0001.txt";
+
     if (!ExistsNonEmpty(semantics) ||
         !ExistsNonEmpty(bindings) ||
         !ExistsNonEmpty(manualSemantics) ||
@@ -1086,7 +1090,8 @@ int wmain(
         !ExistsNonEmpty(manualPipelineLandmarks) ||
         !ExistsNonEmpty(knownSurfaces) ||
         !ExistsNonEmpty(atlasSurfaces) ||
-        !ExistsNonEmpty(pipelineConstantBuffers))
+        !ExistsNonEmpty(pipelineConstantBuffers) ||
+        !ExistsNonEmpty(captureModules))
     {
         return 15;
     }
