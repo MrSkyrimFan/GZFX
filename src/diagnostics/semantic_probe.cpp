@@ -1124,6 +1124,277 @@ float4 PSMain(V input) : SV_TARGET
             return stream.str();
         }
 
+        void CaptureKnownSurfaces(
+            ID3D11Device* device,
+            ID3D11DeviceContext* context,
+            const std::wstring& suffix)
+        {
+            const fs::path root =
+                gzfx::paths::DiagnosticsRoot();
+
+            if (root.empty())
+            {
+                return;
+            }
+
+            std::ofstream report(
+                root /
+                    (
+                        std::wstring(
+                            L"known_surfaces") +
+                        suffix +
+                        L".txt"
+                    ),
+                std::ios::out |
+                    std::ios::trunc);
+
+            if (!report)
+            {
+                return;
+            }
+
+            report
+                << "GZFX known surface channel evidence\n"
+                << "version="
+                << gzfx::kVersion
+                << "\n"
+                << "scene_color="
+                << Ptr(g_knownSceneColor)
+                << "\n"
+                << "depth="
+                << Ptr(g_knownDepth)
+                << "\n"
+                << "motion="
+                << Ptr(g_knownMotion)
+                << "\n"
+                << "normal="
+                << Ptr(g_knownNormal)
+                << "\n"
+                << "aux="
+                << Ptr(g_knownAux)
+                << "\n\n";
+
+            const auto capture =
+                [&](const char* label,
+                    const std::uintptr_t id,
+                    const std::uint32_t mode,
+                    const float scale)
+                {
+                    report
+                        << "surface="
+                        << label
+                        << " id="
+                        << Ptr(id);
+
+                    const auto found =
+                        g_resources.find(id);
+
+                    if (id == 0 ||
+                        found == g_resources.end() ||
+                        found->second.texture ==
+                            nullptr)
+                    {
+                        report
+                            << " status=missing\n";
+
+                        return;
+                    }
+
+                    const auto& desc =
+                        found->second.desc;
+
+                    std::wstring wideLabel;
+
+                    {
+                        const int needed =
+                            MultiByteToWideChar(
+                                CP_UTF8,
+                                0,
+                                label,
+                                -1,
+                                nullptr,
+                                0);
+
+                        if (needed > 1)
+                        {
+                            wideLabel.resize(
+                                static_cast<
+                                    std::size_t>(
+                                        needed - 1));
+
+                            MultiByteToWideChar(
+                                CP_UTF8,
+                                0,
+                                label,
+                                -1,
+                                wideLabel.data(),
+                                needed);
+                        }
+                    }
+
+                    const fs::path path =
+                        root /
+                        (
+                            std::wstring(
+                                L"known_surface") +
+                            suffix +
+                            L"_" +
+                            wideLabel +
+                            L".bmp"
+                        );
+
+                    PreviewStats stats{};
+
+                    const bool wrote =
+                        RenderPreview(
+                            device,
+                            context,
+                            found->second,
+                            mode,
+                            scale,
+                            path,
+                            &stats);
+
+                    report
+                        << " status="
+                        << (wrote
+                            ? "ok"
+                            : "failed")
+                        << " size="
+                        << desc.Width
+                        << "x"
+                        << desc.Height
+                        << " format="
+                        << static_cast<
+                            std::uint32_t>(
+                                desc.Format)
+                        << " mode="
+                        << mode;
+
+                    if (wrote &&
+                        stats.pixels != 0)
+                    {
+                        report
+                            << std::fixed
+                            << std::setprecision(6);
+
+                        for (std::size_t channel = 0;
+                             channel < 4;
+                             ++channel)
+                        {
+                            const double mean =
+                                static_cast<double>(
+                                    stats.sums[channel]) /
+                                (
+                                    static_cast<double>(
+                                        stats.pixels) *
+                                    255.0
+                                );
+
+                            const double fraction =
+                                static_cast<double>(
+                                    stats.nonzero[channel]) /
+                                static_cast<double>(
+                                    stats.pixels);
+
+                            report
+                                << " c"
+                                << channel
+                                << "_mean="
+                                << mean
+                                << " c"
+                                << channel
+                                << "_nonzero="
+                                << fraction
+                                << " c"
+                                << channel
+                                << "_min="
+                                << static_cast<unsigned>(
+                                    stats.minimum[channel])
+                                << " c"
+                                << channel
+                                << "_max="
+                                << static_cast<unsigned>(
+                                    stats.maximum[channel]);
+                        }
+                    }
+
+                    report << "\n";
+                };
+
+            capture(
+                "scene_color",
+                g_knownSceneColor,
+                0,
+                1.0f);
+
+            capture(
+                "main_depth",
+                g_knownDepth,
+                3,
+                1.0f);
+
+            capture(
+                "motion",
+                g_knownMotion,
+                2,
+                24.0f);
+
+            capture(
+                "normal_decoded",
+                g_knownNormal,
+                1,
+                1.0f);
+
+            capture(
+                "normal_raw",
+                g_knownNormal,
+                8,
+                1.0f);
+
+            capture(
+                "normal_r",
+                g_knownNormal,
+                4,
+                1.0f);
+
+            capture(
+                "normal_g",
+                g_knownNormal,
+                5,
+                1.0f);
+
+            capture(
+                "normal_b",
+                g_knownNormal,
+                6,
+                1.0f);
+
+            capture(
+                "normal_a",
+                g_knownNormal,
+                7,
+                1.0f);
+
+            capture(
+                "aux_raw",
+                g_knownAux,
+                8,
+                1.0f);
+
+            capture(
+                "aux_r",
+                g_knownAux,
+                4,
+                1.0f);
+
+            capture(
+                "aux_g",
+                g_knownAux,
+                5,
+                1.0f);
+        }
+
         void CaptureCandidates(
             ID3D11Device* device,
             ID3D11DeviceContext* context,
@@ -1855,6 +2126,11 @@ float4 PSMain(V input) : SV_TARGET
                     suffix);
 
                 CaptureCandidates(
+                    device,
+                    context,
+                    suffix);
+
+                CaptureKnownSurfaces(
                     device,
                     context,
                     suffix);
