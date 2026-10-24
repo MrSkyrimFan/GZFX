@@ -1,0 +1,769 @@
+======================================================================
+GZFX 0.0.21 WAVE 3 ENGINEERING RESULT
+Native Input Broker + Post-Opaque Depth Hierarchy + Temporal Core
+Engineering date: October 24, 2026
+======================================================================
+
+STATUS:
+
+CODE = PASS
+PR CI = PASS
+MERGED-MAIN CI = PASS
+PACKAGE = PASS
+FIELD = PENDING USER SKYRIM CAMPAIGN
+WAVE 3 FORMAL CLOSE = NOT YET
+
+Wave 3 is implemented and packaged. It is now at the real-Skyrim field gate.
+Do not claim Wave 3 CLOSED until the field campaign passes.
+
+======================================================================
+1. SOURCE / REPOSITORY PROOF
+======================================================================
+
+Repository:
+MrSkyrimFan/GZFX
+
+Implementation baseline main:
+08d1159d55729137431a70b50ab900e98b7e8bb7
+
+Implementation branch:
+feat/wave3-native-input-temporal-core
+
+Pull request:
+#24
+Wave 3: native input broker and temporal core
+
+Accepted PR head:
+cfb85135977359babc931dd91fa241fac3846ef8
+
+Source merge commit:
+658dd9c0bf22afb3cc84e6a4f6cb1ed33e745acb
+
+Merged-main Windows x64 workflow:
+run 40079077480
+SUCCESS
+
+Merged-main package refresh:
+a7345ed7a53958d9691c7fb01a7297586bca248a
+
+Package refresh parent:
+658dd9c0bf22afb3cc84e6a4f6cb1ed33e745acb
+
+Verified package-refresh delta:
+ONLY
+LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Lance ZIP blob:
+344703e8a787acda3c1c690d1799a9f2b1a0d54c
+
+Lance ZIP size:
+283,374 bytes
+
+Runtime version:
+0.0.21-native-input-temporal-core
+
+======================================================================
+2. NEW PERMANENT WORKFLOW
+======================================================================
+
+The old manual authority-folder shuttle is retired.
+
+The permanent repo-native workspace is:
+
+GZFXWorkFolder/
+  new/
+  old/
+
+Root governance:
+AGENT.md
+README.md
+
+All future agents MUST read AGENT.md first.
+
+Cycle:
+
+field data
+->
+findings TXT in new/
+->
+research TXT in new/
+->
+blueprint TXT in new/
+->
+implementation directly from repo authority
+->
+CI / PR / merge / package proof
+->
+engineering result TXT in old/
+->
+completed findings/research/blueprint moved new/ -> old/
+->
+new/ cleared for next field cycle
+->
+short chat summary + exact in-game instructions
+->
+next data cycle
+
+This workflow is controlling unless the repository owner explicitly changes it.
+
+======================================================================
+3. AUTHORITY MIGRATION
+======================================================================
+
+The user's uploaded GZFXWorkFolder contents were copied into the repository.
+
+Historical authority is preserved under:
+GZFXWorkFolder/old/
+
+Wave 3 active authority was imported under:
+GZFXWorkFolder/new/
+
+This closeout commit archives the completed Wave 3 pre-implementation authority
+from new/ into old/ and leaves new/ ready for the next field cycle.
+
+The user no longer needs the local SSD authority folder for ChatGPT continuity.
+
+======================================================================
+4. IMPLEMENTED PRODUCTION ARCHITECTURE
+======================================================================
+
+New production modules:
+
+include/gzfx/render/renderer_execution_service.hpp
+src/render/renderer_execution_service.cpp
+
+include/gzfx/render/native_input_broker.hpp
+src/render/native_input_broker.cpp
+
+include/gzfx/render/wave3_math.hpp
+
+include/gzfx/render/wave3_pipeline.hpp
+src/render/wave3_pipeline.cpp
+
+New tests:
+
+tests/wave3_math_harness.cpp
+tests/wave3_pipeline_harness.cpp
+
+Modified integration:
+
+src/diagnostics/d3d11_lifecycle.cpp
+src/diagnostics/renderer_forensics.cpp
+src/runtime.cpp
+CMakeLists.txt
+include/gzfx/version.hpp
+
+======================================================================
+5. RENDERER EXECUTION SERVICE
+======================================================================
+
+Wave 3 introduces production ownership of:
+
+- primary D3D11 device
+- immediate context
+- optional D3D11.1 context
+- primary swap chain
+- device generation
+- surface generation
+
+Production modules no longer need to reach directly into renderer_forensics
+globals for execution.
+
+GZFX-owned command lists are tagged with:
+
+- pass kind
+- frame
+- bounded ownership lifetime
+
+renderer_forensics now recognizes owned command lists and does NOT count them
+as opaque Skyrim command lists.
+
+This protects the foundation cartography from self-contamination.
+
+======================================================================
+6. NATIVE INPUT BROKER
+======================================================================
+
+The Semantic Authority remains the production semantic authority.
+
+Wave 3 requests:
+
+MAIN_DEPTH_CURRENT
+MOTION
+NORMAL_MASK_CURRENT
+
+for:
+
+CurrentFrame
+at:
+AfterOpaqueWorldMRT
+
+The existing resource-intelligence live-input path is retained only as the
+strong COM-pointer carrier/cross-check lane.
+
+It does NOT decide the production semantic.
+
+For each production input, the broker requires:
+
+- successful Semantic Authority CurrentFrame query
+- exact canonical COM identity match
+- semantic generation match
+- correct dimensions
+- correct format
+- typed SRV creation
+
+Required formats:
+
+MAIN_DEPTH_CURRENT:
+R24G8_TYPELESS
+SRV R24_UNORM_X8_TYPELESS
+
+MOTION:
+R16G16_FLOAT
+
+NORMAL_MASK_CURRENT:
+R8G8B8A8_UNORM
+
+Camera:
+720-byte native b12 constant buffer
+
+Camera identity changes increment a camera generation and conservatively reset
+temporal history.
+
+======================================================================
+7. GZFXSCENEDEPTHHIERARCHY
+======================================================================
+
+Source:
+MAIN_DEPTH_CURRENT
+
+Build stage:
+AfterOpaqueWorldMRT
+
+Format:
+R32_FLOAT
+
+Representation:
+positive view-space depth
+
+Background:
+0.0
+
+Allocation:
+full mip chain to 1x1
+
+Binding:
+SRV + per-mip UAV/SRV
+
+Generation:
+compute shaders
+
+D3D11 GenerateMips:
+NOT USED
+
+Reduction modes implemented:
+
+0:
+weighted / far-aware production candidate
+
+1:
+linear average reference
+
+2:
+minimum diagnostic
+
+3:
+maximum diagnostic
+
+Zero/background samples are ignored during reduction.
+
+The first pass converts native device depth to positive view-space depth using
+the verified CameraProjInverse data.
+
+======================================================================
+8. NATIVE MOTION CONTRACT
+======================================================================
+
+The locked convention is implemented exactly:
+
+previousUV = currentUV + motion.xy
+
+Native motion is consumed as:
+
+R16G16_FLOAT
+normalized logical screen-UV displacement
+
+No negation.
+No second Y flip.
+No pixel conversion before history sampling.
+
+Pixel-space magnitude is computed only for diagnostics/history-cap logic.
+
+======================================================================
+9. DYNAMIC RESOLUTION
+======================================================================
+
+The temporal shader uses:
+
+current ratio:
+DynamicResolutionParams1.xy
+
+previous ratio:
+DynamicResolutionParams1.zw
+
+Current logical UV is mapped with the current ratio.
+
+Previous logical UV is obtained from native motion:
+
+previousLogicalUV =
+currentLogicalUV + motion
+
+Then previous history is sampled using:
+
+previousDRUV =
+previousRatio * previousLogicalUV
+
+Current and previous ratios are not conflated.
+
+======================================================================
+10. NATIVE NORMAL / WORLD NORMAL HISTORY
+======================================================================
+
+Wave 3 uses only native normal R/G.
+
+The native decode matches the already-proven Skyrim/GZFX decoder.
+
+Current native view-space normal is transformed through CameraViewInverse into
+world-space orientation.
+
+GZFX stores previous world normal using its own octahedral encoding.
+
+Preferred history format:
+R8G8_UNORM
+
+Capability fallback:
+R16G16_FLOAT
+
+The selected format is recorded in Wave 3 diagnostics.
+
+No depth-derived normal is silently promoted as production truth.
+
+======================================================================
+11. TEMPORAL GEOMETRY HISTORY
+======================================================================
+
+Two ping-pong history sets are implemented.
+
+Per set:
+
+Previous/current linear depth:
+R32_FLOAT
+
+World normal:
+R8G8_UNORM preferred
+R16G16_FLOAT fallback
+
+History confidence:
+R8_UNORM preferred
+R16_FLOAT fallback
+
+Previous camera:
+structured float4 history buffer
+
+Global continuity state tracks:
+
+frame
+device generation
+surface generation
+dimensions
+depth semantic generation
+motion semantic generation
+normal semantic generation
+camera generation
+previous completed environment
+history generation
+read/write index
+reset reason
+
+======================================================================
+12. TEMPORAL REPROJECTION / REJECTION
+======================================================================
+
+Per-pixel temporal flow:
+
+current depth
+->
+native motion
+->
+previousUV = currentUV + motion
+->
+logical bounds rejection
+->
+previous DR mapping
+->
+previous depth
+->
+cheap relative-depth rejection
+->
+current/previous world-position reconstruction
+->
+world-position rejection
+->
+current/previous world-normal comparison
+->
+history acceptance/confidence
+
+Initial engineering constants:
+
+DepthDisocclusion:
+0.02
+
+NormalDotThreshold:
+0.75
+
+Still max history:
+16 frames
+
+Fast-motion max history:
+4 frames
+
+High-motion reference:
+32 pixels
+
+These remain field-tunable parameters, not immutable artistic constants.
+
+======================================================================
+13. CAMERA CONTINUITY / CUT DETECTION
+======================================================================
+
+Renderer-only camera continuity runs without SKSE.
+
+Current/previous camera data is compared for:
+
+- translation delta
+- rotation delta
+- previous matrix continuity
+- projection delta
+- dynamic-resolution validity
+
+Initial cut seeds:
+
+translation:
+4096 Skyrim units
+
+rotation:
+75 degrees
+
+matrix continuity:
+0.02
+
+projection delta:
+0.05
+
+The current-frame native b12 remains the source of truth.
+
+No normal-runtime per-frame staging readback was introduced.
+
+The previous accepted camera is stored as GPU temporal history for continuity
+and world reconstruction.
+
+======================================================================
+14. HISTORY INVALIDATION
+======================================================================
+
+Implemented CPU/global reset causes include:
+
+- first valid frame
+- frame gap
+- device generation change
+- surface generation change
+- resource dimension change
+- critical semantic generation change
+- camera generation change
+- previous completed environment change
+- Wave 3 runtime/resource rebuild
+- missing required input
+- command recording/execution failure
+
+GPU camera-cut state additionally invalidates per-frame temporal reuse for:
+
+- global history invalid
+- translation cut
+- rotation cut
+- matrix continuity cut
+- projection cut
+- invalid DR ratios
+
+The system fails closed.
+
+======================================================================
+15. D3D11 STATE SAFETY
+======================================================================
+
+Wave 3 records production work on a dedicated deferred context.
+
+Execution:
+
+FinishCommandList(FALSE)
+->
+GZFX-owned tag
+->
+ExecuteCommandList(..., TRUE)
+->
+owned tag retired
+
+RestoreContextState is TRUE.
+
+This preserves Skyrim immediate-context state around injected work.
+
+The Wave 3 integration harness proved this architecture compiles and executes
+inside a real D3D11 WARP runtime path.
+
+======================================================================
+16. DIAGNOSTICS / ACCESSIBILITY
+======================================================================
+
+Shift + Numpad5 is the Wave 3 manual evidence trigger.
+
+Wave 3 capture output is written under:
+
+Data/GZFX/Diagnostics/Wave3/manualNNNN/
+
+The diagnostics are monochrome/text based.
+
+Generated evidence includes selected depth hierarchy mips, motion X/Y,
+motion magnitude, temporal acceptance/rejection masks, history confidence,
+camera continuity state, stock CameraZ comparison when available, and timing
+metadata.
+
+Required validation does not depend on hue discrimination.
+
+Normal runtime does not continuously read full-resolution debug images back
+to the CPU.
+
+Readback is bounded to explicit capture work.
+
+======================================================================
+17. GPU TIMING
+======================================================================
+
+Wave 3 owns asynchronous timestamp/disjoint query slots.
+
+Current timing categories:
+
+depth base
+depth tail
+temporal geometry/camera-cut region
+camera store
+total Wave 3 command recording interval
+
+Results are resolved without forcing a flush.
+
+Timing is evidence for later measured optimization.
+
+R32 depth was not weakened preemptively.
+
+======================================================================
+18. CI / SYNTHETIC ACCEPTANCE
+======================================================================
+
+Pre-Wave-3 gate:
+14 / 14
+
+Final Wave-3 gate:
+16 / 16
+
+New tests:
+
+15:
+wave3_math
+PASS
+
+16:
+wave3_pipeline
+PASS
+
+The Wave 3 pipeline harness:
+
+- loads the real GZFX DLL
+- creates a WARP D3D11 device/swap chain
+- arms the real renderer hooks
+- creates the verified main MRT/depth formats
+- binds a 720-byte camera buffer
+- transitions into a synthetic stock CameraZ producer
+- triggers real AfterOpaqueWorldMRT
+- forces Wave 3 shader compilation
+- executes the Wave 3 production pipeline
+- verifies hierarchy + temporal runtime status
+
+Final PR CI:
+run 40078885405
+SUCCESS
+
+Result:
+16 / 16 PASS
+0 failures
+
+Merged-main CI:
+run 40079077480
+SUCCESS
+
+Result:
+16 / 16 PASS
+0 failures
+
+======================================================================
+19. FAILURE / REPAIR HISTORY
+======================================================================
+
+The first PR CI attempts were real failures and are preserved.
+
+Run 143:
+initial compile failure.
+
+Caught:
+- oversized C++ embedded HLSL string literal
+- old capture-helper call signature
+- duplicate CanonicalId definition
+- bad DepthPreview helper call
+
+Run 144:
+after capture-helper corrections, remaining failures were:
+- oversized C++ embedded HLSL string literal
+- duplicate CanonicalId definition
+
+Repair:
+- split HLSL source into multiple bounded raw literals assembled into one
+  std::string
+- remove duplicate CanonicalId
+- keep corrected capture calls
+
+One temporary repository source-staging mistake then wrote an error message
+into the Wave 3 pipeline file on an intermediate branch commit.
+
+That mistake was immediately detected before acceptance, the full source was
+restored from the staged source, and the superseding head was rebuilt.
+
+Accepted head:
+cfb85135977359babc931dd91fa241fac3846ef8
+
+No failed/intermediate commit was treated as accepted evidence.
+
+======================================================================
+20. MERGED-MAIN PACKAGE PROOF
+======================================================================
+
+Merged source:
+658dd9c0bf22afb3cc84e6a4f6cb1ed33e745acb
+
+Merged-main CI:
+40079077480
+SUCCESS
+
+Main package refresh:
+a7345ed7a53958d9691c7fb01a7297586bca248a
+
+Verified difference from source merge to package refresh:
+
+ONLY:
+LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+No hidden source change exists in the package refresh.
+
+Final Lance ZIP:
+
+path:
+LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+blob:
+344703e8a787acda3c1c690d1799a9f2b1a0d54c
+
+size:
+283,374 bytes
+
+======================================================================
+21. CURRENT ACCEPTANCE STATE
+======================================================================
+
+Wave 1:
+CLOSED
+
+Wave 2:
+CLOSED
+
+Broad foundation cartography:
+COMPLETE
+
+Wave 3 code:
+PASS
+
+Wave 3 CI:
+PASS
+
+Wave 3 merge:
+PASS
+
+Wave 3 package:
+PASS
+
+Wave 3 real-Skyrim field:
+PENDING
+
+Wave 3 formal close:
+NOT YET
+
+This is correct.
+
+The next step is NOT more broad research.
+
+The next step is the compact movement/transition-focused field campaign.
+
+======================================================================
+22. FIELD OBJECTIVES
+======================================================================
+
+Real Skyrim must now validate:
+
+- hierarchy construction in actual game frames
+- post-opaque depth correctness
+- stock CameraZ common-geometry scale relationship
+- GZFX-only post-opaque geometry
+- native motion sign/orientation
+- previous-UV reprojection
+- current/previous DR mapping
+- stationary temporal acceptance
+- movement disocclusion
+- fast-turn response
+- history confidence
+- camera/load reset behavior
+- exterior/interior continuity
+- GPU cost
+- zero renderer corruption/device removal
+
+The actual user procedure is supplied directly in chat.
+
+======================================================================
+23. AFTER THE FIELD RUN
+======================================================================
+
+The next cycle begins from the captured Wave 3 data.
+
+The chat agent must:
+
+1. read AGENT.md;
+2. read current main;
+3. inspect the new field evidence;
+4. write the next full findings TXT directly into GZFXWorkFolder/new/;
+5. give only a short chat summary;
+6. research only remaining Wave 3 blockers if field acceptance fails;
+7. otherwise close Wave 3 and begin the next authorized feature wave.
+
+If Wave 3 passes:
+
+next production target:
+Wave 4
+Ambient Visibility v2
+
+======================================================================
+END OF ENGINEERING RESULT
+======================================================================
