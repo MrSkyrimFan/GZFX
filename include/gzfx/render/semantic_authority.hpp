@@ -225,6 +225,7 @@ namespace gzfx::render::semantic_authority
         Semantic semantic,
         QueryMode mode,
         std::uint64_t frame,
+        stage_scheduler::Boundary atStage,
         SemanticView* outView) noexcept;
 
     Snapshot GetSnapshot() noexcept;
