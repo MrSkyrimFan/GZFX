@@ -109,6 +109,9 @@ namespace gzfx::diagnostics::semantic_probe
 
         std::uintptr_t g_knownDepth = 0;
         std::uintptr_t g_knownSceneColor = 0;
+        std::uintptr_t g_knownMotion = 0;
+        std::uintptr_t g_knownNormal = 0;
+        std::uintptr_t g_knownAux = 0;
 
         std::uint64_t g_stableGameplay = 0;
         bool g_traceActive = false;
@@ -503,6 +506,21 @@ float4 PSMain(V input) : SV_TARGET
                 1);
     }
 
+    if (Mode >= 4 && Mode <= 7)
+    {
+        float scalar =
+            Mode == 4 ? value.r :
+            Mode == 5 ? value.g :
+            Mode == 6 ? value.b :
+                        value.a;
+
+        return float4(
+            scalar,
+            scalar,
+            scalar,
+            1);
+    }
+
     float3 color =
         max(
             value.rgb,
@@ -751,6 +769,7 @@ float4 PSMain(V input) : SV_TARGET
             ResourceStats& resource,
             const std::uint32_t mode,
             const float scale,
+            const UINT mip,
             const fs::path& path)
         {
             if (!EnsurePreviewRuntime(device) ||
@@ -772,8 +791,18 @@ float4 PSMain(V input) : SV_TARGET
                 return false;
             }
 
+            if (mip >=
+                std::max<UINT>(
+                    1,
+                    resource.desc.MipLevels))
+            {
+                return false;
+            }
+
             srvDesc.ViewDimension =
                 D3D11_SRV_DIMENSION_TEXTURE2D;
+            srvDesc.Texture2D.MostDetailedMip =
+                mip;
             srvDesc.Texture2D.MipLevels = 1;
 
             ID3D11ShaderResourceView* srv = nullptr;
@@ -1114,27 +1143,45 @@ float4 PSMain(V input) : SV_TARGET
                 }
             }
 
+            const auto candidateScore =
+                [&](const std::uintptr_t id,
+                    const ResourceStats* stats)
+                {
+                    const bool known =
+                        id == g_knownDepth ||
+                        id == g_knownSceneColor ||
+                        id == g_knownMotion ||
+                        id == g_knownNormal ||
+                        id == g_knownAux;
+
+                    const std::uint64_t anchorBonus =
+                        known
+                            ? (1ull << 60)
+                            : 0ull;
+
+                    return
+                        anchorBonus +
+                        stats->rtvWrites * 4 +
+                        stats->csUavWrites * 4 +
+                        stats->psReads * 2 +
+                        stats->csReads * 2 +
+                        stats->coReadWithMainDepth * 8 +
+                        stats->dsvWrites;
+                };
+
             std::sort(
                 candidates.begin(),
                 candidates.end(),
-                [](const auto& left,
-                   const auto& right)
+                [&](const auto& left,
+                    const auto& right)
                 {
-                    const auto score =
-                        [](const ResourceStats* stats)
-                        {
-                            return
-                                stats->rtvWrites * 4 +
-                                stats->csUavWrites * 4 +
-                                stats->psReads * 2 +
-                                stats->csReads * 2 +
-                                stats->coReadWithMainDepth * 8 +
-                                stats->dsvWrites;
-                        };
-
                     return
-                        score(left.second) >
-                        score(right.second);
+                        candidateScore(
+                            left.first,
+                            left.second) >
+                        candidateScore(
+                            right.first,
+                            right.second);
                 });
 
             std::ofstream report(
@@ -1169,6 +1216,15 @@ float4 PSMain(V input) : SV_TARGET
                 << "known_scene_color="
                 << Ptr(g_knownSceneColor)
                 << "\n"
+                << "known_motion="
+                << Ptr(g_knownMotion)
+                << "\n"
+                << "known_normal="
+                << Ptr(g_knownNormal)
+                << "\n"
+                << "known_aux="
+                << Ptr(g_knownAux)
+                << "\n"
                 << "trace_frames="
                 << g_traceStartFrame
                 << "-"
@@ -1177,7 +1233,10 @@ float4 PSMain(V input) : SV_TARGET
                 << "events="
                 << g_events.size()
                 << "\n"
-                << "resources="
+                << "resources_active="
+                << candidates.size()
+                << "\n"
+                << "resources_catalogued="
                 << g_resources.size()
                 << "\n\n";
 
@@ -1254,17 +1313,11 @@ float4 PSMain(V input) : SV_TARGET
                 std::uint32_t mode = 0;
                 float scale = 1.0f;
 
-                if (stats->desc.Format ==
-                    DXGI_FORMAT_R8G8B8A8_UNORM)
+                if (id == g_knownNormal)
                 {
-                    mode =
-                        stats->rtvWrites >= 100
-                            ? 1
-                            : 0;
+                    mode = 1;
                 }
-                else if (
-                    stats->desc.Format ==
-                    DXGI_FORMAT_R16G16_FLOAT)
+                else if (id == g_knownMotion)
                 {
                     mode = 2;
                     scale = 24.0f;
@@ -1292,6 +1345,7 @@ float4 PSMain(V input) : SV_TARGET
                         *stats,
                         mode,
                         scale,
+                        0,
                         root /
                             (
                                 base.str() +
@@ -1305,15 +1359,146 @@ float4 PSMain(V input) : SV_TARGET
                         : "failed")
                     << " mode="
                     << mode
+                    << " mip=0"
                     << "\n";
+
+                const bool channelTarget =
+                    id == g_knownNormal ||
+                    id == g_knownAux ||
+                    (stats->desc.Format ==
+                        DXGI_FORMAT_R8G8B8A8_UNORM &&
+                     captured < 8);
+
+                if (channelTarget)
+                {
+                    const std::array<std::pair<
+                        std::uint32_t,
+                        const wchar_t*>, 4>
+                            channels =
+                    {{
+                        {4, L"_r"},
+                        {5, L"_g"},
+                        {6, L"_b"},
+                        {7, L"_a"}
+                    }};
+
+                    const std::size_t channelCount =
+                        stats->desc.Format ==
+                            DXGI_FORMAT_R8G8_UNORM
+                            ? 2
+                            : 4;
+
+                    for (std::size_t channel = 0;
+                         channel < channelCount;
+                         ++channel)
+                    {
+                        const bool channelWrote =
+                            RenderPreview(
+                                device,
+                                context,
+                                *stats,
+                                channels[channel].first,
+                                1.0f,
+                                0,
+                                root /
+                                    (
+                                        base.str() +
+                                        channels[channel].second +
+                                        L".bmp"
+                                    ));
+
+                        report
+                            << "  channel="
+                            << static_cast<char>(
+                                'R' + channel)
+                            << " preview="
+                            << (channelWrote
+                                ? "ok"
+                                : "failed")
+                            << "\n";
+                    }
+                }
+
+                if (stats->desc.MipLevels > 1 &&
+                    (id == g_knownDepth ||
+                     stats->desc.Format ==
+                        DXGI_FORMAT_R32_FLOAT))
+                {
+                    const std::array<UINT, 5>
+                        requestedMips =
+                    {
+                        0,
+                        3,
+                        6,
+                        9,
+                        stats->desc.MipLevels - 1
+                    };
+
+                    std::array<UINT, 5>
+                        emittedMips{};
+                    std::size_t emittedCount = 0;
+
+                    for (const UINT mip :
+                         requestedMips)
+                    {
+                        if (mip >=
+                                stats->desc.MipLevels ||
+                            std::find(
+                                emittedMips.begin(),
+                                emittedMips.begin() +
+                                    emittedCount,
+                                mip) !=
+                                emittedMips.begin() +
+                                    emittedCount)
+                        {
+                            continue;
+                        }
+
+                        emittedMips[emittedCount++] =
+                            mip;
+
+                        if (mip == 0)
+                        {
+                            continue;
+                        }
+
+                        std::wostringstream mipName;
+                        mipName
+                            << base.str()
+                            << L"_mip"
+                            << mip
+                            << L".bmp";
+
+                        const bool mipWrote =
+                            RenderPreview(
+                                device,
+                                context,
+                                *stats,
+                                3,
+                                1.0f,
+                                mip,
+                                root /
+                                    mipName.str());
+
+                        report
+                            << "  mip="
+                            << mip
+                            << " preview="
+                            << (mipWrote
+                                ? "ok"
+                                : "failed")
+                            << "\n";
+                    }
+                }
 
                 ++captured;
             }
 
             report
                 << "\nsemantic_hints:\n"
-                << "- Full-resolution RGBA8 candidates with high depth-co-read counts are strong stock normal/TAA/SSR candidates.\n"
-                << "- Full-resolution R16G16_FLOAT candidates are strong motion-vector candidates.\n"
+                << "- known_normal is decoded only from the independently acquired stock normal anchor; other RGBA8 targets stay raw.\n"
+                << "- known_motion is visualized only from the independently acquired stock motion anchor; other RG targets stay raw.\n"
+                << "- grayscale channel planes are emitted for known normal/aux and a bounded set of high-ranked RGBA8 intermediates.\n"
                 << "- Full-resolution R32_FLOAT/R16_FLOAT candidates may be scalar depth/mask/image-space intermediates.\n"
                 << "- 4096/512 depth-stencil candidates are likely directional/local shadow resources.\n"
                 << "- semantic_bindings.csv preserves shader/slot/output chronology for SSAO, lighting, post, water, and exposure reconstruction.\n";
@@ -1326,9 +1511,11 @@ float4 PSMain(V input) : SV_TARGET
         {
             resource_intelligence::LiveInputs inputs{};
 
-            std::uintptr_t knownMotion = 0;
-            std::uintptr_t knownNormal = 0;
-            std::uintptr_t knownAux = 0;
+            g_knownDepth = 0;
+            g_knownSceneColor = 0;
+            g_knownMotion = 0;
+            g_knownNormal = 0;
+            g_knownAux = 0;
 
             if (resource_intelligence::
                     AcquireLiveInputs(
@@ -1345,17 +1532,17 @@ float4 PSMain(V input) : SV_TARGET
                         std::uintptr_t>(
                             inputs.sceneColorTexture);
 
-                knownMotion =
+                g_knownMotion =
                     reinterpret_cast<
                         std::uintptr_t>(
                             inputs.motionVectorTexture);
 
-                knownNormal =
+                g_knownNormal =
                     reinterpret_cast<
                         std::uintptr_t>(
                             inputs.nativeNormalTexture);
 
-                knownAux =
+                g_knownAux =
                     reinterpret_cast<
                         std::uintptr_t>(
                             inputs.nativeAuxTexture);
@@ -1396,9 +1583,9 @@ float4 PSMain(V input) : SV_TARGET
                 context,
                 g_knownSceneColor,
                 g_knownDepth,
-                knownMotion,
-                knownNormal,
-                knownAux);
+                g_knownMotion,
+                g_knownNormal,
+                g_knownAux);
 
             g_traceActive = true;
         }
