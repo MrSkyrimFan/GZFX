@@ -1,13 +1,11 @@
 #include "gzfx/render/semantic_authority.hpp"
 
 #include "gzfx/paths.hpp"
-#include "gzfx/render/stage_scheduler.hpp"
 
 #include <algorithm>
 #include <array>
 #include <filesystem>
 #include <fstream>
-#include <iomanip>
 #include <mutex>
 #include <sstream>
 #include <string>
@@ -22,8 +20,7 @@ namespace gzfx::render::semantic_authority
     namespace
     {
         constexpr std::size_t kStageCount =
-            static_cast<std::size_t>(
-                ShaderStage::Count);
+            static_cast<std::size_t>(ShaderStage::Count);
 
         constexpr std::size_t kSrvSlots =
             D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT;
@@ -38,7 +35,6 @@ namespace gzfx::render::semantic_authority
         {
             D3D11_RESOURCE_DIMENSION dimension =
                 D3D11_RESOURCE_DIMENSION_UNKNOWN;
-
             UINT width = 0;
             UINT height = 0;
             UINT depth = 0;
@@ -62,56 +58,65 @@ namespace gzfx::render::semantic_authority
         {
             std::array<
                 std::uintptr_t,
-                kStageCount>
-                    shaders{};
+                kStageCount> shaders{};
 
             std::array<
                 std::array<
                     ViewBinding,
                     kSrvSlots>,
-                kStageCount>
-                    srvs{};
+                kStageCount> srvs{};
 
             std::array<
                 ViewBinding,
-                kRtvSlots>
-                    rtvs{};
+                kRtvSlots> rtvs{};
 
             ViewBinding dsv{};
 
             std::array<
                 ViewBinding,
-                kUavSlots>
-                    omUavs{};
+                kUavSlots> omUavs{};
 
             std::array<
                 ViewBinding,
-                kUavSlots>
-                    csUavs{};
+                kUavSlots> csUavs{};
 
             UINT viewportWidth = 0;
             UINT viewportHeight = 0;
         };
 
+        struct SemanticRecord
+        {
+            ResourceInfo resource{};
+            AvailabilityInfo availability{};
+        };
+
         struct FrameState
         {
             std::uint64_t frame = 0;
+
             std::uint64_t mainMrtDraws = 0;
             bool sawMainMrt = false;
             bool sawCameraZ = false;
             bool sawAO = false;
             bool sawVolumetric = false;
+
             bool earlyDepthCopySeen = false;
-            bool finalDepthCopySeen = false;
+            bool opaqueWorldMrtSignaled = false;
 
             std::uintptr_t cameraZCandidate = 0;
             std::uint64_t cameraZMipMask = 0;
+            bool cameraZCompleteSignaled = false;
 
             std::uintptr_t aoFilterTemp = 0;
             UINT aoFilterStep = 0;
 
-            bool lightingCompositePending = false;
-            std::uint64_t lightingCompositeOrdinal = 0;
+            bool ambientCompositePending = false;
+            std::uint64_t ambientCompositeOrdinal = 0;
+
+            bool volumetricApplyPending = false;
+            std::uint64_t volumetricApplyOrdinal = 0;
+            std::uintptr_t volumetricPreviousDepthIdentity = 0;
+            bool preWaterDepthPublished = false;
         };
 
         struct Promotion
@@ -124,14 +129,36 @@ namespace gzfx::render::semantic_authority
             std::string reason;
         };
 
+        struct Observation
+        {
+            std::uint64_t frame = 0;
+            Semantic semantic = Semantic::SceneColorHDR;
+            std::uintptr_t identity = 0;
+            bool produced = false;
+            bool consumed = false;
+            bool currentAvailable = false;
+            bool previousAvailable = false;
+            std::uint64_t epoch = 0;
+            std::string reason;
+        };
+
+        struct EpochTransition
+        {
+            std::uint64_t frame = 0;
+            std::uintptr_t identity = 0;
+            Semantic from = Semantic::SceneColorHDR;
+            Semantic to = Semantic::SceneColorHDR;
+            std::uint64_t fromEpoch = 0;
+            std::uint64_t toEpoch = 0;
+            std::string event;
+        };
+
         struct PendingStage
         {
             stage_scheduler::Boundary boundary =
                 stage_scheduler::Boundary::Unknown;
-
             stage_scheduler::Phase phase =
                 stage_scheduler::Phase::Landmark;
-
             const char* reason = nullptr;
         };
 
@@ -140,59 +167,132 @@ namespace gzfx::render::semantic_authority
         FrameState g_frame{};
 
         std::array<
-            ResourceInfo,
+            SemanticRecord,
             static_cast<std::size_t>(Semantic::Count)>
-                g_resources{};
+                g_semantics{};
 
         EnvironmentClass g_environment =
             EnvironmentClass::UnknownTransition;
 
         UINT g_screenWidth = 0;
         UINT g_screenHeight = 0;
+
         std::uint64_t g_generation = 0;
+        std::uint64_t g_epochSequence = 0;
         std::uint64_t g_snapshotFrame = 0;
 
-        std::unordered_map<
-            std::uintptr_t,
-            ViewBinding>
-                g_srvCache;
-
-        std::unordered_map<
-            std::uintptr_t,
-            ViewBinding>
-                g_rtvCache;
-
-        std::unordered_map<
-            std::uintptr_t,
-            ViewBinding>
-                g_dsvCache;
-
-        std::unordered_map<
-            std::uintptr_t,
-            ViewBinding>
-                g_uavCache;
+        std::unordered_map<std::uintptr_t, ViewBinding> g_srvCache;
+        std::unordered_map<std::uintptr_t, ViewBinding> g_rtvCache;
+        std::unordered_map<std::uintptr_t, ViewBinding> g_dsvCache;
+        std::unordered_map<std::uintptr_t, ViewBinding> g_uavCache;
 
         bool g_captureActive = false;
         std::uint64_t g_captureStart = 0;
         std::uint64_t g_captureEnd = 0;
+
         std::vector<Promotion> g_capturePromotions;
+        std::vector<Observation> g_captureObservations;
+        std::vector<EpochTransition> g_captureEpochTransitions;
 
         std::size_t SemanticIndex(
             const Semantic semantic)
         {
-            return static_cast<std::size_t>(
-                semantic);
+            return static_cast<std::size_t>(semantic);
         }
 
         std::size_t StageIndex(
             const ShaderStage stage)
         {
-            return static_cast<std::size_t>(
-                stage);
+            return static_cast<std::size_t>(stage);
+        }
+
+        int StageRank(
+            const stage_scheduler::Boundary stage)
+        {
+            using B = stage_scheduler::Boundary;
+
+            switch (stage)
+            {
+            case B::AfterShadowProduction:
+                return 5;
+            case B::AfterDepthPrepass:
+                return 10;
+            case B::AfterOpaqueWorldMRT:
+                return 20;
+            case B::AfterCameraZ:
+                return 30;
+            case B::AfterStockAO:
+                return 40;
+            case B::BeforeAmbientScreenSpaceComposite:
+                return 50;
+            case B::AtAmbientScreenSpaceComposite:
+                return 51;
+            case B::AfterAmbientScreenSpaceComposite:
+                return 52;
+            case B::BeforeVolumetricApply:
+                return 60;
+            case B::AfterVolumetricApply:
+                return 61;
+            case B::PublishPreWaterDepth:
+                return 62;
+            case B::WaterDomain:
+                return 70;
+            case B::BeforeGlobalTAA:
+                return 80;
+            case B::AfterGlobalTAA:
+                return 81;
+            case B::HDRReduction:
+                return 90;
+            case B::BeforeTonemap:
+                return 100;
+            case B::PostTonemapPreUi:
+                return 110;
+            case B::UiPresent:
+                return 120;
+            case B::Unknown:
+            case B::Count:
+            default:
+                return -1;
+            }
+        }
+
+        bool StageWithinValidity(
+            const AvailabilityInfo& availability,
+            const stage_scheduler::Boundary stage)
+        {
+            if (stage == stage_scheduler::Boundary::Unknown)
+            {
+                return true;
+            }
+
+            const int rank = StageRank(stage);
+
+            if (rank < 0)
+            {
+                return false;
+            }
+
+            const int from =
+                StageRank(availability.validFromStage);
+
+            const int until =
+                StageRank(availability.validUntilStage);
+
+            if (from >= 0 && rank < from)
+            {
+                return false;
+            }
+
+            if (until >= 0 && rank > until)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         std::uintptr_t CanonicalId(
-            IUnknown* value)
+            IUnknown* const value)
         {
             if (value == nullptr)
             {
@@ -204,27 +304,21 @@ namespace gzfx::render::semantic_authority
             if (FAILED(
                     value->QueryInterface(
                         __uuidof(IUnknown),
-                        reinterpret_cast<void**>(
-                            &identity))) ||
+                        reinterpret_cast<void**>(&identity))) ||
                 identity == nullptr)
             {
-                return
-                    reinterpret_cast<
-                        std::uintptr_t>(
-                            value);
+                return reinterpret_cast<std::uintptr_t>(value);
             }
 
             const auto id =
-                reinterpret_cast<
-                    std::uintptr_t>(
-                        identity);
+                reinterpret_cast<std::uintptr_t>(identity);
 
             identity->Release();
             return id;
         }
 
         ResourceShape DescribeResource(
-            ID3D11Resource* resource)
+            ID3D11Resource* const resource)
         {
             ResourceShape shape{};
 
@@ -233,8 +327,7 @@ namespace gzfx::render::semantic_authority
                 return shape;
             }
 
-            resource->GetType(
-                &shape.dimension);
+            resource->GetType(&shape.dimension);
 
             if (shape.dimension ==
                 D3D11_RESOURCE_DIMENSION_TEXTURE2D)
@@ -244,8 +337,7 @@ namespace gzfx::render::semantic_authority
                 if (SUCCEEDED(
                         resource->QueryInterface(
                             __uuidof(ID3D11Texture2D),
-                            reinterpret_cast<void**>(
-                                &texture))) &&
+                            reinterpret_cast<void**>(&texture))) &&
                     texture != nullptr)
                 {
                     D3D11_TEXTURE2D_DESC desc{};
@@ -270,8 +362,7 @@ namespace gzfx::render::semantic_authority
                 if (SUCCEEDED(
                         resource->QueryInterface(
                             __uuidof(ID3D11Texture3D),
-                            reinterpret_cast<void**>(
-                                &texture))) &&
+                            reinterpret_cast<void**>(&texture))) &&
                     texture != nullptr)
                 {
                     D3D11_TEXTURE3D_DESC desc{};
@@ -296,8 +387,7 @@ namespace gzfx::render::semantic_authority
                 if (SUCCEEDED(
                         resource->QueryInterface(
                             __uuidof(ID3D11Texture1D),
-                            reinterpret_cast<void**>(
-                                &texture))) &&
+                            reinterpret_cast<void**>(&texture))) &&
                     texture != nullptr)
                 {
                     D3D11_TEXTURE1D_DESC desc{};
@@ -319,7 +409,7 @@ namespace gzfx::render::semantic_authority
         }
 
         ViewBinding BaseViewBinding(
-            ID3D11View* view)
+            ID3D11View* const view)
         {
             ViewBinding binding{};
 
@@ -336,18 +426,15 @@ namespace gzfx::render::semantic_authority
                 return binding;
             }
 
-            binding.identity =
-                CanonicalId(resource);
-
-            binding.shape =
-                DescribeResource(resource);
+            binding.identity = CanonicalId(resource);
+            binding.shape = DescribeResource(resource);
 
             resource->Release();
             return binding;
         }
 
         ViewBinding DescribeSrv(
-            ID3D11ShaderResourceView* view)
+            ID3D11ShaderResourceView* const view)
         {
             if (view == nullptr)
             {
@@ -355,26 +442,33 @@ namespace gzfx::render::semantic_authority
             }
 
             const auto key =
-                reinterpret_cast<
-                    std::uintptr_t>(
-                        view);
+                reinterpret_cast<std::uintptr_t>(view);
 
-            const auto found =
-                g_srvCache.find(key);
+            const auto found = g_srvCache.find(key);
 
             if (found != g_srvCache.end())
             {
                 return found->second;
             }
 
-            ViewBinding binding =
-                BaseViewBinding(view);
+            ViewBinding binding = BaseViewBinding(view);
 
             D3D11_SHADER_RESOURCE_VIEW_DESC desc{};
             view->GetDesc(&desc);
 
             switch (desc.ViewDimension)
             {
+            case D3D11_SRV_DIMENSION_TEXTURE1D:
+                binding.firstMip =
+                    static_cast<INT>(
+                        desc.Texture1D.MostDetailedMip);
+                binding.mipCount =
+                    static_cast<INT>(
+                        desc.Texture1D.MipLevels);
+                binding.firstSlice = 0;
+                binding.sliceCount = 1;
+                break;
+
             case D3D11_SRV_DIMENSION_TEXTURE2D:
                 binding.firstMip =
                     static_cast<INT>(
@@ -418,15 +512,12 @@ namespace gzfx::render::semantic_authority
                 break;
             }
 
-            g_srvCache.emplace(
-                key,
-                binding);
-
+            g_srvCache.emplace(key, binding);
             return binding;
         }
 
         ViewBinding DescribeRtv(
-            ID3D11RenderTargetView* view)
+            ID3D11RenderTargetView* const view)
         {
             if (view == nullptr)
             {
@@ -434,26 +525,31 @@ namespace gzfx::render::semantic_authority
             }
 
             const auto key =
-                reinterpret_cast<
-                    std::uintptr_t>(
-                        view);
+                reinterpret_cast<std::uintptr_t>(view);
 
-            const auto found =
-                g_rtvCache.find(key);
+            const auto found = g_rtvCache.find(key);
 
             if (found != g_rtvCache.end())
             {
                 return found->second;
             }
 
-            ViewBinding binding =
-                BaseViewBinding(view);
+            ViewBinding binding = BaseViewBinding(view);
 
             D3D11_RENDER_TARGET_VIEW_DESC desc{};
             view->GetDesc(&desc);
 
             switch (desc.ViewDimension)
             {
+            case D3D11_RTV_DIMENSION_TEXTURE1D:
+                binding.firstMip =
+                    static_cast<INT>(
+                        desc.Texture1D.MipSlice);
+                binding.mipCount = 1;
+                binding.firstSlice = 0;
+                binding.sliceCount = 1;
+                break;
+
             case D3D11_RTV_DIMENSION_TEXTURE2D:
                 binding.firstMip =
                     static_cast<INT>(
@@ -493,15 +589,12 @@ namespace gzfx::render::semantic_authority
                 break;
             }
 
-            g_rtvCache.emplace(
-                key,
-                binding);
-
+            g_rtvCache.emplace(key, binding);
             return binding;
         }
 
         ViewBinding DescribeDsv(
-            ID3D11DepthStencilView* view)
+            ID3D11DepthStencilView* const view)
         {
             if (view == nullptr)
             {
@@ -509,20 +602,16 @@ namespace gzfx::render::semantic_authority
             }
 
             const auto key =
-                reinterpret_cast<
-                    std::uintptr_t>(
-                        view);
+                reinterpret_cast<std::uintptr_t>(view);
 
-            const auto found =
-                g_dsvCache.find(key);
+            const auto found = g_dsvCache.find(key);
 
             if (found != g_dsvCache.end())
             {
                 return found->second;
             }
 
-            ViewBinding binding =
-                BaseViewBinding(view);
+            ViewBinding binding = BaseViewBinding(view);
 
             D3D11_DEPTH_STENCIL_VIEW_DESC desc{};
             view->GetDesc(&desc);
@@ -555,15 +644,12 @@ namespace gzfx::render::semantic_authority
                 break;
             }
 
-            g_dsvCache.emplace(
-                key,
-                binding);
-
+            g_dsvCache.emplace(key, binding);
             return binding;
         }
 
         ViewBinding DescribeUav(
-            ID3D11UnorderedAccessView* view)
+            ID3D11UnorderedAccessView* const view)
         {
             if (view == nullptr)
             {
@@ -571,26 +657,31 @@ namespace gzfx::render::semantic_authority
             }
 
             const auto key =
-                reinterpret_cast<
-                    std::uintptr_t>(
-                        view);
+                reinterpret_cast<std::uintptr_t>(view);
 
-            const auto found =
-                g_uavCache.find(key);
+            const auto found = g_uavCache.find(key);
 
             if (found != g_uavCache.end())
             {
                 return found->second;
             }
 
-            ViewBinding binding =
-                BaseViewBinding(view);
+            ViewBinding binding = BaseViewBinding(view);
 
             D3D11_UNORDERED_ACCESS_VIEW_DESC desc{};
             view->GetDesc(&desc);
 
             switch (desc.ViewDimension)
             {
+            case D3D11_UAV_DIMENSION_TEXTURE1D:
+                binding.firstMip =
+                    static_cast<INT>(
+                        desc.Texture1D.MipSlice);
+                binding.mipCount = 1;
+                binding.firstSlice = 0;
+                binding.sliceCount = 1;
+                break;
+
             case D3D11_UAV_DIMENSION_TEXTURE2D:
                 binding.firstMip =
                     static_cast<INT>(
@@ -630,10 +721,7 @@ namespace gzfx::render::semantic_authority
                 break;
             }
 
-            g_uavCache.emplace(
-                key,
-                binding);
-
+            g_uavCache.emplace(key, binding);
             return binding;
         }
 
@@ -659,10 +747,8 @@ namespace gzfx::render::semantic_authority
                 g_screenHeight != 0 &&
                 binding.shape.dimension ==
                     D3D11_RESOURCE_DIMENSION_TEXTURE2D &&
-                binding.shape.width ==
-                    g_screenWidth &&
-                binding.shape.height ==
-                    g_screenHeight;
+                binding.shape.width == g_screenWidth &&
+                binding.shape.height == g_screenHeight;
         }
 
         bool IsFullResolutionFormat(
@@ -672,6 +758,45 @@ namespace gzfx::render::semantic_authority
             return
                 IsFullResolution(binding) &&
                 binding.shape.format == format;
+        }
+
+        bool IsDepthLike(
+            const ViewBinding& binding)
+        {
+            return
+                IsFullResolution(binding) &&
+                (
+                    binding.shape.format ==
+                        DXGI_FORMAT_R24G8_TYPELESS ||
+                    binding.shape.format ==
+                        DXGI_FORMAT_R32_TYPELESS ||
+                    binding.shape.format ==
+                        DXGI_FORMAT_R32_FLOAT
+                );
+        }
+
+        void ResetFrameAvailabilityLocked(
+            const std::uint64_t frame)
+        {
+            for (auto& record : g_semantics)
+            {
+                auto& availability = record.availability;
+
+                availability.observedThisFrame = false;
+                availability.producedThisFrame = false;
+                availability.consumedThisFrame = false;
+                availability.currentFrameAvailable = false;
+                availability.previousFrameAvailable = false;
+                availability.frame = frame;
+                availability.environmentScope =
+                    EnvironmentClass::UnknownTransition;
+                availability.validFromStage =
+                    stage_scheduler::Boundary::Unknown;
+                availability.validUntilStage =
+                    stage_scheduler::Boundary::Unknown;
+                availability.epochKind =
+                    ContentEpochKind::Unknown;
+            }
         }
 
         void EnsureFrameLocked(
@@ -684,6 +809,8 @@ namespace gzfx::render::semantic_authority
 
             g_frame = FrameState{};
             g_frame.frame = frame;
+
+            ResetFrameAvailabilityLocked(frame);
         }
 
         ResourceInfo MakeResourceInfo(
@@ -694,33 +821,36 @@ namespace gzfx::render::semantic_authority
             const std::uint64_t generation)
         {
             ResourceInfo info{};
+
             info.semantic = semantic;
             info.confidence = confidence;
             info.identity = binding.identity;
             info.generation = generation;
             info.firstSeenFrame = frame;
             info.lastSeenFrame = frame;
-            info.dimension =
-                binding.shape.dimension;
-            info.width =
-                binding.shape.width;
-            info.height =
-                binding.shape.height;
-            info.depth =
-                binding.shape.depth;
-            info.mipLevels =
-                binding.shape.mipLevels;
-            info.arraySize =
-                binding.shape.arraySize;
-            info.format =
-                binding.shape.format;
-            info.bindFlags =
-                binding.shape.bindFlags;
+
+            info.dimension = binding.shape.dimension;
+            info.width = binding.shape.width;
+            info.height = binding.shape.height;
+            info.depth = binding.shape.depth;
+            info.mipLevels = binding.shape.mipLevels;
+            info.arraySize = binding.shape.arraySize;
+            info.format = binding.shape.format;
+            info.bindFlags = binding.shape.bindFlags;
 
             return info;
         }
 
-        bool PromoteLocked(
+        bool InCaptureRange(
+            const std::uint64_t frame)
+        {
+            return
+                g_captureActive &&
+                frame >= g_captureStart &&
+                frame <= g_captureEnd;
+        }
+
+        bool PromoteIdentityLocked(
             const Semantic semantic,
             const Confidence confidence,
             const ViewBinding& binding,
@@ -733,22 +863,17 @@ namespace gzfx::render::semantic_authority
             }
 
             auto& current =
-                g_resources[
-                    SemanticIndex(semantic)];
+                g_semantics[SemanticIndex(semantic)].resource;
 
             const bool changed =
-                current.identity !=
-                    binding.identity ||
-                static_cast<std::uint32_t>(
-                    confidence) >
+                current.identity != binding.identity ||
+                static_cast<std::uint32_t>(confidence) >
                     static_cast<std::uint32_t>(
                         current.confidence);
 
             if (!changed)
             {
-                current.lastSeenFrame =
-                    frame;
-
+                current.lastSeenFrame = frame;
                 return false;
             }
 
@@ -756,8 +881,7 @@ namespace gzfx::render::semantic_authority
                 ++g_generation;
 
             const std::uint64_t firstSeen =
-                current.identity ==
-                    binding.identity &&
+                current.identity == binding.identity &&
                 current.firstSeenFrame != 0
                     ? current.firstSeenFrame
                     : frame;
@@ -770,25 +894,18 @@ namespace gzfx::render::semantic_authority
                     frame,
                     generation);
 
-            current.firstSeenFrame =
-                firstSeen;
+            current.firstSeenFrame = firstSeen;
 
-            if (g_captureActive &&
-                frame >= g_captureStart &&
-                frame <= g_captureEnd)
+            if (InCaptureRange(frame))
             {
                 Promotion promotion{};
                 promotion.frame = frame;
                 promotion.semantic = semantic;
                 promotion.confidence = confidence;
-                promotion.identity =
-                    binding.identity;
-                promotion.generation =
-                    generation;
+                promotion.identity = binding.identity;
+                promotion.generation = generation;
                 promotion.reason =
-                    reason != nullptr
-                        ? reason
-                        : "";
+                    reason != nullptr ? reason : "";
 
                 g_capturePromotions.push_back(
                     std::move(promotion));
@@ -797,13 +914,182 @@ namespace gzfx::render::semantic_authority
             return true;
         }
 
+        void RecordObservationLocked(
+            const Semantic semantic,
+            const std::uintptr_t identity,
+            const std::uint64_t frame,
+            const bool produced,
+            const bool consumed,
+            const bool currentAvailable,
+            const bool previousAvailable,
+            const std::uint64_t epoch,
+            const char* const reason)
+        {
+            if (!InCaptureRange(frame))
+            {
+                return;
+            }
+
+            Observation observation{};
+            observation.frame = frame;
+            observation.semantic = semantic;
+            observation.identity = identity;
+            observation.produced = produced;
+            observation.consumed = consumed;
+            observation.currentAvailable = currentAvailable;
+            observation.previousAvailable = previousAvailable;
+            observation.epoch = epoch;
+            observation.reason =
+                reason != nullptr ? reason : "";
+
+            g_captureObservations.push_back(
+                std::move(observation));
+        }
+
+        void MarkSemanticLocked(
+            const Semantic semantic,
+            const Confidence confidence,
+            const ViewBinding& binding,
+            const std::uint64_t frame,
+            const bool produced,
+            const bool consumed,
+            const bool currentAvailable,
+            const bool previousAvailable,
+            const ContentEpochKind epochKind,
+            const EnvironmentClass environmentScope,
+            const stage_scheduler::Boundary validFrom,
+            const stage_scheduler::Boundary validUntil,
+            const char* const reason)
+        {
+            if (binding.identity == 0)
+            {
+                return;
+            }
+
+            PromoteIdentityLocked(
+                semantic,
+                confidence,
+                binding,
+                frame,
+                reason);
+
+            auto& record =
+                g_semantics[SemanticIndex(semantic)];
+
+            auto& availability =
+                record.availability;
+
+            const bool firstObservationThisFrame =
+                availability.frame != frame ||
+                !availability.observedThisFrame;
+
+            if (availability.frame != frame)
+            {
+                availability.observedThisFrame = false;
+                availability.producedThisFrame = false;
+                availability.consumedThisFrame = false;
+                availability.currentFrameAvailable = false;
+                availability.previousFrameAvailable = false;
+                availability.frame = frame;
+            }
+
+            if (firstObservationThisFrame ||
+                availability.epochKind != epochKind)
+            {
+                availability.contentEpoch =
+                    ++g_epochSequence;
+            }
+
+            availability.observedThisFrame = true;
+            availability.producedThisFrame =
+                availability.producedThisFrame || produced;
+            availability.consumedThisFrame =
+                availability.consumedThisFrame || consumed;
+            availability.currentFrameAvailable =
+                availability.currentFrameAvailable ||
+                currentAvailable;
+            availability.previousFrameAvailable =
+                availability.previousFrameAvailable ||
+                previousAvailable;
+
+            availability.lastObservedFrame = frame;
+
+            if (produced)
+            {
+                availability.lastProducedFrame = frame;
+            }
+
+            if (consumed)
+            {
+                availability.lastConsumedFrame = frame;
+            }
+
+            availability.epochKind = epochKind;
+            availability.environmentScope = environmentScope;
+            availability.validFromStage = validFrom;
+            availability.validUntilStage = validUntil;
+
+            record.resource.lastSeenFrame = frame;
+
+            if (firstObservationThisFrame)
+            {
+                RecordObservationLocked(
+                    semantic,
+                    binding.identity,
+                    frame,
+                    produced,
+                    consumed,
+                    currentAvailable,
+                    previousAvailable,
+                    availability.contentEpoch,
+                    reason);
+            }
+        }
+
+        void MarkConsumedLocked(
+            const Semantic semantic,
+            const std::uint64_t frame)
+        {
+            auto& record =
+                g_semantics[SemanticIndex(semantic)];
+
+            if (record.resource.identity == 0)
+            {
+                return;
+            }
+
+            record.availability.consumedThisFrame = true;
+            record.availability.lastConsumedFrame = frame;
+        }
+
         std::uintptr_t ResourceIdLocked(
             const Semantic semantic)
         {
             return
-                g_resources[
-                    SemanticIndex(semantic)]
-                    .identity;
+                g_semantics[SemanticIndex(semantic)]
+                    .resource.identity;
+        }
+
+        ViewBinding BindingFromRecordLocked(
+            const Semantic semantic)
+        {
+            ViewBinding binding{};
+
+            const auto& resource =
+                g_semantics[SemanticIndex(semantic)]
+                    .resource;
+
+            binding.identity = resource.identity;
+            binding.shape.dimension = resource.dimension;
+            binding.shape.width = resource.width;
+            binding.shape.height = resource.height;
+            binding.shape.depth = resource.depth;
+            binding.shape.mipLevels = resource.mipLevels;
+            binding.shape.arraySize = resource.arraySize;
+            binding.shape.format = resource.format;
+            binding.shape.bindFlags = resource.bindFlags;
+
+            return binding;
         }
 
         bool ConflictsWithOutputsLocked(
@@ -874,14 +1160,11 @@ namespace gzfx::render::semantic_authority
                 return false;
             }
 
-            for (const auto& stage :
-                 g_state.srvs)
+            for (const auto& stage : g_state.srvs)
             {
-                for (const auto& binding :
-                     stage)
+                for (const auto& binding : stage)
                 {
-                    if (binding.identity ==
-                        identity)
+                    if (binding.identity == identity)
                     {
                         return true;
                     }
@@ -893,15 +1176,11 @@ namespace gzfx::render::semantic_authority
 
         ViewBinding FindFullResolutionReadLocked(
             const DXGI_FORMAT format,
-            const std::array<
-                std::uintptr_t,
-                8>& exclusions)
+            const std::array<std::uintptr_t, 8>& exclusions)
         {
-            for (const auto& stage :
-                 g_state.srvs)
+            for (const auto& stage : g_state.srvs)
             {
-                for (const auto& binding :
-                     stage)
+                for (const auto& binding : stage)
                 {
                     if (!IsFullResolutionFormat(
                             binding,
@@ -912,12 +1191,10 @@ namespace gzfx::render::semantic_authority
 
                     bool excluded = false;
 
-                    for (const auto identity :
-                         exclusions)
+                    for (const auto identity : exclusions)
                     {
                         if (identity != 0 &&
-                            binding.identity ==
-                                identity)
+                            binding.identity == identity)
                         {
                             excluded = true;
                             break;
@@ -942,36 +1219,30 @@ namespace gzfx::render::semantic_authority
 
             if (compute)
             {
-                for (const auto& binding :
-                     g_state.csUavs)
+                for (const auto& binding : g_state.csUavs)
                 {
                     if (binding.identity != 0)
                     {
-                        writes.push_back(
-                            binding);
+                        writes.push_back(binding);
                     }
                 }
 
                 return writes;
             }
 
-            for (const auto& binding :
-                 g_state.rtvs)
+            for (const auto& binding : g_state.rtvs)
             {
                 if (binding.identity != 0)
                 {
-                    writes.push_back(
-                        binding);
+                    writes.push_back(binding);
                 }
             }
 
-            for (const auto& binding :
-                 g_state.omUavs)
+            for (const auto& binding : g_state.omUavs)
             {
                 if (binding.identity != 0)
                 {
-                    writes.push_back(
-                        binding);
+                    writes.push_back(binding);
                 }
             }
 
@@ -1039,7 +1310,7 @@ namespace gzfx::render::semantic_authority
                     DXGI_FORMAT_R24G8_TYPELESS;
         }
 
-        void PromoteMainMrtLocked(
+        void ObserveMainMrtLocked(
             const std::uint64_t frame)
         {
             if (!MainMrtBoundLocked())
@@ -1053,39 +1324,81 @@ namespace gzfx::render::semantic_authority
             g_screenHeight =
                 g_state.rtvs[0].shape.height;
 
-            PromoteLocked(
+            using B = stage_scheduler::Boundary;
+
+            MarkSemanticLocked(
                 Semantic::SceneColorHDR,
                 Confidence::Verified,
                 g_state.rtvs[0],
                 frame,
+                true,
+                false,
+                true,
+                false,
+                ContentEpochKind::CurrentFrame,
+                EnvironmentClass::UnknownTransition,
+                B::AfterOpaqueWorldMRT,
+                B::UiPresent,
                 "four_target_opaque_mrt_rt0");
 
-            PromoteLocked(
+            MarkSemanticLocked(
                 Semantic::MotionVectors,
                 Confidence::Verified,
                 g_state.rtvs[1],
                 frame,
+                true,
+                false,
+                true,
+                false,
+                ContentEpochKind::CurrentFrame,
+                EnvironmentClass::UnknownTransition,
+                B::AfterOpaqueWorldMRT,
+                B::AfterGlobalTAA,
                 "four_target_opaque_mrt_rt1");
 
-            PromoteLocked(
+            MarkSemanticLocked(
                 Semantic::NativeNormalMask,
                 Confidence::Verified,
                 g_state.rtvs[2],
                 frame,
+                true,
+                false,
+                true,
+                false,
+                ContentEpochKind::CurrentFrame,
+                EnvironmentClass::UnknownTransition,
+                B::AfterOpaqueWorldMRT,
+                B::AfterAmbientScreenSpaceComposite,
                 "four_target_opaque_mrt_rt2");
 
-            PromoteLocked(
+            MarkSemanticLocked(
                 Semantic::AuxiliaryRT3,
                 Confidence::Verified,
                 g_state.rtvs[3],
                 frame,
+                true,
+                false,
+                true,
+                false,
+                ContentEpochKind::CurrentFrame,
+                EnvironmentClass::UnknownTransition,
+                B::AfterOpaqueWorldMRT,
+                B::AfterAmbientScreenSpaceComposite,
                 "four_target_opaque_mrt_rt3");
 
-            PromoteLocked(
-                Semantic::MainDepth,
+            MarkSemanticLocked(
+                Semantic::MainDepthCurrent,
                 Confidence::Verified,
                 g_state.dsv,
                 frame,
+                true,
+                false,
+                true,
+                false,
+                ContentEpochKind::CurrentFrame,
+                EnvironmentClass::UnknownTransition,
+                B::AfterOpaqueWorldMRT,
+                B::UiPresent,
                 "four_target_opaque_mrt_depth");
 
             g_frame.sawMainMrt = true;
@@ -1096,37 +1409,57 @@ namespace gzfx::render::semantic_authority
             const UINT mipLevels)
         {
             const UINT count =
-                std::min<UINT>(
-                    mipLevels,
-                    63);
+                std::min<UINT>(mipLevels, 63);
 
             if (count == 0)
             {
                 return 0;
             }
 
+            return (1ull << count) - 1ull;
+        }
+
+        bool IsCameraZCandidate(
+            const ViewBinding& output)
+        {
             return
-                (1ull << count) - 1ull;
+                g_screenWidth != 0 &&
+                g_screenHeight != 0 &&
+                output.identity != 0 &&
+                output.shape.dimension ==
+                    D3D11_RESOURCE_DIMENSION_TEXTURE2D &&
+                output.shape.format ==
+                    DXGI_FORMAT_R32_FLOAT &&
+                output.shape.width == g_screenWidth &&
+                output.shape.height == g_screenHeight &&
+                output.shape.mipLevels >= 8 &&
+                output.firstMip >= 0 &&
+                output.firstMip < 63;
+        }
+
+        bool BeginsCameraZLocked(
+            const bool compute)
+        {
+            const auto writes =
+                CurrentWritesLocked(compute);
+
+            for (const auto& output : writes)
+            {
+                if (IsCameraZCandidate(output) &&
+                    output.firstMip == 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         bool ObserveCameraZWriteLocked(
             const ViewBinding& output,
             const std::uint64_t frame)
         {
-            if (g_screenWidth == 0 ||
-                g_screenHeight == 0 ||
-                output.identity == 0 ||
-                output.shape.dimension !=
-                    D3D11_RESOURCE_DIMENSION_TEXTURE2D ||
-                output.shape.format !=
-                    DXGI_FORMAT_R32_FLOAT ||
-                output.shape.width !=
-                    g_screenWidth ||
-                output.shape.height !=
-                    g_screenHeight ||
-                output.shape.mipLevels < 8 ||
-                output.firstMip < 0 ||
-                output.firstMip >= 63)
+            if (!IsCameraZCandidate(output))
             {
                 return false;
             }
@@ -1136,36 +1469,50 @@ namespace gzfx::render::semantic_authority
             {
                 g_frame.cameraZCandidate =
                     output.identity;
-
                 g_frame.cameraZMipMask = 0;
+                g_frame.cameraZCompleteSignaled = false;
             }
 
             g_frame.cameraZMipMask |=
                 1ull <<
-                static_cast<UINT>(
-                    output.firstMip);
+                static_cast<UINT>(output.firstMip);
 
             const std::uint64_t required =
                 RequiredMipMask(
                     output.shape.mipLevels);
 
-            if (required != 0 &&
-                (g_frame.cameraZMipMask &
-                    required) == required)
+            if (required == 0 ||
+                (g_frame.cameraZMipMask & required) != required)
             {
-                const bool promoted =
-                    PromoteLocked(
-                        Semantic::CameraZ,
-                        Confidence::Verified,
-                        output,
-                        frame,
-                        "full_resolution_r32_12_mip_hierarchy");
-
-                g_frame.sawCameraZ = true;
-                return promoted;
+                return false;
             }
 
-            return false;
+            using B = stage_scheduler::Boundary;
+
+            MarkSemanticLocked(
+                Semantic::StockCameraZ,
+                Confidence::Verified,
+                output,
+                frame,
+                true,
+                false,
+                true,
+                false,
+                ContentEpochKind::CurrentFrame,
+                EnvironmentClass::UnknownTransition,
+                B::AfterCameraZ,
+                B::AfterAmbientScreenSpaceComposite,
+                "complete_r32_cameraz_mip_hierarchy");
+
+            g_frame.sawCameraZ = true;
+
+            if (g_frame.cameraZCompleteSignaled)
+            {
+                return false;
+            }
+
+            g_frame.cameraZCompleteSignaled = true;
+            return true;
         }
 
         bool IsVolumetricDensity(
@@ -1197,25 +1544,31 @@ namespace gzfx::render::semantic_authority
                 ResourceIdLocked(
                     Semantic::VolumetricDensityA);
 
-            if (first == 0 ||
-                first == output.identity)
-            {
-                PromoteLocked(
-                    Semantic::VolumetricDensityA,
-                    Confidence::Verified,
-                    output,
-                    frame,
-                    "exterior_3d_r16_density_volume");
+            const Semantic semantic =
+                first == 0 ||
+                first == output.identity
+                    ? Semantic::VolumetricDensityA
+                    : Semantic::VolumetricDensityB;
 
-                return;
-            }
+            using B = stage_scheduler::Boundary;
 
-            PromoteLocked(
-                Semantic::VolumetricDensityB,
+            MarkSemanticLocked(
+                semantic,
                 Confidence::Verified,
                 output,
                 frame,
-                "exterior_3d_r16_density_ping_pong");
+                true,
+                false,
+                true,
+                false,
+                ContentEpochKind::CurrentFrame,
+                EnvironmentClass::Exterior,
+                B::AfterOpaqueWorldMRT,
+                B::AfterVolumetricApply,
+                semantic ==
+                        Semantic::VolumetricDensityA
+                    ? "exterior_3d_r16_density_volume"
+                    : "exterior_3d_r16_density_ping_pong");
         }
 
         bool ObserveRawAOLocked(
@@ -1231,7 +1584,7 @@ namespace gzfx::render::semantic_authority
 
             const auto cameraZ =
                 ResourceIdLocked(
-                    Semantic::CameraZ);
+                    Semantic::StockCameraZ);
 
             const auto motion =
                 ResourceIdLocked(
@@ -1251,22 +1604,16 @@ namespace gzfx::render::semantic_authority
                 return false;
             }
 
-            const std::array<
-                std::uintptr_t,
-                8> exclusions =
+            const std::array<std::uintptr_t, 8> exclusions =
             {
                 output.identity,
                 cameraZ,
                 motion,
                 normal,
-                ResourceIdLocked(
-                    Semantic::AuxiliaryRT3),
-                ResourceIdLocked(
-                    Semantic::SceneColorHDR),
-                ResourceIdLocked(
-                    Semantic::AOFilterTemp),
-                ResourceIdLocked(
-                    Semantic::AOFiltered)
+                ResourceIdLocked(Semantic::AuxiliaryRT3),
+                ResourceIdLocked(Semantic::SceneColorHDR),
+                ResourceIdLocked(Semantic::AOFilterTemp),
+                ResourceIdLocked(Semantic::AOFiltered)
             };
 
             const auto previous =
@@ -1279,26 +1626,43 @@ namespace gzfx::render::semantic_authority
                 return false;
             }
 
-            PromoteLocked(
+            using B = stage_scheduler::Boundary;
+
+            MarkSemanticLocked(
                 Semantic::RawAOPrevious,
                 Confidence::Strong,
                 previous,
                 frame,
+                false,
+                true,
+                false,
+                true,
+                ContentEpochKind::PreviousFrameHistory,
+                EnvironmentClass::UnknownTransition,
+                B::AfterCameraZ,
+                B::AfterStockAO,
                 "cameraz_normal_motion_previous_ao_read");
 
-            const bool promoted =
-                PromoteLocked(
-                    Semantic::RawAOCurrent,
-                    Confidence::Strong,
-                    output,
-                    frame,
-                    "cameraz_normal_motion_temporal_ao_write");
+            MarkSemanticLocked(
+                Semantic::RawAOCurrent,
+                Confidence::Strong,
+                output,
+                frame,
+                true,
+                false,
+                true,
+                false,
+                ContentEpochKind::CurrentFrame,
+                EnvironmentClass::UnknownTransition,
+                B::AfterCameraZ,
+                B::AfterStockAO,
+                "cameraz_normal_motion_temporal_ao_write");
 
             g_frame.sawAO = true;
             g_frame.aoFilterStep = 0;
             g_frame.aoFilterTemp = 0;
 
-            return promoted;
+            return true;
         }
 
         bool ObserveAOFilterLocked(
@@ -1317,37 +1681,53 @@ namespace gzfx::render::semantic_authority
                 ResourceIdLocked(
                     Semantic::RawAOCurrent);
 
+            using B = stage_scheduler::Boundary;
+
             if (g_frame.aoFilterStep == 0 &&
                 raw != 0 &&
                 ReadsLocked(raw) &&
                 output.identity != raw)
             {
-                PromoteLocked(
+                MarkSemanticLocked(
                     Semantic::AOFilterTemp,
                     Confidence::Strong,
                     output,
                     frame,
+                    true,
+                    false,
+                    true,
+                    false,
+                    ContentEpochKind::CurrentFrame,
+                    EnvironmentClass::UnknownTransition,
+                    B::AfterCameraZ,
+                    B::AfterStockAO,
                     "first_temporal_ao_filter");
 
                 g_frame.aoFilterTemp =
                     output.identity;
-
                 g_frame.aoFilterStep = 1;
+
                 return true;
             }
 
             if (g_frame.aoFilterStep == 1 &&
                 g_frame.aoFilterTemp != 0 &&
-                ReadsLocked(
-                    g_frame.aoFilterTemp) &&
-                output.identity !=
-                    g_frame.aoFilterTemp)
+                ReadsLocked(g_frame.aoFilterTemp) &&
+                output.identity != g_frame.aoFilterTemp)
             {
-                PromoteLocked(
+                MarkSemanticLocked(
                     Semantic::AOFiltered,
                     Confidence::Strong,
                     output,
                     frame,
+                    true,
+                    false,
+                    true,
+                    false,
+                    ContentEpochKind::CurrentFrame,
+                    EnvironmentClass::UnknownTransition,
+                    B::AfterStockAO,
+                    B::AfterAmbientScreenSpaceComposite,
                     "second_temporal_ao_filter");
 
                 g_frame.aoFilterStep = 2;
@@ -1355,10 +1735,8 @@ namespace gzfx::render::semantic_authority
 
                 stages.push_back(
                     PendingStage{
-                        stage_scheduler::Boundary::
-                            AfterStockAO,
-                        stage_scheduler::Phase::
-                            AfterExecution,
+                        B::AfterStockAO,
+                        stage_scheduler::Phase::AfterExecution,
                         "two_pass_temporal_ao_filter_complete"
                     });
 
@@ -1381,7 +1759,7 @@ namespace gzfx::render::semantic_authority
 
             const auto cameraZ =
                 ResourceIdLocked(
-                    Semantic::CameraZ);
+                    Semantic::StockCameraZ);
 
             const auto scene =
                 ResourceIdLocked(
@@ -1401,24 +1779,33 @@ namespace gzfx::render::semantic_authority
                 return false;
             }
 
-            return
-                PromoteLocked(
-                    Semantic::RawIndirect,
-                    Confidence::Strong,
-                    output,
-                    frame,
-                    "cameraz_hdr_aux_raw_indirect_write");
+            using B = stage_scheduler::Boundary;
+
+            MarkSemanticLocked(
+                Semantic::RawIndirect,
+                Confidence::Strong,
+                output,
+                frame,
+                true,
+                false,
+                true,
+                false,
+                ContentEpochKind::CurrentFrame,
+                EnvironmentClass::UnknownTransition,
+                B::AfterStockAO,
+                B::AfterAmbientScreenSpaceComposite,
+                "cameraz_hdr_aux_raw_indirect_write");
+
+            return true;
         }
 
         bool HasDepthArrayReadLocked(
             const UINT minWidth,
             const UINT minArray)
         {
-            for (const auto& stage :
-                 g_state.srvs)
+            for (const auto& stage : g_state.srvs)
             {
-                for (const auto& binding :
-                     stage)
+                for (const auto& binding : stage)
                 {
                     if (binding.identity == 0)
                     {
@@ -1460,26 +1847,34 @@ namespace gzfx::render::semantic_authority
 
             const auto depth =
                 ResourceIdLocked(
-                    Semantic::MainDepth);
+                    Semantic::MainDepthCurrent);
 
             if (depth == 0 ||
                 !ReadsLocked(depth) ||
-                !HasDepthArrayReadLocked(
-                    2048,
-                    2))
+                !HasDepthArrayReadLocked(2048, 2))
             {
                 return;
             }
 
-            PromoteLocked(
+            using B = stage_scheduler::Boundary;
+
+            MarkSemanticLocked(
                 Semantic::ShadowMask,
                 Confidence::Strong,
                 output,
                 frame,
+                true,
+                false,
+                true,
+                false,
+                ContentEpochKind::CurrentFrame,
+                EnvironmentClass::UnknownTransition,
+                B::AfterShadowProduction,
+                B::AfterAmbientScreenSpaceComposite,
                 "full_resolution_mask_from_depth_and_shadow_arrays");
         }
 
-        bool IsLightingCompositeLocked()
+        bool IsAmbientScreenSpaceCompositeLocked()
         {
             const auto scene =
                 ResourceIdLocked(
@@ -1502,8 +1897,7 @@ namespace gzfx::render::semantic_authority
 
             bool writesScene = false;
 
-            for (const auto& output :
-                 g_state.rtvs)
+            for (const auto& output : g_state.rtvs)
             {
                 if (output.identity == scene)
                 {
@@ -1514,11 +1908,9 @@ namespace gzfx::render::semantic_authority
 
             if (!writesScene)
             {
-                for (const auto& output :
-                     g_state.omUavs)
+                for (const auto& output : g_state.omUavs)
                 {
-                    if (output.identity ==
-                        scene)
+                    if (output.identity == scene)
                     {
                         writesScene = true;
                         break;
@@ -1530,6 +1922,123 @@ namespace gzfx::render::semantic_authority
                 writesScene &&
                 ReadsLocked(rawIndirect) &&
                 ReadsLocked(ao);
+        }
+
+        bool IsFullResolutionR16OutputLocked()
+        {
+            for (const auto& output : g_state.rtvs)
+            {
+                if (IsFullResolutionFormat(
+                        output,
+                        DXGI_FORMAT_R16_FLOAT))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        bool DetectVolumetricApplyLocked(
+            const std::uint64_t frame)
+        {
+            const auto pixel =
+                StageIndex(ShaderStage::Pixel);
+
+            const auto& slots =
+                g_state.srvs[pixel];
+
+            const auto mainDepth =
+                ResourceIdLocked(
+                    Semantic::MainDepthCurrent);
+
+            const auto motion =
+                ResourceIdLocked(
+                    Semantic::MotionVectors);
+
+            if (mainDepth == 0 ||
+                motion == 0 ||
+                !IsFullResolutionR16OutputLocked())
+            {
+                return false;
+            }
+
+            const auto& depthCurrent = slots[0];
+            const auto& volume = slots[2];
+            const auto& repartition = slots[3];
+            const auto& motionRead = slots[5];
+            const auto& previousDepth = slots[6];
+
+            const bool matches =
+                depthCurrent.identity == mainDepth &&
+                volume.identity != 0 &&
+                IsVolumetricDensity(volume) &&
+                repartition.identity != 0 &&
+                repartition.shape.dimension ==
+                    D3D11_RESOURCE_DIMENSION_TEXTURE1D &&
+                repartition.shape.format ==
+                    DXGI_FORMAT_R32_FLOAT &&
+                motionRead.identity == motion &&
+                previousDepth.identity != 0 &&
+                previousDepth.identity != mainDepth &&
+                IsDepthLike(previousDepth);
+
+            if (!matches)
+            {
+                return false;
+            }
+
+            using B = stage_scheduler::Boundary;
+
+            MarkSemanticLocked(
+                Semantic::VolumetricPreviousDepth,
+                Confidence::Verified,
+                previousDepth,
+                frame,
+                false,
+                true,
+                false,
+                true,
+                ContentEpochKind::PreviousFrameHistory,
+                EnvironmentClass::Exterior,
+                B::BeforeVolumetricApply,
+                B::PublishPreWaterDepth,
+                "volumetric_apply_previous_depth_t6");
+
+            g_frame.volumetricApplyPending = true;
+            g_frame.volumetricPreviousDepthIdentity =
+                previousDepth.identity;
+            g_frame.sawVolumetric = true;
+
+            return true;
+        }
+
+        void RecordEpochTransitionLocked(
+            const std::uint64_t frame,
+            const std::uintptr_t identity,
+            const Semantic from,
+            const Semantic to,
+            const std::uint64_t fromEpoch,
+            const std::uint64_t toEpoch,
+            const char* const event)
+        {
+            if (!InCaptureRange(frame))
+            {
+                return;
+            }
+
+            EpochTransition transition{};
+            transition.frame = frame;
+            transition.identity = identity;
+            transition.from = from;
+            transition.to = to;
+            transition.fromEpoch = fromEpoch;
+            transition.toEpoch = toEpoch;
+            transition.event =
+                event != nullptr ? event : "";
+
+            g_captureEpochTransitions.push_back(
+                std::move(transition));
         }
 
         void SignalStages(
@@ -1552,7 +2061,6 @@ namespace gzfx::render::semantic_authority
             const std::uintptr_t value)
         {
             std::ostringstream stream;
-
             stream
                 << "0x"
                 << std::hex
@@ -1560,6 +2068,11 @@ namespace gzfx::render::semantic_authority
                 << value;
 
             return stream.str();
+        }
+
+        const char* BoolText(const bool value)
+        {
+            return value ? "1" : "0";
         }
 
         void WriteSnapshotLocked(
@@ -1584,8 +2097,7 @@ namespace gzfx::render::semantic_authority
             std::ofstream out(
                 root /
                     (
-                        std::wstring(
-                            L"semantic_authority") +
+                        std::wstring(L"semantic_authority") +
                         suffix +
                         L".txt"
                     ),
@@ -1602,8 +2114,7 @@ namespace gzfx::render::semantic_authority
                 << g_snapshotFrame
                 << "\n"
                 << "environment="
-                << EnvironmentName(
-                    g_environment)
+                << EnvironmentName(g_environment)
                 << "\n"
                 << "screen="
                 << g_screenWidth
@@ -1618,17 +2129,18 @@ namespace gzfx::render::semantic_authority
                 << "\n\n";
 
             out
+                << "[session_identity_registry]\n"
                 << "semantic,confidence,identity,generation,"
                    "first_seen_frame,last_seen_frame,"
                    "dimension,width,height,depth,mips,array_size,"
                    "format,bind_flags\n";
 
             for (std::size_t i = 0;
-                 i < g_resources.size();
+                 i < g_semantics.size();
                  ++i)
             {
                 const auto& resource =
-                    g_resources[i];
+                    g_semantics[i].resource;
 
                 if (resource.identity == 0)
                 {
@@ -1639,11 +2151,9 @@ namespace gzfx::render::semantic_authority
                     << SemanticName(
                         static_cast<Semantic>(i))
                     << ","
-                    << ConfidenceName(
-                        resource.confidence)
+                    << ConfidenceName(resource.confidence)
                     << ","
-                    << PointerText(
-                        resource.identity)
+                    << PointerText(resource.identity)
                     << ","
                     << resource.generation
                     << ","
@@ -1651,9 +2161,8 @@ namespace gzfx::render::semantic_authority
                     << ","
                     << resource.lastSeenFrame
                     << ","
-                    << static_cast<
-                        std::uint32_t>(
-                            resource.dimension)
+                    << static_cast<std::uint32_t>(
+                        resource.dimension)
                     << ","
                     << resource.width
                     << ","
@@ -1665,16 +2174,117 @@ namespace gzfx::render::semantic_authority
                     << ","
                     << resource.arraySize
                     << ","
-                    << static_cast<
-                        std::uint32_t>(
-                            resource.format)
+                    << static_cast<std::uint32_t>(
+                        resource.format)
                     << ","
                     << resource.bindFlags
                     << "\n";
             }
 
             out
-                << "\ncapture_promotions:\n"
+                << "\n[current_frame_semantic_views]\n"
+                << "semantic,identity,frame,current_available,"
+                   "previous_available,observed,produced,consumed,"
+                   "last_observed,last_produced,last_consumed,"
+                   "epoch,epoch_kind,environment_scope,"
+                   "valid_from,valid_until\n";
+
+            for (std::size_t i = 0;
+                 i < g_semantics.size();
+                 ++i)
+            {
+                const auto semantic =
+                    static_cast<Semantic>(i);
+
+                const auto& record =
+                    g_semantics[i];
+
+                if (record.resource.identity == 0)
+                {
+                    continue;
+                }
+
+                const auto& availability =
+                    record.availability;
+
+                out
+                    << SemanticName(semantic)
+                    << ","
+                    << PointerText(
+                        record.resource.identity)
+                    << ","
+                    << availability.frame
+                    << ","
+                    << BoolText(
+                        availability.currentFrameAvailable)
+                    << ","
+                    << BoolText(
+                        availability.previousFrameAvailable)
+                    << ","
+                    << BoolText(
+                        availability.observedThisFrame)
+                    << ","
+                    << BoolText(
+                        availability.producedThisFrame)
+                    << ","
+                    << BoolText(
+                        availability.consumedThisFrame)
+                    << ","
+                    << availability.lastObservedFrame
+                    << ","
+                    << availability.lastProducedFrame
+                    << ","
+                    << availability.lastConsumedFrame
+                    << ","
+                    << availability.contentEpoch
+                    << ","
+                    << ContentEpochName(
+                        availability.epochKind)
+                    << ","
+                    << EnvironmentName(
+                        availability.environmentScope)
+                    << ","
+                    << stage_scheduler::BoundaryName(
+                        availability.validFromStage)
+                    << ","
+                    << stage_scheduler::BoundaryName(
+                        availability.validUntilStage)
+                    << "\n";
+            }
+
+            out
+                << "\n[capture_local_observations]\n"
+                << "frame,semantic,identity,produced,consumed,"
+                   "current_available,previous_available,epoch,reason\n";
+
+            for (const auto& observation :
+                 g_captureObservations)
+            {
+                out
+                    << observation.frame
+                    << ","
+                    << SemanticName(observation.semantic)
+                    << ","
+                    << PointerText(observation.identity)
+                    << ","
+                    << BoolText(observation.produced)
+                    << ","
+                    << BoolText(observation.consumed)
+                    << ","
+                    << BoolText(
+                        observation.currentAvailable)
+                    << ","
+                    << BoolText(
+                        observation.previousAvailable)
+                    << ","
+                    << observation.epoch
+                    << ","
+                    << observation.reason
+                    << "\n";
+            }
+
+            out
+                << "\n[capture_local_promotions]\n"
                 << "frame,semantic,confidence,identity,"
                    "generation,reason\n";
 
@@ -1684,18 +2294,40 @@ namespace gzfx::render::semantic_authority
                 out
                     << promotion.frame
                     << ","
-                    << SemanticName(
-                        promotion.semantic)
+                    << SemanticName(promotion.semantic)
                     << ","
                     << ConfidenceName(
                         promotion.confidence)
                     << ","
-                    << PointerText(
-                        promotion.identity)
+                    << PointerText(promotion.identity)
                     << ","
                     << promotion.generation
                     << ","
                     << promotion.reason
+                    << "\n";
+            }
+
+            out
+                << "\n[content_epoch_transitions]\n"
+                << "frame,identity,from,to,from_epoch,to_epoch,event\n";
+
+            for (const auto& transition :
+                 g_captureEpochTransitions)
+            {
+                out
+                    << transition.frame
+                    << ","
+                    << PointerText(transition.identity)
+                    << ","
+                    << SemanticName(transition.from)
+                    << ","
+                    << SemanticName(transition.to)
+                    << ","
+                    << transition.fromEpoch
+                    << ","
+                    << transition.toEpoch
+                    << ","
+                    << transition.event
                     << "\n";
             }
         }
@@ -1708,8 +2340,8 @@ namespace gzfx::render::semantic_authority
         {
         case Semantic::SceneColorHDR:
             return "MAIN_HDR";
-        case Semantic::MainDepth:
-            return "MAIN_DEPTH";
+        case Semantic::MainDepthCurrent:
+            return "MAIN_DEPTH_CURRENT";
         case Semantic::MotionVectors:
             return "MOTION";
         case Semantic::NativeNormalMask:
@@ -1718,10 +2350,8 @@ namespace gzfx::render::semantic_authority
             return "AUXILIARY_RT3";
         case Semantic::DepthEarlyCopy:
             return "DEPTH_EARLY_COPY";
-        case Semantic::OpaqueFinalDepth:
-            return "OPAQUE_FINAL_DEPTH";
-        case Semantic::CameraZ:
-            return "CAMERAZ";
+        case Semantic::StockCameraZ:
+            return "STOCK_CAMERAZ";
         case Semantic::RawAOCurrent:
             return "SAO_RAWAO_CURRENT";
         case Semantic::RawAOPrevious:
@@ -1738,6 +2368,10 @@ namespace gzfx::render::semantic_authority
             return "VOLUMETRIC_DENSITY_A";
         case Semantic::VolumetricDensityB:
             return "VOLUMETRIC_DENSITY_B";
+        case Semantic::VolumetricPreviousDepth:
+            return "VOLUMETRIC_PREVIOUS_DEPTH";
+        case Semantic::PreWaterDepthCurrent:
+            return "PRE_WATER_DEPTH_CURRENT";
         case Semantic::ReducedReflectionLighting:
             return "REDUCED_REFLECTION_LIGHTING";
         case Semantic::ReducedTemporalLightingHistory:
@@ -1780,22 +2414,56 @@ namespace gzfx::render::semantic_authority
         }
     }
 
+    const char* QueryModeName(
+        const QueryMode mode) noexcept
+    {
+        switch (mode)
+        {
+        case QueryMode::CurrentFrame:
+            return "current_frame";
+        case QueryMode::PreviousFrameHistory:
+            return "previous_frame_history";
+        case QueryMode::PersistentIdentity:
+            return "persistent_identity";
+        case QueryMode::DiagnosticAnyKnown:
+            return "diagnostic_any_known";
+        default:
+            return "unknown";
+        }
+    }
+
+    const char* ContentEpochName(
+        const ContentEpochKind epoch) noexcept
+    {
+        switch (epoch)
+        {
+        case ContentEpochKind::CurrentFrame:
+            return "current_frame";
+        case ContentEpochKind::PreviousFrameHistory:
+            return "previous_frame_history";
+        case ContentEpochKind::PreWaterCurrent:
+            return "pre_water_current";
+        case ContentEpochKind::Unknown:
+        default:
+            return "unknown";
+        }
+    }
+
     void SetShader(
         const ShaderStage stage,
         ID3D11DeviceChild* const shader) noexcept
     {
         try
         {
-            if (StageIndex(stage) >=
-                g_state.shaders.size())
+            const auto index = StageIndex(stage);
+
+            if (index >= g_state.shaders.size())
             {
                 return;
             }
 
             std::scoped_lock lock(g_mutex);
-
-            g_state.shaders[
-                StageIndex(stage)] =
+            g_state.shaders[index] =
                 CanonicalId(shader);
         }
         catch (...)
@@ -1811,24 +2479,19 @@ namespace gzfx::render::semantic_authority
     {
         try
         {
-            const auto index =
-                StageIndex(stage);
+            const auto index = StageIndex(stage);
 
-            if (index >=
-                g_state.srvs.size())
+            if (index >= g_state.srvs.size())
             {
                 return;
             }
 
             std::scoped_lock lock(g_mutex);
-
-            auto& slots =
-                g_state.srvs[index];
+            auto& slots = g_state.srvs[index];
 
             for (UINT i = 0;
                  i < count &&
-                 startSlot + i <
-                    slots.size();
+                 startSlot + i < slots.size();
                  ++i)
             {
                 const auto binding =
@@ -1874,15 +2537,15 @@ namespace gzfx::render::semantic_authority
             }
 
             g_state.dsv =
-                DescribeDsv(
-                    depthTarget);
+                DescribeDsv(depthTarget);
 
             for (const auto& output : g_state.rtvs)
             {
                 UnbindReadsForOutputLocked(output);
             }
 
-            UnbindReadsForOutputLocked(g_state.dsv);
+            UnbindReadsForOutputLocked(
+                g_state.dsv);
         }
         catch (...)
         {
@@ -1919,15 +2582,17 @@ namespace gzfx::render::semantic_authority
                 }
 
                 g_state.dsv =
-                    DescribeDsv(
-                        depthTarget);
+                    DescribeDsv(depthTarget);
 
-                for (const auto& output : g_state.rtvs)
+                for (const auto& output :
+                     g_state.rtvs)
                 {
-                    UnbindReadsForOutputLocked(output);
+                    UnbindReadsForOutputLocked(
+                        output);
                 }
 
-                UnbindReadsForOutputLocked(g_state.dsv);
+                UnbindReadsForOutputLocked(
+                    g_state.dsv);
             }
 
             if (uavStartSlot !=
@@ -2043,18 +2708,41 @@ namespace gzfx::render::semantic_authority
                 std::scoped_lock lock(g_mutex);
                 EnsureFrameLocked(frame);
 
-                if (IsLightingCompositeLocked())
+                if (g_frame.sawMainMrt &&
+                    !g_frame.opaqueWorldMrtSignaled &&
+                    BeginsCameraZLocked(false))
                 {
-                    g_frame.lightingCompositePending =
-                        true;
-
-                    g_frame.lightingCompositeOrdinal =
-                        ordinal;
+                    g_frame.opaqueWorldMrtSignaled = true;
 
                     stages.push_back(
                         PendingStage{
                             stage_scheduler::Boundary::
-                                BeforeIndirectLightingComposite,
+                                AfterOpaqueWorldMRT,
+                            stage_scheduler::Phase::
+                                Landmark,
+                            "main_opaque_mrt_complete_before_cameraz"
+                        });
+                }
+
+                if (IsAmbientScreenSpaceCompositeLocked())
+                {
+                    g_frame.ambientCompositePending =
+                        true;
+                    g_frame.ambientCompositeOrdinal =
+                        ordinal;
+
+                    MarkConsumedLocked(
+                        Semantic::RawIndirect,
+                        frame);
+
+                    MarkConsumedLocked(
+                        Semantic::AOFiltered,
+                        frame);
+
+                    stages.push_back(
+                        PendingStage{
+                            stage_scheduler::Boundary::
+                                BeforeAmbientScreenSpaceComposite,
                             stage_scheduler::Phase::
                                 BeforeExecution,
                             "raw_indirect_and_filtered_ao_to_main_hdr"
@@ -2063,18 +2751,30 @@ namespace gzfx::render::semantic_authority
                     stages.push_back(
                         PendingStage{
                             stage_scheduler::Boundary::
-                                AtLightingComposite,
+                                AtAmbientScreenSpaceComposite,
                             stage_scheduler::Phase::
                                 BeforeExecution,
-                            "lighting_composite_execution"
+                            "ambient_screen_space_composite_execution"
+                        });
+                }
+
+                if (DetectVolumetricApplyLocked(frame))
+                {
+                    g_frame.volumetricApplyOrdinal =
+                        ordinal;
+
+                    stages.push_back(
+                        PendingStage{
+                            stage_scheduler::Boundary::
+                                BeforeVolumetricApply,
+                            stage_scheduler::Phase::
+                                BeforeExecution,
+                            "volumetric_temporal_apply_with_previous_depth"
                         });
                 }
             }
 
-            SignalStages(
-                stages,
-                frame,
-                ordinal);
+            SignalStages(stages, frame, ordinal);
         }
         catch (...)
         {
@@ -2093,25 +2793,24 @@ namespace gzfx::render::semantic_authority
                 std::scoped_lock lock(g_mutex);
                 EnsureFrameLocked(frame);
 
-                PromoteMainMrtLocked(frame);
+                ObserveMainMrtLocked(frame);
 
                 const auto writes =
                     CurrentWritesLocked(false);
 
-                bool cameraZPromoted = false;
+                bool cameraZCompleted = false;
 
-                for (const auto& output :
-                     writes)
+                for (const auto& output : writes)
                 {
                     if (ObserveCameraZWriteLocked(
                             output,
                             frame))
                     {
-                        cameraZPromoted = true;
+                        cameraZCompleted = true;
                     }
                 }
 
-                if (cameraZPromoted)
+                if (cameraZCompleted)
                 {
                     stages.push_back(
                         PendingStage{
@@ -2119,14 +2818,13 @@ namespace gzfx::render::semantic_authority
                                 AfterCameraZ,
                             stage_scheduler::Phase::
                                 AfterExecution,
-                            "complete_cameraz_mip_hierarchy"
+                            "cameraz_hierarchy_complete_this_frame"
                         });
                 }
 
                 bool rawAo = false;
 
-                for (const auto& output :
-                     writes)
+                for (const auto& output : writes)
                 {
                     if (ObserveRawAOLocked(
                             output,
@@ -2139,8 +2837,7 @@ namespace gzfx::render::semantic_authority
 
                 if (!rawAo)
                 {
-                    for (const auto& output :
-                         writes)
+                    for (const auto& output : writes)
                     {
                         if (ObserveAOFilterLocked(
                                 output,
@@ -2152,8 +2849,7 @@ namespace gzfx::render::semantic_authority
                     }
                 }
 
-                for (const auto& output :
-                     writes)
+                for (const auto& output : writes)
                 {
                     ObserveRawIndirectLocked(
                         output,
@@ -2164,28 +2860,66 @@ namespace gzfx::render::semantic_authority
                         frame);
                 }
 
-                if (g_frame.lightingCompositePending &&
-                    g_frame.lightingCompositeOrdinal ==
+                if (g_frame.ambientCompositePending &&
+                    g_frame.ambientCompositeOrdinal ==
+                        ordinal)
+                {
+                    const auto sceneBinding =
+                        BindingFromRecordLocked(
+                            Semantic::SceneColorHDR);
+
+                    if (sceneBinding.identity != 0)
+                    {
+                        MarkSemanticLocked(
+                            Semantic::SceneColorHDR,
+                            Confidence::Verified,
+                            sceneBinding,
+                            frame,
+                            true,
+                            false,
+                            true,
+                            false,
+                            ContentEpochKind::CurrentFrame,
+                            EnvironmentClass::UnknownTransition,
+                            stage_scheduler::Boundary::
+                                AfterAmbientScreenSpaceComposite,
+                            stage_scheduler::Boundary::
+                                UiPresent,
+                            "ambient_screen_space_composite_writeback");
+                    }
+
+                    stages.push_back(
+                        PendingStage{
+                            stage_scheduler::Boundary::
+                                AfterAmbientScreenSpaceComposite,
+                            stage_scheduler::Phase::
+                                AfterExecution,
+                            "ambient_screen_space_composite_complete"
+                        });
+
+                    g_frame.ambientCompositePending =
+                        false;
+                }
+
+                if (g_frame.volumetricApplyPending &&
+                    g_frame.volumetricApplyOrdinal ==
                         ordinal)
                 {
                     stages.push_back(
                         PendingStage{
                             stage_scheduler::Boundary::
-                                AfterLightingComposite,
+                                AfterVolumetricApply,
                             stage_scheduler::Phase::
                                 AfterExecution,
-                            "lighting_composite_complete"
+                            "volumetric_temporal_apply_complete"
                         });
 
-                    g_frame.lightingCompositePending =
+                    g_frame.volumetricApplyPending =
                         false;
                 }
             }
 
-            SignalStages(
-                stages,
-                frame,
-                ordinal);
+            SignalStages(stages, frame, ordinal);
         }
         catch (...)
         {
@@ -2198,10 +2932,30 @@ namespace gzfx::render::semantic_authority
     {
         try
         {
-            std::scoped_lock lock(g_mutex);
-            EnsureFrameLocked(frame);
+            std::vector<PendingStage> stages;
 
-            (void)ordinal;
+            {
+                std::scoped_lock lock(g_mutex);
+                EnsureFrameLocked(frame);
+
+                if (g_frame.sawMainMrt &&
+                    !g_frame.opaqueWorldMrtSignaled &&
+                    BeginsCameraZLocked(true))
+                {
+                    g_frame.opaqueWorldMrtSignaled = true;
+
+                    stages.push_back(
+                        PendingStage{
+                            stage_scheduler::Boundary::
+                                AfterOpaqueWorldMRT,
+                            stage_scheduler::Phase::
+                                Landmark,
+                            "main_opaque_mrt_complete_before_compute_cameraz"
+                        });
+                }
+            }
+
+            SignalStages(stages, frame, ordinal);
         }
         catch (...)
         {
@@ -2223,16 +2977,15 @@ namespace gzfx::render::semantic_authority
                 const auto writes =
                     CurrentWritesLocked(true);
 
-                bool cameraZPromoted = false;
+                bool cameraZCompleted = false;
 
-                for (const auto& output :
-                     writes)
+                for (const auto& output : writes)
                 {
                     if (ObserveCameraZWriteLocked(
                             output,
                             frame))
                     {
-                        cameraZPromoted = true;
+                        cameraZCompleted = true;
                     }
 
                     ObserveVolumetricLocked(
@@ -2244,7 +2997,7 @@ namespace gzfx::render::semantic_authority
                         frame);
                 }
 
-                if (cameraZPromoted)
+                if (cameraZCompleted)
                 {
                     stages.push_back(
                         PendingStage{
@@ -2252,14 +3005,13 @@ namespace gzfx::render::semantic_authority
                                 AfterCameraZ,
                             stage_scheduler::Phase::
                                 AfterExecution,
-                            "complete_compute_cameraz_mip_hierarchy"
+                            "compute_cameraz_hierarchy_complete_this_frame"
                         });
                 }
 
                 bool rawAo = false;
 
-                for (const auto& output :
-                     writes)
+                for (const auto& output : writes)
                 {
                     if (ObserveRawAOLocked(
                             output,
@@ -2272,8 +3024,7 @@ namespace gzfx::render::semantic_authority
 
                 if (!rawAo)
                 {
-                    for (const auto& output :
-                         writes)
+                    for (const auto& output : writes)
                     {
                         if (ObserveAOFilterLocked(
                                 output,
@@ -2286,10 +3037,7 @@ namespace gzfx::render::semantic_authority
                 }
             }
 
-            SignalStages(
-                stages,
-                frame,
-                ordinal);
+            SignalStages(stages, frame, ordinal);
         }
         catch (...)
         {
@@ -2321,7 +3069,7 @@ namespace gzfx::render::semantic_authority
 
                 const auto mainDepth =
                     ResourceIdLocked(
-                        Semantic::MainDepth);
+                        Semantic::MainDepthCurrent);
 
                 if (mainDepth == 0 ||
                     sourceId != mainDepth)
@@ -2332,92 +3080,113 @@ namespace gzfx::render::semantic_authority
                 ViewBinding destinationBinding{};
                 destinationBinding.identity =
                     CanonicalId(destination);
-
                 destinationBinding.shape =
-                    DescribeResource(
-                        destination);
+                    DescribeResource(destination);
 
-                const auto main =
-                    g_resources[
-                        SemanticIndex(
-                            Semantic::MainDepth)];
-
-                ResourceShape mainShape{};
-                mainShape.dimension =
-                    main.dimension;
-                mainShape.width =
-                    main.width;
-                mainShape.height =
-                    main.height;
-                mainShape.depth =
-                    main.depth;
-                mainShape.mipLevels =
-                    main.mipLevels;
-                mainShape.arraySize =
-                    main.arraySize;
-                mainShape.format =
-                    main.format;
-                mainShape.bindFlags =
-                    main.bindFlags;
+                const auto mainBinding =
+                    BindingFromRecordLocked(
+                        Semantic::MainDepthCurrent);
 
                 if (!SameShape(
                         destinationBinding.shape,
-                        mainShape))
+                        mainBinding.shape))
                 {
                     return;
                 }
 
+                using B = stage_scheduler::Boundary;
+
                 if (g_frame.mainMrtDraws == 0 &&
                     !g_frame.earlyDepthCopySeen)
                 {
-                    PromoteLocked(
+                    MarkSemanticLocked(
                         Semantic::DepthEarlyCopy,
                         Confidence::Strong,
                         destinationBinding,
                         frame,
+                        true,
+                        false,
+                        true,
+                        false,
+                        ContentEpochKind::CurrentFrame,
+                        EnvironmentClass::UnknownTransition,
+                        B::AfterDepthPrepass,
+                        B::AfterCameraZ,
                         "main_depth_copy_before_opaque_mrt");
 
-                    g_frame.earlyDepthCopySeen =
-                        true;
+                    g_frame.earlyDepthCopySeen = true;
 
                     stages.push_back(
                         PendingStage{
-                            stage_scheduler::Boundary::
-                                AfterDepthPrepass,
+                            B::AfterDepthPrepass,
                             stage_scheduler::Phase::
                                 AfterExecution,
                             "early_main_depth_copy_complete"
                         });
                 }
                 else if (
-                    g_frame.mainMrtDraws != 0 &&
-                    !g_frame.finalDepthCopySeen)
+                    g_frame.volumetricPreviousDepthIdentity != 0 &&
+                    destinationBinding.identity ==
+                        g_frame.volumetricPreviousDepthIdentity &&
+                    !g_frame.preWaterDepthPublished)
                 {
-                    PromoteLocked(
-                        Semantic::OpaqueFinalDepth,
-                        Confidence::Strong,
+                    auto& previous =
+                        g_semantics[
+                            SemanticIndex(
+                                Semantic::VolumetricPreviousDepth)];
+
+                    const std::uint64_t fromEpoch =
+                        previous.availability.contentEpoch;
+
+                    previous.availability.previousFrameAvailable =
+                        false;
+                    previous.availability.currentFrameAvailable =
+                        false;
+                    previous.availability.validUntilStage =
+                        B::AfterVolumetricApply;
+
+                    MarkSemanticLocked(
+                        Semantic::PreWaterDepthCurrent,
+                        Confidence::Verified,
                         destinationBinding,
                         frame,
-                        "first_main_depth_copy_after_opaque_mrt");
+                        true,
+                        false,
+                        true,
+                        false,
+                        ContentEpochKind::PreWaterCurrent,
+                        EnvironmentClass::Exterior,
+                        B::PublishPreWaterDepth,
+                        B::UiPresent,
+                        "main_depth_publish_to_pre_water_depth");
 
-                    g_frame.finalDepthCopySeen =
-                        true;
+                    const auto& current =
+                        g_semantics[
+                            SemanticIndex(
+                                Semantic::PreWaterDepthCurrent)];
+
+                    RecordEpochTransitionLocked(
+                        frame,
+                        destinationBinding.identity,
+                        Semantic::VolumetricPreviousDepth,
+                        Semantic::PreWaterDepthCurrent,
+                        fromEpoch,
+                        current.availability.contentEpoch,
+                        "MAIN_DEPTH_COPY");
+
+                    g_frame.preWaterDepthPublished = true;
 
                     stages.push_back(
                         PendingStage{
-                            stage_scheduler::Boundary::
-                                AfterOpaqueGeometryFinalDepth,
+                            B::PublishPreWaterDepth,
                             stage_scheduler::Phase::
                                 AfterExecution,
-                            "finished_opaque_depth_copy_complete"
+                            "volumetric_previous_depth_to_pre_water_depth"
                         });
                 }
             }
 
-            SignalStages(
-                stages,
-                frame,
-                ordinal);
+            SignalStages(stages, frame, ordinal);
         }
         catch (...)
         {
@@ -2452,22 +3221,16 @@ namespace gzfx::render::semantic_authority
                         EnvironmentClass::Interior;
                 }
 
-                g_environment =
-                    environment;
-
-                g_snapshotFrame =
-                    frame;
+                g_environment = environment;
+                g_snapshotFrame = frame;
             }
 
             stage_scheduler::Signal(
-                stage_scheduler::Boundary::
-                    UiPresent,
-                stage_scheduler::Phase::
-                    Landmark,
+                stage_scheduler::Boundary::UiPresent,
+                stage_scheduler::Phase::Landmark,
                 frame,
                 0,
                 "frame_present");
-
         }
         catch (...)
         {
@@ -2482,14 +3245,14 @@ namespace gzfx::render::semantic_authority
 
             g_state = CurrentState{};
             g_frame = FrameState{};
-            g_resources = {};
+            g_semantics = {};
             g_environment =
-                EnvironmentClass::
-                    UnknownTransition;
+                EnvironmentClass::UnknownTransition;
 
             g_screenWidth = 0;
             g_screenHeight = 0;
             g_generation = 0;
+            g_epochSequence = 0;
             g_snapshotFrame = 0;
 
             g_srvCache.clear();
@@ -2513,20 +3276,17 @@ namespace gzfx::render::semantic_authority
             {
                 std::scoped_lock lock(g_mutex);
 
-                g_captureStart =
-                    startFrame;
-
-                g_captureEnd =
-                    endFrame;
-
+                g_captureStart = startFrame;
+                g_captureEnd = endFrame;
                 g_capturePromotions.clear();
+                g_captureObservations.clear();
+                g_captureEpochTransitions.clear();
                 g_captureActive = true;
             }
 
-            stage_scheduler::
-                BeginEvidenceCapture(
-                    startFrame,
-                    endFrame);
+            stage_scheduler::BeginEvidenceCapture(
+                startFrame,
+                endFrame);
         }
         catch (...)
         {
@@ -2546,19 +3306,103 @@ namespace gzfx::render::semantic_authority
                     return;
                 }
 
-                WriteSnapshotLocked(
-                    suffix);
+                WriteSnapshotLocked(suffix);
 
                 g_captureActive = false;
                 g_capturePromotions.clear();
+                g_captureObservations.clear();
+                g_captureEpochTransitions.clear();
             }
 
-            stage_scheduler::
-                FinishEvidenceCapture(
-                    suffix);
+            stage_scheduler::FinishEvidenceCapture(
+                suffix);
         }
         catch (...)
         {
+        }
+    }
+
+    bool QuerySemantic(
+        const Semantic semantic,
+        const QueryMode mode,
+        const std::uint64_t frame,
+        const stage_scheduler::Boundary atStage,
+        SemanticView* const outView) noexcept
+    {
+        if (outView == nullptr ||
+            semantic == Semantic::Count)
+        {
+            return false;
+        }
+
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+
+            const auto& record =
+                g_semantics[SemanticIndex(semantic)];
+
+            SemanticView view{};
+            view.semantic = semantic;
+            view.queryMode = mode;
+            view.resource = record.resource;
+            view.availability = record.availability;
+
+            bool available =
+                record.resource.identity != 0;
+
+            switch (mode)
+            {
+            case QueryMode::CurrentFrame:
+                available =
+                    available &&
+                    record.availability.frame == frame &&
+                    record.availability.currentFrameAvailable &&
+                    StageWithinValidity(
+                        record.availability,
+                        atStage);
+                break;
+
+            case QueryMode::PreviousFrameHistory:
+                available =
+                    available &&
+                    record.availability.frame == frame &&
+                    record.availability.previousFrameAvailable &&
+                    StageWithinValidity(
+                        record.availability,
+                        atStage);
+                break;
+
+            case QueryMode::PersistentIdentity:
+            case QueryMode::DiagnosticAnyKnown:
+                break;
+
+            default:
+                available = false;
+                break;
+            }
+
+            if (available &&
+                record.availability.environmentScope !=
+                    EnvironmentClass::UnknownTransition &&
+                g_snapshotFrame == frame &&
+                g_environment !=
+                    EnvironmentClass::UnknownTransition &&
+                g_environment !=
+                    record.availability.environmentScope)
+            {
+                available = false;
+            }
+
+            view.available = available;
+            *outView = view;
+
+            return available;
+        }
+        catch (...)
+        {
+            *outView = {};
+            return false;
         }
     }
 
@@ -2570,20 +3414,21 @@ namespace gzfx::render::semantic_authority
         {
             std::scoped_lock lock(g_mutex);
 
-            snapshot.frame =
-                g_snapshotFrame;
+            snapshot.frame = g_snapshotFrame;
+            snapshot.environment = g_environment;
+            snapshot.screenWidth = g_screenWidth;
+            snapshot.screenHeight = g_screenHeight;
 
-            snapshot.environment =
-                g_environment;
+            for (std::size_t i = 0;
+                 i < g_semantics.size();
+                 ++i)
+            {
+                snapshot.resources[i] =
+                    g_semantics[i].resource;
 
-            snapshot.screenWidth =
-                g_screenWidth;
-
-            snapshot.screenHeight =
-                g_screenHeight;
-
-            snapshot.resources =
-                g_resources;
+                snapshot.availability[i] =
+                    g_semantics[i].availability;
+            }
         }
         catch (...)
         {

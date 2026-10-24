@@ -3,6 +3,7 @@
 #include <d3dcompiler.h>
 #include <dxgi.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -10,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -35,15 +37,18 @@ namespace
     {
         std::error_code error;
 
-        return
-            std::filesystem::exists(
-                path,
-                error) &&
-            !error &&
-            std::filesystem::file_size(
-                path,
-                error) > 0 &&
-            !error;
+        const bool exists =
+            std::filesystem::exists(path, error);
+
+        if (!exists || error)
+        {
+            return false;
+        }
+
+        const auto size =
+            std::filesystem::file_size(path, error);
+
+        return !error && size > 0;
     }
 
     std::string ReadAll(
@@ -54,6 +59,62 @@ namespace
         return std::string(
             std::istreambuf_iterator<char>(in),
             std::istreambuf_iterator<char>());
+    }
+
+    std::size_t CountOccurrences(
+        const std::string& text,
+        const std::string& value)
+    {
+        if (value.empty())
+        {
+            return 0;
+        }
+
+        std::size_t count = 0;
+        std::size_t position = 0;
+
+        while ((position =
+                    text.find(value, position)) !=
+               std::string::npos)
+        {
+            ++count;
+            position += value.size();
+        }
+
+        return count;
+    }
+
+    std::string FindLineStartingWith(
+        const std::string& text,
+        const std::string& prefix)
+    {
+        std::istringstream stream(text);
+        std::string line;
+
+        while (std::getline(stream, line))
+        {
+            if (line.rfind(prefix, 0) == 0)
+            {
+                return line;
+            }
+        }
+
+        return {};
+    }
+
+    std::vector<std::string> SplitCsv(
+        const std::string& line)
+    {
+        std::vector<std::string> values;
+        std::stringstream stream(line);
+        std::string value;
+
+        while (std::getline(stream, value, ','))
+        {
+            values.push_back(value);
+        }
+
+        return values;
     }
 
     bool Compile(
@@ -91,6 +152,26 @@ namespace
         ID3D11Texture2D* texture = nullptr;
         ID3D11RenderTargetView* rtv = nullptr;
         ID3D11ShaderResourceView* srv = nullptr;
+    };
+
+    struct DepthTexture
+    {
+        ID3D11Texture2D* texture = nullptr;
+        ID3D11DepthStencilView* dsv = nullptr;
+        ID3D11ShaderResourceView* srv = nullptr;
+    };
+
+    struct Texture1D
+    {
+        ID3D11Texture1D* texture = nullptr;
+        ID3D11ShaderResourceView* srv = nullptr;
+    };
+
+    struct Texture3D
+    {
+        ID3D11Texture3D* texture = nullptr;
+        ID3D11ShaderResourceView* srv = nullptr;
+        ID3D11UnorderedAccessView* uav = nullptr;
     };
 
     Texture2D CreateColor(
@@ -147,12 +228,303 @@ namespace
         return result;
     }
 
-    void Release(Texture2D& texture)
+    DepthTexture CreateDepth(
+        ID3D11Device* device,
+        const UINT width,
+        const UINT height)
     {
-        if (texture.srv) texture.srv->Release();
-        if (texture.rtv) texture.rtv->Release();
-        if (texture.texture) texture.texture->Release();
-        texture = {};
+        DepthTexture result{};
+
+        D3D11_TEXTURE2D_DESC desc{};
+        desc.Width = width;
+        desc.Height = height;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags =
+            D3D11_BIND_DEPTH_STENCIL |
+            D3D11_BIND_SHADER_RESOURCE;
+
+        if (FAILED(
+                device->CreateTexture2D(
+                    &desc,
+                    nullptr,
+                    &result.texture)))
+        {
+            return {};
+        }
+
+        D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+        dsvDesc.Format =
+            DXGI_FORMAT_D24_UNORM_S8_UINT;
+        dsvDesc.ViewDimension =
+            D3D11_DSV_DIMENSION_TEXTURE2D;
+
+        if (FAILED(
+                device->CreateDepthStencilView(
+                    result.texture,
+                    &dsvDesc,
+                    &result.dsv)))
+        {
+            return {};
+        }
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+        srvDesc.Format =
+            DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+        srvDesc.ViewDimension =
+            D3D11_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels = 1;
+
+        if (FAILED(
+                device->CreateShaderResourceView(
+                    result.texture,
+                    &srvDesc,
+                    &result.srv)))
+        {
+            return {};
+        }
+
+        return result;
+    }
+
+    Texture1D CreateLookup(
+        ID3D11Device* device,
+        const UINT width)
+    {
+        Texture1D result{};
+
+        D3D11_TEXTURE1D_DESC desc{};
+        desc.Width = width;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R32_FLOAT;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        if (FAILED(
+                device->CreateTexture1D(
+                    &desc,
+                    nullptr,
+                    &result.texture)) ||
+            FAILED(
+                device->CreateShaderResourceView(
+                    result.texture,
+                    nullptr,
+                    &result.srv)))
+        {
+            return {};
+        }
+
+        return result;
+    }
+
+    Texture3D CreateVolume(
+        ID3D11Device* device)
+    {
+        Texture3D result{};
+
+        D3D11_TEXTURE3D_DESC desc{};
+        desc.Width = 320;
+        desc.Height = 192;
+        desc.Depth = 90;
+        desc.MipLevels = 1;
+        desc.Format = DXGI_FORMAT_R16_FLOAT;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags =
+            D3D11_BIND_UNORDERED_ACCESS |
+            D3D11_BIND_SHADER_RESOURCE;
+
+        if (FAILED(
+                device->CreateTexture3D(
+                    &desc,
+                    nullptr,
+                    &result.texture)) ||
+            FAILED(
+                device->CreateShaderResourceView(
+                    result.texture,
+                    nullptr,
+                    &result.srv)) ||
+            FAILED(
+                device->CreateUnorderedAccessView(
+                    result.texture,
+                    nullptr,
+                    &result.uav)))
+        {
+            return {};
+        }
+
+        return result;
+    }
+
+    void Release(Texture2D& value)
+    {
+        if (value.srv) value.srv->Release();
+        if (value.rtv) value.rtv->Release();
+        if (value.texture) value.texture->Release();
+        value = {};
+    }
+
+    void Release(DepthTexture& value)
+    {
+        if (value.srv) value.srv->Release();
+        if (value.dsv) value.dsv->Release();
+        if (value.texture) value.texture->Release();
+        value = {};
+    }
+
+    void Release(Texture1D& value)
+    {
+        if (value.srv) value.srv->Release();
+        if (value.texture) value.texture->Release();
+        value = {};
+    }
+
+    void Release(Texture3D& value)
+    {
+        if (value.uav) value.uav->Release();
+        if (value.srv) value.srv->Release();
+        if (value.texture) value.texture->Release();
+        value = {};
+    }
+
+    bool CurrentAvailabilityIs(
+        const std::string& authority,
+        const std::string& semantic,
+        const bool expected)
+    {
+        const std::string marker =
+            "[current_frame_semantic_views]\n";
+
+        const auto section =
+            authority.find(marker);
+
+        if (section == std::string::npos)
+        {
+            return false;
+        }
+
+        const auto next =
+            authority.find(
+                "\n[",
+                section + marker.size());
+
+        const std::string body =
+            authority.substr(
+                section + marker.size(),
+                next == std::string::npos
+                    ? std::string::npos
+                    : next -
+                        (section + marker.size()));
+
+        const std::string line =
+            FindLineStartingWith(
+                body,
+                semantic + ",");
+
+        if (line.empty())
+        {
+            return false;
+        }
+
+        const auto fields = SplitCsv(line);
+
+        if (fields.size() < 4)
+        {
+            return false;
+        }
+
+        return fields[3] ==
+            (expected ? "1" : "0");
+    }
+
+    bool CaptureObservationFramesBounded(
+        const std::string& authority)
+    {
+        const auto startLine =
+            FindLineStartingWith(
+                authority,
+                "capture_start=");
+
+        const auto endLine =
+            FindLineStartingWith(
+                authority,
+                "capture_end=");
+
+        if (startLine.empty() ||
+            endLine.empty())
+        {
+            return false;
+        }
+
+        const std::uint64_t start =
+            std::stoull(
+                startLine.substr(
+                    std::strlen("capture_start=")));
+
+        const std::uint64_t end =
+            std::stoull(
+                endLine.substr(
+                    std::strlen("capture_end=")));
+
+        const std::string marker =
+            "[capture_local_observations]\n";
+
+        const auto section =
+            authority.find(marker);
+
+        if (section == std::string::npos)
+        {
+            return false;
+        }
+
+        const auto next =
+            authority.find(
+                "\n[",
+                section + marker.size());
+
+        const std::string body =
+            authority.substr(
+                section + marker.size(),
+                next == std::string::npos
+                    ? std::string::npos
+                    : next -
+                        (section + marker.size()));
+
+        std::istringstream lines(body);
+        std::string line;
+        bool sawData = false;
+
+        while (std::getline(lines, line))
+        {
+            if (line.empty() ||
+                line.rfind("frame,", 0) == 0)
+            {
+                continue;
+            }
+
+            const auto fields = SplitCsv(line);
+
+            if (fields.empty())
+            {
+                return false;
+            }
+
+            const auto frame =
+                std::stoull(fields[0]);
+
+            if (frame < start ||
+                frame > end)
+            {
+                return false;
+            }
+
+            sawData = true;
+        }
+
+        return sawData;
     }
 }
 
@@ -191,8 +563,7 @@ int wmain(
     }
 
     const HMODULE gzfx =
-        LoadLibraryW(
-            dllPath.c_str());
+        LoadLibraryW(dllPath.c_str());
 
     if (gzfx == nullptr)
     {
@@ -284,8 +655,6 @@ int wmain(
         return 8;
     }
 
-    // First present lets GZFX bind the primary swap chain/context and
-    // starts the fast semantic evidence window.
     swap->Present(0, 0);
 
     const char* vertexSource =
@@ -432,6 +801,42 @@ int wmain(
             DXGI_FORMAT_R32_FLOAT,
             9);
 
+    Texture2D previousVl =
+        CreateColor(
+            device,
+            320,
+            180,
+            DXGI_FORMAT_R16_FLOAT);
+
+    Texture2D currentVl =
+        CreateColor(
+            device,
+            320,
+            180,
+            DXGI_FORMAT_R16_FLOAT);
+
+    Texture2D noise =
+        CreateColor(
+            device,
+            32,
+            32,
+            DXGI_FORMAT_R8G8B8A8_UNORM);
+
+    DepthTexture depth =
+        CreateDepth(device, 320, 180);
+
+    DepthTexture depthEarly =
+        CreateDepth(device, 320, 180);
+
+    DepthTexture depthHistory =
+        CreateDepth(device, 320, 180);
+
+    Texture1D repartition =
+        CreateLookup(device, 4096);
+
+    Texture3D volume =
+        CreateVolume(device);
+
     if (!hdr.texture ||
         !motion.texture ||
         !normal.texture ||
@@ -441,7 +846,15 @@ int wmain(
         !aoTemp.texture ||
         !aoFinal.texture ||
         !rawIndirect.texture ||
-        !cameraZ.texture)
+        !cameraZ.texture ||
+        !previousVl.texture ||
+        !currentVl.texture ||
+        !noise.texture ||
+        !depth.texture ||
+        !depthEarly.texture ||
+        !depthHistory.texture ||
+        !repartition.texture ||
+        !volume.texture)
     {
         return 11;
     }
@@ -471,108 +884,6 @@ int wmain(
         }
     }
 
-    D3D11_TEXTURE2D_DESC depthDesc{};
-    depthDesc.Width = 320;
-    depthDesc.Height = 180;
-    depthDesc.MipLevels = 1;
-    depthDesc.ArraySize = 1;
-    depthDesc.Format =
-        DXGI_FORMAT_R24G8_TYPELESS;
-    depthDesc.SampleDesc.Count = 1;
-    depthDesc.Usage =
-        D3D11_USAGE_DEFAULT;
-    depthDesc.BindFlags =
-        D3D11_BIND_DEPTH_STENCIL |
-        D3D11_BIND_SHADER_RESOURCE;
-
-    ID3D11Texture2D* depth = nullptr;
-    ID3D11Texture2D* depthEarly = nullptr;
-    ID3D11Texture2D* depthFinal = nullptr;
-
-    if (FAILED(
-            device->CreateTexture2D(
-                &depthDesc,
-                nullptr,
-                &depth)) ||
-        FAILED(
-            device->CreateTexture2D(
-                &depthDesc,
-                nullptr,
-                &depthEarly)) ||
-        FAILED(
-            device->CreateTexture2D(
-                &depthDesc,
-                nullptr,
-                &depthFinal)))
-    {
-        return 13;
-    }
-
-    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
-    dsvDesc.Format =
-        DXGI_FORMAT_D24_UNORM_S8_UINT;
-    dsvDesc.ViewDimension =
-        D3D11_DSV_DIMENSION_TEXTURE2D;
-
-    ID3D11DepthStencilView* depthDsv = nullptr;
-
-    if (FAILED(
-            device->CreateDepthStencilView(
-                depth,
-                &dsvDesc,
-                &depthDsv)))
-    {
-        return 14;
-    }
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC depthSrvDesc{};
-    depthSrvDesc.Format =
-        DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-    depthSrvDesc.ViewDimension =
-        D3D11_SRV_DIMENSION_TEXTURE2D;
-    depthSrvDesc.Texture2D.MipLevels = 1;
-
-    ID3D11ShaderResourceView* depthFinalSrv = nullptr;
-
-    if (FAILED(
-            device->CreateShaderResourceView(
-                depthFinal,
-                &depthSrvDesc,
-                &depthFinalSrv)))
-    {
-        return 15;
-    }
-
-    D3D11_TEXTURE3D_DESC volumeDesc{};
-    volumeDesc.Width = 320;
-    volumeDesc.Height = 192;
-    volumeDesc.Depth = 90;
-    volumeDesc.MipLevels = 1;
-    volumeDesc.Format =
-        DXGI_FORMAT_R16_FLOAT;
-    volumeDesc.Usage =
-        D3D11_USAGE_DEFAULT;
-    volumeDesc.BindFlags =
-        D3D11_BIND_UNORDERED_ACCESS |
-        D3D11_BIND_SHADER_RESOURCE;
-
-    ID3D11Texture3D* volume = nullptr;
-    ID3D11UnorderedAccessView* volumeUav = nullptr;
-
-    if (FAILED(
-            device->CreateTexture3D(
-                &volumeDesc,
-                nullptr,
-                &volume)) ||
-        FAILED(
-            device->CreateUnorderedAccessView(
-                volume,
-                nullptr,
-                &volumeUav)))
-    {
-        return 16;
-    }
-
     context->IASetInputLayout(nullptr);
     context->IASetPrimitiveTopology(
         D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -585,19 +896,18 @@ int wmain(
     full.MinDepth = 0.0f;
     full.MaxDepth = 1.0f;
 
-    for (UINT frame = 0;
-         frame < 7;
-         ++frame)
+    for (UINT syntheticFrame = 0;
+         syntheticFrame < 7;
+         ++syntheticFrame)
     {
-        context->RSSetViewports(
-            1,
-            &full);
+        const bool exterior =
+            syntheticFrame == 0;
 
-        // From the second synthetic frame onward, the authority already
-        // knows MAIN_DEPTH and can classify the early copy.
+        context->RSSetViewports(1, &full);
+
         context->CopyResource(
-            depthEarly,
-            depth);
+            depthEarly.texture,
+            depth.texture);
 
         std::array<
             ID3D11RenderTargetView*,
@@ -612,16 +922,10 @@ int wmain(
         context->OMSetRenderTargets(
             static_cast<UINT>(mrt.size()),
             mrt.data(),
-            depthDsv);
+            depth.dsv);
 
         context->Draw(3, 0);
 
-        // First post-MRT depth copy is the synthetic final opaque depth.
-        context->CopyResource(
-            depthFinal,
-            depth);
-
-        // Construct the full CameraZ mip hierarchy.
         for (UINT mip = 0;
              mip < cameraMipRtvs.size();
              ++mip)
@@ -638,11 +942,9 @@ int wmain(
 
             D3D11_VIEWPORT viewport{};
             viewport.Width =
-                static_cast<FLOAT>(
-                    width);
+                static_cast<FLOAT>(width);
             viewport.Height =
-                static_cast<FLOAT>(
-                    height);
+                static_cast<FLOAT>(height);
             viewport.MinDepth = 0.0f;
             viewport.MaxDepth = 1.0f;
 
@@ -663,34 +965,33 @@ int wmain(
                 context->PSSetShaderResources(
                     0,
                     1,
-                    &depthFinalSrv);
+                    &depthEarly.srv);
             }
 
             context->Draw(3, 0);
         }
 
         ID3D11ShaderResourceView* nullSrv = nullptr;
+
         context->PSSetShaderResources(
             0,
             1,
             &nullSrv);
 
-        context->RSSetViewports(
-            1,
-            &full);
+        context->RSSetViewports(1, &full);
 
         const bool even =
-            (frame % 2) == 0;
+            (syntheticFrame % 2) == 0;
 
-        Texture2D& previous =
+        Texture2D& previousAo =
             even ? aoA : aoB;
 
-        Texture2D& current =
+        Texture2D& currentAo =
             even ? aoB : aoA;
 
         context->OMSetRenderTargets(
             1,
-            &current.rtv,
+            &currentAo.rtv,
             nullptr);
 
         std::array<
@@ -700,21 +1001,23 @@ int wmain(
             cameraZ.srv,
             motion.srv,
             normal.srv,
-            previous.srv
+            previousAo.srv
         };
 
         context->PSSetShaderResources(
             0,
-            static_cast<UINT>(
-                aoInputs.size()),
+            static_cast<UINT>(aoInputs.size()),
             aoInputs.data());
 
         context->Draw(3, 0);
 
         std::array<
             ID3D11ShaderResourceView*,
-            4> clearAo =
+            7> clearSrvs =
         {
+            nullptr,
+            nullptr,
+            nullptr,
             nullptr,
             nullptr,
             nullptr,
@@ -723,9 +1026,8 @@ int wmain(
 
         context->PSSetShaderResources(
             0,
-            static_cast<UINT>(
-                clearAo.size()),
-            clearAo.data());
+            static_cast<UINT>(clearSrvs.size()),
+            clearSrvs.data());
 
         context->OMSetRenderTargets(
             1,
@@ -735,7 +1037,7 @@ int wmain(
         context->PSSetShaderResources(
             0,
             1,
-            &current.srv);
+            &currentAo.srv);
 
         context->Draw(3, 0);
 
@@ -783,20 +1085,10 @@ int wmain(
 
         context->Draw(3, 0);
 
-        std::array<
-            ID3D11ShaderResourceView*,
-            3> clearIndirect =
-        {
-            nullptr,
-            nullptr,
-            nullptr
-        };
-
         context->PSSetShaderResources(
             0,
-            static_cast<UINT>(
-                clearIndirect.size()),
-            clearIndirect.data());
+            static_cast<UINT>(clearSrvs.size()),
+            clearSrvs.data());
 
         context->OMSetRenderTargets(
             1,
@@ -819,54 +1111,87 @@ int wmain(
 
         context->Draw(3, 0);
 
-        std::array<
-            ID3D11ShaderResourceView*,
-            2> clearComposite =
-        {
-            nullptr,
-            nullptr
-        };
-
         context->PSSetShaderResources(
             0,
-            static_cast<UINT>(
-                clearComposite.size()),
-            clearComposite.data());
+            static_cast<UINT>(clearSrvs.size()),
+            clearSrvs.data());
+
+        if (exterior)
+        {
+            context->OMSetRenderTargets(
+                0,
+                nullptr,
+                nullptr);
+
+            context->CSSetShader(
+                cs,
+                nullptr,
+                0);
+
+            context->CSSetUnorderedAccessViews(
+                0,
+                1,
+                &volume.uav,
+                nullptr);
+
+            context->Dispatch(1, 1, 1);
+
+            ID3D11UnorderedAccessView* nullUav =
+                nullptr;
+
+            context->CSSetUnorderedAccessViews(
+                0,
+                1,
+                &nullUav,
+                nullptr);
+
+            context->CSSetShader(
+                nullptr,
+                nullptr,
+                0);
+
+            context->PSSetShader(ps, nullptr, 0);
+
+            context->OMSetRenderTargets(
+                1,
+                &currentVl.rtv,
+                nullptr);
+
+            std::array<
+                ID3D11ShaderResourceView*,
+                7> volumetricInputs =
+            {
+                depth.srv,
+                previousVl.srv,
+                volume.srv,
+                repartition.srv,
+                noise.srv,
+                motion.srv,
+                depthHistory.srv
+            };
+
+            context->PSSetShaderResources(
+                0,
+                static_cast<UINT>(
+                    volumetricInputs.size()),
+                volumetricInputs.data());
+
+            context->Draw(3, 0);
+
+            context->PSSetShaderResources(
+                0,
+                static_cast<UINT>(clearSrvs.size()),
+                clearSrvs.data());
+
+            context->CopyResource(
+                depthHistory.texture,
+                depth.texture);
+        }
 
         context->OMSetRenderTargets(
             0,
             nullptr,
             nullptr);
-
-        context->CSSetShader(
-            cs,
-            nullptr,
-            0);
-
-        context->CSSetUnorderedAccessViews(
-            0,
-            1,
-            &volumeUav,
-            nullptr);
-
-        context->Dispatch(
-            1,
-            1,
-            1);
-
-        ID3D11UnorderedAccessView* nullUav =
-            nullptr;
-
-        context->CSSetUnorderedAccessViews(
-            0,
-            1,
-            &nullUav,
-            nullptr);
-
-        context->CSSetShader(
-            nullptr,
-            nullptr,
-            0);
 
         swap->Present(0, 0);
     }
@@ -887,7 +1212,7 @@ int wmain(
     if (!ExistsNonEmpty(authority) ||
         !ExistsNonEmpty(schedule))
     {
-        return 17;
+        return 13;
     }
 
     const std::string authorityText =
@@ -901,12 +1226,12 @@ int wmain(
         10> requiredSemantics =
     {
         "MAIN_HDR,verified",
-        "MAIN_DEPTH,verified",
+        "MAIN_DEPTH_CURRENT,verified",
         "MOTION,verified",
         "NORMAL_MASK_CURRENT,verified",
         "AUXILIARY_RT3,verified",
-        "OPAQUE_FINAL_DEPTH,strong",
-        "CAMERAZ,verified",
+        "DEPTH_EARLY_COPY,strong",
+        "STOCK_CAMERAZ,verified",
         "SAO_RAWAO_CURRENT,strong",
         "SAO_FILTERED,strong",
         "RAW_INDIRECT,strong"
@@ -915,11 +1240,10 @@ int wmain(
     for (const auto* required :
          requiredSemantics)
     {
-        if (authorityText.find(
-                required) ==
+        if (authorityText.find(required) ==
             std::string::npos)
         {
-            return 18;
+            return 14;
         }
     }
 
@@ -927,49 +1251,157 @@ int wmain(
             "VOLUMETRIC_DENSITY_A,verified") ==
             std::string::npos ||
         authorityText.find(
-            "environment=exterior") ==
+            "VOLUMETRIC_PREVIOUS_DEPTH,verified") ==
+            std::string::npos ||
+        authorityText.find(
+            "PRE_WATER_DEPTH_CURRENT,verified") ==
+            std::string::npos)
+    {
+        return 15;
+    }
+
+    if (authorityText.find(
+            "OPAQUE_FINAL_DEPTH") !=
+        std::string::npos)
+    {
+        return 16;
+    }
+
+    if (CountOccurrences(
+            scheduleText,
+            "after_opaque_world_mrt") < 3 ||
+        CountOccurrences(
+            scheduleText,
+            "after_cameraz") < 3 ||
+        CountOccurrences(
+            scheduleText,
+            "after_stock_ao") < 3 ||
+        CountOccurrences(
+            scheduleText,
+            "before_ambient_screen_space_composite") < 3 ||
+        CountOccurrences(
+            scheduleText,
+            "at_ambient_screen_space_composite") < 3 ||
+        CountOccurrences(
+            scheduleText,
+            "after_ambient_screen_space_composite") < 3)
+    {
+        return 17;
+    }
+
+    if (CountOccurrences(
+            scheduleText,
+            "before_volumetric_apply") < 1 ||
+        CountOccurrences(
+            scheduleText,
+            "after_volumetric_apply") < 1 ||
+        CountOccurrences(
+            scheduleText,
+            "publish_pre_water_depth") < 1)
+    {
+        return 18;
+    }
+
+    if (scheduleText.find(
+            "after_opaque_geometry_final_depth") !=
+            std::string::npos ||
+        scheduleText.find(
+            "before_indirect_lighting_composite") !=
+            std::string::npos ||
+        scheduleText.find(
+            "at_lighting_composite") !=
+            std::string::npos ||
+        scheduleText.find(
+            "after_lighting_composite") !=
             std::string::npos)
     {
         return 19;
     }
 
-    const std::array<
-        const char*,
-        6> requiredStages =
-    {
-        "after_opaque_geometry_final_depth",
-        "after_cameraz",
-        "after_stock_ao",
-        "before_indirect_lighting_composite",
-        "at_lighting_composite",
-        "after_lighting_composite"
-    };
-
-    for (const auto* required :
-         requiredStages)
-    {
-        if (scheduleText.find(
-                required) ==
+    if (authorityText.find(
+            "VOLUMETRIC_PREVIOUS_DEPTH,PRE_WATER_DEPTH_CURRENT") ==
+            std::string::npos ||
+        authorityText.find(
+            "MAIN_DEPTH_COPY") ==
             std::string::npos)
-        {
-            return 20;
-        }
+    {
+        return 20;
     }
 
-    if (volumeUav) volumeUav->Release();
-    if (volume) volume->Release();
+    if (!CurrentAvailabilityIs(
+            authorityText,
+            "VOLUMETRIC_DENSITY_A",
+            false) ||
+        !CurrentAvailabilityIs(
+            authorityText,
+            "VOLUMETRIC_PREVIOUS_DEPTH",
+            false) ||
+        !CurrentAvailabilityIs(
+            authorityText,
+            "PRE_WATER_DEPTH_CURRENT",
+            false))
+    {
+        return 21;
+    }
 
-    if (depthFinalSrv) depthFinalSrv->Release();
-    if (depthDsv) depthDsv->Release();
-    if (depthFinal) depthFinal->Release();
-    if (depthEarly) depthEarly->Release();
-    if (depth) depth->Release();
+    if (!CurrentAvailabilityIs(
+            authorityText,
+            "MAIN_HDR",
+            true) ||
+        !CurrentAvailabilityIs(
+            authorityText,
+            "STOCK_CAMERAZ",
+            true) ||
+        !CurrentAvailabilityIs(
+            authorityText,
+            "SAO_FILTERED",
+            true) ||
+        !CurrentAvailabilityIs(
+            authorityText,
+            "RAW_INDIRECT",
+            true))
+    {
+        return 22;
+    }
+
+    if (!CaptureObservationFramesBounded(
+            authorityText))
+    {
+        return 23;
+    }
+
+    if (authorityText.find(
+            "[session_identity_registry]") ==
+            std::string::npos ||
+        authorityText.find(
+            "[current_frame_semantic_views]") ==
+            std::string::npos ||
+        authorityText.find(
+            "[capture_local_observations]") ==
+            std::string::npos ||
+        authorityText.find(
+            "[capture_local_promotions]") ==
+            std::string::npos ||
+        authorityText.find(
+            "[content_epoch_transitions]") ==
+            std::string::npos)
+    {
+        return 24;
+    }
 
     for (auto*& rtv : cameraMipRtvs)
     {
         if (rtv) rtv->Release();
     }
 
+    Release(volume);
+    Release(repartition);
+    Release(depthHistory);
+    Release(depthEarly);
+    Release(depth);
+    Release(noise);
+    Release(currentVl);
+    Release(previousVl);
     Release(cameraZ);
     Release(rawIndirect);
     Release(aoFinal);
@@ -993,7 +1425,7 @@ int wmain(
     FreeLibrary(gzfx);
 
     std::wcout
-        << L"Semantic authority foundation harness passed.\n";
+        << L"Corrected semantic authority foundation harness passed.\n";
 
     return 0;
 }
