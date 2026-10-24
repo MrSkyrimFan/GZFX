@@ -1246,6 +1246,12 @@ int wmain(
         !sawChannelPreview ||
         !sawMipPreview)
     {
+        std::cerr
+            << semanticText
+            << "\n"
+            << manualSemanticText
+            << "\n";
+
         return 17;
     }
 
