@@ -136,6 +136,23 @@ add_executable(GZFXD3D11ProbeHarness
 target_link_libraries(GZFXD3D11ProbeHarness PRIVATE d3d11)
 gzfx_apply_common(GZFXD3D11ProbeHarness)
 
+add_executable(GZFXD3D11FrontDoorHarness
+    tests/d3d11_frontdoor_harness.cpp
+)
+target_link_libraries(
+    GZFXD3D11FrontDoorHarness
+    PRIVATE
+        d3d11
+        dxgi
+        user32
+)
+add_dependencies(
+    GZFXD3D11FrontDoorHarness
+    GZFX
+    GZFXD3D11Bootstrap
+)
+gzfx_apply_common(GZFXD3D11FrontDoorHarness)
+
 add_executable(GZFXEngineEpochHarness
     tests/engine_epoch_harness.cpp
 )
@@ -265,6 +282,13 @@ add_test(
         "$<TARGET_FILE:GZFXD3D11ProbeHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/probe-test-output"
+)
+
+add_test(
+    NAME d3d11_frontdoor_bootstrap
+    COMMAND
+        "$<TARGET_FILE:GZFXD3D11FrontDoorHarness>"
+        "${CMAKE_BINARY_DIR}/frontdoor-test-output"
 )
 
 add_test(
