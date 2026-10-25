@@ -1,6 +1,7 @@
 #include "gzfx/runtime.hpp"
 
 #include "gzfx/diagnostics/d3d11_lifecycle.hpp"
+#include "gzfx/diagnostics/engine_epochs.hpp"
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/diagnostics/telemetry_listener.hpp"
 #include "gzfx/paths.hpp"
@@ -71,6 +72,9 @@ namespace
         const bool rendererForensicsArmed =
             gzfx::diagnostics::ArmRendererForensics();
 
+        const bool engineEpochsArmed =
+            gzfx::diagnostics::engine_epochs::Arm();
+
         const bool wave3Initialized =
             gzfx::render::wave3::Initialize();
 
@@ -120,6 +124,9 @@ namespace
             << "\n";
         log << "renderer_forensics="
             << (rendererForensicsArmed ? "armed" : "failed")
+            << "\n";
+        log << "engine_epochs="
+            << (engineEpochsArmed ? "armed" : "unavailable_or_unverified")
             << "\n";
         log << "wave3_pipeline="
             << (wave3Initialized ? "initialized" : "failed")
