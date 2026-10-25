@@ -1,0 +1,799 @@
+GZFX 0.0.26 RENDERER IDENTITY + ENGINE EPOCH FIELD FINDINGS
+DATA Pass — Real Skyrim Session
+Review date: October 25, 2026
+Status: DATA COMPLETE / RENDERER IDENTITY SUCCESS / ENGINE PROFILE MISMATCH / LATE STACK SHARPLY NARROWED
+Runtime under test: 0.0.26-renderer-identity-engine-epochs
+
+======================================================================
+1. EXECUTIVE VERDICT
+======================================================================
+
+The 0.0.26 real-Skyrim field session is a strong success for the universal
+renderer-identity architecture and materially closes several 0.0.25 unknowns.
+
+Most important results:
+
+1. The live Skyrim runtime is NOT 1.6.1170.
+
+   It is:
+
+       SkyrimSE.exe 1.7.104.0
+
+   The 1.6.1170 engine-epoch profile correctly failed closed.
+
+2. Creation-time renderer identity worked strongly.
+
+       shader creation hooks armed
+       resource creation hooks armed
+       16,126 shader creations observed
+       23,230 resource creations observed
+
+   Late image-space shader families now carry stable bytecode hashes rather
+   than volatile COM pointer identities.
+
+3. The old "Skyrim deferred command-list" hypothesis is effectively closed for
+   this field session.
+
+       finished lists: 26,370
+       ownership rows: 26,370
+       GZFX-owned: 26,370
+       external: 0
+
+   The dominant 0.0.25 untagged population was GZFX's own unowned work.
+
+4. Global TAA is now extraordinarily strong field evidence.
+
+       BeforeGlobalTAA = 9,103
+       AfterGlobalTAA  = 9,103
+       active scene frames = 9,103
+
+   One stable TAA pixel-shader hash and one stable resource signature repeat on
+   every active scene frame in both exterior and interior environments.
+
+5. The HDR reduction/adaptation spine is also structurally present on all
+   active scene frames, including interiors.
+
+   The remaining HDR stage-count defect is detector logic, not missing
+   renderer knowledge.
+
+6. BeforeTonemap still does not fire because the HDR detector marks the chain
+   complete one pass too early:
+
+       detector terminal: 3x2
+       actual chain terminal: 2x2
+
+   The full-resolution tonemap/current-image pass consumes the 2x2 resource,
+   not the detector's stored 3x2 identity.
+
+7. Most interior HDRReduction misses are explained by an extra full-resolution
+   HDR transform before the reduction chain.
+
+   Exterior:
+       canonical MAIN_HDR -> 640x360 reduction
+
+   Interior:
+       canonical MAIN_HDR
+       -> derived full-resolution RGBA16F
+       -> 640x360 reduction
+
+   The current detector requires the reduction root to read canonical MAIN_HDR
+   directly, so it rejects most interior chains even though the same stable
+   reduction shaders and dimensions are present.
+
+8. Physical DXGI Present telemetry worked.
+
+       present_epochs = 10,037
+
+9. The session remained bounded and healthy through the captured snapshot:
+
+       enqueued == written
+       dropped = 0
+       queue_depth = 0
+
+10. A clean telemetry-session completion marker is still absent in the uploaded
+    archive.
+
+    This remains a closure/packaging caveat, not evidence of dropped telemetry.
+
+The correct next phase is focused RESEARCH.
+
+Do NOT restart broad anonymous renderer cartography.
+
+======================================================================
+2. SOURCE ARCHIVE
+======================================================================
+
+Uploaded archive:
+
+    GZFXkkkkkkkkkjjjjjjjggftt.zip
+
+Compressed bytes:
+
+    78,407,303
+
+SHA256:
+
+    c7f2f0e990ce611cc76f6b1f4885dda4972846171a4158dca5e55847d11e47b3
+
+Archive entries:
+
+    125
+
+Total uncompressed bytes:
+
+    949,632,962
+
+Telemetry session:
+
+    session_20261025_153503_145720
+
+Runtime:
+
+    0.0.26-renderer-identity-engine-epochs
+
+======================================================================
+3. SESSION COVERAGE
+======================================================================
+
+Frame range:
+
+    1..10,037
+
+Active scene frames:
+
+    9,103
+
+Environment:
+
+    exterior:           5,969
+    interior:           3,134
+    transition/unknown:   934
+
+Development modes:
+
+    Mode 0: 4,648
+    Mode 1: 2,956
+    Mode 2: 2,233
+    Mode 3:    76
+    Mode 4:   124
+
+The requested primary Modes 0/1/2 are all strongly represented.
+
+The session provides broad exterior/interior coverage and is sufficient for
+architecture validation.
+
+======================================================================
+4. TELEMETRY HEALTH
+======================================================================
+
+listener_status:
+
+    enqueued=1,719,403
+    written=1,719,403
+    dropped=0
+    queue_depth=0
+    queue_high_water=536
+    ring_capacity=65,536
+
+    bytes_written=890,301,500
+    pipeline_segment=13
+    detail_gate=late_only
+    detailed_pipeline_rows=1,349,485
+
+Transport verdict:
+
+    HEALTHY THROUGH CAPTURED SNAPSHOT
+
+No dropped evidence is indicated.
+
+The 0.0.26 evidence size remains substantially below the 0.0.24 full-pipeline
+firehose while carrying much stronger identities.
+
+======================================================================
+5. CLEAN-SHUTDOWN CAVEAT
+======================================================================
+
+The uploaded archive does not contain:
+
+    telemetry_session_complete.txt
+
+listener_status still shows:
+
+    writer_alive=true
+    complete=false
+
+At the captured status:
+
+    enqueued == written
+    queue_depth == 0
+    dropped == 0
+
+Therefore:
+
+    captured evidence is internally accounted for;
+    clean session termination is not proven.
+
+This repeated condition deserves targeted engineering/research attention, but it
+does not invalidate the current field findings.
+
+Do not assign operator fault without proof.
+
+======================================================================
+6. LIVE SKYRIM RUNTIME
+======================================================================
+
+0.0.26 engine resolver reports:
+
+    engine_profile=0x1000700680000
+    engine_runtime_supported=false
+    engine_post_processing_anchor=unavailable
+    engine_pre_ui_anchor=unavailable
+
+Decoded file version:
+
+    1.7.104.0
+
+engine_events.csv contains only its header because no supported engine profile
+was armed.
+
+This is correct fail-closed behavior.
+
+The 1.6.1170 signatures were NOT applied to a different executable.
+
+DATA verdict:
+
+    ENGINE PROFILE SAFETY = PASS
+    ENGINE-EPOCH FIELD VALIDATION = NOT EXERCISED
+    REQUIRED NEXT RESEARCH = 1.7.104 profile strategy
+
+======================================================================
+7. CREATION-TIME IDENTITY
+======================================================================
+
+listener_status:
+
+    stable_shader_creation_hooks_armed=true
+    resource_creation_hooks_armed=true
+
+    shader_creations_observed=16,126
+    resource_creations_observed=23,230
+
+This confirms the 0.0.26 D3D creation hooks operated in real Skyrim.
+
+Late image-space shaders now have stable exact bytecode hashes and creator
+module provenance.
+
+Important result:
+
+    key late post/TAA shader families are owned by:
+        SkyrimSE.exe
+
+rather than GZFX.
+
+This is the intended stable identity layer.
+
+======================================================================
+8. COMMAND-LIST OWNERSHIP — OLD MYSTERY CLOSED
+======================================================================
+
+Deferred recorder:
+
+    deferred_contexts_attached=7
+    deferred_lists_finished=26,370
+    deferred_lists_executed=0
+    deferred_opaque_executions=0
+    deferred_recorded_runs=95,013
+    deferred_record_overflows=0
+    deferred_registry_evictions=0
+
+ownership.csv:
+
+    total rows: 26,370
+    owner=gzfx: 26,370
+    owner=external: 0
+
+GZFX ownership distribution:
+
+    owned_pass 2: 9,103
+    owned_pass 6: 8,596
+    owned_pass 4: 4,313
+    owned_pass 5: 4,313
+    owned_pass 8:    42
+    owned_pass 7:     3
+
+The exact naming is source-defined, but the key field result is unambiguous:
+
+    EVERY OBSERVED COMMAND-LIST EXECUTION IS GZFX-OWNED.
+
+There is no external list population to expand in this session.
+
+Therefore:
+
+    deferred_lists.csv = header only
+    deferred_runs_0001.csv = header only
+
+is expected under the current architecture.
+
+The recorder's listsExecuted counter tracks observed non-GZFX command lists,
+which is correctly zero.
+
+DATA conclusion:
+
+    0.0.25's dominant "Skyrim" deferred-list population was a GZFX ownership
+    bookkeeping defect.
+
+Do not reopen the hidden-Skyrim-deferred-renderer branch unless new evidence
+produces genuine external command lists.
+
+======================================================================
+9. FOUNDATION STAGE REGRESSION CHECK
+======================================================================
+
+Counts:
+
+    ui_present                           10,037
+
+    after_opaque_world_mrt                9,103
+    after_cameraz                         9,103
+    after_stock_ao                        9,103
+    before_ambient_screen_space_composite 9,103
+    at_ambient_screen_space_composite     9,103
+    after_ambient_screen_space_composite  9,103
+
+    after_depth_prepass                    9,102
+
+Exterior-only:
+
+    before_volumetric_apply               5,969
+    after_volumetric_apply                5,969
+    publish_pre_water_depth               5,969
+
+No evidence requires reopening Waves 1-3.
+
+======================================================================
+10. GLOBAL TAA — FIELD RESULT
+======================================================================
+
+Stage counts:
+
+    BeforeGlobalTAA = 9,103
+    AfterGlobalTAA  = 9,103
+
+Exactly:
+
+    9,103 / 9,103 active scene frames
+
+Environment split:
+
+    exterior:
+        5,969 / 5,969
+
+    interior:
+        3,134 / 3,134
+
+The same stable global temporal shader/resource signature appears on every
+active scene frame.
+
+Stable global TAA pixel shader:
+
+    hex:
+        0xE8D58B595587B316
+
+    decimal:
+        16777469202641957654
+
+pipeline_shaders registry:
+
+    object:
+        0x229CEAB1EF0
+
+    birth:
+        16026
+
+    stage:
+        Pixel
+
+    bytecode hash:
+        0xE8D58B595587B316
+
+    bytecode bytes:
+        10036
+
+    creator:
+        SkyrimSE.exe
+
+Associated stable stages:
+
+    VS:
+        0x3DCFD48A0EC17B4F
+
+    CS:
+        0xF0C159F6E9B3DAA2
+
+Stable-hash known mask:
+
+    49
+
+which corresponds to the observed VS/PS/CS stable identities in this pass.
+
+Structural TAA signature:
+
+    reads:
+        full-resolution RGBA8 current color
+        full-resolution RGBA8 history color
+        MOTION
+        MAIN_DEPTH_CURRENT
+        additional full-resolution mask/context inputs
+
+    writes:
+        exactly two full-resolution RGBA8 outputs
+
+Viewport:
+
+    2560 x 1440
+
+This is the strongest TAA evidence obtained by the project so far.
+
+DATA classification:
+
+    GLOBAL TAA = FIELD-PROVEN HIGH CONFIDENCE
+    BeforeGlobalTAA/AfterGlobalTAA = 1:1 ACTIVE-FRAME BEHAVIOR
+
+A later blueprint may promote these stages to locked contracts if the research
+phase finds no contradictory Skyrim 1.7.104 evidence.
+
+======================================================================
+11. COMPLETE LATE IMAGE-SPACE SPINE
+======================================================================
+
+Using the stable TAA event as the temporal landmark, the late chain repeats
+across all active scene frames.
+
+Relative to TAA:
+
+    TAA - 8:
+        160x90 RGBA16F
+        PS 0x8906DFE9AFA8D050
+
+    TAA - 7:
+        40x23 RGBA16F
+        PS 0xE137371A74F69AA2
+
+    TAA - 6:
+        10x6 RGBA16F
+        PS 0xE137371A74F69AA2
+
+    TAA - 5:
+        3x2 RGBA16F
+        PS 0xE137371A74F69AA2
+
+    TAA - 4:
+        2x2 RGBA16F
+        PS 0x877420B175E42589 on 9,098 frames
+        reduction-family PS on 5 frames
+
+    TAA - 3:
+        640x360 RGBA16F
+        PS 0xDA12D7342C71A0B8
+
+    TAA - 2:
+        640x360 RGBA16F
+        PS 0x6A5D8FBECC2404BD
+
+    TAA - 1:
+        full-resolution 2560x1440 RGBA8 current image
+        PS 0x99D22A3D198A3B69
+        exactly 9,103 active frames
+
+    TAA:
+        global temporal pass
+        PS 0xE8D58B595587B316
+        exactly 9,103 active frames
+
+This is now a stable renderer-family graph, not a process-local pointer graph.
+
+======================================================================
+12. HDR REDUCTION — FIELD RESULT
+======================================================================
+
+HDRReduction stage count:
+
+    6,303
+
+Environment:
+
+    exterior:
+        5,969 / 5,969
+
+    interior:
+          334 / 3,134
+
+This superficially looks like an interior pipeline difference.
+
+Stable shader/resource analysis shows otherwise.
+
+The same reduction structure is present in interiors.
+
+Exterior representative frame 861:
+
+    640x360 reduction reads canonical MAIN_HDR directly
+    -> 160x90
+    -> 40x23
+    -> 10x6
+    -> 3x2
+    -> 2x2
+    -> 640x360 downstream adaptation/reconstruction
+    -> full-res RGBA8
+    -> TAA
+
+Interior representative frame 4789:
+
+    canonical MAIN_HDR
+    -> derived full-resolution RGBA16F
+    -> 640x360 reduction reads derived HDR
+    -> 160x90
+    -> 40x23
+    -> 10x6
+    -> 3x2
+    -> 2x2
+    -> 640x360 downstream adaptation/reconstruction
+    -> full-res RGBA8
+    -> TAA
+
+The detector currently requires a new HDR root to read canonical MAIN_HDR
+directly.
+
+That is true for exteriors but false for most interiors.
+
+DATA classification:
+
+    HDR STRUCTURE = PRESENT
+    HDR STAGE COUNT DEFECT = ROOT-ELIGIBILITY LOGIC
+
+Required design correction:
+
+    allow the reduction root to descend from a verified same-frame
+    full-resolution HDR descendant of MAIN_HDR, not only MAIN_HDR itself.
+
+======================================================================
+13. HDR TERMINAL / BEFORETONEMAP BUG
+======================================================================
+
+BeforeTonemap count:
+
+    0
+
+The reason is now concrete.
+
+Current HDR completion rule:
+
+    step >= 4
+    width <= 4
+    height <= 4
+
+The chain reaches:
+
+    3x2
+
+and the detector immediately sets:
+
+    hdrReductionComplete = true
+    hdrReductionFinalIdentity = 3x2 resource
+
+The real chain then performs:
+
+    3x2 -> 2x2
+
+But ObserveHdrReductionLocked returns once hdrReductionComplete is true, so the
+final identity is never updated to the 2x2 resource.
+
+The full-resolution current-image / tonemap candidate later reads:
+
+    final 2x2 reduction/adaptation resource
+
+NOT:
+
+    stored 3x2 detector identity.
+
+Therefore the current BeforeTonemap rule:
+
+    reads hdrReductionFinalIdentity
+    AND writes full-resolution RGBA8
+
+never matches.
+
+DATA classification:
+
+    BeforeTonemap zero count = PROVEN DETECTOR TERMINAL BUG
+
+Required design correction:
+
+    identify the true terminal 2x2 node / downstream exposure resource before
+    committing HDRReduction terminal identity.
+
+Do not treat 3x2 as final merely because it satisfies <=4x4.
+
+======================================================================
+14. TONEMAP / FULL-RES CURRENT CANDIDATE
+======================================================================
+
+The pass immediately before global TAA is extremely stable.
+
+Stable pixel shader:
+
+    0x99D22A3D198A3B69
+
+Population:
+
+    9,103 / 9,103 active scene frames
+
+Output:
+
+    2560x1440 R8G8B8A8_UNORM
+
+Inputs include:
+
+    processed 640x360 HDR-family resource
+    full-resolution RGBA16F color
+    final 2x2 exposure/adaptation resource
+
+It directly feeds the global TAA-family lane.
+
+DATA classification:
+
+    VERY STRONG TONEMAP / FULL-RES CURRENT IMAGE CANDIDATE
+
+The next research phase should compare this with public Skyrim image-space
+knowledge for 1.7.104 before permanently naming the exact boundary.
+
+======================================================================
+15. PHYSICAL PRESENT TIMELINE
+======================================================================
+
+listener_status:
+
+    present_epochs=10,037
+
+This equals the frame count.
+
+The new physical present lifecycle therefore operated throughout the session.
+
+This removes the old semantic ambiguity where UiPresent was treated as though it
+were the original DXGI Present call.
+
+Use present_timeline.csv as physical presentation authority.
+
+======================================================================
+16. RESOURCE CREATION PROVENANCE — IMPORTANT LIMIT
+======================================================================
+
+Creation-time hooks clearly operated, but several core long-lived Skyrim render
+targets still appear in the registry as:
+
+    unknown/preexisting
+
+including important semantic families such as:
+
+    MAIN_HDR
+    MAIN_DEPTH
+    MOTION
+    NORMAL / related long-lived surfaces.
+
+Late image-space shader identities, by contrast, have strong SkyrimSE.exe
+creator provenance.
+
+This does NOT mean the creation hooks failed.
+
+It indicates some core renderer resources existed before the 0.0.26 identity
+observer first encountered them.
+
+Source review of the bootstrap is required in RESEARCH before deciding why.
+
+One important current source fact:
+
+    dinput8.dll DllMain does not load GZFX.dll.
+
+Instead:
+
+    Skyrim calls a dinput8 export
+    -> Prepare()
+    -> EnsureGzfx()
+    -> LoadLibraryW(GZFX.dll)
+    -> GZFX_Initialize()
+
+Therefore GZFX initialization timing depends on when Skyrim first uses DirectInput.
+
+It is plausible that some D3D renderer/device/resource initialization occurs
+before that first DirectInput export.
+
+This must be researched carefully.
+
+Do NOT simply move heavy initialization into DllMain because Windows loader-lock
+constraints make that unsafe.
+
+======================================================================
+17. WHAT 0.0.26 PROVED
+======================================================================
+
+Proven or strongly strengthened:
+
+1. Stable shader bytecode identity works in real Skyrim.
+
+2. Stable identity dramatically improves cross-frame renderer mapping.
+
+3. GZFX command-list ownership accounting is now coherent.
+
+4. The old supposed Skyrim deferred-list blind spot was GZFX bookkeeping.
+
+5. Global TAA is present once per active scene frame with one stable shader and
+   one stable resource signature.
+
+6. The HDR reduction/adaptation chain is present in both exteriors and
+   interiors.
+
+7. The HDR interior miss has a concrete root-eligibility cause.
+
+8. BeforeTonemap failure has a concrete 3x2-versus-2x2 terminal cause.
+
+9. Physical Present epochs work.
+
+10. Engine-hook runtime mismatch fails closed correctly.
+
+======================================================================
+18. WHAT REMAINS OPEN
+======================================================================
+
+Open, but now narrow:
+
+1. Add/derive a truthful Skyrim 1.7.104 engine epoch strategy.
+
+2. Decide whether GZFX must move its renderer bootstrap earlier to capture core
+   resource birth.
+
+3. Fix HDR reduction root/terminal logic.
+
+4. Correlate the stable full-res 0x99D22A3D198A3B69 pass with Skyrim's real
+   tonemap/image-space stage.
+
+5. Decide whether Before/AfterGlobalTAA can now be permanently locked.
+
+6. Resolve PostTonemapPreUi using:
+       stable TAA output
+       full-res current/late sink
+       true pre-UI engine epoch
+       physical Present.
+
+7. Resolve WaterDomain using stable identities + existing exterior-only
+   semantic resources.
+
+8. Investigate repeated missing clean completion marker.
+
+======================================================================
+19. NEXT PHASE
+======================================================================
+
+DATA COMPLETE.
+
+Proceed to targeted RESEARCH.
+
+The research should explicitly compare:
+
+    ENB
+    ReShade 6.8.0
+    GZFX current bootstrap/interception model
+    Skyrim 1.7.104 public reverse-engineering evidence
+
+Questions:
+
+    - front-door timing;
+    - object lifetime/identity;
+    - present lifecycle;
+    - command-list lifecycle;
+    - third-party hook compatibility;
+    - safe bootstrap architecture;
+    - 1.7.104 engine anchors;
+    - exact tonemap/TAA semantic mapping.
+
+Do not implement from this DATA record alone.
+
+END FIELD FINDINGS
