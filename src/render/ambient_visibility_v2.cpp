@@ -167,6 +167,8 @@ namespace gzfx::render::ambient_visibility_v2
 
         std::uint64_t g_finalVisibilityFrame = 0;
         std::uint64_t g_lastAppliedFrame = 0;
+        ID3D11Buffer* g_currentCamera = nullptr;
+        std::uint64_t g_currentCameraFrame = 0;
         std::uint64_t g_computeCount = 0;
         std::uint64_t g_applyCount = 0;
         std::uint64_t g_skipCount = 0;
@@ -403,6 +405,14 @@ namespace gzfx::render::ambient_visibility_v2
             g_runtime = {};
             g_signalHistory = {};
             g_finalVisibilityFrame = 0;
+
+            if (g_currentCamera != nullptr)
+            {
+                g_currentCamera->Release();
+                g_currentCamera = nullptr;
+            }
+
+            g_currentCameraFrame = 0;
         }
 
         const char* ShaderSource()
@@ -1419,16 +1429,28 @@ void PackCS(
 
     if (!active)
     {
-        float stockOutside =
-            T1.Load(
-                int3(pixel, 0)).r;
+        if (Mode == 1)
+        {
+            float stockOutside =
+                T1.Load(
+                    int3(pixel, 0)).r;
 
-        OutColor[pixel] =
-            float4(
-                stockOutside,
-                stockOutside,
-                stockOutside,
-                1.0);
+            OutColor[pixel] =
+                float4(
+                    stockOutside,
+                    stockOutside,
+                    stockOutside,
+                    1.0);
+        }
+        else
+        {
+            OutColor[pixel] =
+                float4(
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0);
+        }
 
         return;
     }
@@ -2749,8 +2771,11 @@ void PackCS(
             std::string& error)
         {
             if (outCommands == nullptr ||
-                stockTexture == nullptr)
+                stockTexture == nullptr ||
+                camera == nullptr)
             {
+                error =
+                    "missing stock texture or camera for AO pack";
                 return false;
             }
 
@@ -4064,6 +4089,18 @@ void PackCS(
                 g_finalVisibilityFrame =
                     event.frame;
 
+                if (g_currentCamera != nullptr)
+                {
+                    g_currentCamera->Release();
+                    g_currentCamera = nullptr;
+                }
+
+                g_currentCamera =
+                    inputs.cameraBuffer;
+                g_currentCamera->AddRef();
+                g_currentCameraFrame =
+                    event.frame;
+
                 if (g_capture.active &&
                     event.frame >=
                         g_capture.targetFrame)
@@ -4203,12 +4240,22 @@ void PackCS(
                 ID3D11CommandList* commands =
                     nullptr;
 
+                if (g_currentCamera == nullptr ||
+                    g_currentCameraFrame !=
+                        event.frame)
+                {
+                    ++g_skipCount;
+                    WriteStatus(
+                        event.frame,
+                        "stock_fallback",
+                        "current frame camera unavailable");
+                    return;
+                }
+
                 if (!RecordPackCommands(
                         event.frame,
                         mode,
-                        g_capture.active
-                            ? nullptr
-                            : nullptr,
+                        g_currentCamera,
                         stock,
                         needStockCopy,
                         capture,
@@ -4228,14 +4275,59 @@ void PackCS(
                     return;
                 }
 
-                // The pack shader needs Skyrim b12 for dynamic-resolution
-                // mapping. Reacquire the current camera through the native
-                // input broker at the still-valid AfterStockAO stage is not
-                // part of the geometry-bundle contract, so fetch the currently
-                // bound CS/PS-independent camera buffer from resource
-                // intelligence would reintroduce heuristic ownership.
-                // Instead, patch the command list creation below after
-                // resolving the current native geometry bundle.
+                const bool executed =
+                    execution::ExecuteOwned(
+                        lease,
+                        commands,
+                        execution::OwnedPass::
+                            Wave4AmbientInjection,
+                        event.frame,
+                        true);
+
+                commands->Release();
+
+                if (!executed)
+                {
+                    ++g_skipCount;
+                    WriteStatus(
+                        event.frame,
+                        "stock_fallback",
+                        "owned AO injection execution failed");
+                    return;
+                }
+
+                ++g_applyCount;
+                g_lastAppliedFrame =
+                    event.frame;
+
+                if (capture)
+                {
+                    Capture(
+                        lease,
+                        event.frame,
+                        mode);
+
+                    g_capture.active =
+                        false;
+                    g_capture.selectedFrame =
+                        0;
+                }
+
+                if (capture ||
+                    event.frame <= 3 ||
+                    event.frame -
+                        g_lastStatusFrame >=
+                    120)
+                {
+                    WriteStatus(
+                        event.frame,
+                        mode == 1
+                            ? "applied_split"
+                            : "applied_full");
+
+                    g_lastStatusFrame =
+                        event.frame;
+                }
             }
             catch (...)
             {
