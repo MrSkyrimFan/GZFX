@@ -704,6 +704,94 @@ int wmain(int argc, wchar_t** argv)
                 4,
                 nullSrvs);
 
+            if (lateStackActive)
+            {
+                // Synthetic late image-space spine:
+                // HDR reduction -> tonemap entry -> global temporal pass.
+                ID3D11ShaderResourceView* reduceInput =
+                    hdr.srv;
+
+                Target* reductions[4] =
+                {
+                    &hdrReduceA,
+                    &hdrReduceB,
+                    &hdrReduceC,
+                    &hdrReduceD
+                };
+
+                for (Target* reduction :
+                     reductions)
+                {
+                    context->OMSetRenderTargets(
+                        1,
+                        &reduction->rtv,
+                        nullptr);
+
+                    context->PSSetShaderResources(
+                        0,
+                        1,
+                        &reduceInput);
+
+                    context->Draw(3, 0);
+
+                    context->PSSetShaderResources(
+                        0,
+                        1,
+                        nullSrvs);
+
+                    reduceInput =
+                        reduction->srv;
+                }
+
+                context->OMSetRenderTargets(
+                    1,
+                    &tonemapCurrent.rtv,
+                    nullptr);
+
+                context->PSSetShaderResources(
+                    0,
+                    1,
+                    &hdrReduceD.srv);
+
+                context->Draw(3, 0);
+
+                context->PSSetShaderResources(
+                    0,
+                    1,
+                    nullSrvs);
+
+                ID3D11RenderTargetView* taaOutputs[2] =
+                {
+                    taaColor.rtv,
+                    taaFeedback.rtv
+                };
+
+                context->OMSetRenderTargets(
+                    2,
+                    taaOutputs,
+                    nullptr);
+
+                ID3D11ShaderResourceView* taaInputs[4] =
+                {
+                    tonemapCurrent.srv,
+                    taaHistory.srv,
+                    motion.srv,
+                    depthSrv
+                };
+
+                context->PSSetShaderResources(
+                    0,
+                    4,
+                    taaInputs);
+
+                context->Draw(3, 0);
+
+                context->PSSetShaderResources(
+                    0,
+                    4,
+                    nullSrvs);
+            }
+
             context->OMSetRenderTargets(
                 0,
                 nullptr,
