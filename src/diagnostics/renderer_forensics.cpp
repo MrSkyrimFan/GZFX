@@ -3609,22 +3609,33 @@ namespace gzfx::diagnostics
 
             if (resourceTargets)
             {
-                ok = HookOne(
+                bool resourceHooksOk =
+                    HookOne(
                         targets.createBuffer,
                         Address(&HookCreateBuffer),
-                        &originalCreateBuffer) && ok;
-                ok = HookOne(
+                        &originalCreateBuffer);
+                resourceHooksOk =
+                    HookOne(
                         targets.createTexture1D,
                         Address(&HookCreateTexture1D),
-                        &originalCreateTexture1D) && ok;
-                ok = HookOne(
+                        &originalCreateTexture1D) &&
+                    resourceHooksOk;
+                resourceHooksOk =
+                    HookOne(
                         targets.createTexture2D,
                         Address(&HookCreateTexture2D),
-                        &originalCreateTexture2D) && ok;
-                ok = HookOne(
+                        &originalCreateTexture2D) &&
+                    resourceHooksOk;
+                resourceHooksOk =
+                    HookOne(
                         targets.createTexture3D,
                         Address(&HookCreateTexture3D),
-                        &originalCreateTexture3D) && ok;
+                        &originalCreateTexture3D) &&
+                    resourceHooksOk;
+
+                ok =
+                    resourceHooksOk &&
+                    ok;
 
                 g_createBuffer =
                     reinterpret_cast<CreateBufferFn>(
@@ -3639,7 +3650,8 @@ namespace gzfx::diagnostics
                     reinterpret_cast<CreateTexture3DFn>(
                         originalCreateTexture3D);
 
-                g_resourceCreationHooksArmed = true;
+                g_resourceCreationHooksArmed =
+                    resourceHooksOk;
             }
 
             const bool shaderTargets =
@@ -3653,34 +3665,51 @@ namespace gzfx::diagnostics
 
             if (shaderTargets)
             {
-                ok = HookOne(
+                bool shaderHooksOk =
+                    HookOne(
                         targets.createVertexShader,
                         Address(&HookCreateVertexShader),
-                        &originalCreateVertexShader) && ok;
-                ok = HookOne(
+                        &originalCreateVertexShader);
+                shaderHooksOk =
+                    HookOne(
                         targets.createGeometryShader,
                         Address(&HookCreateGeometryShader),
-                        &originalCreateGeometryShader) && ok;
-                ok = HookOne(
+                        &originalCreateGeometryShader) &&
+                    shaderHooksOk;
+                shaderHooksOk =
+                    HookOne(
                         targets.createGeometryShaderWithStreamOutput,
                         Address(&HookCreateGeometryShaderWithStreamOutput),
-                        &originalCreateGeometryShaderWithStreamOutput) && ok;
-                ok = HookOne(
+                        &originalCreateGeometryShaderWithStreamOutput) &&
+                    shaderHooksOk;
+                shaderHooksOk =
+                    HookOne(
                         targets.createPixelShader,
                         Address(&HookCreatePixelShader),
-                        &originalCreatePixelShader) && ok;
-                ok = HookOne(
+                        &originalCreatePixelShader) &&
+                    shaderHooksOk;
+                shaderHooksOk =
+                    HookOne(
                         targets.createHullShader,
                         Address(&HookCreateHullShader),
-                        &originalCreateHullShader) && ok;
-                ok = HookOne(
+                        &originalCreateHullShader) &&
+                    shaderHooksOk;
+                shaderHooksOk =
+                    HookOne(
                         targets.createDomainShader,
                         Address(&HookCreateDomainShader),
-                        &originalCreateDomainShader) && ok;
-                ok = HookOne(
+                        &originalCreateDomainShader) &&
+                    shaderHooksOk;
+                shaderHooksOk =
+                    HookOne(
                         targets.createComputeShader,
                         Address(&HookCreateComputeShader),
-                        &originalCreateComputeShader) && ok;
+                        &originalCreateComputeShader) &&
+                    shaderHooksOk;
+
+                ok =
+                    shaderHooksOk &&
+                    ok;
 
                 g_createVertexShader =
                     reinterpret_cast<CreateVertexShaderFn>(
@@ -3704,7 +3733,8 @@ namespace gzfx::diagnostics
                     reinterpret_cast<CreateComputeShaderFn>(
                         originalCreateComputeShader);
 
-                g_shaderCreationHooksArmed = true;
+                g_shaderCreationHooksArmed =
+                    shaderHooksOk;
             }
 
             if (targets.createDeferredContext)
