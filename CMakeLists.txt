@@ -445,3 +445,17 @@ set_tests_properties(
     PROPERTIES
         ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_DEFERRED_OUTSIDE_DETAIL_ACTIVE=1"
 )
+
+add_test(
+    NAME global_taa_without_hdr_completion
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/global-taa-without-hdr-output"
+)
+
+set_tests_properties(
+    global_taa_without_hdr_completion
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_TAA_WITHOUT_HDR_ACTIVE=1"
+)
