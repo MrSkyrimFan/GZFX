@@ -1,0 +1,335 @@
+GZFX 0.0.27 NEW CHAT TECHNICAL APPENDIX
+Date: October 25, 2026
+Companion to:
+    GZFX_NEW_CHAT_TAKEOVER_0.0.27.txt
+
+======================================================================
+0.0.26 FIELD FACTS THAT CONTROL 0.0.27
+======================================================================
+
+Field runtime:
+
+    SkyrimSE.exe 1.7.104.0
+
+Session:
+
+    session_20261025_153503_145720
+
+Active frames:
+
+    9,103
+
+Creation identity:
+
+    shaders 16,126
+    resources 23,230
+
+Present epochs:
+
+    10,037
+
+Command lists:
+
+    26,370 / 26,370 GZFX-owned
+    external 0
+
+Global TAA:
+
+    BeforeGlobalTAA 9,103
+    AfterGlobalTAA  9,103
+
+Stable global TAA PS:
+
+    0xE8D58B595587B316
+
+Pre-TAA full-res current/tonemap candidate:
+
+    PS 0x99D22A3D198A3B69
+    9,103 / 9,103 active frames
+
+Observed HDR reduction family:
+
+    160x90
+    40x23
+    10x6
+    3x2
+    2x2
+
+Exterior root:
+
+    MAIN_HDR -> reduction
+
+Interior root:
+
+    MAIN_HDR
+    -> full-resolution RGBA16F descendant
+    -> reduction
+
+Old detector committed 3x2 too early.
+
+======================================================================
+D3D FRONT-DOOR ARCHITECTURE
+======================================================================
+
+Package:
+
+    dinput8.dll
+    d3d11.dll
+    GZFX.dll
+
+dinput8:
+    input bridge / existing bootstrap path.
+
+d3d11:
+    graphics bootstrap only.
+
+GZFX.dll:
+    renderer core.
+
+d3d11 DllMain:
+    no LoadLibrary
+    no renderer init
+    no file I/O.
+
+D3D export path:
+
+    application enters local d3d11 export
+    ->
+    local shim loads/resolves absolute System32 d3d11.dll
+    ->
+    real device creation
+    ->
+    GZFX initialize if needed
+    ->
+    explicit primary attach
+    ->
+    return unchanged device/context/swapchain.
+
+Forwarded exports:
+
+    D3D11CreateDevice
+    D3D11CreateDeviceAndSwapChain
+    D3D11CoreCreateDevice
+    D3D11CoreCreateLayeredDevice
+    D3D11CoreGetLayeredDeviceSize
+    D3D11CoreRegisterLayers
+
+======================================================================
+REENTRANT INITIALIZATION
+======================================================================
+
+GZFX initialization state:
+
+    0 not started
+    1 initializing
+    2 ready
+    3 failed
+
+This is required because dinput8 may load GZFX first.
+
+During renderer_forensics target discovery GZFX creates a temporary WARP device.
+
+That WARP request may enter local d3d11.dll.
+
+If GZFX state=1:
+
+    proxy forwards real D3D creation;
+    does not recursively call GZFX_Initialize;
+    does not attach WARP as primary.
+
+Only state=2 may attach primary objects.
+
+This avoids same-thread recursive std::call_once deadlock.
+
+======================================================================
+PRIMARY ATTACH
+======================================================================
+
+Export:
+
+    GZFX_AttachPrimaryD3D11
+
+Internal:
+
+    diagnostics::AttachPrimaryRendererObjects
+    -> AttachPrimaryLocked
+
+It requires:
+
+    device
+    immediate context
+
+Swapchain may be null for D3D11CreateDevice.
+
+First real process-window Present remains fallback/upgrade path.
+
+A different device/context is rejected after primary binding.
+
+======================================================================
+STARTUP EVIDENCE
+======================================================================
+
+File:
+
+    Diagnostics/renderer_startup.csv
+
+Important ordered events for D3D-first path:
+
+    d3d11_proxy_process_attach
+    first_d3d11_export_enter
+    real_device_creation_complete
+    gzfx_load_begin
+    gzfx_initialize_complete
+    primary_attach_complete
+    first_resource_creation_observed
+    first_present
+
+CI enforces ordering.
+
+======================================================================
+UNIVERSAL RUNTIME MODEL
+======================================================================
+
+Level 1:
+
+    universal D3D renderer core.
+
+Level 2:
+
+    optional executable-specific engine profile.
+
+Known diagnostic runtimes:
+
+    1.5.97.0
+    1.6.1170.0
+    1.7.104.0
+
+Only 1.6.1170 currently arms the verified engine epochs.
+
+1.5.97 and 1.7.104 are not rejected.
+
+Unknown future Skyrim also keeps rendererCoreSupported=true while engine hooks
+remain unavailable.
+
+No SKSE runtime dependency.
+No Address Library runtime dependency.
+
+Do not claim 1.5.97 field-certified until actually tested there.
+
+======================================================================
+HDR DETECTOR
+======================================================================
+
+FrameState added:
+
+    hdrReductionSourceIdentity
+    hdrFullResAncestryDepth
+
+Before reduction root:
+
+    source = verified descendant if present
+             else canonical MAIN_HDR.
+
+Full-resolution ancestry candidate must:
+
+    be RGBA16F
+    equal screen resolution
+    read current verified source
+    be a different identity
+    remain within depth < 3.
+
+Reduction root may then consume that verified source.
+
+Fresh-root recovery also uses the verified source.
+
+Terminal now requires:
+
+    hdrReductionStep >= 4
+    width <= 2
+    height <= 2.
+
+Reason:
+
+    hdr_reduction_complete_2x2_terminal
+
+This encodes field structure, not field shader hashes.
+
+======================================================================
+TAA CONTRACT
+======================================================================
+
+TAA remains independent from HDR completion.
+
+Required structure:
+
+    Motion semantic
+    MainDepth semantic
+    >=2 full-resolution RGBA8 reads
+    exactly 2 full-resolution RGBA8 writes.
+
+Field stable hash is corroboration only.
+
+Do not turn 0xE8D58B595587B316 into a universal magic constant.
+
+======================================================================
+SHUTDOWN EVIDENCE
+======================================================================
+
+New:
+
+    session_close_state.txt
+
+At Shutdown entry:
+
+    state=shutdown_requested
+
+After writer join:
+
+    state=complete
+
+Existing writer completion file remains:
+
+    telemetry_session_complete.txt
+
+Front-door CI requires both.
+
+======================================================================
+CI
+======================================================================
+
+Final suite:
+
+    25 tests
+
+New 0.0.27 tests:
+
+    d3d11_frontdoor_bootstrap
+    hdr_descendant_reduction_contract
+
+Final PR:
+    run 40240307819
+    25/25 PASS
+
+Merged main:
+    run 40240619364
+    25/25 PASS
+
+Package exactly:
+    d3d11.dll
+    dinput8.dll
+    GZFX.dll
+
+======================================================================
+KNOWN NON-GOALS
+======================================================================
+
+No ENB/ReShade runtime coexistence requirement.
+
+No chain support in 0.0.27 acceptance.
+
+No 1.7.104 executable engine hook until GZFX has independently validated
+address/signature evidence.
+
+No new graphics feature.
+
+END TECHNICAL APPENDIX

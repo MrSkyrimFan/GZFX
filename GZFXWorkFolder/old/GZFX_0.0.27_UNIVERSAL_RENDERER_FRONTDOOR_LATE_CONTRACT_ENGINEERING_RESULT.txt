@@ -1,0 +1,606 @@
+GZFX 0.0.27 UNIVERSAL RENDERER FRONT-DOOR + LATE CONTRACTS
+FINAL ENGINEERING RESULT
+Closure date: October 25, 2026
+
+STATUS:
+    IMPLEMENTED
+    PR GREEN
+    MERGED
+    MERGED-MAIN GREEN
+    PACKAGED
+    PACKAGE REFRESH VERIFIED ZIP-ONLY
+    READY FOR REAL-SKYRIM FIELD VALIDATION
+
+RUNTIME:
+    0.0.27-universal-frontdoor-late-contracts
+
+======================================================================
+1. CONTROLLING INPUTS
+======================================================================
+
+This engineering wave implemented:
+
+    GZFX_0.0.26_RENDERER_IDENTITY_ENGINE_EPOCH_FIELD_FINDINGS.txt
+    GZFX_RESEARCH_PASS_10_ENB_RESHADE_FRONT_DOOR_AND_1.7.104_RENDERER_STRATEGY.txt
+    GZFX_0.0.27_UNIVERSAL_RENDERER_FRONTDOOR_LATE_CONTRACT_BLUEPRINT.txt
+
+Owner explicitly authorized completion through implementation, CI, merge,
+package refresh, archive and field-test handoff without another checkpoint.
+
+Product intent is explicit:
+
+    GZFX is NOT being made runtime-compatible with ENB or ReShade.
+
+ENB/ReShade were architecture references only.
+
+GZFX 0.0.27 remains standalone and independently implemented.
+
+======================================================================
+2. FINAL SOURCE / PR PROOF
+======================================================================
+
+Implementation branch:
+
+    feature/0.0.27-universal-frontdoor-late-contracts
+
+Pull request:
+
+    #30
+    0.0.27 universal renderer front door and late contracts
+
+Final PR head:
+
+    0e9846b354c528b2e3a5c06d4656c13d88e2c846
+
+Final PR Windows x64 workflow:
+
+    run 40240307819
+
+Result:
+
+    25 / 25 tests PASS
+    0 failures
+    total ctest time 27.93 sec
+
+Merge commit:
+
+    d7dc0d9c2a5dd80aff2b960d01b01bc1fed83632
+
+Merged-main Windows x64 workflow:
+
+    run 40240619364
+
+Result:
+
+    25 / 25 tests PASS
+    0 failures
+    total ctest time 22.74 sec
+
+Package refresh commit:
+
+    b771cec8cc5a9278e53016d082ebad34f16dc94a
+
+Package refresh changed ONLY:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+No source/test/authority files changed in the package-refresh commit.
+
+======================================================================
+3. PACKAGE PROOF
+======================================================================
+
+Published package:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Git blob:
+
+    a98988f9685a011ac6ebfa095abf844fe3056285
+
+Repository ZIP bytes:
+
+    389,438
+
+CI exact-content assertion passed.
+
+The package contains exactly:
+
+    GZFX.dll
+    d3d11.dll
+    dinput8.dll
+
+No ENB files.
+No ReShade files.
+No SKSE files.
+No Address Library files.
+
+Merged-main Actions artifact:
+
+    artifact id 12616802987
+    name GZFX-SkyrimSE-x64
+    artifact container bytes 388,837
+    artifact digest:
+        sha256:a10161f4364c7f641a0f60b452d26a331b807af60ee0d5e47f91537f8e6c8e30
+
+The Actions artifact digest is an artifact-container digest and is not asserted
+to equal the repository inner ZIP byte digest.
+
+======================================================================
+4. IMPLEMENTED LANE A — GRAPHICS FRONT DOOR
+======================================================================
+
+New root bootstrap:
+
+    d3d11.dll
+
+Existing root bootstrap retained:
+
+    dinput8.dll
+
+Renderer core remains:
+
+    GZFX.dll
+
+The new d3d11 bootstrap is intentionally tiny.
+
+It forwards the real System32 D3D11 implementation and contains no graphics
+feature algorithms.
+
+Exports:
+
+    D3D11CreateDevice
+    D3D11CreateDeviceAndSwapChain
+    D3D11CoreCreateDevice
+    D3D11CoreCreateLayeredDevice
+    D3D11CoreGetLayeredDeviceSize
+    D3D11CoreRegisterLayers
+
+DllMain remains minimal:
+
+    store module handle
+    DisableThreadLibraryCalls
+    buffer an in-memory startup timestamp
+
+It does NOT:
+
+    LoadLibrary GZFX
+    initialize renderer systems
+    perform file I/O.
+
+On a real application D3D create call:
+
+    call real System32 D3D11 first
+    ->
+    receive real device/context/swapchain
+    ->
+    initialize GZFX outside loader lock
+    ->
+    explicitly attach the real primary objects
+    ->
+    return the unchanged real objects/HRESULT to the application.
+
+This closes the 0.0.26 timing gap where dinput8 could lazy-load GZFX only after
+core renderer resources already existed.
+
+======================================================================
+5. STARTUP REENTRANCY SAFETY
+======================================================================
+
+A startup-order hazard was found during implementation.
+
+Possible order:
+
+    dinput8 loads GZFX first
+    ->
+    GZFX_Initialize begins
+    ->
+    renderer_forensics creates a temporary WARP device
+    ->
+    WARP call re-enters local d3d11 proxy
+    ->
+    proxy could recursively call GZFX_Initialize
+    ->
+    same std::call_once could deadlock.
+
+Repair:
+
+    GZFX exports initialization state:
+
+        0 not started
+        1 initializing
+        2 ready
+        3 failed
+
+    d3d11 proxy checks that state before initialization/attach.
+
+If state=1:
+
+    do not recursively initialize;
+    forward the temporary D3D request;
+    do not attach temporary WARP device as primary.
+
+Primary attach is permitted only when state=2.
+
+Both startup orders are now exercised by CI:
+
+    GZFX-first existing harnesses
+    D3D-first new front-door harness.
+
+A 30-second CTest timeout bounds front-door deadlock detection.
+
+======================================================================
+6. EXPLICIT PRE-PRESENT PRIMARY ATTACH
+======================================================================
+
+New exported runtime API:
+
+    GZFX_AttachPrimaryD3D11(
+        IDXGISwapChain*,
+        ID3D11Device*,
+        ID3D11DeviceContext*)
+
+renderer_forensics now supports explicit primary attachment before first
+Present.
+
+The path:
+
+    validates device/context;
+    rejects a different already-bound primary object;
+    retains real COM objects;
+    installs immediate-context observation;
+    attaches renderer_execution_service;
+    records renderer summary.
+
+First-Present acquisition remains as fallback and can upgrade a no-swapchain
+D3D11CreateDevice path later.
+
+======================================================================
+7. STARTUP TIMELINE EVIDENCE
+======================================================================
+
+New compact:
+
+    Diagnostics/renderer_startup.csv
+
+Relevant events include:
+
+    d3d11_proxy_process_attach
+    first_d3d11_export_enter
+    real_device_creation_complete
+    gzfx_load_begin
+    gzfx_initialize_complete
+    primary_attach_complete
+    first_resource_creation_observed
+    first_shader_creation_observed
+    first_present
+
+The D3D-first harness requires ordered evidence:
+
+    proxy attach
+    <
+    first D3D export
+    <
+    real device creation
+    <
+    GZFX load
+    <
+    GZFX initialize complete
+    <
+    primary attach
+    <
+    first tracked resource
+    <
+    first Present
+
+This is direct automated proof of graphics-front-door timing.
+
+======================================================================
+8. UNIVERSAL RUNTIME POLICY
+======================================================================
+
+The product no longer equates:
+
+    missing engine hook profile
+
+with:
+
+    unsupported Skyrim runtime.
+
+Engine status now separates:
+
+    renderer_core_supported
+    runtime_known
+    engine_profile_available
+    engine hooks armed/not armed.
+
+Known runtime-family diagnostics include:
+
+    1.5.97.0
+    1.6.1170.0
+    1.7.104.0
+
+Only 1.6.1170 currently has the already-validated optional executable engine
+epoch profile.
+
+1.5.97 and 1.7.104 still receive the full universal D3D renderer core.
+
+Unknown future runtimes also retain the D3D core and fail closed only on the
+optional executable hooks.
+
+This is the architecture basis for downgraded/Nolvus/current-runtime support.
+
+IMPORTANT:
+
+    Architecture support is not the same as field certification.
+
+1.7.104 is the current field runtime.
+
+1.5.97/Nolvus remains to be field-tested before claiming field-proven support.
+
+======================================================================
+9. GLOBAL TAA CONTRACT
+======================================================================
+
+0.0.26 field evidence:
+
+    9,103 / 9,103 active scene frames
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+Stable field PS:
+
+    0xE8D58B595587B316
+
+0.0.27 treats global TAA as a structural contract, not a magic-hash rule.
+
+The existing TAA detector remains independent from HDR completion and requires
+the temporal resource structure:
+
+    MAIN_DEPTH_CURRENT
+    MOTION
+    full-resolution current/history color
+    exactly two full-resolution RGBA8 temporal outputs.
+
+CI retains:
+
+    global_taa_without_hdr_completion
+
+PASS.
+
+======================================================================
+10. HDR INTERIOR ANCESTRY REPAIR
+======================================================================
+
+0.0.26 field evidence proved interiors can use:
+
+    MAIN_HDR
+    ->
+    full-resolution RGBA16F descendant
+    ->
+    reduction chain
+
+rather than reducing canonical MAIN_HDR directly.
+
+0.0.27 adds bounded same-frame full-resolution HDR ancestry.
+
+Rules:
+
+    RGBA16F
+    full resolution
+    consumes canonical MAIN_HDR or prior verified descendant
+    same frame
+    bounded ancestry depth
+
+The reduction root can consume the verified descendant.
+
+Arbitrary graph traversal is not allowed.
+
+New acceptance:
+
+    hdr_descendant_reduction_contract
+
+PASS on final PR and merged main.
+
+======================================================================
+11. HDR TERMINAL / BEFORETONEMAP REPAIR
+======================================================================
+
+0.0.26 field evidence proved the true chain continues:
+
+    3x2
+    ->
+    2x2
+
+The old detector committed at the first <=4x4 node and therefore stored 3x2 as
+the final identity.
+
+0.0.27 no longer commits at 3x2.
+
+Current terminal rule requires:
+
+    coherent descending chain
+    step >= 4
+    width <= 2
+    height <= 2
+
+The observed family therefore commits the true 2x2 terminal.
+
+BeforeTonemap can subsequently use the true terminal dependency before the
+full-resolution RGBA8 transition.
+
+======================================================================
+12. SESSION SHUTDOWN PROOF
+======================================================================
+
+New:
+
+    session_close_state.txt
+
+Shutdown entry writes:
+
+    state=shutdown_requested
+    qpc
+    enqueued
+    written
+    dropped
+    queue_depth
+    writer_alive
+
+After writer join/flush it writes:
+
+    state=complete
+
+Existing:
+
+    telemetry_session_complete.txt
+
+is retained.
+
+The new front-door harness requires both completion proofs.
+
+This is intended to distinguish:
+
+    Shutdown never called
+
+from:
+
+    Shutdown entered but drain/flush failed.
+
+No shutdown file I/O was moved into DllMain.
+
+======================================================================
+13. CI EXPANSION
+======================================================================
+
+Test suite grew:
+
+    23 -> 25
+
+New acceptance:
+
+    d3d11_frontdoor_bootstrap
+    hdr_descendant_reduction_contract
+
+Existing strengthened acceptance remains:
+
+    engine_epoch_signatures
+    global_taa_without_hdr_completion
+    deferred_telemetry_outside_detail_gate
+    late_stack_cartography
+    all Waves 1-4 tests.
+
+Final PR:
+
+    25 / 25 PASS
+
+Merged main:
+
+    25 / 25 PASS
+
+======================================================================
+14. PRESERVED FAILURE / REPAIR HISTORY
+======================================================================
+
+First 0.0.27 PR compile failure:
+
+    run 40239727793
+
+MSVC:
+
+    bootstrap/d3d11_proxy.cpp
+    warning C4114 promoted to error C2220
+
+Cause:
+
+    const REFIID duplicated a const qualifier already present in REFIID.
+
+Repair:
+
+    remove redundant qualifier.
+
+Commit:
+
+    0351e1d4f930f16ac67047644c4ade2fa18d4ee0
+
+A second startup-order risk was found by source audit before merge:
+
+    possible recursive GZFX_Initialize through the dinput-first/WARP path.
+
+Repair commits:
+
+    bdca2dbd44aa0ae5acc40b8609a949c9a7e23adf
+    19cf5b4ae826b9b0fe2c6395a118182b54e8e47e
+    428c6e61e1aeeb25eb883aa60e37f5d1ddc2a89d
+
+Post-repair run:
+
+    40240181867
+    25/25 PASS
+
+The final exact PR head then passed independently.
+
+No failure history was erased.
+
+======================================================================
+15. FIELD PACKAGE CONSTRAINT
+======================================================================
+
+0.0.27 ships a local:
+
+    d3d11.dll
+
+Therefore the immediate field-validation configuration is:
+
+    standalone GZFX.
+
+Do not leave another ENB/ReShade d3d11.dll in the same Skyrim root and pretend
+the filename collision is supported.
+
+ENB/ReShade coexistence is not a 0.0.27 product requirement.
+
+======================================================================
+16. NEXT FIELD QUESTIONS
+======================================================================
+
+On the next real Skyrim 1.7.104 run verify:
+
+1. renderer_startup.csv exists.
+2. Primary attach precedes first Skyrim core resource creation.
+3. MAIN_HDR / MAIN_DEPTH / MOTION / NORMAL provenance improves from
+   unknown/preexisting.
+4. renderer_core_supported=true.
+5. detected runtime remains 1.7.104.
+6. runtime_known=true.
+7. engine_profile_available=false is acceptable and expected.
+8. creation hooks remain armed.
+9. command-list ownership remains coherent.
+10. BeforeGlobalTAA / AfterGlobalTAA remain 1:1 active-frame.
+11. HDRReduction now covers exterior AND interior.
+12. HDR terminal follows the actual 2x2 chain.
+13. BeforeTonemap now fires.
+14. present timeline remains coherent.
+15. session_close_state reaches state=complete after normal quit.
+16. telemetry_session_complete exists.
+17. dropped=0.
+18. Waves 1-4 show no regression.
+
+If this passes, late-stack cartography should be very close to closure.
+
+======================================================================
+17. CLOSURE VERDICT
+======================================================================
+
+0.0.27 IMPLEMENTATION = COMPLETE.
+
+PR #30 = MERGED.
+FINAL PR CI = GREEN.
+MERGED-MAIN CI = GREEN.
+25/25 TESTS = PASS.
+GRAPHICS FRONT DOOR = AUTOMATED PASS.
+INTERIOR HDR CONTRACT = AUTOMATED PASS.
+EXACT THREE-DLL PACKAGE = VERIFIED.
+PACKAGE REFRESH = ZIP ONLY.
+READY FOR REAL-SKYRIM FIELD VALIDATION.
+
+END ENGINEERING RESULT

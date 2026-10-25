@@ -1,0 +1,241 @@
+GZFX NEW CHAT TAKEOVER — 0.0.27
+Date: October 25, 2026
+Status: CONTROLLING CURRENT HANDOFF
+
+READ FIRST:
+    AGENT.md
+    GZFXWorkFolder/old/GZFX_0.0.27_UNIVERSAL_RENDERER_FRONTDOOR_LATE_CONTRACT_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.27.txt
+
+For deeper history:
+    GZFX_NEW_CHAT_TAKEOVER_0.0.26.txt
+    GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.26.txt
+
+======================================================================
+CURRENT PRODUCT STATE
+======================================================================
+
+Runtime:
+
+    0.0.27-universal-frontdoor-late-contracts
+
+PR:
+
+    #30
+
+Final PR head:
+
+    0e9846b354c528b2e3a5c06d4656c13d88e2c846
+
+Final PR CI:
+
+    run 40240307819
+    25/25 PASS
+
+Source merge:
+
+    d7dc0d9c2a5dd80aff2b960d01b01bc1fed83632
+
+Merged-main CI:
+
+    run 40240619364
+    25/25 PASS
+
+Package refresh:
+
+    b771cec8cc5a9278e53016d082ebad34f16dc94a
+
+Package:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Package blob:
+
+    a98988f9685a011ac6ebfa095abf844fe3056285
+
+Package bytes:
+
+    389,438
+
+Package contents exactly:
+
+    GZFX.dll
+    d3d11.dll
+    dinput8.dll
+
+Package-refresh diff:
+
+    ZIP ONLY.
+
+======================================================================
+PRODUCT INTENT
+======================================================================
+
+GZFX is NOT being made runtime-compatible with ENB or ReShade.
+
+ENB and ReShade were architecture references.
+
+0.0.27 field configuration is standalone GZFX.
+
+The new d3d11.dll belongs to GZFX.
+
+Do not leave another ENB/ReShade d3d11.dll in the Skyrim root for this field
+test.
+
+======================================================================
+WHY 0.0.27 EXISTS
+======================================================================
+
+0.0.26 real Skyrim telemetry showed:
+
+    live Skyrim = 1.7.104.0
+    stable shader/resource identity worked
+    command-list ownership was completely coherent
+    global TAA = 9,103/9,103 active frames
+
+It also showed:
+
+    some core resources remained unknown/preexisting;
+    dinput8 lazy-load timing could be too late;
+    interior HDR used a full-res HDR descendant before reduction;
+    HDR detector stopped at 3x2 instead of the real 2x2 terminal;
+    BeforeTonemap therefore never fired;
+    clean shutdown marker remained absent.
+
+0.0.27 fixes those architecture/detector issues.
+
+======================================================================
+WHAT 0.0.27 ADDS
+======================================================================
+
+1. GZFX d3d11.dll graphics-front-door bootstrap.
+
+2. Safe GZFX initialization outside DllMain.
+
+3. Reentrant startup-state handshake:
+       not started
+       initializing
+       ready
+       failed.
+
+4. Explicit primary D3D device/context/swapchain attach before Present.
+
+5. renderer_startup.csv.
+
+6. Universal renderer-core support separated from optional executable engine
+   profiles.
+
+7. Known runtime family diagnostics:
+       1.5.97
+       1.6.1170
+       1.7.104.
+
+8. 1.6.1170 optional engine profile retained.
+   1.5.97/1.7.104 use universal D3D core with executable anchors disabled until
+   independently validated.
+
+9. Global TAA treated as structural field contract.
+
+10. Interior HDR full-resolution ancestry support.
+
+11. True 2x2 HDR terminal.
+
+12. session_close_state.txt shutdown proof.
+
+======================================================================
+CURRENT PHASE
+======================================================================
+
+TEST / UNIVERSAL FRONT-DOOR + LATE-CONTRACT FIELD VALIDATION
+
+Do NOT begin another graphics feature yet.
+
+Still intentionally open:
+
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+HDRReduction and BeforeTonemap require the new field run.
+
+BeforeGlobalTAA / AfterGlobalTAA are now the strongest locked late-stage
+contract.
+
+======================================================================
+EXACT NEXT ACTION
+======================================================================
+
+Install the newest root-ready package.
+
+IMPORTANT:
+
+    it contains GZFX's own d3d11.dll.
+
+For this test, Skyrim root must not retain another ENB/ReShade d3d11.dll.
+
+Replace the previous GZFX runtime files with:
+
+    GZFX.dll
+    d3d11.dll
+    dinput8.dll
+
+Run one fresh natural Skyrim session roughly 2-3 minutes.
+
+Coverage:
+    exterior daylight
+    interior
+    exterior night
+    water/reflections
+    fire/particles if convenient
+    Modes 0, 1, 2 represented naturally.
+
+No manual capture hotkey required.
+
+Quit normally.
+
+Wait until SkyrimSE.exe is fully gone.
+
+Upload ONLY the newest:
+
+    Documents/My Games/Skyrim Special Edition/GZFX/Telemetry/session_*
+
+Also include Diagnostics files automatically present with the install/session
+if the user's ZIP workflow captures them; if the telemetry session alone does
+not contain renderer_startup.csv, request the current GZFX Diagnostics folder
+in the next DATA review.
+
+======================================================================
+ON NEXT DATA
+======================================================================
+
+First inspect:
+
+    renderer_startup.csv
+    listener_status.txt
+    session_close_state.txt
+    telemetry_session_complete.txt
+    manifest.txt
+    stages.csv
+    resources.csv
+    pipeline_shaders.csv
+    ownership.csv
+    present_timeline.csv
+    engine_events.csv
+    pipeline_runs_*.csv
+    semantics.csv
+    transitions.csv
+    seconds.csv
+
+Primary questions:
+
+    Did graphics-front-door timing capture core Skyrim resource birth?
+    Did unknown/preexisting core provenance collapse?
+    Did HDRReduction cover interiors?
+    Did BeforeTonemap fire from the true 2x2 terminal?
+    Did TAA remain 1:1?
+    Did shutdown complete cleanly?
+    Is late-stack cartography now closable?
+
+Follow the repository cycle.
+
+END TAKEOVER
