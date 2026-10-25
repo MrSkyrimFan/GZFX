@@ -2034,6 +2034,8 @@ namespace gzfx::render::semantic_authority
             const std::uint64_t ordinal,
             std::vector<PendingStage>& stages)
         {
+            (void)frame;
+
             if (!g_frame.lateStageEligible)
             {
                 return;
