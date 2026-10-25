@@ -202,8 +202,9 @@ namespace gzfx::render::wave3
         Runtime g_runtime{};
         HistoryState g_history{};
         PendingCapture g_capture{};
-        bool g_captureKeyDown = false;
+        std::atomic<bool> g_captureRequested{false};
         std::uint32_t g_captureIndex = 0;
+        constexpr std::uint64_t kCaptureArmDelayFrames = 30;
         std::uint64_t g_executeCount = 0;
         std::uint64_t g_skipCount = 0;
         std::uint64_t g_lastStatusFrame = 0;
@@ -4255,37 +4256,34 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
             return true;
         }
 
-        void PollCaptureRequest(const std::uint64_t frame)
+        void BeginRequestedCapture(
+            const std::uint64_t frame)
         {
-            const bool shift =
-                (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
-            const bool numpad5 =
-                (GetAsyncKeyState(VK_NUMPAD5) & 0x8000) != 0 ||
-                (GetAsyncKeyState(VK_CLEAR) & 0x8000) != 0;
-            const bool down = shift && numpad5;
-
-            if (down && !g_captureKeyDown &&
-                !g_capture.active)
+            if (!g_captureRequested.exchange(
+                    false,
+                    std::memory_order_acq_rel) ||
+                g_capture.active)
             {
-                ++g_captureIndex;
-                g_capture = {};
-                g_capture.active = true;
-                g_capture.frame = frame;
-                g_capture.index = g_captureIndex;
-
-                std::wostringstream name;
-                name
-                    << L"manual"
-                    << std::setw(4)
-                    << std::setfill(L'0')
-                    << g_captureIndex;
-
-                g_capture.directory =
-                    DiagnosticsRoot() /
-                    name.str();
+                return;
             }
 
-            g_captureKeyDown = down;
+            ++g_captureIndex;
+            g_capture = {};
+            g_capture.active = true;
+            g_capture.frame =
+                frame + kCaptureArmDelayFrames;
+            g_capture.index = g_captureIndex;
+
+            std::wostringstream name;
+            name
+                << L"manual"
+                << std::setw(4)
+                << std::setfill(L'0')
+                << g_captureIndex;
+
+            g_capture.directory =
+                DiagnosticsRoot() /
+                name.str();
         }
 
         void InvalidateHistory(
@@ -4309,7 +4307,7 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 }
 
                 std::scoped_lock lock(g_mutex);
-                PollCaptureRequest(event.frame);
+                BeginRequestedCapture(event.frame);
 
                 execution::ExecutionLease lease{};
 
@@ -4582,6 +4580,19 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
         catch (...)
         {
             return false;
+        }
+    }
+
+    void RequestManualCapture() noexcept
+    {
+        try
+        {
+            g_captureRequested.store(
+                true,
+                std::memory_order_release);
+        }
+        catch (...)
+        {
         }
     }
 }
