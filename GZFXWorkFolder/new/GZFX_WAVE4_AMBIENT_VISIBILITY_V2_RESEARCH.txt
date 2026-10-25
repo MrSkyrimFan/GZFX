@@ -1,0 +1,1200 @@
+GZFX WAVE 4 RESEARCH
+Ambient Visibility v2 - Production AO Architecture
+Research date: October 24, 2026
+Status: COMPLETE
+Repository product source modified during research: NO
+
+Controlling authority:
+- GZFXWorkFolder/new/GZFX_0.0.22_WAVE3_FIELD_FINDINGS_CLOSED.txt
+- GZFX 0.0.22 merged source
+- prior field/research/blueprint history in GZFXWorkFolder/old/
+
+Public research basis:
+- Activision, Practical Realtime Strategies for Accurate Indirect Occlusion:
+  https://www.activision.com/cdn/research/Practical_Real_Time_Strategies_for_Accurate_Indirect_Occlusion_NEW%20VERSION_COLOR.pdf
+- Intel/GameTechDev XeGTAO, MIT licensed reference:
+  https://github.com/GameTechDev/XeGTAO
+- XeGTAO shader reference:
+  https://github.com/GameTechDev/XeGTAO/blob/master/Source/Rendering/Shaders/XeGTAO.hlsli
+- NVIDIA Scalable Ambient Obscurance:
+  https://research.nvidia.com/publication/2012-06_scalable-ambient-obscurance
+- NVIDIA HBAO+ background / integration guidance:
+  https://developer.nvidia.com/rendering-technologies/horizon-based-ambient-occlusion-plus
+- Community Shaders public Skyrim renderer research:
+  https://github.com/doodlum/skyrim-community-shaders
+  NOTE: Community Shaders is GPL. GZFX does not copy its implementation.
+  Public architecture/renderer observations are used only as research input.
+- Microsoft D3D11 deferred contexts / ExecuteCommandList:
+  https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11devicecontext-executecommandlist
+
+======================================================================
+1. EXECUTIVE DECISION
+======================================================================
+
+Wave 4 should build the first production graphics-quality effect on top of the
+now field-closed renderer foundation.
+
+Feature:
+
+    AMBIENT VISIBILITY v2
+
+Algorithm family:
+
+    clean-room GTAO-inspired horizon visibility
+
+Integration:
+
+    replace Skyrim's final filtered SAO visibility surface
+    AFTER stock AO completes
+    BEFORE Skyrim's Ambient Screen-Space Composite consumes it
+
+This is the critical architectural decision.
+
+Do NOT:
+
+    multiply HDR scene color late
+    reuse the failed old half-resolution Horizon/HBAO prototype
+    reconstruct normals from depth as the primary surface orientation
+    create another duplicate depth hierarchy
+    create another independent temporal system
+
+Wave 4 should consume the systems Wave 3 proved:
+
+    GZFXSceneDepthHierarchy
+    native NORMAL_MASK_CURRENT
+    native MOTION
+    camera data
+    GZFX temporal geometry confidence/reprojection validity
+    Stage Scheduler
+    Renderer Execution Service
+
+The first production effect should finally operate as a renderer component,
+not as a post-processing trick.
+
+======================================================================
+2. WHY GTAO IS THE RIGHT ALGORITHM FAMILY
+======================================================================
+
+The old GZFX Horizon/HBAO-style experiments failed in the field because they
+combined several weak assumptions:
+
+- fixed screen-space sampling;
+- poor surface orientation before native normals were known;
+- half-resolution analysis;
+- no reliable temporal geometry foundation;
+- overly global response;
+- late scene-color multiplication;
+- large visible horizontal/crawling patterns.
+
+GTAO addresses the important algorithmic side of this failure.
+
+The Activision work derives an ambient visibility approximation from horizon
+angles in projected slices rather than merely summing arbitrary depth
+differences.
+
+Important properties:
+
+- world-space radius;
+- directional horizon search;
+- surface-normal-aware visibility integration;
+- bounded falloff;
+- physically/radiometrically motivated visibility term;
+- low sample counts with temporal/spatial filtering;
+- natural separation between scalar visibility and later indirect/multiple
+  bounce lighting.
+
+XeGTAO demonstrates a practical modern implementation and confirms:
+
+- full-resolution rendering is a strong quality baseline;
+- hierarchical view-space depth is valuable for cache-efficient larger radii;
+- 32-bit view-space depth materially improves quality;
+- a small number of slices/steps is sufficient;
+- depth-aware denoise is important;
+- temporal noise is expected to be filtered rather than hidden by huge sample
+  counts.
+
+This maps unusually well onto the exact systems GZFX just finished.
+
+======================================================================
+3. FULL RESOLUTION IS THE WAVE 4 BASELINE
+======================================================================
+
+Wave 4 should begin at full active render resolution.
+
+Reference field resolution:
+
+    2560x1440
+
+Reasons:
+
+1. The old GZFX half-resolution Horizon path flickered/crawled badly.
+
+2. NVIDIA's HBAO+ material explicitly identifies full-resolution operation as
+   an important improvement over older half-resolution AO behavior.
+
+3. XeGTAO's modern default/high quality paths are designed to work at full
+   resolution.
+
+4. Wave 3 GPU infrastructure is currently inexpensive enough that there is no
+   evidence forcing a half-resolution compromise.
+
+5. The user is targeting ENB-class or better visual quality, not lowest-common-
+   denominator post-processing.
+
+Do not optimize to half resolution before measuring the real production pass.
+
+======================================================================
+4. USE THE GZFX R32 HIERARCHY DIRECTLY
+======================================================================
+
+Wave 4 must NOT construct another depth pyramid.
+
+The field-proven:
+
+    GZFXSceneDepthHierarchy
+
+already provides:
+
+    R32_FLOAT
+    positive view-space depth
+    post-opaque coverage
+    full mip chain to 1x1
+    full-resolution mip0
+    weighted/far-aware reduction
+
+Wave 3 real-game evidence proved:
+
+- correct scale/sign against CameraZ on common geometry;
+- additional post-opaque geometry missed by stock CameraZ;
+- stable construction at the exact renderer stage needed by Wave 4.
+
+GTAO's sample radius naturally benefits from choosing coarser hierarchy mips
+for farther screen-space offsets.
+
+Recommended mip selection concept:
+
+    samplePixelDistance = length(offsetPixels)
+
+    mip =
+        clamp(
+            log2(samplePixelDistance) - depthMipBias,
+            0,
+            mipCount - 1)
+
+Use point sampling within a chosen mip to avoid blending unrelated depth
+surfaces across discontinuities.
+
+No D3D11 GenerateMips.
+
+======================================================================
+5. NATIVE NORMALS
+======================================================================
+
+Primary normal:
+
+    NORMAL_MASK_CURRENT.RG
+
+Use the already field-proven native Skyrim decode.
+
+Do not use depth-derived normals as a silent fallback.
+
+Wave 4 should fail soft to stock AO for a frame when the required native
+normal semantic is unavailable.
+
+That is preferable to reintroducing the exact unstable approximation the
+project spent multiple versions escaping.
+
+======================================================================
+6. CLEAN-ROOM GTAO MAIN PASS
+======================================================================
+
+Implement independently from the public paper and MIT XeGTAO concepts.
+
+Do not copy GPL Community Shaders shader code.
+
+Core per-pixel sequence:
+
+1. read current positive view-space depth from hierarchy mip0;
+
+2. background:
+       visibility = 1
+       return;
+
+3. decode native view-space normal;
+
+4. reconstruct current view-space position;
+
+5. compute view vector toward the camera;
+
+6. compute a world-space effect radius projected to a screen-space radius at
+   the current depth;
+
+7. rotate a small set of horizon slices using deterministic per-pixel/frame
+   low-discrepancy noise;
+
+8. for each slice:
+       sample both directions;
+       distribute steps non-linearly from near to far;
+       choose hierarchy mip from sample distance;
+       reconstruct sampled view position;
+       calculate sample horizon vector;
+       apply world-radius/falloff rejection;
+       retain the strongest valid horizon on each side;
+
+9. integrate the two horizons against the projected surface normal;
+
+10. average visibility across slices;
+
+11. apply a mild user/engineering power curve only after the physical
+    visibility term is formed;
+
+12. output:
+       visibility in [0,1]
+       1 = unoccluded
+       0 = fully occluded
+
+Wave 4 should not emit bent normals yet.
+
+Bent normals are valuable, but they add cost and are more important once GZFX
+has environment/indirect radiance that can consume them.
+
+======================================================================
+7. INITIAL QUALITY PRESETS
+======================================================================
+
+Do not expose 20 tuning sliders.
+
+Initial internal quality tiers:
+
+MEDIUM:
+
+    slices = 2
+    steps per slice = 4
+    8 bilateral horizon samples per pixel pair direction structure
+
+HIGH - DEFAULT FIELD TARGET:
+
+    slices = 3
+    steps per slice = 6
+    18 sample steps across slices
+
+ULTRA - OPTIONAL ENGINEERING MODE:
+
+    slices = 4
+    steps per slice = 8
+
+The first real field build should default to HIGH.
+
+Do not let ULTRA become the acceptance baseline unless performance proves it
+cheap.
+
+======================================================================
+8. INITIAL WORLD-SPACE PARAMETERS
+======================================================================
+
+These are engineering seeds, not final artistic truth.
+
+Suggested starting values:
+
+    effect radius:
+        ~240 Skyrim world units
+
+    falloff range:
+        last ~35% of radius
+
+    sample distribution power:
+        ~2.0
+
+    thin-occluder compensation:
+        conservative / near zero initially
+
+    visibility power:
+        1.0
+
+    minimum practical screen radius:
+        roughly 1-2 pixels
+
+The radius must be WORLD-SPACE driven.
+
+Do not return to an arbitrary "96 screen pixels everywhere" artistic control.
+
+A world-space radius naturally shrinks on distant surfaces and avoids the
+global-gray behavior seen in the old prototype.
+
+======================================================================
+9. SPATIAL FILTER
+======================================================================
+
+The raw signal will be noisy at practical sample counts.
+
+Use a small depth/normal-aware spatial filter.
+
+Recommended baseline:
+
+    separable bilateral
+    horizontal pass
+    vertical pass
+
+Each pass:
+
+    5 taps
+
+Weight by:
+
+    Gaussian-ish spatial distance
+    relative view-depth difference
+    native-normal agreement
+
+This is simple, predictable, full resolution, and avoids a huge kernel.
+
+Alternative 5x5 single compute pass is viable, but separable filtering is
+easier to time/debug independently.
+
+Do not blur across depth silhouettes.
+
+Do not allow sky/background to bleed into geometry.
+
+======================================================================
+10. TEMPORAL INTEGRATION
+======================================================================
+
+Wave 4 should NOT create another geometry-history system.
+
+Wave 3 already owns:
+
+    previous linear depth
+    previous world normal
+    geometry confidence
+    native-motion reprojection validation
+    disocclusion masks
+
+Wave 4 needs only signal history:
+
+    PreviousAmbientVisibility
+
+Use:
+
+    previousUV =
+        currentUV + nativeMotion.xy
+
+but accept prior AO only when Wave 3 says the current pixel's previous geometry
+was valid.
+
+Recommended signal reuse inputs from Wave 3:
+
+    current geometry confidence
+    current reprojection accepted mask
+
+Wave 4 then:
+
+1. samples previous AO at previous dynamic-resolution mapping;
+
+2. rejects if Wave 3 reprojection is invalid;
+
+3. calculates current spatial AO neighborhood min/max;
+
+4. clamps reprojected AO into that current neighborhood range;
+
+5. blends according to Wave 3 confidence and current motion;
+
+6. writes current AO history.
+
+This avoids duplicating depth/world/normal disocclusion math.
+
+The Wave 4 temporal system is therefore:
+
+    signal history
+
+not:
+
+    geometry history v2.
+
+======================================================================
+11. WAVE 3 MUST EXPOSE A PRODUCTION FRAME VIEW
+======================================================================
+
+Add a narrow read-only Wave 3 API.
+
+Suggested:
+
+    struct FrameView
+    {
+        uint64_t frame;
+        uint64_t historyGeneration;
+
+        UINT width;
+        UINT height;
+        UINT mipCount;
+
+        ID3D11ShaderResourceView* depthHierarchy;
+        ID3D11ShaderResourceView* geometryConfidence;
+        ID3D11ShaderResourceView* reprojectionMask;
+
+        bool historyValid;
+        bool valid;
+    };
+
+API:
+
+    bool AcquireFrameView(
+        uint64_t frame,
+        FrameView* outView) noexcept;
+
+    void ReleaseFrameView(
+        FrameView& view) noexcept;
+
+Returned SRVs are AddRef'd.
+
+The view is valid only for the current produced frame.
+
+This lets future renderer features reuse the Wave 3 foundation without
+reaching into private Wave 3 globals.
+
+Wave 4 is the first consumer.
+
+======================================================================
+12. COMPUTE STAGE
+======================================================================
+
+Wave 4 visibility computation should run from:
+
+    AfterOpaqueWorldMRT
+
+Registration order:
+
+    Wave 3 initializes/registers first
+    Wave 4 initializes/registers second
+
+The Stage Scheduler invokes callbacks in registration order.
+
+Therefore:
+
+    AfterOpaqueWorldMRT
+    ->
+    Wave 3 builds hierarchy and temporal geometry
+    ->
+    Wave 4 consumes the completed current Wave 3 frame view
+
+Wave 4 then records one GZFX-owned deferred command list containing:
+
+    raw GTAO
+    spatial horizontal
+    spatial vertical
+    temporal accumulation
+
+No MAIN_HDR modification occurs here.
+
+The final visibility remains in GZFX-owned R16_FLOAT resources.
+
+======================================================================
+13. WHY R16_FLOAT IS SUFFICIENT FOR THE AO SIGNAL
+======================================================================
+
+Depth remains R32_FLOAT.
+
+The scalar ambient visibility output is bounded:
+
+    [0,1]
+
+R16_FLOAT is more than sufficient precision for:
+
+    raw visibility
+    filtered visibility
+    temporal AO history
+
+Using R32_FLOAT for the visibility term would double bandwidth without a
+meaningful visual benefit.
+
+This does NOT weaken the R32 depth architecture.
+
+======================================================================
+14. THE STOCK SKYRIM INTEGRATION BREAKTHROUGH
+======================================================================
+
+The field-closed renderer map provides a much better integration point than
+the old pre-UI HDR mutation.
+
+The stock AO family is:
+
+    temporal RawAO
+    ->
+    filter temp
+    ->
+    final SAO_FILTERED
+
+Final SAO_FILTERED is:
+
+    full resolution
+    R8G8B8A8_UNORM
+    RTV + SRV + UAV capable
+
+The stock Ambient Screen-Space Composite later consumes:
+
+    RAW_INDIRECT
+    SAO_FILTERED
+    depth
+    normal
+    auxiliary inputs
+    other lighting resources
+
+and writes:
+
+    MAIN_HDR
+
+Crucially:
+
+the RAW_INDIRECT pass between stock AO and the ambient composite does NOT
+consume SAO_FILTERED.
+
+This creates a clean interval:
+
+    stock final AO complete
+    ->
+    AfterStockAO
+    ->
+    raw indirect pass
+    ->
+    BeforeAmbientScreenSpaceComposite
+    ->
+    ambient composite consumes AO
+
+Wave 4 can replace SAO_FILTERED immediately after stock AO without disturbing
+raw indirect generation.
+
+Skyrim then performs its own normal ambient-light composition using GZFX's
+visibility term.
+
+This is the preferred production integration.
+
+======================================================================
+15. SAO_FILTERED REPLACEMENT
+======================================================================
+
+At:
+
+    AfterStockAO
+
+Wave 4 should:
+
+1. query Semantic Authority for:
+       SAO_FILTERED
+       CurrentFrame
+       AfterStockAO
+
+2. acquire the actual currently bound stock AO output texture;
+
+3. validate:
+       2560x1440/current resource size
+       R8G8B8A8_UNORM
+       UAV-capable
+
+4. before mutation, optionally copy it to:
+       GZFXStockAOCopy
+   when split comparison/capture is requested;
+
+5. record a GZFX-owned deferred command list that:
+       unbinds render targets
+       binds SAO_FILTERED as UAV
+       reads final GZFX R16 visibility
+       writes float4(v,v,v,1)
+
+6. execute with:
+       ExecuteCommandList(..., TRUE)
+
+7. restore Skyrim immediate-context state automatically.
+
+The physical stock AO texture remains the resource Skyrim already expects.
+
+Only its content changes.
+
+======================================================================
+16. FAIL-SOFT STOCK FALLBACK
+======================================================================
+
+Wave 4 must preserve Skyrim stock AO automatically whenever GZFX is not
+confident.
+
+If any required condition fails:
+
+    Wave 3 frame view missing
+    native normal unavailable
+    motion unavailable for temporal mode
+    camera unavailable
+    GZFX runtime creation failure
+    SAO_FILTERED unavailable
+    wrong stock AO format
+    execution failure
+
+then:
+
+    DO NOT MODIFY SAO_FILTERED
+
+Skyrim's stock AO remains intact and its stock ambient composite proceeds.
+
+This is the correct failure mode.
+
+No black frame.
+
+No unoccluded frame.
+
+No guessed fallback normal.
+
+======================================================================
+17. DEVELOPMENT MODES
+======================================================================
+
+Use the existing development-mode switch without forcing a new UI surface
+before the algorithm proves itself.
+
+Mode 0:
+
+    STOCK CONTROL
+    Wave 4 may compute nothing
+    SAO_FILTERED untouched
+
+Mode 1:
+
+    STAGE-CORRECT SPLIT COMPARISON
+
+    copy stock SAOFiltered
+    write:
+        left half = stock AO
+        right half = GZFX Ambient Visibility v2
+
+    Skyrim's own ambient composite produces the final split in the correct
+    lighting domain.
+
+Mode 2:
+
+    FULL GZFX AMBIENT VISIBILITY REPLACEMENT
+
+Mode 3 / Mode 4:
+
+    retain existing development diagnostics unless conflict requires a
+    bounded adjustment.
+
+This replaces the old meaning of mode 1/2 for the field build.
+
+======================================================================
+18. RETIRE OLD AMBIENT-DEPTH OUTPUT FROM THE ACTIVE PATH
+======================================================================
+
+The old:
+
+    ambient_depth
+    Horizon Occlusion
+    old half-res SSIL
+    old pre-UI HDR multiplication
+
+remain useful historical regression material.
+
+They must NOT run when Wave 4 owns Mode 1 or Mode 2.
+
+Required behavior:
+
+    if Wave4 is initialized/active in mode1/2:
+        scene_effects::ApplyPreUi does not invoke old ambient_depth AO
+        visible_pass does not apply Present-time Ambient Contact fallback
+
+Otherwise field screenshots would mix:
+
+    old failed AO
+    new Ambient Visibility v2
+
+and become impossible to judge.
+
+Do not delete the old code during Wave 4.
+
+Just remove it from the active Wave 4 comparison path.
+
+======================================================================
+19. STOCK AO COST DURING FIRST WAVE 4 FIELD BUILD
+======================================================================
+
+For the first Wave 4 implementation:
+
+    ALLOW STOCK SKYRIM AO TO RUN
+
+Then overwrite its final filtered result.
+
+Yes, this temporarily pays both:
+
+    Skyrim stock AO cost
+    GZFX AO cost
+
+This is intentional for the first acceptance build.
+
+Advantages:
+
+- safe fallback;
+- true stock-vs-GZFX split;
+- no need to suppress a Bethesda pass before GZFX proves itself;
+- easier field diagnosis.
+
+After Wave 4 field closure, a later optimization can consider suppressing the
+stock AO producer while preserving the same final semantic resource.
+
+Do not conflate architecture proof with final optimization.
+
+======================================================================
+20. USER SETTINGS
+======================================================================
+
+Do not expose the research implementation constants directly as a dozen
+sliders.
+
+Wave 4 field build should use a small production-facing control set.
+
+Recommended eventual settings:
+
+    Enabled
+    Strength / Visibility Power
+    RadiusWorld
+    Quality
+
+For the first field gate:
+
+    mode switch is sufficient
+    internal constants are acceptable
+
+Once the field result is visually proven, rename/remove old Horizon controls
+and introduce proper Ambient Visibility controls coherently.
+
+Do not preserve bad old slider semantics merely for compatibility.
+
+======================================================================
+21. ACCESSIBLE DIAGNOSTICS
+======================================================================
+
+Shift+Numpad5 remains the single capture request.
+
+Wave 4 should join that request fanout.
+
+Manual Wave 4 package should include grayscale:
+
+    stock_sao_filtered.bmp
+    gzfx_visibility_raw.bmp
+    gzfx_visibility_spatial.bmp
+    gzfx_visibility_temporal.bmp
+    final_sao_written.bmp
+    stock_vs_gzfx_difference.bmp
+
+Numeric report:
+
+    min
+    max
+    mean
+    p01
+    p50
+    p95
+    fraction < 0.25
+    fraction < 0.50
+    fraction < 0.75
+    fraction > 0.95
+
+Temporal:
+
+    mean Wave3 confidence
+    accepted geometry fraction
+
+Performance:
+
+    raw GTAO ms
+    horizontal filter ms
+    vertical filter ms
+    temporal ms
+    stock-pack/injection ms
+    total Wave4 ms
+
+No hue-only visualization.
+
+======================================================================
+22. GPU TIMING TARGET
+======================================================================
+
+Do not turn a desired timing into a precision-destroying hard requirement.
+
+Engineering target at 2560x1440 RTX 4060 Laptop:
+
+    normal Wave 4 total ideally <= ~1.5 ms
+
+Investigate sustained:
+
+    > ~2.5 ms
+
+before field closure.
+
+This is a quality/performance target, not permission to:
+
+    switch to half resolution immediately
+    reduce depth precision
+    drop native normal
+    remove temporal validation
+
+Optimization order:
+
+1. shader instruction/sample efficiency;
+2. hierarchy mip usage/cache behavior;
+3. spatial filter efficiency;
+4. redundant state/bind work;
+5. quality preset adjustment;
+6. only then consider resolution changes with real visual evidence.
+
+======================================================================
+23. QUALITY FAILURE CONDITIONS
+======================================================================
+
+Wave 4 must be rejected if it repeats old failure classes:
+
+- horizontal lines/bands;
+- crawling/flickering on stationary geometry;
+- global gray response;
+- indiscriminate whole-screen darkening;
+- large water/sky contamination;
+- halos around depth discontinuities;
+- actor silhouettes leaving persistent dark trails;
+- visibility that changes wildly from tiny camera motion;
+- no meaningful response except at absurd slider values;
+- performance comparable to the old ~5.4 ms failed prototype without a
+  dramatic quality justification.
+
+The purpose of Wave 4 is not merely to produce nonzero AO.
+
+It must look like a real lighting feature.
+
+======================================================================
+24. NIGHT / INTERIOR / EXTERIOR EXPECTATIONS
+======================================================================
+
+Ambient visibility is geometric.
+
+The scalar visibility term should be stable across:
+
+    daylight exterior
+    night exterior
+    interior
+
+The lighting impact can differ because Skyrim's ambient-light composition
+differs.
+
+This is another advantage of injecting the visibility term into the stock
+ambient composite rather than directly multiplying final HDR.
+
+GZFX computes geometry visibility.
+
+Skyrim's ambient lighting determines how that visibility affects the lit
+scene.
+
+That separation is exactly what a renderer-native implementation should do.
+
+======================================================================
+25. RELATION TO INDIRECT RADIANCE
+======================================================================
+
+Wave 4 is scalar ambient visibility.
+
+Do NOT add fake "bounce brightness" to make it seem like GI.
+
+Wave 5 should tackle:
+
+    Indirect Radiance
+
+with its own research around:
+
+    scene radiance
+    surface color/albedo
+    visibility
+    temporal radiance
+    stock RAW_INDIRECT / lighting-domain integration
+
+Wave 4 should create the visibility foundation Wave 5 can consume.
+
+======================================================================
+26. COMMUNITY SHADERS RESEARCH BOUNDARY
+======================================================================
+
+Community Shaders demonstrates that current Skyrim graphics work can
+successfully use:
+
+- final opaque depth;
+- renderer-native normals;
+- GTAO-family visibility;
+- temporal denoise;
+- renderer-aware lighting composition.
+
+These are useful architectural confirmations.
+
+However:
+
+    Community Shaders source is GPL.
+
+GZFX must not copy that implementation into this project.
+
+The production Wave 4 shader should be independently authored from:
+
+- the Activision GTAO paper;
+- the MIT XeGTAO reference where legally appropriate;
+- GZFX's own renderer evidence and architecture.
+
+If a literal MIT XeGTAO code portion is ever incorporated rather than merely
+studied, preserve the required MIT attribution/license notice.
+
+Preferred approach:
+
+    independent implementation
+    with research attribution
+    no copied third-party shader body.
+
+======================================================================
+27. REQUIRED WAVE 3 API EXTENSION
+======================================================================
+
+Wave 4 should not duplicate private Wave 3 resource ownership.
+
+Add:
+
+    wave3::FrameView
+
+and:
+
+    AcquireFrameView
+    ReleaseFrameView
+
+FrameView must provide current-frame AddRef'd views for:
+
+    depth hierarchy
+    geometry confidence
+    reprojection/debug mask
+
+plus:
+
+    frame
+    history generation
+    dimensions
+    mip count
+    history validity
+
+This is a production API, not a diagnostic escape hatch.
+
+Future effects should use the same interface.
+
+======================================================================
+28. REQUIRED WAVE 4 PRODUCTION MODULE
+======================================================================
+
+Add a distinct module:
+
+    include/gzfx/render/ambient_visibility_v2.hpp
+    src/render/ambient_visibility_v2.cpp
+
+Responsibilities:
+
+- register AfterOpaqueWorldMRT callback;
+- acquire current Wave 3 frame view;
+- acquire native surface inputs;
+- create/run GTAO;
+- spatial filter;
+- temporal signal history;
+- retain final current visibility;
+
+- register AfterStockAO callback;
+- locate/validate current SAO_FILTERED;
+- perform stock/split/full replacement;
+- record per-frame applied status;
+
+- join manual capture request;
+- write accessible diagnostics;
+- provide:
+      WasAppliedFrame(frame)
+
+It must not depend on old ambient_depth globals.
+
+======================================================================
+29. RUNTIME REGISTRATION ORDER
+======================================================================
+
+Runtime initialization order:
+
+    Wave 3 initialize
+    then
+    Wave 4 initialize
+
+This ensures callback order at AfterOpaqueWorldMRT:
+
+    Wave 3
+    ->
+    Wave 4
+
+No scheduler redesign is required.
+
+======================================================================
+30. CI DESIGN
+======================================================================
+
+Keep all current 16 tests.
+
+Add a dedicated:
+
+    ambient_visibility_v2
+
+test for 17 total.
+
+Synthetic harness should create the proven stock renderer sequence:
+
+    opaque MRT
+    CameraZ
+    stock temporal AO
+    AO filter temp
+    AO filtered
+    raw indirect
+    ambient composite
+
+Then prove:
+
+MODE 0:
+    stock AOFiltered content is untouched by Wave 4
+
+MODE 1:
+    split write occurs after stock AO
+    before ambient composite
+
+MODE 2:
+    GZFX final visibility replaces stock AOFiltered
+
+Additional requirements:
+
+- Wave 3 hierarchy exists before Wave 4 computation;
+- native-normal physical ping-pong does not reset Wave 4 signal history;
+- missing current Wave 3 frame causes fail-soft stock fallback;
+- stock ambient composite still executes;
+- RAW_INDIRECT generation still occurs normally;
+- GZFX-owned command lists do not increment opaque Skyrim command-list count;
+- state is restored after GZFX injection;
+- flat/open synthetic scene remains near visibility 1;
+- synthetic occluder scene produces visibility < 1 locally;
+- output contains no NaN/INF.
+
+Existing old AO tests remain green as regression/history tests.
+
+======================================================================
+31. FIRST FIELD GATE
+======================================================================
+
+Keep the human workload compact.
+
+Preferred six captures:
+
+DAY EXTERIOR:
+    1. Mode 1 stationary split
+    2. Mode 2 slow movement
+
+INTERIOR:
+    3. Mode 1 stationary split
+    4. Mode 2 movement
+
+NIGHT EXTERIOR:
+    5. Mode 1 stationary split
+    6. Mode 2 movement
+
+Capture is arm-then-act.
+
+No octopus controls.
+
+Mode 1 gives a direct stage-correct visual stock-vs-GZFX comparison.
+
+Mode 2 proves full replacement stability.
+
+Do not ask the user to tune dozens of controls in the first field run.
+
+======================================================================
+32. FIELD ACCEPTANCE
+======================================================================
+
+PASS requires:
+
+ARCHITECTURE:
+- GZFX visibility computed from GZFX hierarchy + native normals;
+- stock ambient composite consumes GZFX final AO;
+- no late HDR multiplication for Wave 4;
+- stock fallback works.
+
+QUALITY:
+- obvious/local geometric grounding;
+- no global gray wash;
+- no horizontal bands;
+- no stationary flicker/crawl;
+- no large halos;
+- moving camera remains temporally coherent;
+- interiors and exteriors both usable;
+- nighttime geometry remains stable.
+
+COMPARISON:
+- split shows meaningful, intentional difference from stock;
+- GZFX is not simply "darker everywhere."
+
+PERFORMANCE:
+- bounded timing evidence;
+- no sustained pathological cost.
+
+STABILITY:
+- no crash/device removal;
+- no foundation stage regression;
+- no Wave 3 temporal regression.
+
+Only then close Wave 4.
+
+======================================================================
+33. LISTENER / PROBING DECISION
+======================================================================
+
+The user explicitly authorized a harder, XForge-style continuous listener if
+the current data was insufficient.
+
+It is NOT warranted before Wave 4 implementation.
+
+Wave 3 evidence is now sufficient and production architecture is understood.
+
+The correct aggressive strategy is:
+
+    implement the real Wave 4 effect
+    +
+    embed targeted telemetry in it
+
+If Wave 4 field evidence fails to explain a visual defect, then add a bounded
+feature-specific telemetry ring sampling:
+
+    AO inputs
+    AO output
+    ambient composite state
+    selected shader/resource identities
+    timing
+    history acceptance
+
+at high cadence.
+
+Do not continuously dump the entire Skyrim renderer every second unless a
+specific unknown genuinely requires it.
+
+======================================================================
+34. RESEARCH VERDICT
+======================================================================
+
+GZFX is ready to stop "finding the renderer" and start replacing graphics
+functionality in the renderer.
+
+Wave 4 should be:
+
+    full-resolution GTAO-inspired Ambient Visibility v2
+    on the GZFX post-opaque R32 hierarchy
+    with native Skyrim normals
+    with Wave 3 temporal validation
+    injected into stock SAO_FILTERED
+    before Skyrim's Ambient Screen-Space Composite
+
+This is the strongest architecture GZFX has had for an AO-class feature.
+
+NEXT PHASE:
+
+    BLUEPRINT
+
+END OF WAVE 4 RESEARCH
