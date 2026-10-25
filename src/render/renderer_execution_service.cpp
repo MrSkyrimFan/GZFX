@@ -493,6 +493,12 @@ namespace gzfx::render::execution
             return "wave4_ambient_visibility";
         case OwnedPass::Wave4AmbientInjection:
             return "wave4_ambient_injection";
+        case OwnedPass::VisiblePass:
+            return "visible_pass";
+        case OwnedPass::ResourceDiagnostic:
+            return "resource_diagnostic";
+        case OwnedPass::SemanticDiagnostic:
+            return "semantic_diagnostic";
         case OwnedPass::Unknown:
         case OwnedPass::Count:
         default:
