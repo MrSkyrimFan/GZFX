@@ -2644,7 +2644,7 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                     g_history.generation);
             parameters.debugFlags =
                 g_capture.active &&
-                g_capture.frame == inputs.frame
+                inputs.frame >= g_capture.frame
                     ? 1u
                     : 0u;
             parameters.reductionMode = 0;
@@ -4587,37 +4587,6 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
             WriteResetEvents();
         }
 
-        ResetReason CutResetReason(
-            const std::uint32_t flags)
-        {
-            if ((flags & 2u) != 0)
-            {
-                return ResetReason::CameraCutTranslation;
-            }
-
-            if ((flags & 4u) != 0)
-            {
-                return ResetReason::CameraCutRotation;
-            }
-
-            if ((flags & 8u) != 0)
-            {
-                return ResetReason::CameraMatrixDiscontinuity;
-            }
-
-            if ((flags & 16u) != 0)
-            {
-                return ResetReason::CameraProjectionDiscontinuity;
-            }
-
-            if ((flags & 32u) != 0)
-            {
-                return ResetReason::DynamicResolutionInvalid;
-            }
-
-            return ResetReason::None;
-        }
-
         void InvalidateHistory(
             const ResetReason reason)
         {
@@ -4798,35 +4767,6 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 }
 
                 ++g_executeCount;
-
-                if (resetReason == ResetReason::None)
-                {
-                    std::array<
-                        float,
-                        kCutStateElements * 4> cutValues{};
-
-                    if (ReadCutState(
-                            lease,
-                            cutValues))
-                    {
-                        std::uint32_t cutFlags = 0;
-                        std::memcpy(
-                            &cutFlags,
-                            &cutValues[0],
-                            sizeof(cutFlags));
-
-                        const ResetReason cutReason =
-                            CutResetReason(cutFlags);
-
-                        if (cutReason != ResetReason::None)
-                        {
-                            resetReason = cutReason;
-                            ++g_history.generation;
-                            g_history.lastReset =
-                                cutReason;
-                        }
-                    }
-                }
 
                 if (resetReason != ResetReason::None)
                 {
