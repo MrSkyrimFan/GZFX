@@ -55,9 +55,15 @@ int wmain(
         outputRoot,
         error);
 
-    SetEnvironmentVariableW(
-        L"GZFX_TEST_OUTPUT_ROOT",
-        outputRoot.c_str());
+    if (!SetEnvironmentVariableW(
+            L"GZFX_TEST_OUTPUT_ROOT",
+            outputRoot.c_str()) ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_TELEMETRY_ACTIVE",
+            L"1"))
+    {
+        return 3;
+    }
 
     const wchar_t* className =
         L"GZFX.FrontDoor.Harness";
@@ -92,7 +98,7 @@ int wmain(
 
     if (window == nullptr)
     {
-        return 3;
+        return 4;
     }
 
     DXGI_SWAP_CHAIN_DESC swapDesc{};
