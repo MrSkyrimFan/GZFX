@@ -231,6 +231,9 @@ int wmain(int argc, wchar_t** argv)
             L"1") ||
         !SetEnvironmentVariableW(
             L"GZFX_TEST_WAVE3_CAPTURE_REQUEST",
+            L"1") ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_WAVE4_ACTIVE",
             L"1"))
     {
         return 3;
