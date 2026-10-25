@@ -591,10 +591,21 @@ namespace gzfx::diagnostics::deferred_context_cartography
                     static_cast<std::uint64_t>(
                         pass.drawKind));
 
-            for (const auto value :
-                 pass.shaderHashes)
+            for (std::size_t i = 0;
+                 i < pass.shaderHashes.size();
+                 ++i)
             {
-                hash = Mix(hash, value);
+                const bool stable =
+                    (pass.shaderHashKnownMask &
+                        (1u << static_cast<std::uint32_t>(i))) != 0;
+
+                hash =
+                    Mix(
+                        hash,
+                        stable
+                            ? pass.shaderHashes[i]
+                            : static_cast<std::uint64_t>(
+                                pass.shaderObjectIds[i]));
             }
 
             for (const auto value :
@@ -677,8 +688,18 @@ namespace gzfx::diagnostics::deferred_context_cartography
                  i < out.shaderHashes.size();
                  ++i)
             {
-                out.shaderHashes[i] =
+                out.shaderObjectIds[i] =
                     context.state.shaders[i];
+
+                out.shaderHashes[i] =
+                    pc::StableShaderHash(
+                        context.state.shaders[i]);
+
+                if (out.shaderHashes[i] != 0)
+                {
+                    out.shaderHashKnownMask |=
+                        (1u << static_cast<std::uint32_t>(i));
+                }
             }
 
             for (std::size_t i = 0;

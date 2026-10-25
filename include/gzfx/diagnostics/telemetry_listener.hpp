@@ -9,6 +9,27 @@
 
 namespace gzfx::diagnostics::telemetry_listener
 {
+    enum class PresentPhase : std::uint32_t
+    {
+        HookEnter = 0,
+        CallbacksBegin,
+        CallbacksEnd,
+        BeforeOriginalPresent,
+        AfterOriginalPresent
+    };
+
+    enum class EngineAnchor : std::uint32_t
+    {
+        PostProcessing = 0,
+        PreUi
+    };
+
+    enum class EnginePhase : std::uint32_t
+    {
+        Enter = 0,
+        Exit
+    };
+
     struct FrameCounters
     {
         std::uint64_t frame = 0;
@@ -78,9 +99,26 @@ namespace gzfx::diagnostics::telemetry_listener
         ID3D11CommandList* commandList,
         bool restoreState) noexcept;
 
-    void OnSkyrimCommandList(
+    void OnExternalCommandList(
         std::uint64_t frame,
         std::uint64_t ordinal,
         ID3D11CommandList* commandList,
         bool restoreState) noexcept;
+
+    void OnPresentTimeline(
+        std::uint64_t frame,
+        std::uint64_t presentEpoch,
+        PresentPhase phase,
+        std::uint32_t threadId,
+        std::uint32_t syncInterval,
+        std::uint32_t flags,
+        std::int32_t hresult) noexcept;
+
+    void OnEngineEvent(
+        std::uint64_t frame,
+        EngineAnchor anchor,
+        EnginePhase phase,
+        std::uint32_t threadId,
+        std::uint64_t runtimeProfile,
+        std::uint64_t targetRva) noexcept;
 }

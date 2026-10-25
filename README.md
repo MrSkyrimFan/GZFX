@@ -23,21 +23,25 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.25-late-stack-cartography-closure
-current phase: TEST / LATE-STACK FIELD VALIDATION
+current runtime: 0.0.26-renderer-identity-engine-epochs
+current phase: TEST / RENDERER-IDENTITY + ENGINE-EPOCH FIELD VALIDATION
 primary discovery authority: Continuous Renderer Telemetry Listener
-detailed pipeline telemetry: late-stack only by default
-deferred Skyrim command-list internals: instrumented at record time
-field-supported stage candidates: HDRReduction / BeforeTonemap / BeforeGlobalTAA / AfterGlobalTAA
+stable shader/resource identity: observed at D3D11 creation time
+physical DXGI present timeline: explicit present epochs
+deferred command lists: owner-tagged with late-detail-independent retained evidence
+verified Skyrim engine epoch profile: Steam AE 1.6.1170 post-processing + pre-UI, fail-closed on other runtimes
+field-validation candidates: HDRReduction / BeforeTonemap / BeforeGlobalTAA / AfterGlobalTAA
 still unpromoted: WaterDomain / PostTonemapPreUi / AfterShadowProduction
 next graphics wave: NOT YET SELECTED
 ```
 
 Wave 3 remains field-closed. Wave 4 proved that GZFX can generate its own ambient-visibility signal and replace Skyrim's filtered SAO input before Skyrim's native Ambient Screen-Space Composite. Final artistic tuning remains intentionally deferred until the renderer architecture is sufficiently owned.
 
-The 0.0.24 continuous listener campaign was triple-reviewed and exposed the remaining late-stack blind spots. 0.0.25 closes those instrumentation gaps by recording Skyrim deferred D3D11 contexts while command lists are built, preserving true explicit copy/resolve/clear operands, reporting total-versus-retained resource-access counts, and limiting detailed pass logging to the unresolved late renderer. It also adds resource-driven stage detection for HDR reduction, tonemap entry, and the global TAA lane.
+The 0.0.25 field campaign proved that the remaining late-stack problem was primarily identity/timeline correctness, not missing renderer structure: the HDR/TAA resource spine remained present, the greedy HDR detector could poison itself on an earlier downsample, the old `UiPresent` marker was not the physical DXGI Present boundary, and most of the supposedly "Skyrim" deferred-list population was GZFX's own untagged work.
 
-**Important:** 0.0.25 is still a forensic build. Its FPS is not release-performance evidence. `WaterDomain`, `PostTonemapPreUi`, and `AfterShadowProduction` remain intentionally unclaimed until real Skyrim telemetry proves them. The next graphics feature is not selected until the 0.0.25 field DATA pass closes or narrows those remaining gaps.
+0.0.26 consolidates that evidence into a stable renderer-identity layer. Shader content hashes and process-local object identities are now separate; resource/shader provenance is captured at creation; every known GZFX command-list producer is explicitly owned; deferred evidence survives outside the immediate late-detail window; physical Present phases are recorded; and a verified, fail-closed Steam AE 1.6.1170 profile observes Skyrim post-processing and pre-UI engine epochs without adding SKSE or Address Library.
+
+**Important:** 0.0.26 remains a forensic field-validation build. Its FPS is not release-performance evidence. `WaterDomain`, `PostTonemapPreUi`, and `AfterShadowProduction` remain intentionally unclaimed until the next real-Skyrim DATA pass correlates stable shader/resource identity, engine epochs, HDR/TAA structure, and the physical Present timeline. The next graphics feature is not selected yet.
 
 ## Permanent authority workflow
 

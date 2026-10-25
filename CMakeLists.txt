@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.25
+    VERSION 0.0.26
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -65,6 +65,7 @@ add_library(GZFX SHARED
     src/version.cpp
     src/diagnostics/d3d11_lifecycle.cpp
     src/diagnostics/deferred_context_cartography.cpp
+    src/diagnostics/engine_epochs.cpp
     src/diagnostics/pipeline_cartography.cpp
     src/diagnostics/renderer_forensics.cpp
     src/diagnostics/resource_intelligence.cpp
@@ -95,6 +96,7 @@ target_link_libraries(
         ole32
         user32
         gdi32
+        version
         d3dcompiler
         dxguid
         minhook
@@ -125,6 +127,11 @@ add_executable(GZFXD3D11ProbeHarness
 )
 target_link_libraries(GZFXD3D11ProbeHarness PRIVATE d3d11)
 gzfx_apply_common(GZFXD3D11ProbeHarness)
+
+add_executable(GZFXEngineEpochHarness
+    tests/engine_epoch_harness.cpp
+)
+gzfx_apply_common(GZFXEngineEpochHarness)
 
 add_executable(GZFXRendererForensicsHarness
     tests/renderer_forensics_harness.cpp
@@ -250,6 +257,13 @@ add_test(
         "$<TARGET_FILE:GZFXD3D11ProbeHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/probe-test-output"
+)
+
+add_test(
+    NAME engine_epoch_signatures
+    COMMAND
+        "$<TARGET_FILE:GZFXEngineEpochHarness>"
+        "$<TARGET_FILE:GZFX>"
 )
 
 add_test(
@@ -416,4 +430,32 @@ set_tests_properties(
     late_stack_cartography
     PROPERTIES
         ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1"
+)
+
+add_test(
+    NAME deferred_telemetry_outside_detail_gate
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/deferred-outside-detail-output"
+)
+
+set_tests_properties(
+    deferred_telemetry_outside_detail_gate
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_DEFERRED_OUTSIDE_DETAIL_ACTIVE=1"
+)
+
+add_test(
+    NAME global_taa_without_hdr_completion
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/global-taa-without-hdr-output"
+)
+
+set_tests_properties(
+    global_taa_without_hdr_completion
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_TAA_WITHOUT_HDR_ACTIVE=1"
 )

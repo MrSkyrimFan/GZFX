@@ -2,6 +2,7 @@
 
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 #include "gzfx/paths.hpp"
+#include "gzfx/render/renderer_execution_service.hpp"
 #include "gzfx/render/runtime_state.hpp"
 #include "gzfx/render/scene_effects.hpp"
 #include "gzfx/render/ambient_visibility_v2.hpp"
@@ -1794,9 +1795,17 @@ float4 PSMain(VSOutput input) : SV_TARGET
             if (SUCCEEDED(result) &&
                 commands != nullptr)
             {
+                gzfx::render::execution::TagCommandList(
+                    commands,
+                    gzfx::render::execution::OwnedPass::VisiblePass,
+                    frame);
+
                 context->ExecuteCommandList(
                     commands,
                     TRUE);
+
+                gzfx::render::execution::RetireCommandList(
+                    commands);
             }
 
             if (SUCCEEDED(result) &&

@@ -2,6 +2,8 @@
 
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/diagnostics/deferred_context_cartography.hpp"
+#include "gzfx/diagnostics/engine_epochs.hpp"
+#include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/render/ambient_visibility_v2.hpp"
 #include "gzfx/render/runtime_state.hpp"
@@ -45,7 +47,9 @@ namespace gzfx::diagnostics::telemetry_listener
             Ownership,
             Timing,
             DeferredList,
-            DeferredRun
+            DeferredRun,
+            PresentTimeline,
+            EngineEvent
         };
 
         enum class TransitionKind : std::uint32_t
@@ -285,6 +289,8 @@ namespace gzfx::diagnostics::telemetry_listener
             std::ofstream deferredLists;
             std::ofstream pipeline;
             std::ofstream deferredRuns;
+            std::ofstream presentTimeline;
+            std::ofstream engineEvents;
             std::uint32_t pipelineSegment = 0;
             std::uint64_t pipelineBytes = 0;
             std::uint32_t deferredRunSegment = 0;
@@ -307,7 +313,7 @@ namespace gzfx::diagnostics::telemetry_listener
             std::uint64_t pipelineRuns = 0;
             std::uint64_t stageEvents = 0;
             std::uint64_t ownedPasses = 0;
-            std::uint64_t skyrimCommandLists = 0;
+            std::uint64_t externalCommandLists = 0;
         };
 
         constexpr std::uint64_t kPipelineSegmentBytes =
@@ -611,13 +617,21 @@ namespace gzfx::diagnostics::telemetry_listener
                     static_cast<std::uint64_t>(
                         pass.drawKind));
 
-            for (const auto value :
-                 pass.shaderHashes)
+            for (std::size_t i = 0;
+                 i < pass.shaderHashes.size();
+                 ++i)
             {
+                const bool stable =
+                    (pass.shaderHashKnownMask &
+                        (1u << static_cast<std::uint32_t>(i))) != 0;
+
                 hash =
                     HashMix(
                         hash,
-                        value);
+                        stable
+                            ? pass.shaderHashes[i]
+                            : static_cast<std::uint64_t>(
+                                pass.shaderObjectIds[i]));
             }
 
             for (const auto value :
@@ -824,6 +838,17 @@ namespace gzfx::diagnostics::telemetry_listener
                 event.u[80 + i] =
                     pass.args[i];
             }
+
+            for (std::size_t i = 0;
+                 i < pass.shaderObjectIds.size();
+                 ++i)
+            {
+                event.u[84 + i] =
+                    pass.shaderObjectIds[i];
+            }
+
+            event.u[90] =
+                pass.shaderHashKnownMask;
 
             if (Enqueue(event))
             {
@@ -1199,13 +1224,49 @@ namespace gzfx::diagnostics::telemetry_listener
             }
         }
 
+        const char* PresentPhaseName(
+            const PresentPhase phase)
+        {
+            switch (phase)
+            {
+            case PresentPhase::HookEnter: return "hook_enter";
+            case PresentPhase::CallbacksBegin: return "callbacks_begin";
+            case PresentPhase::CallbacksEnd: return "callbacks_end";
+            case PresentPhase::BeforeOriginalPresent: return "before_original_present";
+            case PresentPhase::AfterOriginalPresent: return "after_original_present";
+            }
+            return "unknown";
+        }
+
+        const char* EngineAnchorName(
+            const EngineAnchor anchor)
+        {
+            switch (anchor)
+            {
+            case EngineAnchor::PostProcessing: return "post_processing";
+            case EngineAnchor::PreUi: return "pre_ui";
+            }
+            return "unknown";
+        }
+
+        const char* EnginePhaseName(
+            const EnginePhase phase)
+        {
+            switch (phase)
+            {
+            case EnginePhase::Enter: return "enter";
+            case EnginePhase::Exit: return "exit";
+            }
+            return "unknown";
+        }
+
         const char* EventOwnerName(
             const std::uint64_t value)
         {
             return
                 value == 1
                     ? "gzfx"
-                    : "skyrim";
+                    : "external";
         }
 
         std::string Hex(
@@ -1265,7 +1326,7 @@ namespace gzfx::diagnostics::telemetry_listener
                 files.pipeline,
                 g_sessionRoot /
                     name.str(),
-                "sequence,qpc,frame,first_ordinal,last_ordinal,repeat,kind,draw_kind,vs,hs,ds,gs,ps,cs,rtv0,rtv1,rtv2,rtv3,dsv,om_uav_hash,cs_uav_hash,read_hash,write_hash,total_read_count,total_write_count,retained_read_count,retained_write_count,read_overflow,write_overflow,read0,read1,read2,read3,read4,read5,read6,read7,read8,read9,read10,read11,read12,read13,read14,read15,read16,read17,read18,read19,read20,read21,read22,read23,write0,write1,write2,write3,write4,write5,write6,write7,write8,write9,write10,write11,explicit_read0,explicit_read1,explicit_write0,explicit_write1,explicit_read_count,explicit_write_count,source_subresource,destination_subresource,explicit_format,explicit_flags,cb_hash,sampler_hash,blend_hash,depth_hash,raster_hash,topology,viewport_width,viewport_height,arg0,arg1,arg2,arg3\n");
+                "sequence,qpc,frame,first_ordinal,last_ordinal,repeat,kind,draw_kind,vs_hash,hs_hash,ds_hash,gs_hash,ps_hash,cs_hash,rtv0,rtv1,rtv2,rtv3,dsv,om_uav_hash,cs_uav_hash,read_hash,write_hash,total_read_count,total_write_count,retained_read_count,retained_write_count,read_overflow,write_overflow,read0,read1,read2,read3,read4,read5,read6,read7,read8,read9,read10,read11,read12,read13,read14,read15,read16,read17,read18,read19,read20,read21,read22,read23,write0,write1,write2,write3,write4,write5,write6,write7,write8,write9,write10,write11,explicit_read0,explicit_read1,explicit_write0,explicit_write1,explicit_read_count,explicit_write_count,source_subresource,destination_subresource,explicit_format,explicit_flags,cb_hash,sampler_hash,blend_hash,depth_hash,raster_hash,topology,viewport_width,viewport_height,arg0,arg1,arg2,arg3,vs_object,hs_object,ds_object,gs_object,ps_object,cs_object,shader_hash_known_mask\n");
         }
 
         bool OpenDeferredRunSegment(
@@ -1305,7 +1366,7 @@ namespace gzfx::diagnostics::telemetry_listener
                     "sequence,qpc,frame,execute_ordinal,list_generation,"
                     "context_generation,recording_generation,run_index,"
                     "first_recording_ordinal,last_recording_ordinal,repeat,"
-                    "kind,draw_kind,vs,hs,ds,gs,ps,cs,"
+                    "kind,draw_kind,vs_hash,hs_hash,ds_hash,gs_hash,ps_hash,cs_hash,"
                     "rtv0,rtv1,rtv2,rtv3,dsv,om_uav_hash,cs_uav_hash,"
                     "read_hash,write_hash,total_read_count,total_write_count,"
                     "retained_read_count,retained_write_count,"
@@ -1317,7 +1378,8 @@ namespace gzfx::diagnostics::telemetry_listener
                     "source_subresource,destination_subresource,explicit_format,"
                     "explicit_flags,cb_hash,sampler_hash,blend_hash,depth_hash,"
                     "raster_hash,topology,viewport_width,viewport_height,"
-                    "arg0,arg1,arg2,arg3\n"
+                    "arg0,arg1,arg2,arg3,vs_object,hs_object,ds_object,gs_object,"
+                    "ps_object,cs_object,shader_hash_known_mask\n"
                 ).c_str());
         }
 
@@ -1334,7 +1396,7 @@ namespace gzfx::diagnostics::telemetry_listener
                     files.seconds,
                     g_sessionRoot /
                         L"seconds.csv",
-                    "second,first_frame,last_frame,frames,avg_frame_ms,min_frame_ms,max_frame_ms,avg_fps,mode,environment,pipeline_runs,stage_events,gzfx_owned_passes,skyrim_command_lists,dropped,queue_high_water,bytes_written\n") &&
+                    "second,first_frame,last_frame,frames,avg_frame_ms,min_frame_ms,max_frame_ms,avg_fps,mode,environment,pipeline_runs,stage_events,gzfx_owned_passes,external_command_lists,dropped,queue_high_water,bytes_written\n") &&
                 OpenText(
                     files.stages,
                     g_sessionRoot /
@@ -1376,7 +1438,17 @@ namespace gzfx::diagnostics::telemetry_listener
                 OpenPipelineSegment(
                     files) &&
                 OpenDeferredRunSegment(
-                    files);
+                    files) &&
+                OpenText(
+                    files.presentTimeline,
+                    g_sessionRoot /
+                        L"present_timeline.csv",
+                    "sequence,qpc,frame,present_epoch,phase,thread,sync_interval,flags,hresult\n") &&
+                OpenText(
+                    files.engineEvents,
+                    g_sessionRoot /
+                        L"engine_events.csv",
+                    "sequence,qpc,frame,thread,anchor,phase,runtime_profile,target_rva\n");
         }
 
         void WriteStatusFile(
@@ -1454,6 +1526,49 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "\n"
                 << "detailed_pipeline_rows="
                 << g_detailedPipelineRows.load()
+                << "\n";
+
+            const auto rendererStatus =
+                GetRendererForensicsStatus();
+
+            out
+                << "stable_shader_creation_hooks_armed="
+                << (rendererStatus.shaderCreationHooksArmed ? "true" : "false")
+                << "\n"
+                << "resource_creation_hooks_armed="
+                << (rendererStatus.resourceCreationHooksArmed ? "true" : "false")
+                << "\n"
+                << "shader_creations_observed="
+                << rendererStatus.shaderCreationsObserved
+                << "\n"
+                << "resource_creations_observed="
+                << rendererStatus.resourceCreationsObserved
+                << "\n"
+                << "present_epochs="
+                << rendererStatus.presentEpochs
+                << "\n";
+
+            const auto engineStatus =
+                engine_epochs::GetStatus();
+
+            out
+                << "engine_profile="
+                << Hex(engineStatus.runtimeProfile)
+                << "\n"
+                << "engine_runtime_supported="
+                << (engineStatus.runtimeSupported ? "true" : "false")
+                << "\n"
+                << "engine_post_processing_anchor="
+                << (engineStatus.postProcessingArmed ? "armed" : "unavailable")
+                << "\n"
+                << "engine_pre_ui_anchor="
+                << (engineStatus.preUiArmed ? "armed" : "unavailable")
+                << "\n"
+                << "engine_post_processing_events="
+                << engineStatus.postProcessingEvents
+                << "\n"
+                << "engine_pre_ui_events="
+                << engineStatus.preUiEvents
                 << "\n";
 
             const auto deferred =
@@ -1536,7 +1651,9 @@ namespace gzfx::diagnostics::telemetry_listener
                     ? "full_pipeline"
                     : "late_only")
                 << "\n"
-                << "performance_note=forensic_build_not_release_fps_evidence\n";
+                << "performance_note=forensic_build_not_release_fps_evidence\n"
+                << "renderer_identity_policy=creation_time_exact_hash\n"
+                << "engine_anchor_policy=versioned_fail_closed\n";
         }
 
         void WriteEvent(
@@ -1687,7 +1804,7 @@ namespace gzfx::diagnostics::telemetry_listener
                     << event.u[1];
 
                 for (std::size_t i = 5;
-                     i <= 83;
+                     i <= 90;
                      ++i)
                 {
                     row
@@ -1830,7 +1947,7 @@ namespace gzfx::diagnostics::telemetry_listener
                 }
                 else
                 {
-                    ++second.skyrimCommandLists;
+                    ++second.externalCommandLists;
                 }
 
                 g_bytesWritten.fetch_add(
@@ -1882,7 +1999,7 @@ namespace gzfx::diagnostics::telemetry_listener
                     << event.frame;
 
                 for (std::size_t i = 0;
-                     i <= 88;
+                     i <= 95;
                      ++i)
                 {
                     row
@@ -1914,6 +2031,44 @@ namespace gzfx::diagnostics::telemetry_listener
                     text.size());
                 break;
             }
+
+            case EventType::PresentTimeline:
+                row
+                    << event.sequence << ","
+                    << event.qpc << ","
+                    << event.frame << ","
+                    << event.u[0] << ","
+                    << PresentPhaseName(
+                        static_cast<PresentPhase>(event.u[1])) << ","
+                    << event.u[2] << ","
+                    << event.u[3] << ","
+                    << event.u[4] << ","
+                    << static_cast<std::int32_t>(event.u[5])
+                    << "\n";
+                files.presentTimeline
+                    << row.str();
+                g_bytesWritten.fetch_add(
+                    row.str().size());
+                break;
+
+            case EventType::EngineEvent:
+                row
+                    << event.sequence << ","
+                    << event.qpc << ","
+                    << event.frame << ","
+                    << event.u[0] << ","
+                    << EngineAnchorName(
+                        static_cast<EngineAnchor>(event.u[1])) << ","
+                    << EnginePhaseName(
+                        static_cast<EnginePhase>(event.u[2])) << ","
+                    << event.u[3] << ","
+                    << Hex(event.u[4])
+                    << "\n";
+                files.engineEvents
+                    << row.str();
+                g_bytesWritten.fetch_add(
+                    row.str().size());
+                break;
             }
 
             g_written.fetch_add(
@@ -1979,7 +2134,7 @@ namespace gzfx::diagnostics::telemetry_listener
                 << ","
                 << second.ownedPasses
                 << ","
-                << second.skyrimCommandLists
+                << second.externalCommandLists
                 << ","
                 << g_dropped.load()
                 << ","
@@ -2005,6 +2160,8 @@ namespace gzfx::diagnostics::telemetry_listener
             files.deferredLists.flush();
             files.pipeline.flush();
             files.deferredRuns.flush();
+            files.presentTimeline.flush();
+            files.engineEvents.flush();
         }
 
         void WriterMain()
@@ -2773,10 +2930,7 @@ namespace gzfx::diagnostics::telemetry_listener
     void OnDeferredList(
         const DeferredListInfo& info) noexcept
     {
-        if (!IsInitialized() ||
-            (!g_fullPipelineDetail &&
-             !g_detailActive.load(
-                 std::memory_order_acquire)))
+        if (!IsInitialized())
         {
             return;
         }
@@ -2829,10 +2983,7 @@ namespace gzfx::diagnostics::telemetry_listener
         const std::uint64_t repeatCount,
         const pipeline_cartography::PassTelemetry& pass) noexcept
     {
-        if (!IsInitialized() ||
-            (!g_fullPipelineDetail &&
-             !g_detailActive.load(
-                 std::memory_order_acquire)))
+        if (!IsInitialized())
         {
             return;
         }
@@ -2976,6 +3127,61 @@ namespace gzfx::diagnostics::telemetry_listener
                 pass.args[i];
         }
 
+        for (std::size_t i = 0;
+             i < pass.shaderObjectIds.size();
+             ++i)
+        {
+            event.u[89 + i] =
+                pass.shaderObjectIds[i];
+        }
+
+        event.u[95] =
+            pass.shaderHashKnownMask;
+
+        Enqueue(event);
+    }
+
+    void OnPresentTimeline(
+        const std::uint64_t frame,
+        const std::uint64_t presentEpoch,
+        const PresentPhase phase,
+        const std::uint32_t threadId,
+        const std::uint32_t syncInterval,
+        const std::uint32_t flags,
+        const std::int32_t hresult) noexcept
+    {
+        Event event{};
+        event.type = EventType::PresentTimeline;
+        event.frame = frame;
+        event.u[0] = presentEpoch;
+        event.u[1] =
+            static_cast<std::uint64_t>(phase);
+        event.u[2] = threadId;
+        event.u[3] = syncInterval;
+        event.u[4] = flags;
+        event.u[5] =
+            static_cast<std::uint32_t>(hresult);
+        Enqueue(event);
+    }
+
+    void OnEngineEvent(
+        const std::uint64_t frame,
+        const EngineAnchor anchor,
+        const EnginePhase phase,
+        const std::uint32_t threadId,
+        const std::uint64_t runtimeProfile,
+        const std::uint64_t targetRva) noexcept
+    {
+        Event event{};
+        event.type = EventType::EngineEvent;
+        event.frame = frame;
+        event.u[0] = threadId;
+        event.u[1] =
+            static_cast<std::uint64_t>(anchor);
+        event.u[2] =
+            static_cast<std::uint64_t>(phase);
+        event.u[3] = runtimeProfile;
+        event.u[4] = targetRva;
         Enqueue(event);
     }
 
@@ -3023,7 +3229,7 @@ namespace gzfx::diagnostics::telemetry_listener
         Enqueue(event);
     }
 
-    void OnSkyrimCommandList(
+    void OnExternalCommandList(
         const std::uint64_t frame,
         const std::uint64_t ordinal,
         ID3D11CommandList* const commandList,

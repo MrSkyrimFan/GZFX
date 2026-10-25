@@ -330,15 +330,34 @@ int wmain(int argc, wchar_t** argv)
             static_cast<DWORD>(
                 std::size(lateStackValue))) > 0;
 
+    wchar_t taaWithoutHdrValue[8]{};
+    const bool taaWithoutHdrActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_TAA_WITHOUT_HDR_ACTIVE",
+            taaWithoutHdrValue,
+            static_cast<DWORD>(
+                std::size(taaWithoutHdrValue))) > 0;
+
+    wchar_t deferredOutsideDetailValue[8]{};
+    const bool deferredOutsideDetailActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_DEFERRED_OUTSIDE_DETAIL_ACTIVE",
+            deferredOutsideDetailValue,
+            static_cast<DWORD>(
+                std::size(deferredOutsideDetailValue))) > 0;
+
     if (lateStackActive)
     {
         SetEnvironmentVariableW(
             L"GZFX_TEST_TELEMETRY_ACTIVE",
             L"1");
 
-        SetEnvironmentVariableW(
-            L"GZFX_TEST_TELEMETRY_FULL_PIPELINE",
-            L"1");
+        if (!deferredOutsideDetailActive)
+        {
+            SetEnvironmentVariableW(
+                L"GZFX_TEST_TELEMETRY_FULL_PIPELINE",
+                L"1");
+        }
     }
 
     wchar_t telemetryEnabledValue[8]{};
@@ -430,6 +449,12 @@ int wmain(int argc, wchar_t** argv)
         true);
     Target rawIndirect = CreateTarget(device, width, height, DXGI_FORMAT_R11G11B10_FLOAT);
 
+    // A deliberately plausible but wrong early MAIN_HDR reduction root.
+    // 0.0.25 latched onto this kind of pass and never recovered.
+    Target hdrFalseRoot = CreateTarget(
+        device, width / 8, height / 8,
+        DXGI_FORMAT_R16G16B16A16_FLOAT);
+
     Target hdrReduceA = CreateTarget(
         device, width / 4, height / 4,
         DXGI_FORMAT_R16G16B16A16_FLOAT);
@@ -471,6 +496,7 @@ int wmain(int argc, wchar_t** argv)
         !normalB.texture || !aux.texture ||
         !aoA.texture || !aoB.texture || !aoTemp.texture ||
         !aoFinal.texture || !rawIndirect.texture ||
+        !hdrFalseRoot.texture ||
         !hdrReduceA.texture || !hdrReduceB.texture ||
         !hdrReduceC.texture || !hdrReduceD.texture ||
         !tonemapCurrent.texture || !taaHistory.texture ||
@@ -804,31 +830,21 @@ int wmain(int argc, wchar_t** argv)
 
             if (lateStackActive)
             {
-                // Synthetic late image-space spine:
-                // HDR reduction -> tonemap entry -> global temporal pass.
-                ID3D11ShaderResourceView* reduceInput =
-                    hdr.srv;
-
-                Target* reductions[4] =
+                if (!taaWithoutHdrActive)
                 {
-                    &hdrReduceA,
-                    &hdrReduceB,
-                    &hdrReduceC,
-                    &hdrReduceD
-                };
-
-                for (Target* reduction :
-                     reductions)
-                {
+                    // Synthetic late image-space spine. First emit a false
+                    // MAIN_HDR downsample candidate that is smaller than the
+                    // real chain root. The detector must restart when the
+                    // later real root appears.
                     context->OMSetRenderTargets(
                         1,
-                        &reduction->rtv,
+                        &hdrFalseRoot.rtv,
                         nullptr);
 
                     context->PSSetShaderResources(
                         0,
                         1,
-                        &reduceInput);
+                        &hdr.srv);
 
                     context->Draw(3, 0);
 
@@ -837,27 +853,60 @@ int wmain(int argc, wchar_t** argv)
                         1,
                         nullSrvs);
 
-                    reduceInput =
-                        reduction->srv;
+                    ID3D11ShaderResourceView* reduceInput =
+                        hdr.srv;
+
+                    Target* reductions[4] =
+                    {
+                        &hdrReduceA,
+                        &hdrReduceB,
+                        &hdrReduceC,
+                        &hdrReduceD
+                    };
+
+                    for (Target* reduction :
+                         reductions)
+                    {
+                        context->OMSetRenderTargets(
+                            1,
+                            &reduction->rtv,
+                            nullptr);
+
+                        context->PSSetShaderResources(
+                            0,
+                            1,
+                            &reduceInput);
+
+                        context->Draw(3, 0);
+
+                        context->PSSetShaderResources(
+                            0,
+                            1,
+                            nullSrvs);
+
+                        reduceInput =
+                            reduction->srv;
+                    }
+
+                    context->OMSetRenderTargets(
+                        1,
+                        &tonemapCurrent.rtv,
+                        nullptr);
+
+                    context->PSSetShaderResources(
+                        0,
+                        1,
+                        &hdrReduceD.srv);
+
+                    context->Draw(3, 0);
+
+                    context->PSSetShaderResources(
+                        0,
+                        1,
+                        nullSrvs);
                 }
 
-                context->OMSetRenderTargets(
-                    1,
-                    &tonemapCurrent.rtv,
-                    nullptr);
-
-                context->PSSetShaderResources(
-                    0,
-                    1,
-                    &hdrReduceD.srv);
-
-                context->Draw(3, 0);
-
-                context->PSSetShaderResources(
-                    0,
-                    1,
-                    nullSrvs);
-
+                // Global temporal recognition must not depend on HDR completion.
                 ID3D11RenderTargetView* taaOutputs[2] =
                 {
                     taaColor.rtv,
@@ -1335,6 +1384,10 @@ int wmain(int argc, wchar_t** argv)
             existsNonEmpty(
                 session / L"seconds.csv") &&
             existsNonEmpty(
+                session / L"present_timeline.csv") &&
+            existsNonEmpty(
+                session / L"engine_events.csv") &&
+            existsNonEmpty(
                 session /
                     L"telemetry_session_complete.txt");
 
@@ -1365,6 +1418,16 @@ int wmain(int argc, wchar_t** argv)
                 session /
                 L"ownership.csv");
 
+        const std::string pipeline =
+            ReadAll(
+                session /
+                L"pipeline_runs_0001.csv");
+
+        const std::string presentTimeline =
+            ReadAll(
+                session /
+                L"present_timeline.csv");
+
         const std::uint64_t dropped =
             FindUnsignedOnLine(
                 listenerStatus,
@@ -1388,18 +1451,29 @@ int wmain(int argc, wchar_t** argv)
         const bool lateStageCoverage =
             !lateStackActive ||
             (
-                stages.find(
-                    "hdr_reduction") !=
-                        std::string::npos &&
-                stages.find(
-                    "before_tonemap") !=
-                        std::string::npos &&
-                stages.find(
-                    "before_global_taa") !=
-                        std::string::npos &&
-                stages.find(
-                    "after_global_taa") !=
-                        std::string::npos
+                taaWithoutHdrActive
+                    ? (
+                        stages.find(
+                            "before_global_taa") !=
+                                std::string::npos &&
+                        stages.find(
+                            "after_global_taa") !=
+                                std::string::npos
+                    )
+                    : (
+                        stages.find(
+                            "hdr_reduction") !=
+                                std::string::npos &&
+                        stages.find(
+                            "before_tonemap") !=
+                                std::string::npos &&
+                        stages.find(
+                            "before_global_taa") !=
+                                std::string::npos &&
+                        stages.find(
+                            "after_global_taa") !=
+                                std::string::npos
+                    )
             );
 
         const bool semanticCoverage =
@@ -1419,7 +1493,43 @@ int wmain(int argc, wchar_t** argv)
 
         const bool ownershipCoverage =
             ownership.find(",gzfx,") !=
+                std::string::npos &&
+            ownership.find(",skyrim,") ==
                 std::string::npos;
+
+        const bool shaderIdentitySchema =
+            pipeline.find("vs_hash") !=
+                std::string::npos &&
+            pipeline.find("vs_object") !=
+                std::string::npos &&
+            pipeline.find("shader_hash_known_mask") !=
+                std::string::npos;
+
+        const bool presentTimelineCoverage =
+            presentTimeline.find("hook_enter") !=
+                std::string::npos &&
+            presentTimeline.find("callbacks_begin") !=
+                std::string::npos &&
+            presentTimeline.find("callbacks_end") !=
+                std::string::npos &&
+            presentTimeline.find("before_original_present") !=
+                std::string::npos &&
+            presentTimeline.find("after_original_present") !=
+                std::string::npos;
+
+        const bool creationIdentityCoverage =
+            listenerStatus.find(
+                "stable_shader_creation_hooks_armed=true") !=
+                    std::string::npos &&
+            listenerStatus.find(
+                "resource_creation_hooks_armed=true") !=
+                    std::string::npos &&
+            listenerStatus.find(
+                "shader_creations_observed=0") ==
+                    std::string::npos &&
+            listenerStatus.find(
+                "resource_creations_observed=0") ==
+                    std::string::npos;
 
         bool deferredCoverage =
             !lateStackActive;
@@ -1794,6 +1904,9 @@ int wmain(int argc, wchar_t** argv)
             !deferredCoverage ||
             !semanticCoverage ||
             !ownershipCoverage ||
+            !shaderIdentitySchema ||
+            !presentTimelineCoverage ||
+            !creationIdentityCoverage ||
             !dropExpectation)
         {
             std::cerr
@@ -1826,6 +1939,7 @@ int wmain(int argc, wchar_t** argv)
     Release(hdrReduceC);
     Release(hdrReduceB);
     Release(hdrReduceA);
+    Release(hdrFalseRoot);
     Release(rawIndirect);
     Release(aoFinal);
     Release(aoTemp);

@@ -1,3 +1,4 @@
+#include "gzfx/render/renderer_execution_service.hpp"
 #include "gzfx/diagnostics/semantic_probe.hpp"
 
 #include "gzfx/diagnostics/resource_intelligence.hpp"
@@ -1039,9 +1040,17 @@ float4 PSMain(V input) : SV_TARGET
                 if (SUCCEEDED(result) &&
                     commands != nullptr)
                 {
+                    gzfx::render::execution::TagCommandList(
+                        commands,
+                        gzfx::render::execution::OwnedPass::SemanticDiagnostic,
+                        0);
+
                     context->ExecuteCommandList(
                         commands,
                         TRUE);
+
+                    gzfx::render::execution::RetireCommandList(
+                        commands);
 
                     context->CopyResource(
                         staging,

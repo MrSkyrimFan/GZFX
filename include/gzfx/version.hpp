@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.25-late-stack-cartography-closure";
+        "0.0.26-renderer-identity-engine-epochs";
 }
 
 extern "C" __declspec(dllexport)
