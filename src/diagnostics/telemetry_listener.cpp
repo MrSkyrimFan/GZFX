@@ -318,6 +318,9 @@ namespace gzfx::diagnostics::telemetry_listener
         std::atomic<std::uint64_t> g_queueHighWater{0};
         std::atomic<std::uint64_t> g_bytesWritten{0};
         std::atomic<bool> g_overflowActive{false};
+        std::atomic<bool> g_detailActive{false};
+        bool g_fullPipelineDetail = false;
+        std::atomic<std::uint64_t> g_detailedPipelineRows{0};
 
         HANDLE g_wakeEvent = nullptr;
         std::thread g_writer{};
@@ -815,7 +818,12 @@ namespace gzfx::diagnostics::telemetry_listener
                     pass.args[i];
             }
 
-            Enqueue(event);
+            if (Enqueue(event))
+            {
+                g_detailedPipelineRows.fetch_add(
+                    1,
+                    std::memory_order_relaxed);
+            }
 
             g_pendingPass = {};
         }
@@ -827,6 +835,13 @@ namespace gzfx::diagnostics::telemetry_listener
         {
             try
             {
+                if (!g_fullPipelineDetail &&
+                    !g_detailActive.load(
+                        std::memory_order_acquire))
+                {
+                    return;
+                }
+
                 const auto signature =
                     PassSignature(
                         pass);
@@ -915,6 +930,33 @@ namespace gzfx::diagnostics::telemetry_listener
                 Event& stage,
             void*) noexcept
         {
+            using B =
+                render::stage_scheduler::Boundary;
+            using P =
+                render::stage_scheduler::Phase;
+
+            if (!g_fullPipelineDetail &&
+                stage.boundary ==
+                    B::AfterAmbientScreenSpaceComposite &&
+                stage.phase ==
+                    P::AfterExecution)
+            {
+                EnqueuePendingPass();
+                g_detailActive.store(
+                    true,
+                    std::memory_order_release);
+            }
+
+            if (!g_fullPipelineDetail &&
+                stage.boundary ==
+                    B::UiPresent)
+            {
+                EnqueuePendingPass();
+                g_detailActive.store(
+                    false,
+                    std::memory_order_release);
+            }
+
             Event event{};
             event.type =
                 EventType::Stage;
@@ -1326,6 +1368,14 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "pipeline_segment="
                 << files.pipelineSegment
                 << "\n"
+                << "detail_gate="
+                << (g_fullPipelineDetail
+                    ? "full_pipeline"
+                    : "late_only")
+                << "\n"
+                << "detailed_pipeline_rows="
+                << g_detailedPipelineRows.load()
+                << "\n"
                 << "last_error="
                 << g_lastError
                 << "\n"
@@ -1375,6 +1425,11 @@ namespace gzfx::diagnostics::telemetry_listener
                 << g_sessionRoot.string()
                 << "\n"
                 << "policy=continuous_async_structured_text\n"
+                << "detail_gate="
+                << (g_fullPipelineDetail
+                    ? "full_pipeline"
+                    : "late_only")
+                << "\n"
                 << "performance_note=forensic_build_not_release_fps_evidence\n";
         }
 
@@ -2062,6 +2117,18 @@ namespace gzfx::diagnostics::telemetry_listener
 
             QueryPerformanceFrequency(
                 &g_qpcFrequency);
+
+            wchar_t fullPipeline[8]{};
+            g_fullPipelineDetail =
+                GetEnvironmentVariableW(
+                    L"GZFX_TEST_TELEMETRY_FULL_PIPELINE",
+                    fullPipeline,
+                    static_cast<DWORD>(
+                        std::size(fullPipeline))) > 0;
+
+            g_detailActive.store(
+                g_fullPipelineDetail,
+                std::memory_order_release);
 
             const auto capacity =
                 DefaultRingCapacity();
