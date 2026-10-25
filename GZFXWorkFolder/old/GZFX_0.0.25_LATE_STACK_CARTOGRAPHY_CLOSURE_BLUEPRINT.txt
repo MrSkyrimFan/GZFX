@@ -1,0 +1,1009 @@
+GZFX 0.0.25 BLUEPRINT
+Late-Stack Cartography Closure
+Blueprint date: October 24, 2026
+Status: APPROVED FOR IMPLEMENTATION
+
+Controlling authority:
+1. GZFXWorkFolder/new/GZFX_0.0.24_TELEMETRY_FIELD_FINDINGS.txt
+2. GZFXWorkFolder/new/GZFX_0.0.24_TELEMETRY_SECOND_DATA_PASS.txt
+3. GZFXWorkFolder/new/GZFX_0.0.24_TELEMETRY_THIRD_DATA_PASS.txt
+4. GZFXWorkFolder/new/GZFX_RESEARCH_PASS_6_LATE_STACK_CARTOGRAPHY_CLOSURE.txt
+5. current main
+
+======================================================================
+1. MISSION
+======================================================================
+
+Build runtime:
+
+    0.0.25-late-stack-cartography-closure
+
+Goal:
+
+    close the remaining high-value late-renderer blind spots without starting
+    another graphics-quality feature.
+
+This wave must:
+
+A. see inside Skyrim deferred D3D11 command lists by instrumenting the deferred
+   contexts while they RECORD;
+
+B. repair exact copy/resolve/clear resource lineage;
+
+C. stop silently treating truncated concrete resource lists as complete;
+
+D. promote field-supported HDR / tonemap-entry / global-TAA boundaries;
+
+E. reduce detailed pipeline logging to the unresolved late renderer by default.
+
+Do NOT tune AO.
+
+Do NOT begin indirect radiance.
+
+Do NOT replace TAA or tonemapping.
+
+======================================================================
+2. NEW MODULE
+======================================================================
+
+Add:
+
+    include/gzfx/diagnostics/deferred_context_cartography.hpp
+    src/diagnostics/deferred_context_cartography.cpp
+
+Namespace:
+
+    gzfx::diagnostics::deferred_context_cartography
+
+Public API:
+
+    bool AttachContext(
+        ID3D11DeviceContext* context) noexcept;
+
+    bool ExecuteObservedCommandList(
+        std::uint64_t frame,
+        std::uint64_t executeOrdinal,
+        ID3D11CommandList* commandList,
+        bool restoreContextState) noexcept;
+
+    void Reset() noexcept;
+
+    struct Status
+    {
+        std::uint64_t contextsAttached;
+        std::uint64_t listsFinished;
+        std::uint64_t listsExecuted;
+        std::uint64_t opaqueExecutions;
+        std::uint64_t recordedRuns;
+        std::uint64_t recordOverflows;
+    };
+
+    Status GetStatus() noexcept;
+
+The module owns all deferred-context vtable interception and sealed-list state.
+
+======================================================================
+3. CREATEDEFERREDCONTEXT HOOK
+======================================================================
+
+Extend Renderer Forensics startup target resolution.
+
+Add ID3D11Device vtable index:
+
+    CreateDeferredContext = 27
+
+Extend Targets:
+
+    createDeferredContext
+
+Resolve it from the temporary D3D11 device created during Arm().
+
+Install a MinHook detour in the same transaction as:
+
+    Present
+    Present1
+    ResizeBuffers
+
+New detour:
+
+    HookCreateDeferredContext
+
+Behavior:
+
+    call original
+    if success + returned context:
+        deferred_context_cartography::AttachContext(context)
+
+No full device-vtable interception is enabled.
+
+The previous experimental Pipeline Cartography device-creation lane remains
+experimental and untouched.
+
+======================================================================
+4. DEFERRED CONTEXT VTABLE
+======================================================================
+
+ID3D11DeviceContext vtable count:
+
+    115
+
+Add index:
+
+    FinishCommandList = 114
+
+AttachContext:
+
+- verify context != nullptr;
+- verify context->GetType() == D3D11_DEVICE_CONTEXT_DEFERRED;
+- if already attached, return true;
+- capture original vtable;
+- allocate replacement vtable;
+- copy all 115 entries;
+- replace only required methods;
+- atomically install replacement pointer.
+
+Track one ContextRecord per deferred context.
+
+======================================================================
+5. CONTEXT RECORD
+======================================================================
+
+ContextRecord fields:
+
+    contextIdentity
+    contextGeneration
+    originalVtable
+    replacementVtable
+    CurrentState state
+    recordingGeneration
+    runOrdinal
+    vector<DeferredRun> runs
+    bool overflow
+    uint64_t originalPassCount
+
+CurrentState mirrors the compact state required by pipeline telemetry:
+
+    shaders[6]
+    SRVs[6][128]
+    CBs[6][14]
+    samplers[6][16]
+    RTVs[8]
+    DSV
+    OM UAVs[8]
+    CS UAVs[8]
+    blend/depth/raster identity/hash
+    topology
+    viewport
+
+It does NOT share immediate-context state.
+
+======================================================================
+6. RESOURCE IDENTITY HELPERS
+======================================================================
+
+The deferred module may reuse common identity/hash definitions from
+Pipeline Cartography where safely extractable.
+
+If direct reuse would force invasive refactoring, implement small deterministic
+helpers in the deferred module:
+
+    CanonicalId(IUnknown*)
+    ResourceIdFromSRV
+    ResourceIdFromRTV
+    ResourceIdFromDSV
+    ResourceIdFromUAV
+    StateHash
+    SamplerHash
+
+No semantic inference belongs here.
+
+No disk I/O belongs here.
+
+======================================================================
+7. DEFERRED PASS RECORD
+======================================================================
+
+Add to pipeline_cartography.hpp a reusable POD:
+
+    struct PassRunTelemetry
+    {
+        PassTelemetry pass;
+        uint64_t firstOrdinal;
+        uint64_t lastOrdinal;
+        uint64_t repeatCount;
+    };
+
+The deferred module stores PassRunTelemetry.
+
+Adjacent pass compression:
+
+    same structural+binding signature
+    ->
+    extend run
+
+Otherwise:
+
+    append new run
+
+Maximum active runs per context generation:
+
+    65,536
+
+On overflow:
+
+    set overflow=true
+    increment originalPassCount
+    keep renderer running.
+
+======================================================================
+8. COMMAND LIST RECORD
+======================================================================
+
+At successful FinishCommandList:
+
+create:
+
+    CommandListRecord
+    {
+        uintptr_t commandListIdentity;
+        uint64_t commandListGeneration;
+        uintptr_t deferredContextIdentity;
+        uint64_t deferredContextGeneration;
+        uint64_t recordingGeneration;
+        bool restoreDeferredContextState;
+        bool complete;
+        uint64_t originalPassCount;
+        vector<PassRunTelemetry> runs;
+    }
+
+Registry key:
+
+    commandListIdentity
+
+but every record also carries a monotonic generation.
+
+Replacing a reused pointer creates a new generation.
+
+Live registry max:
+
+    256 records
+
+If capacity is exceeded:
+
+    evict oldest record not currently being emitted;
+    increment diagnostic eviction count.
+
+======================================================================
+9. FINISHCOMMANDLIST HOOK
+======================================================================
+
+Hook index 114.
+
+Wrapper:
+
+1. call original FinishCommandList;
+2. on success:
+   - seal current recorded runs;
+   - assign list generation;
+   - store registry record;
+   - notify telemetry of list-seal metadata;
+3. increment context recordingGeneration;
+4. clear active run list;
+5. if RestoreDeferredContextState == FALSE:
+       reset tracked CurrentState to default;
+   else:
+       preserve state.
+
+No file write.
+
+======================================================================
+10. NESTED DEFERRED EXECUTION
+======================================================================
+
+Hook ExecuteCommandList on deferred contexts.
+
+If child list has a known sealed record:
+
+    append a NestedCommandList marker run;
+    append/merge child runs into parent recording;
+    preserve child command-list generation linkage.
+
+If child list unknown:
+
+    append opaque nested marker.
+
+Apply restoreContextState behavior to tracked state:
+
+FALSE:
+    reset state after nested execution.
+
+TRUE:
+    preserve prior tracked state.
+
+The exact D3D11 runtime still performs the real operation through original
+function.
+
+======================================================================
+11. IMMEDIATE EXECUTE JOIN
+======================================================================
+
+Existing renderer_forensics HookExecuteCommandList:
+
+For non-GZFX owned lists:
+
+before original playback:
+
+    bool expanded =
+        deferred_context_cartography::ExecuteObservedCommandList(
+            g_frame,
+            g_drawOrdinalThisFrame.load(),
+            commandList,
+            restoreContextState != FALSE);
+
+Always retain ownership.csv event.
+
+If expanded=false:
+
+    listener records opaque Skyrim command-list execution.
+
+If expanded=true:
+
+    listener records:
+        list generation
+        deferred context generation
+        internal run sequence
+        internal first/last recording ordinals
+        repeat count
+        pass telemetry
+        true execution frame
+        execute ordinal
+
+Do not double-count the command-list container as a fake resource pass.
+
+======================================================================
+12. TELEMETRY LISTENER EXTENSION
+======================================================================
+
+Add event types:
+
+    DeferredRun
+    DeferredList
+    ExplicitAccess
+
+Add writer files:
+
+    deferred_runs_0001.csv
+    deferred_lists.csv
+    explicit_access.csv
+
+Deferred run segment rotation:
+
+    64 MiB
+
+deferred_lists.csv includes:
+
+    execution frame
+    execute ordinal
+    command-list pointer
+    command-list generation
+    context pointer
+    context generation
+    recording generation
+    restore flags
+    run count
+    original pass count
+    complete/overflow
+
+======================================================================
+13. LATE-DETAIL GATING
+======================================================================
+
+Normal 0.0.25 listener no longer writes full pipeline_runs for the closed early
+renderer.
+
+Detailed pipeline capture begins each frame when Stage Scheduler emits:
+
+    AfterAmbientScreenSpaceComposite
+
+Detailed pipeline capture ends at:
+
+    UiPresent
+
+The listener must still record globally:
+
+    frames
+    seconds
+    stages
+    semantics
+    transitions
+    ownership
+    timings
+    resource catalog
+    listener health
+
+A test environment override:
+
+    GZFX_TEST_TELEMETRY_FULL_PIPELINE=1
+
+restores full-frame pipeline rows for synthetic tests when needed.
+
+This should dramatically reduce real session size.
+
+======================================================================
+14. PASSTELEMETRY ACCESS CAPACITY
+======================================================================
+
+Change PassTelemetry concrete access fields.
+
+Reads:
+
+    retained capacity = 24
+
+Writes:
+
+    retained capacity = 12
+
+Add:
+
+    uint32_t totalReadResourceCount
+    uint32_t totalWriteResourceCount
+    uint32_t retainedReadResourceCount
+    uint32_t retainedWriteResourceCount
+    bool readOverflow
+    bool writeOverflow
+
+The full readHash/writeHash remain.
+
+No field named count may ambiguously mean both total and retained.
+
+======================================================================
+15. EXPLICIT OPERATION FIELDS
+======================================================================
+
+Add to PassTelemetry:
+
+    std::array<uintptr_t, 2> explicitReads
+    std::array<uintptr_t, 2> explicitWrites
+    uint32_t explicitReadCount
+    uint32_t explicitWriteCount
+
+    uint32_t sourceSubresource
+    uint32_t destinationSubresource
+    uint32_t explicitFormat
+    uint32_t explicitFlags
+
+For explicit operations, these fields are authoritative.
+
+The generic bound-state read/write list remains contextual only.
+
+======================================================================
+16. IMMEDIATE EXPLICIT-OP FIX
+======================================================================
+
+Refactor Pipeline Cartography compact emission.
+
+For:
+
+CopyResource:
+    explicitReads[0]  = source
+    explicitWrites[0] = destination
+
+CopySubresourceRegion:
+    explicit source/destination + subresources
+
+ResolveSubresource:
+    explicit source/destination + subresources + format
+
+ClearRTV:
+    explicitWrites[0] = resource behind RTV
+
+ClearDSV:
+    explicitWrites[0] = resource behind DSV
+    explicitFlags     = clear flags
+
+ClearUAV:
+    explicitWrites[0] = resource behind UAV
+
+GenerateMips:
+    explicitReads[0]  = SRV resource
+    explicitWrites[0] = same resource
+
+ExecuteCommandList:
+    explicit lists empty;
+    no stale bound resource list is to be interpreted as list contents.
+
+The detailed manual Pipeline Cartography artifacts remain unchanged.
+
+======================================================================
+17. DEFERRED EXPLICIT OPS
+======================================================================
+
+The deferred-context tracker applies the same explicit operand rules.
+
+This gives exact producer/consumer lineage inside formerly opaque command
+lists.
+
+======================================================================
+18. HDR REDUCTION TRACKER
+======================================================================
+
+Implement in Semantic Authority / late-stage detector.
+
+Add per-frame fields:
+
+    hdrReductionStep
+    hdrReductionComplete
+    tonemapPending
+    taaPending
+    taaOrdinal
+
+Detect RGBA16F descending reduction suffix.
+
+Production rule:
+
+- output format R16G16B16A16_FLOAT;
+- each step dimension strictly decreases;
+- target becomes tiny;
+- final target <= 4x4;
+- chain occurs after ambient composite;
+- only first coherent chain per frame accepted.
+
+Synthetic CI may use exact:
+
+    40x23
+    10x6
+    3x2
+    2x2
+
+At final tiny output EndDraw/EndDispatch:
+
+    signal:
+        Boundary::HDRReduction
+        Phase::AfterExecution
+        reason="hdr_reduction_complete"
+
+======================================================================
+19. BEFORE TONEMAP DETECTOR
+======================================================================
+
+After HDRReduction complete:
+
+find first image-space pass that:
+
+- writes full-resolution R8G8B8A8_UNORM;
+- reads MAIN_HDR or a direct reduction/reconstruction descendant;
+- occurs before the TAA detector;
+- is not a clear/copy.
+
+Before its execution:
+
+    signal:
+        Boundary::BeforeTonemap
+        Phase::BeforeExecution
+        reason="hdr_tonemap_entry"
+
+Set:
+
+    tonemapPending=true
+
+The next TAA family is the next locked downstream landmark.
+
+Do NOT signal an AfterTonemap enum that does not exist.
+
+======================================================================
+20. GLOBAL TAA DETECTOR
+======================================================================
+
+After tonemap-entry has occurred:
+
+detect a draw/dispatch that:
+
+- reads MOTION;
+- reads MAIN_DEPTH_CURRENT;
+- reads at least two full-resolution R8G8B8A8_UNORM SRVs;
+- writes exactly two full-resolution R8G8B8A8_UNORM outputs;
+- first qualifying family per frame.
+
+Before execution:
+
+    Boundary::BeforeGlobalTAA
+    Phase::BeforeExecution
+    reason="global_taa_entry"
+
+After execution:
+
+    Boundary::AfterGlobalTAA
+    Phase::AfterExecution
+    reason="global_taa_complete"
+
+No observed shader pointer address is used in detection.
+
+======================================================================
+21. TAA FIELD ACCEPTANCE
+======================================================================
+
+Next real Skyrim session should prove:
+
+Active scene frames:
+    one BeforeGlobalTAA
+    one AfterGlobalTAA
+
+Ordering:
+
+    HDRReduction
+    ->
+    BeforeTonemap
+    ->
+    BeforeGlobalTAA
+    ->
+    AfterGlobalTAA
+    ->
+    Skyrim deferred late domain
+
+History:
+
+    two-surface feedback ping-pong continues
+
+No environment-specific disappearance.
+
+If this fails, stage promotion remains provisional.
+
+======================================================================
+22. UNPROMOTED BOUNDARIES
+======================================================================
+
+Leave unsignaled:
+
+    AfterShadowProduction
+    WaterDomain
+    PostTonemapPreUi
+
+No code should infer them from names.
+
+======================================================================
+23. RESOURCE CATALOG
+======================================================================
+
+Resource catalog stays global across the session.
+
+Deferred-context resources not previously seen by immediate tracking should
+still be cataloged.
+
+Either:
+
+A. expose a Pipeline Cartography RegisterResourceTelemetry helper;
+
+or
+
+B. deferred module emits its own compatible ResourceTelemetry sink event.
+
+Prefer A if it can be done without destabilizing the manual capture path.
+
+======================================================================
+24. TELEMETRY STATUS
+======================================================================
+
+listener_status.txt gains:
+
+    detail_gate=late_only
+    detailed_pipeline_rows
+    deferred_contexts_attached
+    deferred_lists_finished
+    deferred_lists_executed
+    deferred_opaque_executions
+    deferred_recorded_runs
+    deferred_record_overflows
+    explicit_access_events
+
+No silent fallback.
+
+======================================================================
+25. CLEAN SHUTDOWN
+======================================================================
+
+Do not block in DllMain.
+
+Keep:
+
+    GZFX_Shutdown export
+    normal process-lifetime shutdown path
+
+Add listener status fields:
+
+    pid
+    last_heartbeat_qpc
+    last_heartbeat_local_time
+
+On clean Shutdown:
+
+    telemetry_session_complete.txt
+    complete=true
+
+Field instructions must explicitly require:
+
+    exit Skyrim
+    confirm SkyrimSE.exe is gone
+    then ZIP newest session.
+
+======================================================================
+26. VERSION
+======================================================================
+
+CMake:
+
+    0.0.25
+
+Version string:
+
+    0.0.25-late-stack-cartography-closure
+
+======================================================================
+27. CI STRATEGY
+======================================================================
+
+Keep all existing 19 tests.
+
+Add a dedicated executable:
+
+    GZFXLateStackCartographyHarness
+
+or extend the existing WARP pipeline harness if cleaner.
+
+Prefer a dedicated harness for deferred-context lifecycle because the existing
+Wave3 harness is already broad.
+
+New test name:
+
+    late_stack_cartography
+
+Target:
+
+    20 / 20 PASS
+
+======================================================================
+28. SYNTHETIC DEFERRED TEST
+======================================================================
+
+Harness:
+
+1. create D3D11 WARP device + swap chain;
+2. load GZFX;
+3. initialize telemetry test mode;
+4. call device->CreateDeferredContext(0,...);
+5. configure deferred context:
+       shaders
+       SRVs
+       RTV/DSV
+       viewport
+       Draw
+       CopyResource
+6. FinishCommandList(FALSE);
+7. immediate ExecuteCommandList;
+8. repeat with FinishCommandList(TRUE);
+9. create child list and nest it into a parent deferred list;
+10. execute parent;
+11. shutdown GZFX.
+
+Verify:
+
+    deferred_lists.csv exists
+    deferred_runs_0001.csv exists
+    deferred internal Draw visible
+    explicit copy source/destination correct
+    FALSE reset evidence
+    TRUE preserve evidence
+    nested list linkage visible
+    no crash
+    no listener drops
+
+======================================================================
+29. SYNTHETIC HDR/TAA TEST
+======================================================================
+
+Harness emits:
+
+    known active-scene foundation
+    ->
+    RGBA16F reduction suffix
+    ->
+    full-res RGBA8 tonemap candidate
+    ->
+    TAA-shaped pass:
+        current RGBA8
+        history RGBA8
+        motion
+        depth
+        mask
+        alpha
+        two RGBA8 outputs
+    ->
+    deferred late work
+    ->
+    Present
+
+Verify stages.csv ordering:
+
+    hdr_reduction
+    before_tonemap
+    before_global_taa
+    after_global_taa
+
+exactly once per active synthetic frame.
+
+======================================================================
+30. EXPLICIT LINEAGE TEST
+======================================================================
+
+Bind unrelated SRV/RTV state.
+
+Then issue:
+
+    CopyResource(A <- B)
+
+Verify telemetry explicit fields report:
+
+    read = B
+    write = A
+
+and do not report unrelated bound-state resources as operation operands.
+
+Repeat for:
+
+    Resolve
+    ClearRTV
+    ClearDSV
+    GenerateMips
+
+======================================================================
+31. ACCESS OVERFLOW TEST
+======================================================================
+
+Bind >24 unique SRVs.
+
+Execute a pass.
+
+Expected:
+
+    totalReadResourceCount > 24
+    retainedReadResourceCount == 24
+    readOverflow == true
+
+The renderer continues.
+
+No silent claim of completeness.
+
+======================================================================
+32. LATE-DETAIL GATE TEST
+======================================================================
+
+Synthetic early geometry passes occur before:
+
+    AfterAmbientScreenSpaceComposite
+
+Normal telemetry:
+
+    no pipeline run rows for those early passes.
+
+Late pass after boundary:
+
+    present.
+
+Full-pipeline test override:
+
+    early rows present.
+
+======================================================================
+33. PACKAGE / RELEASE GATE
+======================================================================
+
+Normal repository lifecycle:
+
+    branch
+    ->
+    implement
+    ->
+    PR
+    ->
+    Windows x64 CI
+    ->
+    merge
+    ->
+    merged-main CI
+    ->
+    package publisher
+    ->
+    prove package-refresh diff changes only Lance ZIP.
+
+======================================================================
+34. FIELD TEST AFTER IMPLEMENTATION
+======================================================================
+
+This should NOT be another 400 MB marathon.
+
+Target natural session:
+
+    ~2-3 minutes
+
+Exterior day:
+    20-30 sec
+
+Interior:
+    20-30 sec
+
+Exterior night:
+    20-30 sec
+
+Water/reflection scene:
+    20-30 sec
+
+Fire/particles / late transparency if convenient:
+    20-30 sec
+
+Modes:
+
+    Mode 0, 1, 2 each represented
+    no need for exact equal timing.
+
+No Shift+Numpad5 required.
+
+Quit Skyrim fully.
+
+Upload newest Telemetry session ZIP.
+
+Expected archive should be materially smaller because full-detail early
+geometry is gated off.
+
+======================================================================
+35. NEXT DATA QUESTIONS
+======================================================================
+
+The next DATA pass must answer:
+
+- deferred contexts attached?
+- how many deferred contexts exist?
+- how many recorded runs live inside each Skyrim command list?
+- what late families were hidden in 0.0.24?
+- which resources are produced/consumed inside deferred work?
+- does explicit copy lineage close the final full-res sink?
+- do HDRReduction / BeforeTonemap / BeforeGlobalTAA / AfterGlobalTAA fire once
+  per active frame in the expected order?
+- what remains between AfterGlobalTAA and UiPresent?
+- can WaterDomain now be identified?
+- can PostTonemapPreUi now be identified?
+- is the next architecture wave finally a graphics ownership feature rather
+  than more cartography?
+
+======================================================================
+36. NOT AUTHORIZED
+======================================================================
+
+Do not:
+
+    tune Ambient Visibility;
+    optimize final release FPS;
+    start indirect radiance;
+    replace global TAA;
+    replace tonemapping;
+    implement water replacement;
+    invent WaterDomain;
+    invent PostTonemapPreUi;
+    hardcode observed shader pointer values;
+    hardcode observed field ordinals;
+    enable the broad experimental device-creation interception lane.
+
+======================================================================
+37. IMPLEMENTATION COMMAND
+======================================================================
+
+Build 0.0.25 as a late-stack cartography closure release.
+
+The primary success condition is not pretty rendering.
+
+It is:
+
+    the next telemetry session must show the actual commands and exact
+    resources inside Skyrim's formerly opaque late deferred lists,
+    while field-validating HDR / tonemap-entry / TAA stage boundaries and
+    producing substantially less irrelevant early-pipeline data.
+
+END 0.0.25 BLUEPRINT
