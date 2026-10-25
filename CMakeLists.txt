@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.24
+    VERSION 0.0.25
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -64,6 +64,7 @@ add_library(GZFX SHARED
     src/ui/settings_menu.cpp
     src/version.cpp
     src/diagnostics/d3d11_lifecycle.cpp
+    src/diagnostics/deferred_context_cartography.cpp
     src/diagnostics/pipeline_cartography.cpp
     src/diagnostics/renderer_forensics.cpp
     src/diagnostics/resource_intelligence.cpp
