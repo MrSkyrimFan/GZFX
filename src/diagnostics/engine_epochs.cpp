@@ -679,3 +679,44 @@ namespace gzfx::diagnostics::engine_epochs
         }
     }
 }
+
+
+extern "C" __declspec(dllexport)
+bool GZFX_TestValidateAe1170PostProcessing(
+    const std::uint8_t* bytes,
+    const std::uint64_t matchRva,
+    std::uint64_t* outTargetRva) noexcept
+{
+    const auto result =
+        gzfx::diagnostics::engine_epochs::testing::
+            ValidateAe1170PostProcessingFixture(
+                bytes,
+                matchRva);
+
+    if (outTargetRva != nullptr)
+    {
+        *outTargetRva = result.targetRva;
+    }
+
+    return result.matched;
+}
+
+extern "C" __declspec(dllexport)
+bool GZFX_TestValidateAe1170PreUi(
+    const std::uint8_t* bytes,
+    const std::uint64_t matchRva,
+    std::uint64_t* outTargetRva) noexcept
+{
+    const auto result =
+        gzfx::diagnostics::engine_epochs::testing::
+            ValidateAe1170PreUiFixture(
+                bytes,
+                matchRva);
+
+    if (outTargetRva != nullptr)
+    {
+        *outTargetRva = result.targetRva;
+    }
+
+    return result.matched;
+}
