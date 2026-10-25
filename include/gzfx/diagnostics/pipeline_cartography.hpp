@@ -3,6 +3,7 @@
 #include <d3d11.h>
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 
@@ -50,7 +51,13 @@ namespace gzfx::diagnostics::pipeline_cartography
         TelemetryPassKind kind = TelemetryPassKind::Draw;
         DrawKind drawKind = DrawKind::Draw;
 
+        // Stable content identity and process-local object identity are
+        // deliberately separate. A zero hash means creation-time bytecode
+        // identity was not observed; it must never be replaced with a pointer.
         std::array<std::uint64_t, 6> shaderHashes{};
+        std::array<std::uintptr_t, 6> shaderObjectIds{};
+        std::uint32_t shaderHashKnownMask = 0;
+
         std::array<std::uintptr_t, 4> rtvs{};
         std::uintptr_t dsv = 0;
 
@@ -135,6 +142,20 @@ namespace gzfx::diagnostics::pipeline_cartography
 
     std::uintptr_t ObserveResource(
         ID3D11Resource* resource) noexcept;
+
+    void ObserveCreatedResource(
+        ID3D11Resource* resource,
+        const char* ownerModule) noexcept;
+
+    void ObserveCreatedShader(
+        ShaderStage stage,
+        ID3D11DeviceChild* shader,
+        const void* bytecode,
+        std::size_t bytecodeBytes,
+        const char* ownerModule) noexcept;
+
+    std::uint64_t StableShaderHash(
+        std::uintptr_t shaderObjectIdentity) noexcept;
 
     bool AttachDevice(ID3D11Device* device) noexcept;
 
