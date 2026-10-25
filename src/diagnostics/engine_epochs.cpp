@@ -25,6 +25,9 @@ namespace gzfx::diagnostics::engine_epochs
     namespace
     {
         constexpr std::uint64_t kAe1170Profile = 0x0001000604920000ull;
+
+        constexpr std::uint32_t kRuntimeKnown = 1u << 0;
+        constexpr std::uint32_t kEngineProfile = 1u << 1;
         constexpr std::uint64_t kPostProcessingExpectedRva = 0x1481B80ull;
         constexpr std::uint64_t kPreUiExpectedRva = 0xE44850ull;
 
@@ -65,6 +68,41 @@ namespace gzfx::diagnostics::engine_epochs
             std::size_t textSize = 0;
         };
 
+        std::uint32_t ClassifyRuntimeImpl(
+            const std::uint16_t major,
+            const std::uint16_t minor,
+            const std::uint16_t patch,
+            const std::uint16_t build) noexcept
+        {
+            if (major == 1 &&
+                minor == 5 &&
+                patch == 97 &&
+                build == 0)
+            {
+                return kRuntimeKnown;
+            }
+
+            if (major == 1 &&
+                minor == 6 &&
+                patch == 1170 &&
+                build == 0)
+            {
+                return
+                    kRuntimeKnown |
+                    kEngineProfile;
+            }
+
+            if (major == 1 &&
+                minor == 7 &&
+                patch == 104 &&
+                build == 0)
+            {
+                return kRuntimeKnown;
+            }
+
+            return 0;
+        }
+
         std::string Hex(const std::uint64_t value)
         {
             std::ostringstream out;
@@ -99,7 +137,12 @@ namespace gzfx::diagnostics::engine_epochs
             out
                 << "GZFX Skyrim engine epoch resolver\n"
                 << "runtime_profile=" << Hex(g_status.runtimeProfile) << "\n"
-                << "runtime_supported=" << (g_status.runtimeSupported ? "true" : "false") << "\n"
+                << "renderer_core_supported="
+                << (g_status.rendererCoreSupported ? "true" : "false") << "\n"
+                << "runtime_known="
+                << (g_status.runtimeKnown ? "true" : "false") << "\n"
+                << "engine_profile_available="
+                << (g_status.engineProfileAvailable ? "true" : "false") << "\n"
                 << "post_processing_armed=" << (g_status.postProcessingArmed ? "true" : "false") << "\n"
                 << "post_processing_target_rva=" << Hex(g_status.postProcessingTargetRva) << "\n"
                 << "pre_ui_armed=" << (g_status.preUiArmed ? "true" : "false") << "\n"
@@ -481,16 +524,29 @@ namespace gzfx::diagnostics::engine_epochs
                     patch,
                     build);
 
-            if (major != 1 ||
-                minor != 6 ||
-                patch != 1170 ||
-                build != 0)
+            const std::uint32_t runtimeClass =
+                ClassifyRuntimeImpl(
+                    major,
+                    minor,
+                    patch,
+                    build);
+
+            g_status.runtimeKnown =
+                (runtimeClass &
+                 kRuntimeKnown) != 0;
+
+            g_status.engineProfileAvailable =
+                (runtimeClass &
+                 kEngineProfile) != 0;
+
+            if (!g_status.engineProfileAvailable)
             {
-                WriteStatus("unsupported_runtime");
+                WriteStatus(
+                    g_status.runtimeKnown
+                        ? "known_runtime_engine_profile_unavailable"
+                        : "unknown_runtime_engine_profile_unavailable");
                 return;
             }
-
-            g_status.runtimeSupported = true;
 
             const ImageInfo image =
                 MainImage();
@@ -677,6 +733,19 @@ namespace gzfx::diagnostics::engine_epochs
                 matchRva,
                 kPreUiExpectedRva);
         }
+
+        std::uint32_t ClassifyRuntime(
+            const std::uint16_t major,
+            const std::uint16_t minor,
+            const std::uint16_t patch,
+            const std::uint16_t build) noexcept
+        {
+            return ClassifyRuntimeImpl(
+                major,
+                minor,
+                patch,
+                build);
+        }
     }
 }
 
@@ -719,4 +788,21 @@ bool GZFX_TestValidateAe1170PreUi(
     }
 
     return result.matched;
+}
+
+
+extern "C" __declspec(dllexport)
+std::uint32_t GZFX_TestClassifyRuntime(
+    const std::uint16_t major,
+    const std::uint16_t minor,
+    const std::uint16_t patch,
+    const std::uint16_t build) noexcept
+{
+    return
+        gzfx::diagnostics::engine_epochs::testing::
+            ClassifyRuntime(
+                major,
+                minor,
+                patch,
+                build);
 }
