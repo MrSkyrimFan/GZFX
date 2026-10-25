@@ -146,7 +146,12 @@ int wmain(int argc, wchar_t** argv)
     std::filesystem::create_directories(outputRoot, ec);
 
     if (ec ||
-        !SetEnvironmentVariableW(L"GZFX_TEST_OUTPUT_ROOT", outputRoot.c_str()))
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_OUTPUT_ROOT",
+            outputRoot.c_str()) ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_WAVE3_STATUS_EVERY_FRAME",
+            L"1"))
     {
         return 3;
     }
