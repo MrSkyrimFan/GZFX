@@ -516,7 +516,7 @@ namespace gzfx::ui
                    "Shift+Numpad2 reload; "
                    "Shift+Numpad3 cycle view; "
                    "Shift+Numpad4 capture frame+settings; "
-                   "Shift+Numpad5 capture stock renderer semantics; "
+                   "Shift+Numpad5 arm semantic + Wave3 capture; "
                    "mouse click/drag sliders; "
                    "mouse click toggles\n";
         }
