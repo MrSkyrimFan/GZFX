@@ -74,33 +74,62 @@ namespace gzfx::diagnostics::engine_epochs
             const std::uint16_t patch,
             const std::uint16_t build) noexcept
         {
-            if (major == 1 &&
-                minor == 5 &&
-                patch == 97 &&
-                build == 0)
+            if (major != 1 ||
+                build != 0)
             {
-                return kRuntimeKnown;
+                return 0;
             }
 
-            if (major == 1 &&
+            bool known = false;
+
+            if (minor == 5)
+            {
+                known =
+                    patch == 97;
+            }
+            else if (minor == 6)
+            {
+                switch (patch)
+                {
+                case 318:
+                case 323:
+                case 342:
+                case 353:
+                case 629:
+                case 640:
+                case 659:
+                case 1130:
+                case 1170:
+                case 1179:
+                    known = true;
+                    break;
+                default:
+                    break;
+                }
+            }
+            else if (minor == 7)
+            {
+                known =
+                    patch == 99 ||
+                    patch == 104;
+            }
+
+            if (!known)
+            {
+                return 0;
+            }
+
+            const bool engineProfile =
                 minor == 6 &&
-                patch == 1170 &&
-                build == 0)
-            {
-                return
-                    kRuntimeKnown |
-                    kEngineProfile;
-            }
+                patch == 1170;
 
-            if (major == 1 &&
-                minor == 7 &&
-                patch == 104 &&
-                build == 0)
-            {
-                return kRuntimeKnown;
-            }
-
-            return 0;
+            return
+                kRuntimeKnown |
+                (
+                    engineProfile
+                        ? kEngineProfile
+                        : 0u
+                );
         }
 
         std::string Hex(const std::uint64_t value)

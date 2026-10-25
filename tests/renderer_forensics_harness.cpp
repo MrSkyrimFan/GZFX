@@ -169,7 +169,21 @@ int wmain(int argc, wchar_t** argv)
         return 12;
     }
 
-    // Acquire the real swap chain and immediate context.
+    // GZFX was loaded before D3D creation in this harness. Prove the
+    // executable-IAT lifecycle path attaches renderer-forensics BEFORE first
+    // Present by recording a unique viewport now.
+    D3D11_VIEWPORT prePresentViewport{};
+    prePresentViewport.Width = 333.0f;
+    prePresentViewport.Height = 177.0f;
+    prePresentViewport.MinDepth = 0.0f;
+    prePresentViewport.MaxDepth = 1.0f;
+
+    context->RSSetViewports(
+        1,
+        &prePresentViewport);
+
+    // First Present should consume already-instrumented context history, not
+    // be the point where instrumentation first begins.
     swap->Present(0, 0);
 
     D3D11_VIEWPORT viewport{};
@@ -215,6 +229,7 @@ int wmain(int argc, wchar_t** argv)
         summary.find("640x360") == std::string::npos ||
         summary.find("bytes=256") == std::string::npos ||
         summary.find("dsv_binds=") == std::string::npos ||
+        summary.find("333x177 count=1") == std::string::npos ||
         frames.find("2,1,") == std::string::npos)
     {
         return 14;

@@ -60,9 +60,62 @@ int wmain(
             outputRoot.c_str()) ||
         !SetEnvironmentVariableW(
             L"GZFX_TEST_TELEMETRY_ACTIVE",
+            L"1") ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_ALLOW_SOFTWARE_PRIMARY",
             L"1"))
     {
         return 3;
+    }
+
+    const fs::path diagnosticsRoot =
+        outputRoot /
+        L"GZFX" /
+        L"Diagnostics";
+
+    fs::create_directories(
+        diagnosticsRoot,
+        error);
+
+    {
+        std::ofstream stale(
+            diagnosticsRoot /
+                L"renderer_startup.csv",
+            std::ios::out |
+                std::ios::trunc);
+
+        stale
+            << "STALE_STARTUP_MARKER\n";
+    }
+
+    const HMODULE d3d11Module =
+        GetModuleHandleW(
+            L"d3d11.dll");
+
+    if (d3d11Module == nullptr ||
+        GetProcAddress(
+            d3d11Module,
+            "D3D11CreateDevice") == nullptr ||
+        GetProcAddress(
+            d3d11Module,
+            "D3D11CreateDeviceAndSwapChain") == nullptr ||
+        GetProcAddress(
+            d3d11Module,
+            "D3D11On12CreateDevice") == nullptr ||
+        GetProcAddress(
+            d3d11Module,
+            "D3D11CoreCreateDevice") != nullptr ||
+        GetProcAddress(
+            d3d11Module,
+            "D3D11CoreCreateLayeredDevice") != nullptr ||
+        GetProcAddress(
+            d3d11Module,
+            "D3D11CoreGetLayeredDeviceSize") != nullptr ||
+        GetProcAddress(
+            d3d11Module,
+            "D3D11CoreRegisterLayers") != nullptr)
+    {
+        return 4;
     }
 
     const wchar_t* className =
@@ -181,7 +234,7 @@ int wmain(
     if (version == nullptr ||
         shutdown == nullptr ||
         std::string(version()).find(
-            "0.0.27") ==
+            "0.0.28") ==
             std::string::npos)
     {
         context->Release();
@@ -230,9 +283,7 @@ int wmain(
     shutdown();
 
     const fs::path diagnostics =
-        outputRoot /
-        L"GZFX" /
-        L"Diagnostics";
+        diagnosticsRoot;
 
     const std::string startup =
         ReadAll(
@@ -271,21 +322,33 @@ int wmain(
         startup.find(
             "first_present");
 
+    const auto candidateAccepted =
+        startup.find(
+            "primary_candidate_accepted");
+
     const bool startupComplete =
         processAttach != std::string::npos &&
         firstExport != std::string::npos &&
         deviceCreated != std::string::npos &&
+        candidateAccepted != std::string::npos &&
         loadBegin != std::string::npos &&
         initialized != std::string::npos &&
         attached != std::string::npos &&
         firstResource != std::string::npos &&
-        firstPresent != std::string::npos;
+        firstPresent != std::string::npos &&
+        startup.find(
+            "STALE_STARTUP_MARKER") ==
+            std::string::npos &&
+        startup.find(
+            "pid,sequence,qpc,thread,event") !=
+            std::string::npos;
 
     const bool startupOrdered =
         startupComplete &&
         processAttach < firstExport &&
         firstExport < deviceCreated &&
-        deviceCreated < loadBegin &&
+        deviceCreated < candidateAccepted &&
+        candidateAccepted < loadBegin &&
         loadBegin < initialized &&
         initialized < attached &&
         attached < firstResource &&
@@ -298,6 +361,7 @@ int wmain(
 
     bool closeComplete = false;
     bool sessionComplete = false;
+    bool sessionStartupTrace = false;
 
     if (fs::exists(
             telemetryRoot))
@@ -321,6 +385,11 @@ int wmain(
                     entry.path() /
                     L"telemetry_session_complete.txt");
 
+            const std::string sessionStartup =
+                ReadAll(
+                    entry.path() /
+                    L"renderer_startup.csv");
+
             closeComplete =
                 closeComplete ||
                 closeState.find(
@@ -332,6 +401,17 @@ int wmain(
                 complete.find(
                     "status=complete") !=
                     std::string::npos;
+
+            sessionStartupTrace =
+                sessionStartupTrace ||
+                (
+                    sessionStartup.find(
+                        "primary_attach_complete") !=
+                        std::string::npos &&
+                    sessionStartup.find(
+                        "STALE_STARTUP_MARKER") ==
+                        std::string::npos
+                );
         }
     }
 
@@ -352,7 +432,8 @@ int wmain(
     }
 
     if (!closeComplete ||
-        !sessionComplete)
+        !sessionComplete ||
+        !sessionStartupTrace)
     {
         std::cerr
             << "Telemetry shutdown proof incomplete.\n";

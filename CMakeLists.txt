@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.27
+    VERSION 0.0.28
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -122,6 +122,11 @@ add_library(GZFXD3D11Bootstrap SHARED
     bootstrap/d3d11_proxy.cpp
     bootstrap/d3d11.def
 )
+target_link_libraries(
+    GZFXD3D11Bootstrap
+    PRIVATE
+        minhook
+)
 set_target_properties(GZFXD3D11Bootstrap PROPERTIES OUTPUT_NAME "d3d11")
 gzfx_apply_common(GZFXD3D11Bootstrap)
 
@@ -152,6 +157,73 @@ add_dependencies(
     GZFXD3D11Bootstrap
 )
 gzfx_apply_common(GZFXD3D11FrontDoorHarness)
+
+add_executable(GZFXD3D11PrimaryQualificationHarness
+    tests/d3d11_primary_qualification_harness.cpp
+)
+target_link_libraries(
+    GZFXD3D11PrimaryQualificationHarness
+    PRIVATE
+        d3d11
+)
+add_dependencies(
+    GZFXD3D11PrimaryQualificationHarness
+    GZFXD3D11Bootstrap
+)
+gzfx_apply_common(GZFXD3D11PrimaryQualificationHarness)
+
+add_executable(GZFXNaturalExitChild
+    tests/natural_exit_child.cpp
+)
+target_link_libraries(
+    GZFXNaturalExitChild
+    PRIVATE
+        d3d11
+        dxgi
+        user32
+)
+add_dependencies(
+    GZFXNaturalExitChild
+    GZFX
+    GZFXD3D11Bootstrap
+)
+gzfx_apply_common(GZFXNaturalExitChild)
+
+add_executable(GZFXNaturalExitHarness
+    tests/natural_exit_harness.cpp
+)
+add_dependencies(
+    GZFXNaturalExitHarness
+    GZFXNaturalExitChild
+)
+gzfx_apply_common(GZFXNaturalExitHarness)
+
+add_executable(GZFXD3D11ExportContractHarness
+    tests/d3d11_export_contract_harness.cpp
+)
+add_dependencies(
+    GZFXD3D11ExportContractHarness
+    GZFXD3D11Bootstrap
+)
+gzfx_apply_common(GZFXD3D11ExportContractHarness)
+
+add_executable(GZFXStartupTraceHarness
+    tests/startup_trace_harness.cpp
+)
+add_dependencies(
+    GZFXStartupTraceHarness
+    GZFX
+)
+gzfx_apply_common(GZFXStartupTraceHarness)
+
+add_executable(GZFXRuntimeCatalogHarness
+    tests/runtime_catalog_harness.cpp
+)
+add_dependencies(
+    GZFXRuntimeCatalogHarness
+    GZFX
+)
+gzfx_apply_common(GZFXRuntimeCatalogHarness)
 
 add_executable(GZFXEngineEpochHarness
     tests/engine_epoch_harness.cpp
@@ -295,6 +367,55 @@ set_tests_properties(
     d3d11_frontdoor_bootstrap
     PROPERTIES
         TIMEOUT 30
+)
+
+add_test(
+    NAME d3d11_primary_qualification
+    COMMAND
+        "$<TARGET_FILE:GZFXD3D11PrimaryQualificationHarness>"
+        "${CMAKE_BINARY_DIR}/primary-qualification-output"
+)
+
+set_tests_properties(
+    d3d11_primary_qualification
+    PROPERTIES
+        TIMEOUT 30
+)
+
+add_test(
+    NAME natural_process_exit_completion
+    COMMAND
+        "$<TARGET_FILE:GZFXNaturalExitHarness>"
+        "$<TARGET_FILE:GZFXNaturalExitChild>"
+        "${CMAKE_BINARY_DIR}/natural-exit-output"
+)
+
+set_tests_properties(
+    natural_process_exit_completion
+    PROPERTIES
+        TIMEOUT 45
+)
+
+add_test(
+    NAME d3d11_public_export_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXD3D11ExportContractHarness>"
+        "$<TARGET_FILE:GZFXD3D11Bootstrap>"
+)
+
+add_test(
+    NAME startup_trace_process_scope
+    COMMAND
+        "$<TARGET_FILE:GZFXStartupTraceHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/startup-trace-output"
+)
+
+add_test(
+    NAME skyrim_runtime_catalog
+    COMMAND
+        "$<TARGET_FILE:GZFXRuntimeCatalogHarness>"
+        "$<TARGET_FILE:GZFX>"
 )
 
 add_test(

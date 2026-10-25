@@ -2291,6 +2291,32 @@ namespace gzfx::diagnostics::telemetry_listener
                 std::memory_order_release);
         }
 
+        void CopyStartupTraceIntoSession()
+        {
+            if (g_sessionRoot.empty())
+            {
+                return;
+            }
+
+            const fs::path source =
+                paths::DiagnosticsRoot() /
+                L"renderer_startup.csv";
+
+            if (!fs::exists(source))
+            {
+                return;
+            }
+
+            std::error_code error;
+
+            fs::copy_file(
+                source,
+                g_sessionRoot /
+                    L"renderer_startup.csv",
+                fs::copy_options::overwrite_existing,
+                error);
+        }
+
         void WriteSessionCloseState(
             const char* const state)
         {
@@ -2701,6 +2727,8 @@ namespace gzfx::diagnostics::telemetry_listener
                     g_wakeEvent);
                 g_wakeEvent = nullptr;
             }
+
+            CopyStartupTraceIntoSession();
 
             WriteSessionCloseState(
                 "complete");
