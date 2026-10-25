@@ -20,14 +20,15 @@ The long-term product target is a native graphics framework capable of replacing
 foundation baseline: 0.0.20-foundation-epochs-stage-correctness
 Wave 1: CLOSED
 Wave 2: CLOSED
+Wave 3: CLOSED
 broad renderer foundation cartography: COMPLETE
-active engineering wave: Wave 3
-current runtime: 0.0.22-temporal-continuity-repair
+active engineering wave: Wave 4
+current runtime: 0.0.23-ambient-visibility-v2
 current phase: TEST
-Wave 3 field status: OPEN
+Wave 4 field status: OPEN — code/CI/package PASS; real-Skyrim quality gate pending
 ```
 
-0.0.21 proved the production Native Input Broker, renderer execution service, post-opaque R32 hierarchy, native motion path, stage integration, and owned command-list isolation in real Skyrim, but exposed a temporal-history lifecycle defect caused by expected native-normal ping-pong. 0.0.22 repairs that continuity model, corrects CameraZ background diagnostics, and makes field capture human-doable. Production AO/GI remains frozen until the compact 0.0.22 real-Skyrim field gate passes.
+Wave 3 is field-closed: the renderer execution service, Native Input Broker, post-opaque R32 hierarchy, native normals/motion, temporal geometry, disocclusion, confidence history, stage integration, and owned command-list isolation are all production foundation. Wave 4 is the first production graphics-quality feature: full-resolution GTAO-family Ambient Visibility v2 is computed from the Wave 3 hierarchy and injected into Skyrim's final filtered SAO surface before Skyrim's own Ambient Screen-Space Composite. Wave 4 now awaits real-Skyrim visual/performance acceptance.
 
 ## Permanent authority workflow
 
