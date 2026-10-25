@@ -85,6 +85,7 @@ namespace
     {
         ID3D11Texture2D* texture = nullptr;
         ID3D11RenderTargetView* rtv = nullptr;
+        ID3D11ShaderResourceView* srv = nullptr;
     };
 
     Target CreateTarget(
@@ -92,7 +93,8 @@ namespace
         UINT width,
         UINT height,
         DXGI_FORMAT format,
-        UINT mipLevels = 1)
+        UINT mipLevels = 1,
+        bool unorderedAccess = false)
     {
         Target result{};
         D3D11_TEXTURE2D_DESC desc{};
@@ -105,7 +107,10 @@ namespace
         desc.Usage = D3D11_USAGE_DEFAULT;
         desc.BindFlags =
             D3D11_BIND_RENDER_TARGET |
-            D3D11_BIND_SHADER_RESOURCE;
+            D3D11_BIND_SHADER_RESOURCE |
+            (unorderedAccess
+                ? D3D11_BIND_UNORDERED_ACCESS
+                : 0u);
 
         if (FAILED(device->CreateTexture2D(&desc, nullptr, &result.texture)))
         {
@@ -123,14 +128,84 @@ namespace
             return {};
         }
 
+        if (FAILED(
+                device->CreateShaderResourceView(
+                    result.texture,
+                    nullptr,
+                    &result.srv)))
+        {
+            result.rtv->Release();
+            result.texture->Release();
+            return {};
+        }
+
         return result;
     }
 
     void Release(Target& target)
     {
+        if (target.srv) target.srv->Release();
         if (target.rtv) target.rtv->Release();
         if (target.texture) target.texture->Release();
         target = {};
+    }
+
+    bool ReadRgba8Pair(
+        ID3D11Device* device,
+        ID3D11DeviceContext* context,
+        ID3D11Texture2D* source,
+        UINT width,
+        UINT height,
+        float* left,
+        float* right)
+    {
+        if (!device || !context || !source || !left || !right)
+        {
+            return false;
+        }
+
+        D3D11_TEXTURE2D_DESC desc{};
+        source->GetDesc(&desc);
+
+        D3D11_TEXTURE2D_DESC staging = desc;
+        staging.Usage = D3D11_USAGE_STAGING;
+        staging.BindFlags = 0;
+        staging.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+        staging.MiscFlags = 0;
+
+        ID3D11Texture2D* copy = nullptr;
+
+        if (FAILED(device->CreateTexture2D(&staging, nullptr, &copy)))
+        {
+            return false;
+        }
+
+        context->CopyResource(copy, source);
+
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+
+        if (FAILED(context->Map(copy, 0, D3D11_MAP_READ, 0, &mapped)))
+        {
+            copy->Release();
+            return false;
+        }
+
+        const UINT y = height / 2;
+        const auto* row =
+            static_cast<const std::uint8_t*>(mapped.pData) +
+            static_cast<std::size_t>(y) * mapped.RowPitch;
+
+        *left =
+            row[(width / 4) * 4] /
+            255.0f;
+
+        *right =
+            row[(width * 3 / 4) * 4] /
+            255.0f;
+
+        context->Unmap(copy, 0);
+        copy->Release();
+        return true;
     }
 }
 
@@ -218,9 +293,22 @@ int wmain(int argc, wchar_t** argv)
     Target normal = CreateTarget(device, width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
     Target normalB = CreateTarget(device, width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
     Target aux = CreateTarget(device, width, height, DXGI_FORMAT_R8G8_UNORM);
+    Target aoA = CreateTarget(device, width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+    Target aoB = CreateTarget(device, width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+    Target aoTemp = CreateTarget(device, width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+    Target aoFinal = CreateTarget(
+        device,
+        width,
+        height,
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        1,
+        true);
+    Target rawIndirect = CreateTarget(device, width, height, DXGI_FORMAT_R11G11B10_FLOAT);
 
     if (!hdr.texture || !motion.texture || !normal.texture ||
-        !normalB.texture || !aux.texture)
+        !normalB.texture || !aux.texture ||
+        !aoA.texture || !aoB.texture || !aoTemp.texture ||
+        !aoFinal.texture || !rawIndirect.texture)
     {
         return 9;
     }
@@ -283,6 +371,8 @@ int wmain(int argc, wchar_t** argv)
     const FLOAT motionClear[4] = {0, 0, 0, 0};
     const FLOAT normalClear[4] = {0.5f, 0.5f, 0, 1};
     const FLOAT auxClear[4] = {0.25f, 0.75f, 0, 0};
+    const FLOAT stockAoClear[4] = {0.80f, 0.80f, 0.80f, 1.0f};
+    const FLOAT indirectClear[4] = {0.10f, 0.10f, 0.10f, 1.0f};
 
     context->ClearRenderTargetView(hdr.rtv, hdrClear);
     context->ClearRenderTargetView(motion.rtv, motionClear);
@@ -307,6 +397,9 @@ int wmain(int argc, wchar_t** argv)
     ID3D11Texture2D* cameraZ = nullptr;
     if (FAILED(device->CreateTexture2D(&cameraZDesc, nullptr, &cameraZ))) return 13;
 
+    ID3D11ShaderResourceView* cameraZSrv = nullptr;
+    if (FAILED(device->CreateShaderResourceView(cameraZ, nullptr, &cameraZSrv))) return 13;
+
     std::array<ID3D11RenderTargetView*, cameraMipLevels> cameraRtvs{};
 
     for (UINT mip = 0; mip < cameraMipLevels; ++mip)
@@ -323,6 +416,8 @@ int wmain(int argc, wchar_t** argv)
 
     const auto diagnostics =
         outputRoot / L"GZFX" / L"Diagnostics" / L"Wave3";
+
+    std::uint64_t syntheticFrameCounter = 0;
 
     const auto runFrame =
         [&](Target& normalTarget)
@@ -370,8 +465,152 @@ int wmain(int argc, wchar_t** argv)
                     1,
                     &cameraRtvs[mip],
                     nullptr);
+
+                if (mip == 0)
+                {
+                    ID3D11ShaderResourceView* depthSrv = nullptr;
+                    context->PSSetShaderResources(0, 1, &depthSrv);
+                }
+
                 context->Draw(3, 0);
             }
+
+            const bool even =
+                (syntheticFrameCounter++ & 1u) == 0u;
+
+            Target& previousAo =
+                even ? aoA : aoB;
+
+            Target& currentAo =
+                even ? aoB : aoA;
+
+            context->ClearRenderTargetView(
+                currentAo.rtv,
+                stockAoClear);
+
+            context->OMSetRenderTargets(
+                1,
+                &currentAo.rtv,
+                nullptr);
+
+            ID3D11ShaderResourceView* aoInputs[4] =
+            {
+                cameraZSrv,
+                motion.srv,
+                normalTarget.srv,
+                previousAo.srv
+            };
+
+            context->PSSetShaderResources(
+                0,
+                4,
+                aoInputs);
+
+            context->Draw(3, 0);
+
+            ID3D11ShaderResourceView* nullSrvs[4] =
+            {
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr
+            };
+
+            context->PSSetShaderResources(
+                0,
+                4,
+                nullSrvs);
+
+            context->ClearRenderTargetView(
+                aoTemp.rtv,
+                stockAoClear);
+
+            context->OMSetRenderTargets(
+                1,
+                &aoTemp.rtv,
+                nullptr);
+
+            context->PSSetShaderResources(
+                0,
+                1,
+                &currentAo.srv);
+
+            context->Draw(3, 0);
+            context->PSSetShaderResources(
+                0,
+                1,
+                nullSrvs);
+
+            context->ClearRenderTargetView(
+                aoFinal.rtv,
+                stockAoClear);
+
+            context->OMSetRenderTargets(
+                1,
+                &aoFinal.rtv,
+                nullptr);
+
+            context->PSSetShaderResources(
+                0,
+                1,
+                &aoTemp.srv);
+
+            context->Draw(3, 0);
+            context->PSSetShaderResources(
+                0,
+                1,
+                nullSrvs);
+
+            context->ClearRenderTargetView(
+                rawIndirect.rtv,
+                indirectClear);
+
+            context->OMSetRenderTargets(
+                1,
+                &rawIndirect.rtv,
+                nullptr);
+
+            ID3D11ShaderResourceView* indirectInputs[3] =
+            {
+                cameraZSrv,
+                hdr.srv,
+                aux.srv
+            };
+
+            context->PSSetShaderResources(
+                0,
+                3,
+                indirectInputs);
+
+            context->Draw(3, 0);
+
+            context->PSSetShaderResources(
+                0,
+                4,
+                nullSrvs);
+
+            context->OMSetRenderTargets(
+                1,
+                &hdr.rtv,
+                nullptr);
+
+            ID3D11ShaderResourceView* compositeInputs[2] =
+            {
+                rawIndirect.srv,
+                aoFinal.srv
+            };
+
+            context->PSSetShaderResources(
+                0,
+                2,
+                compositeInputs);
+
+            context->Draw(3, 0);
+
+            context->PSSetShaderResources(
+                0,
+                4,
+                nullSrvs);
 
             context->OMSetRenderTargets(
                 0,
@@ -485,6 +724,45 @@ int wmain(int argc, wchar_t** argv)
         contractA == contractB &&
         contractB == contractC;
 
+    const auto wave4Root =
+        outputRoot /
+        L"GZFX" /
+        L"Diagnostics" /
+        L"AmbientVisibilityV2";
+
+    const std::string wave4Status =
+        ReadAll(
+            wave4Root /
+            L"ambient_visibility_v2_status.txt");
+
+    float splitLeft = 0.0f;
+    float splitRight = 0.0f;
+
+    const bool splitRead =
+        ReadRgba8Pair(
+            device,
+            context,
+            aoFinal.texture,
+            width,
+            height,
+            &splitLeft,
+            &splitRight);
+
+    const bool wave4Applied =
+        wave4Status.find(
+            "applications=") !=
+            std::string::npos &&
+        wave4Status.find(
+            "last_applied_frame=0") ==
+            std::string::npos;
+
+    const bool stageCorrectSplit =
+        splitRead &&
+        std::abs(splitLeft - 0.80f) <
+            0.03f &&
+        splitRight >
+            splitLeft + 0.05f;
+
     if (!executed ||
         !hierarchy ||
         !temporal ||
@@ -492,7 +770,9 @@ int wmain(int argc, wchar_t** argv)
         !noReset ||
         !physicalPingPong ||
         !stableContract ||
-        !delayedCapture)
+        !delayedCapture ||
+        !wave4Applied ||
+        !stageCorrectSplit)
     {
         std::cerr
             << "Wave 3 ping-pong continuity failed\n"
@@ -508,6 +788,12 @@ int wmain(int argc, wchar_t** argv)
             << normalGenerationB
             << ","
             << normalGenerationC
+            << "\nwave4_status:\n"
+            << wave4Status
+            << "\nsplit_left="
+            << splitLeft
+            << " split_right="
+            << splitRight
             << "\ncontracts="
             << contractA
             << ","
@@ -520,7 +806,13 @@ int wmain(int argc, wchar_t** argv)
     }
 
     for (auto*& rtv : cameraRtvs) if (rtv) rtv->Release();
+    if (cameraZSrv) cameraZSrv->Release();
     if (cameraZ) cameraZ->Release();
+    Release(rawIndirect);
+    Release(aoFinal);
+    Release(aoTemp);
+    Release(aoB);
+    Release(aoA);
     if (cameraBuffer) cameraBuffer->Release();
     if (dsv) dsv->Release();
     if (depth) depth->Release();
