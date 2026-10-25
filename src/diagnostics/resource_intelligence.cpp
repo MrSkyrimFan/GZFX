@@ -1,3 +1,4 @@
+#include "gzfx/render/renderer_execution_service.hpp"
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 
 #include "gzfx/paths.hpp"
@@ -680,7 +681,19 @@ namespace gzfx::diagnostics::resource_intelligence
 
             if (SUCCEEDED(result))
             {
-                immediate->ExecuteCommandList(commands, TRUE);
+                if (commands != nullptr)
+                {
+                    gzfx::render::execution::TagCommandList(
+                        commands,
+                        gzfx::render::execution::OwnedPass::ResourceDiagnostic,
+                        frame);
+
+                    immediate->ExecuteCommandList(commands, TRUE);
+
+                    gzfx::render::execution::RetireCommandList(
+                        commands);
+                }
+
                 immediate->CopyResource(staging, outputTexture);
 
                 const fs::path root = paths::DiagnosticsRoot();
