@@ -17,15 +17,17 @@ The long-term product target is a native graphics framework capable of replacing
 ## Current engineering frontier
 
 ```text
-baseline: 0.0.20-foundation-epochs-stage-correctness
+foundation baseline: 0.0.20-foundation-epochs-stage-correctness
 Wave 1: CLOSED
 Wave 2: CLOSED
 broad renderer foundation cartography: COMPLETE
 active engineering wave: Wave 3
-target version: 0.0.21-native-input-temporal-core
+current runtime: 0.0.22-temporal-continuity-repair
+current phase: TEST
+Wave 3 field status: OPEN
 ```
 
-Wave 3 builds the production Native Input Broker, renderer execution service, GZFX-owned post-opaque R32 depth hierarchy, and temporal geometry/history core. Production AO/GI remains frozen until Wave 3 passes its real-Skyrim field gate.
+0.0.21 proved the production Native Input Broker, renderer execution service, post-opaque R32 hierarchy, native motion path, stage integration, and owned command-list isolation in real Skyrim, but exposed a temporal-history lifecycle defect caused by expected native-normal ping-pong. 0.0.22 repairs that continuity model, corrects CameraZ background diagnostics, and makes field capture human-doable. Production AO/GI remains frozen until the compact 0.0.22 real-Skyrim field gate passes.
 
 ## Permanent authority workflow
 
