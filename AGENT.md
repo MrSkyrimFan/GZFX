@@ -177,19 +177,22 @@ Never make hue discrimination necessary for acceptance.
 
 ## 10. GZFX current locked foundation
 
-Current state after the 0.0.22 implementation:
+Current state after the 0.0.23 Wave 4 implementation:
 
 ```text
 foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.22-temporal-continuity-repair
+0.0.23-ambient-visibility-v2
 
 Wave 1:
 CLOSED
 
 Wave 2:
+CLOSED
+
+Wave 3:
 CLOSED
 
 broad foundation renderer cartography:
@@ -198,16 +201,20 @@ COMPLETE
 current phase:
 TEST
 
-Wave 3 field status:
-OPEN — code/CI/package PASS; 0.0.22 real-Skyrim field gate pending
+Wave 4:
+CODE / CI / PACKAGE PASS
+REAL-SKYRIM FIELD QUALITY GATE PENDING
 
-next production graphics wave after Wave 3 passes:
+current production graphics feature:
 Ambient Visibility v2
+
+next likely feature after Wave 4 passes:
+Indirect Radiance
 ```
 
-Do not reopen the closed foundation unless new real evidence directly invalidates it.
+Do not reopen Wave 1, Wave 2, or Wave 3 unless new verified real-Skyrim evidence directly invalidates them.
 
-Do not start Wave 4 until the 0.0.22 Wave 3 field gate passes.
+Do not begin Wave 5 until the 0.0.23 Ambient Visibility v2 field gate is reviewed and Wave 4 is explicitly closed.
 
 ## 11. Repository lifecycle proof
 
