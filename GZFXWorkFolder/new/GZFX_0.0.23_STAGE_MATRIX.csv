@@ -1,0 +1,15 @@
+manual_window,frame,environment,opaque_command_lists,after_depth_prepass,after_opaque_world_mrt,after_cameraz,after_stock_ao,before_ambient_screen_space_composite,at_ambient_screen_space_composite,after_ambient_screen_space_composite,before_volumetric_apply,after_volumetric_apply,publish_pre_water_depth,ui_present
+1,3017,exterior,0,3,3,3,3,3,3,3,3,3,3,3
+2,3499,exterior,0,3,3,3,3,3,3,3,3,3,3,3
+3,4398,interior,0,3,3,3,3,3,3,3,0,0,0,3
+4,4687,interior,0,3,3,3,3,3,3,3,0,0,0,3
+5,5164,interior,0,3,3,3,3,3,3,3,0,0,0,3
+6,6995,exterior,0,3,3,3,3,3,3,3,3,3,3,3
+7,7157,exterior,0,3,3,3,3,3,3,3,3,3,3,3
+8,7405,exterior,0,3,3,3,3,3,3,3,3,3,3,3
+9,8343,exterior,0,3,3,3,3,3,3,3,3,3,3,3
+10,8513,exterior,0,3,3,3,3,3,3,3,3,3,3,3
+11,8800,exterior,0,3,3,3,3,3,3,3,3,3,3,3
+12,8961,exterior,0,3,3,3,3,3,3,3,3,3,3,3
+13,9166,exterior,0,3,3,3,3,3,3,3,3,3,3,3
+14,9269,exterior,0,3,3,3,3,3,3,3,3,3,3,3
