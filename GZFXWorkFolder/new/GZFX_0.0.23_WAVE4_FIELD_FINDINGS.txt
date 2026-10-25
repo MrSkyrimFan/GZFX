@@ -821,3 +821,91 @@ NEXT PHASE:
 Research has NOT started.
 
 END OF DATA FINDINGS
+
+
+======================================================================
+18. OWNER CLARIFICATION — CONTROLLING INTERPRETATION
+======================================================================
+
+Repository owner clarification after DATA review:
+
+The 0.0.23 field run is NOT an artistic-quality acceptance test.
+
+Mode 2 was intentionally untuned.
+
+Current GZFX settings/sliders materially alter darkness, strength and visual
+quality. Higher settings can intentionally make the effect look worse.
+
+Therefore:
+
+    current Mode 2 appearance
+    !=
+    final GZFX quality target
+
+The correct conclusion from this run is:
+
+    GZFX CAN OWN THE SAO / AMBIENT-VISIBILITY STACK.
+
+Do NOT use this untuned build to decide whether final GZFX AO is aesthetically
+good or bad.
+
+The project's current priority is broader:
+
+    discover and understand Skyrim's complete graphics pipeline
+    ->
+    own the full renderer stack
+    ->
+    only then perform serious artistic tuning / quality optimization.
+
+PERFORMANCE INTERPRETATION IS ALSO REVISED.
+
+The current forensic/test build performs extensive active logging and writes
+large amounts of evidence to disk while Skyrim is running.
+
+Observed FPS loss and timing spikes therefore contain unknown instrumentation
+overhead.
+
+Current timing evidence is useful for identifying rough relative hot spots,
+but it is NOT accepted as clean production-performance evidence.
+
+Specifically:
+
+    0.0.23 measured cost
+    !=
+    final no-logging GZFX production cost.
+
+A later quiet/performance build with diagnostics disabled is required before
+making release-performance claims.
+
+Accordingly, replace the earlier simplified verdict:
+
+    "visual tuning needs work, performance FAIL"
+
+with the controlling project verdict:
+
+    ARCHITECTURAL OWNERSHIP = PASS
+
+    ARTISTIC QUALITY = NOT YET A PROJECT GATE
+
+    PRODUCTION PERFORMANCE = NOT YET CLEANLY MEASURED
+
+    FULL RENDERER / STACK DISCOVERY = CURRENT PRIORITY
+
+The owner also directs that the manual capture system should no longer be the
+primary discovery mechanism.
+
+Next instrumentation direction:
+
+    XForge-style renderer telemetry listener
+
+Goals:
+
+- continuously record the renderer facts GZFX needs while the user simply
+  plays normally;
+- capture modes, environments, stages, semantic identities, resource
+  generations/contracts, timing, transitions and ownership state;
+- move expensive disk writing off the render thread;
+- make discovery sessions much less dependent on manual capture timing;
+- allow future DATA review from one uploaded telemetry session.
+
+Research phase may now proceed under this clarification.
