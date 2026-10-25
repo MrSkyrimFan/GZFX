@@ -151,6 +151,9 @@ int wmain(int argc, wchar_t** argv)
             outputRoot.c_str()) ||
         !SetEnvironmentVariableW(
             L"GZFX_TEST_WAVE3_STATUS_EVERY_FRAME",
+            L"1") ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_WAVE3_CAPTURE_REQUEST",
             L"1"))
     {
         return 3;
@@ -390,27 +393,46 @@ int wmain(int argc, wchar_t** argv)
     const std::string statusC =
         runFrame(normal);
 
+    std::string statusFinal = statusC;
+
+    for (int frame = 3;
+         frame < 35;
+         ++frame)
+    {
+        statusFinal =
+            runFrame(
+                (frame & 1) == 0
+                    ? normal
+                    : normalB);
+    }
+
     const bool executed =
-        statusC.find("status=executed") !=
+        statusFinal.find("status=executed") !=
         std::string::npos;
 
     const bool hierarchy =
-        statusC.find("hierarchy_valid=true") !=
+        statusFinal.find("hierarchy_valid=true") !=
         std::string::npos;
 
     const bool temporal =
-        statusC.find("temporal_valid=true") !=
+        statusFinal.find("temporal_valid=true") !=
         std::string::npos;
 
     const bool reused =
-        statusC.find(
+        statusFinal.find(
             "history_reused_candidate=true") !=
         std::string::npos;
 
     const bool noReset =
-        statusC.find(
+        statusFinal.find(
             "history_reset_reason=none") !=
         std::string::npos;
+
+    const bool delayedCapture =
+        std::filesystem::exists(
+            diagnostics /
+            L"manual0001" /
+            L"wave3_summary.txt");
 
     const auto normalGenerationA =
         FindUnsignedOnLine(
@@ -468,13 +490,17 @@ int wmain(int argc, wchar_t** argv)
         !reused ||
         !noReset ||
         !physicalPingPong ||
-        !stableContract)
+        !stableContract ||
+        !delayedCapture)
     {
         std::cerr
             << "Wave 3 ping-pong continuity failed\n"
             << "statusA:\n" << statusA
             << "\nstatusB:\n" << statusB
             << "\nstatusC:\n" << statusC
+            << "\nstatusFinal:\n" << statusFinal
+            << "\ndelayed_capture="
+            << delayedCapture
             << "\nnormal_generations="
             << normalGenerationA
             << ","
