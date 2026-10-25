@@ -2,6 +2,7 @@
 
 #include "gzfx/diagnostics/d3d11_lifecycle.hpp"
 #include "gzfx/diagnostics/renderer_forensics.hpp"
+#include "gzfx/diagnostics/telemetry_listener.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
 #include "gzfx/render/wave3_pipeline.hpp"
@@ -10,6 +11,7 @@
 #include <Windows.h>
 
 #include <chrono>
+#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -76,6 +78,21 @@ namespace
             gzfx::render::ambient_visibility_v2::
                 Initialize();
 
+        const bool telemetryInitialized =
+            gzfx::diagnostics::telemetry_listener::
+                Initialize();
+
+        if (telemetryInitialized)
+        {
+            std::atexit(
+                []()
+                {
+                    gzfx::diagnostics::
+                        telemetry_listener::
+                        Shutdown();
+                });
+        }
+
         const fs::path logPath = runtimeRoot / L"GZFX.log";
         std::ofstream log(logPath, std::ios::out | std::ios::app);
         if (!log)
@@ -109,6 +126,9 @@ namespace
         log << "ambient_visibility_v2="
             << (wave4Initialized ? "initialized" : "failed")
             << "\n";
+        log << "telemetry_listener="
+            << (telemetryInitialized ? "initialized" : "disabled_or_failed")
+            << "\n";
         log << "status=initialized\n";
         log << "===============================\n";
         log.flush();
@@ -128,4 +148,10 @@ extern "C" __declspec(dllexport) bool GZFX_Initialize() noexcept
     {
         return false;
     }
+}
+
+
+extern "C" __declspec(dllexport) void GZFX_Shutdown() noexcept
+{
+    gzfx::diagnostics::telemetry_listener::Shutdown();
 }
