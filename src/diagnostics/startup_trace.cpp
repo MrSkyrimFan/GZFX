@@ -4,6 +4,7 @@
 
 #include <Windows.h>
 
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
@@ -15,7 +16,8 @@ namespace gzfx::diagnostics::startup_trace
     namespace
     {
         std::mutex g_mutex;
-        bool g_headerWritten = false;
+        bool g_started = false;
+        std::uint64_t g_sequence = 0;
     }
 
     void Record(
@@ -57,32 +59,37 @@ namespace gzfx::diagnostics::startup_trace
             const fs::path path =
                 root / L"renderer_startup.csv";
 
-            const bool exists =
-                fs::exists(
-                    path,
-                    error);
+            const bool first =
+                !g_started;
 
             std::ofstream out(
                 path,
                 std::ios::out |
-                    std::ios::app);
+                    (
+                        first
+                            ? std::ios::trunc
+                            : std::ios::app
+                    ));
 
             if (!out)
             {
                 return;
             }
 
-            if (!g_headerWritten &&
-                (!exists ||
-                 fs::file_size(path, error) == 0))
+            if (first)
             {
                 out
-                    << "qpc,thread,event,result,pointer_a,pointer_b\n";
+                    << "pid,sequence,qpc,thread,event,result,pointer_a,pointer_b\n";
+
+                g_started = true;
             }
 
-            g_headerWritten = true;
+            const std::uint64_t sequence =
+                ++g_sequence;
 
             out
+                << GetCurrentProcessId() << ","
+                << sequence << ","
                 << qpc << ","
                 << threadId << ","
                 << event << ","
