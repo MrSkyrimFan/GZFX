@@ -374,3 +374,31 @@ add_test(
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/ambient-visibility-v2-output"
 )
+
+add_test(
+    NAME telemetry_listener
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/telemetry-listener-output"
+)
+
+set_tests_properties(
+    telemetry_listener
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_TELEMETRY_ACTIVE=1"
+)
+
+add_test(
+    NAME telemetry_listener_overflow
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/telemetry-listener-overflow-output"
+)
+
+set_tests_properties(
+    telemetry_listener_overflow
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_TELEMETRY_ACTIVE=1;GZFX_TEST_TELEMETRY_RING_CAPACITY=64;GZFX_TEST_TELEMETRY_EXPECT_OVERFLOW=1"
+)
