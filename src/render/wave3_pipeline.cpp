@@ -341,6 +341,17 @@ namespace gzfx::render::wave3
             }
         }
 
+        bool TestStatusEveryFrame()
+        {
+            wchar_t value[8]{};
+
+            return GetEnvironmentVariableW(
+                L"GZFX_TEST_WAVE3_STATUS_EVERY_FRAME",
+                value,
+                static_cast<DWORD>(
+                    std::size(value))) > 0;
+        }
+
         fs::path DiagnosticsRoot()
         {
             const fs::path root = paths::DiagnosticsRoot();
@@ -4794,6 +4805,7 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
 
                 if (resetReason != ResetReason::None ||
                     g_capture.active ||
+                    TestStatusEveryFrame() ||
                     event.frame <= 3 ||
                     event.frame - g_lastStatusFrame >= 120)
                 {
