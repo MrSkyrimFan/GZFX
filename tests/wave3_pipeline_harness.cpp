@@ -456,6 +456,17 @@ int wmain(int argc, wchar_t** argv)
         device, width, height,
         DXGI_FORMAT_R8G8B8A8_UNORM);
 
+    std::array<Target, 5> lateExtraTargets{};
+
+    for (auto& target : lateExtraTargets)
+    {
+        target = CreateTarget(
+            device,
+            64,
+            64,
+            DXGI_FORMAT_R8G8B8A8_UNORM);
+    }
+
     if (!hdr.texture || !motion.texture || !normal.texture ||
         !normalB.texture || !aux.texture ||
         !aoA.texture || !aoB.texture || !aoTemp.texture ||
@@ -463,7 +474,12 @@ int wmain(int argc, wchar_t** argv)
         !hdrReduceA.texture || !hdrReduceB.texture ||
         !hdrReduceC.texture || !hdrReduceD.texture ||
         !tonemapCurrent.texture || !taaHistory.texture ||
-        !taaColor.texture || !taaFeedback.texture)
+        !taaColor.texture || !taaFeedback.texture ||
+        !lateExtraTargets[0].texture ||
+        !lateExtraTargets[1].texture ||
+        !lateExtraTargets[2].texture ||
+        !lateExtraTargets[3].texture ||
+        !lateExtraTargets[4].texture)
     {
         return 9;
     }
@@ -928,7 +944,56 @@ int wmain(int argc, wchar_t** argv)
         std::array<ID3D11CommandList*, 5>
             lists{};
 
-        // List 1: state + explicit copy, then FALSE resets.
+        // List 1 first proves concrete-read overflow reporting.
+        ID3D11ShaderResourceView* overflowSrvs[25] =
+        {
+            hdr.srv,
+            motion.srv,
+            normal.srv,
+            normalB.srv,
+            aux.srv,
+            aoA.srv,
+            aoB.srv,
+            aoTemp.srv,
+            aoFinal.srv,
+            rawIndirect.srv,
+            hdrReduceA.srv,
+            hdrReduceB.srv,
+            hdrReduceC.srv,
+            hdrReduceD.srv,
+            tonemapCurrent.srv,
+            taaHistory.srv,
+            taaColor.srv,
+            taaFeedback.srv,
+            cameraZSrv,
+            depthSrv,
+            lateExtraTargets[0].srv,
+            lateExtraTargets[1].srv,
+            lateExtraTargets[2].srv,
+            lateExtraTargets[3].srv,
+            lateExtraTargets[4].srv
+        };
+
+        deferredContext->OMSetRenderTargets(
+            0,
+            nullptr,
+            nullptr);
+
+        deferredContext->PSSetShaderResources(
+            0,
+            25,
+            overflowSrvs);
+
+        deferredContext->Draw(3, 0);
+
+        ID3D11ShaderResourceView* clearOverflow[25]{};
+
+        deferredContext->PSSetShaderResources(
+            0,
+            25,
+            clearOverflow);
+
+        // Then bind normal state + explicit copy, before FALSE reset.
         deferredContext->OMSetRenderTargets(
             1,
             &tonemapCurrent.rtv,
@@ -1711,6 +1776,11 @@ int wmain(int argc, wchar_t** argv)
     for (auto*& rtv : cameraRtvs) if (rtv) rtv->Release();
     if (cameraZSrv) cameraZSrv->Release();
     if (cameraZ) cameraZ->Release();
+    for (auto& target : lateExtraTargets)
+    {
+        Release(target);
+    }
+
     Release(taaFeedback);
     Release(taaColor);
     Release(taaHistory);
