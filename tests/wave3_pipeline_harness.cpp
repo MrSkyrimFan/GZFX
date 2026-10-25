@@ -1319,6 +1319,23 @@ int wmain(int argc, wchar_t** argv)
                 "at_ambient_screen_space_composite") !=
                     std::string::npos;
 
+        const bool lateStageCoverage =
+            !lateStackActive ||
+            (
+                stages.find(
+                    "hdr_reduction") !=
+                        std::string::npos &&
+                stages.find(
+                    "before_tonemap") !=
+                        std::string::npos &&
+                stages.find(
+                    "before_global_taa") !=
+                        std::string::npos &&
+                stages.find(
+                    "after_global_taa") !=
+                        std::string::npos
+            );
+
         const bool semanticCoverage =
             semantics.find("MAIN_HDR") !=
                     std::string::npos &&
@@ -1338,12 +1355,340 @@ int wmain(int argc, wchar_t** argv)
             ownership.find(",gzfx,") !=
                 std::string::npos;
 
+        bool deferredCoverage =
+            !lateStackActive;
+
+        if (lateStackActive)
+        {
+            const std::string deferredLists =
+                ReadAll(
+                    session /
+                    L"deferred_lists.csv");
+
+            const std::string deferredRuns =
+                ReadAll(
+                    session /
+                    L"deferred_runs_0001.csv");
+
+            std::unordered_map<
+                std::uint64_t,
+                std::uint64_t>
+                    listGenerations;
+
+            const auto parseRows =
+                [](const std::string& text)
+                {
+                    std::vector<
+                        std::vector<
+                            std::string>>
+                                result;
+
+                    std::size_t start = 0;
+
+                    while (start < text.size())
+                    {
+                        const auto end =
+                            text.find(
+                                '\n',
+                                start);
+
+                        std::string line =
+                            text.substr(
+                                start,
+                                end ==
+                                    std::string::npos
+                                    ? std::string::npos
+                                    : end - start);
+
+                        if (!line.empty() &&
+                            line.back() == '\r')
+                        {
+                            line.pop_back();
+                        }
+
+                        if (!line.empty())
+                        {
+                            result.push_back(
+                                SplitCsv(line));
+                        }
+
+                        if (end ==
+                            std::string::npos)
+                        {
+                            break;
+                        }
+
+                        start = end + 1;
+                    }
+
+                    return result;
+                };
+
+            const auto listRows =
+                parseRows(
+                    deferredLists);
+
+            if (listRows.size() > 1)
+            {
+                const auto& header =
+                    listRows.front();
+
+                const auto idColumn =
+                    CsvColumn(
+                        header,
+                        "command_list");
+
+                const auto generationColumn =
+                    CsvColumn(
+                        header,
+                        "list_generation");
+
+                for (std::size_t i = 1;
+                     i < listRows.size();
+                     ++i)
+                {
+                    if (idColumn <
+                            listRows[i].size() &&
+                        generationColumn <
+                            listRows[i].size())
+                    {
+                        listGenerations[
+                            std::stoull(
+                                listRows[i][
+                                    idColumn])] =
+                            std::stoull(
+                                listRows[i][
+                                    generationColumn]);
+                    }
+                }
+            }
+
+            std::array<std::uint64_t, 5>
+                generations{};
+
+            bool allMapped = true;
+
+            for (std::size_t i = 0;
+                 i < generations.size();
+                 ++i)
+            {
+                const auto found =
+                    listGenerations.find(
+                        lateListIdentities[i]);
+
+                if (found ==
+                    listGenerations.end())
+                {
+                    allMapped = false;
+                    break;
+                }
+
+                generations[i] =
+                    found->second;
+            }
+
+            bool copyExact = false;
+            bool falseReset = false;
+            bool truePreserve = false;
+            bool nestedVisible = false;
+
+            const auto runRows =
+                parseRows(
+                    deferredRuns);
+
+            if (allMapped &&
+                runRows.size() > 1)
+            {
+                const auto& header =
+                    runRows.front();
+
+                const auto listColumn =
+                    CsvColumn(
+                        header,
+                        "list_generation");
+                const auto kindColumn =
+                    CsvColumn(
+                        header,
+                        "kind");
+                const auto rtvColumn =
+                    CsvColumn(
+                        header,
+                        "rtv0");
+                const auto explicitReadColumn =
+                    CsvColumn(
+                        header,
+                        "explicit_read0");
+                const auto explicitWriteColumn =
+                    CsvColumn(
+                        header,
+                        "explicit_write0");
+                const auto explicitReadCountColumn =
+                    CsvColumn(
+                        header,
+                        "explicit_read_count");
+                const auto explicitWriteCountColumn =
+                    CsvColumn(
+                        header,
+                        "explicit_write_count");
+                const auto totalReadColumn =
+                    CsvColumn(
+                        header,
+                        "total_read_count");
+                const auto totalWriteColumn =
+                    CsvColumn(
+                        header,
+                        "total_write_count");
+
+                std::uint64_t parentRows = 0;
+
+                for (std::size_t i = 1;
+                     i < runRows.size();
+                     ++i)
+                {
+                    const auto& row =
+                        runRows[i];
+
+                    if (listColumn >= row.size() ||
+                        kindColumn >= row.size() ||
+                        rtvColumn >= row.size())
+                    {
+                        continue;
+                    }
+
+                    const auto generation =
+                        std::stoull(
+                            row[listColumn]);
+
+                    const auto kind =
+                        std::stoull(
+                            row[kindColumn]);
+
+                    const auto rtv =
+                        std::stoull(
+                            row[rtvColumn]);
+
+                    if (generation ==
+                            generations[1] &&
+                        kind == 0 &&
+                        rtv == 0)
+                    {
+                        falseReset = true;
+                    }
+
+                    if (generation ==
+                            generations[3] &&
+                        kind == 0 &&
+                        rtv != 0)
+                    {
+                        truePreserve = true;
+                    }
+
+                    if (generation ==
+                        generations[4])
+                    {
+                        ++parentRows;
+                    }
+
+                    if (generation ==
+                            generations[0] &&
+                        kind == 2 &&
+                        explicitReadColumn <
+                            row.size() &&
+                        explicitWriteColumn <
+                            row.size() &&
+                        explicitReadCountColumn <
+                            row.size() &&
+                        explicitWriteCountColumn <
+                            row.size() &&
+                        totalReadColumn <
+                            row.size() &&
+                        totalWriteColumn <
+                            row.size())
+                    {
+                        const auto read =
+                            std::stoull(
+                                row[
+                                    explicitReadColumn]);
+
+                        const auto write =
+                            std::stoull(
+                                row[
+                                    explicitWriteColumn]);
+
+                        copyExact =
+                            read != 0 &&
+                            write != 0 &&
+                            read != write &&
+                            std::stoull(
+                                row[
+                                    explicitReadCountColumn]) ==
+                                1 &&
+                            std::stoull(
+                                row[
+                                    explicitWriteCountColumn]) ==
+                                1 &&
+                            std::stoull(
+                                row[
+                                    totalReadColumn]) ==
+                                0 &&
+                            std::stoull(
+                                row[
+                                    totalWriteColumn]) ==
+                                0;
+                    }
+                }
+
+                nestedVisible =
+                    parentRows >= 2;
+            }
+
+            const bool deferredStatus =
+                listenerStatus.find(
+                    "deferred_contexts_attached=0") ==
+                    std::string::npos &&
+                listenerStatus.find(
+                    "deferred_lists_finished=0") ==
+                    std::string::npos &&
+                listenerStatus.find(
+                    "deferred_lists_executed=0") ==
+                    std::string::npos;
+
+            deferredCoverage =
+                allMapped &&
+                copyExact &&
+                falseReset &&
+                truePreserve &&
+                nestedVisible &&
+                deferredStatus;
+
+            if (!deferredCoverage)
+            {
+                std::cerr
+                    << "Deferred telemetry proof failed\n"
+                    << "mapped="
+                    << allMapped
+                    << " copy="
+                    << copyExact
+                    << " false_reset="
+                    << falseReset
+                    << " true_preserve="
+                    << truePreserve
+                    << " nested="
+                    << nestedVisible
+                    << "\n"
+                    << listenerStatus
+                    << "\n";
+            }
+        }
+
         const bool dropExpectation =
             expectTelemetryOverflow
                 ? dropped > 0
                 : dropped == 0;
 
         if (!stageCoverage ||
+            !lateStageCoverage ||
+            !deferredCoverage ||
             !semanticCoverage ||
             !ownershipCoverage ||
             !dropExpectation)
