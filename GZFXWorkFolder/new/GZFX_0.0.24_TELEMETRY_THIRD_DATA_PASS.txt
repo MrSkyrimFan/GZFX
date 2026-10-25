@@ -1,0 +1,667 @@
+GZFX 0.0.24 CONTINUOUS TELEMETRY — THIRD DATA PASS
+Independent late-stack resource/lifetime reconstruction
+Review date: October 24, 2026
+Status: DATA ONLY — NO RESEARCH STARTED
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+This third pass intentionally ignored the first report's stage-first framing.
+
+It rebuilt the unresolved late renderer from:
+
+    resource dimensions
+    resource formats
+    write/read lifetimes
+    temporal alternation
+    stable shader/output structure
+    per-frame recurrence
+    environment recurrence
+    mode recurrence
+    relative command-list ordering
+
+The goal was to test whether the first-pass HDR/TAA/post hypotheses survived
+an independent producer/consumer-style reconstruction.
+
+They did.
+
+Several became substantially stronger.
+
+======================================================================
+2. UNKNOWN LATE STACK IS MUCH SMALLER THAN THE FULL RENDERER
+======================================================================
+
+The full continuous session contains:
+
+    14,627,763 compact pass rows
+
+and approximately:
+
+    4,638 structural families
+
+when normalized globally.
+
+The genuinely unresolved late domain examined in this pass is:
+
+EXTERIOR:
+    after PublishPreWaterDepth
+
+INTERIOR:
+    after AfterAmbientScreenSpaceComposite
+
+Late-domain compact rows:
+
+    701,886
+
+Represented executions:
+
+    790,770
+
+After normalizing:
+
+    pass kind
+    shader identities
+    output shapes/formats
+    DSV shape
+    topology
+    viewport
+
+the late domain collapses to only:
+
+    107 structural families
+
+Family scope:
+
+    37 appear in both exterior and interior
+    11 are exterior-only
+    59 are interior-only
+
+This is a major strategic finding.
+
+The remaining late-stack cartography problem is tractable.
+
+It does NOT require treating millions of raw rows as millions of unique
+renderer concepts.
+
+======================================================================
+3. 21 CORE STRUCTURAL FAMILIES OCCUR ON EVERY ACTIVE FRAME
+======================================================================
+
+Twenty-one structural families occur on:
+
+    10,850 / 10,850 active scene frames
+
+with exact exterior/interior recurrence.
+
+They form a stable global post-processing spine.
+
+This includes:
+
+- 640x360 RGBA16F passes;
+- 160x360 RGBA16F passes;
+- 80x360 RGBA16F passes;
+- 160x90 RGBA16F passes;
+- 40x23 RGBA16F reduction;
+- 10x6 RGBA16F reduction;
+- 3x2 RGBA16F reduction;
+- 640x360 reconstruction passes;
+- full-resolution RGBA8 conversion;
+- full-resolution two-output temporal pass;
+- 640x360 RGBA8 pass;
+- two dispatches;
+- full-resolution RGBA8 post/depth-aware pass.
+
+These families persist across:
+
+    exterior
+    interior
+    Modes 0-4
+
+Therefore they are global renderer/post infrastructure rather than
+environment- or GZFX-mode-specific effects.
+
+======================================================================
+4. GLOBAL POST SPINE EXISTS BEFORE THE WORLD IS ACTIVE
+======================================================================
+
+The strongest history pairs begin before Semantic Authority classifies a
+normal 3D environment.
+
+Full-resolution RGBA8 history pair:
+
+    begins frame 167
+
+2x2 RGBA16F history pair:
+
+    begins frame 168
+
+They continue through menu/startup and active gameplay.
+
+Between their start and frame 11,508, both families skip only the same seven
+transition frames:
+
+    601
+    602
+    4463
+    4464
+    8227
+    8228
+    8229
+
+Those frames sit immediately around:
+
+    initial world activation;
+    exterior -> interior transition;
+    interior -> exterior transition.
+
+This strongly supports classification as:
+
+    global image-space/post infrastructure
+
+rather than a world-space lighting feature tied to exterior/interior content.
+
+======================================================================
+5. 2x2 RGBA16F HISTORY PAIR — PERFECT ALTERNATION
+======================================================================
+
+Resources:
+
+    0x25E68BC0210
+    0x25E68BC04D0
+
+Shape:
+
+    2x2
+    R16G16B16A16_FLOAT
+    renderable/UAV-capable
+
+Draw-write frames:
+
+    11,334
+
+Start:
+
+    frame 168
+
+Each eligible frame writes exactly one member.
+
+Alternation:
+
+    perfect
+
+Consecutive-frame same-target violations:
+
+    0
+
+Representative sequence:
+
+168:
+    0x25E68BC0210
+
+169:
+    0x25E68BC04D0
+
+170:
+    0x25E68BC0210
+
+171:
+    0x25E68BC04D0
+
+...
+
+11507:
+    0x25E68BC0210
+
+11508:
+    0x25E68BC04D0
+
+The pair is produced immediately after the reduction chain:
+
+    640x360
+    ->
+    160x90
+    ->
+    40x23
+    ->
+    10x6
+    ->
+    3x2
+    ->
+    2x2 ping-pong
+
+DATA-safe semantic classification:
+
+    GLOBAL 2x2 TEMPORAL REDUCTION / ADAPTATION HISTORY PAIR
+
+This is a much stronger candidate for the future:
+
+    HDR reduction / exposure / adaptation
+
+domain than the first report stated.
+
+Final naming remains a research task.
+
+======================================================================
+6. FULL-RESOLUTION RGBA8 HISTORY PAIR — PERFECT ALTERNATION
+======================================================================
+
+Resources:
+
+    0x25E68BBFC90
+    0x25E68BC0FD0
+
+Shape:
+
+    2560x1440
+    R8G8B8A8_UNORM
+
+Draw-write frames:
+
+    11,335
+
+Start:
+
+    frame 167
+
+Each eligible frame writes exactly one member.
+
+Alternation:
+
+    perfect
+
+Consecutive-frame same-target violations:
+
+    0
+
+Representative sequence:
+
+167:
+    0x25E68BBFC90
+
+168:
+    0x25E68BC0FD0
+
+169:
+    0x25E68BBFC90
+
+...
+
+11507:
+    0x25E68BC0FD0
+
+11508:
+    0x25E68BBFC90
+
+The same stable full-resolution pass also produces:
+
+    0x25E68B74DF0
+
+every active scene frame.
+
+Pass shader pair:
+
+    VS = 0x25ECC9EC9C0
+    PS = 0x25ECC9EBBB0
+
+The pass consumes current full-resolution RGBA8 plus history-like full-res
+RGBA8 and is associated with native motion/depth inputs in the concrete
+binding evidence.
+
+DATA-safe classification:
+
+    GLOBAL FULL-RES TEMPORAL HISTORY PING-PONG
+
+This makes the first-pass TAA hypothesis substantially stronger.
+
+It is now a VERY HIGH-CONFIDENCE global temporal/TAA-family candidate.
+
+Still:
+
+    exact Skyrim semantic promotion waits for research/verification.
+
+======================================================================
+7. TEMPORAL CANDIDATE PRECEDES EVERY SKYRIM DEFERRED COMMAND LIST
+======================================================================
+
+The full-resolution temporal-history pass above occurs before:
+
+    all 9,487 Skyrim command-list executions.
+
+Therefore the late deferred-context blind spot cannot hide the existence or
+order of this temporal pass.
+
+This is strategically important.
+
+The likely future sequence is:
+
+    identify/lock HDR/temporal/post boundaries first
+    ->
+    then instrument deferred contexts for the later domain.
+
+Not necessarily:
+
+    crack deferred contexts before any late-stack promotion is possible.
+
+======================================================================
+8. FULL-RES RGBA8 CURRENT/OUTPUT LANE
+======================================================================
+
+A stable full-resolution RGBA8 resource:
+
+    0x25E68B75E70
+
+is written by:
+
+    VS = 0x25ECC9DABD0
+    PS = 0x25ECC9DAEF0
+
+on every active frame.
+
+It is then consumed by the global temporal-history pass.
+
+The producing pass consumes the 2x2 temporal reduction/adaptation pair.
+
+This creates a stable chain:
+
+    HDR/reduction history
+    ->
+    full-resolution RGBA8 current image
+    ->
+    full-resolution temporal history pass
+
+This ordering materially strengthens the interpretation:
+
+    reduction/adaptation
+    ->
+    tone/output conversion candidate
+    ->
+    temporal reconstruction candidate
+
+The exact product labels remain unpromoted.
+
+======================================================================
+9. POST-TEMPORAL 640x360 + FULL-RES LANE
+======================================================================
+
+After the full-resolution temporal pass:
+
+    0x25E68B74DF0
+
+is used by a stable 640x360 RGBA8 family.
+
+A later stable full-resolution RGBA8 pass:
+
+    VS = 0x25ECC9DA270
+    PS = 0x25ECC9D8FB0
+
+consumes the temporal output and depth-related resources.
+
+Its output contributes to the late full-resolution target domain.
+
+Every normal active-scene Skyrim command-list event occurs after this pass.
+
+DATA-safe classification:
+
+    POST-TEMPORAL / DEPTH-AWARE FULL-RESOLVE LANDMARK
+
+Exact naming remains open.
+
+======================================================================
+10. FINAL LATE FULL-RES TARGET IS A SINK IN CURRENT TELEMETRY
+======================================================================
+
+Resource:
+
+    0x25E68A00490
+
+Shape:
+
+    2560x1440
+    R8G8B8A8_UNORM
+
+Late-domain observed writes:
+
+    213,989
+
+Observed SRV reads:
+
+    0
+
+It receives a large amount of late full-resolution draw activity.
+
+The current compact graph does NOT prove where this resource goes afterward.
+
+A likely reason is the explicit-operation lineage defect:
+
+    a final CopyResource / presentation transfer may not carry its true
+    source/destination IDs in compact telemetry.
+
+Therefore:
+
+    0x25E68A00490 is a high-value late-output/sink candidate.
+
+Do NOT yet call it backbuffer/final LDR without explicit operand proof.
+
+======================================================================
+11. EXTERIOR R16 TEMPORAL PAIR RECONSTRUCTED
+======================================================================
+
+Resources:
+
+    0x25E68B943F0
+    0x25E68B94970
+
+Shape:
+
+    2560x1440
+    R16_FLOAT
+
+Scope:
+
+    exterior only
+
+Eligible frames:
+
+    7,099
+
+Perfect strict alternation:
+
+    0 consecutive-frame same-target violations.
+
+The producer signature is the already-verified volumetric temporal apply
+detector.
+
+One member is read as previous history while the other is written as current.
+
+The roles swap every exterior frame.
+
+This should be considered a strong future semantic candidate:
+
+    exterior volumetric temporal output/history pair
+
+without changing the already-locked stage boundary.
+
+======================================================================
+12. FIRST-PASS "EXTERIOR-ONLY MAIN_HDR APPLY" REMAINS REAL
+======================================================================
+
+The pass:
+
+    VS = 0x25ECC9E6430
+    PS = 0x25ECC9E7A10
+
+still occurs:
+
+    7,099 / 7,099 exterior active frames
+
+and:
+
+    0 interior frames.
+
+It writes:
+
+    MAIN_HDR
+
+and consumes the exterior R16 temporal family plus other late resources.
+
+This pass occurs AFTER the verified volumetric temporal apply / pre-water
+publication landmark.
+
+Therefore it is a distinct later exterior composite/apply domain.
+
+Possible semantic categories remain:
+
+    later volumetric composite
+    reflection
+    water-related lighting
+    atmosphere
+    another exterior-only image-space apply
+
+DATA cannot distinguish among them yet.
+
+Do NOT promote a name.
+
+======================================================================
+13. INTERIOR LATE DOMAIN IS STRUCTURALLY RICHER
+======================================================================
+
+Late structural families:
+
+    both environments = 37
+    exterior-only      = 11
+    interior-only      = 59
+
+Interior contains substantially more environment-specific late
+geometry/material families after ambient composite.
+
+Exterior has fewer unique late families after pre-water.
+
+This confirms the first-pass observation that:
+
+    generic post-processing
+    can be separated from
+    environment-specific late geometry/material work.
+
+It also suggests future deferred-command-list instrumentation should record
+environment class and stage-relative location for every recorded deferred pass.
+
+======================================================================
+14. COMPACT LINEAGE LIMIT CHANGES HOW RESOURCE GRAPH MUST BE READ
+======================================================================
+
+The third-pass graph remains useful, but its interpretation must obey:
+
+A. concrete read identities are capped at 8;
+B. explicit operation rows may contain stale bound-state resource lists;
+C. deferred command-list internals remain hidden;
+D. full read/write hashes still detect complete binding-set changes.
+
+Therefore resource status categories must be:
+
+    VERIFIED PRODUCER
+    VERIFIED CONSUMER
+    PRODUCER NOT OBSERVED
+    CONSUMER LIST TRUNCATED POSSIBLE
+    DEFERRED-PRODUCER POSSIBLE
+    EXPLICIT-OP PRODUCER POSSIBLE
+
+not merely:
+
+    read-only
+    write-only.
+
+This is a methodological correction for all future DATA passes.
+
+======================================================================
+15. LATE-STACK EVENT-KIND COUNTS
+======================================================================
+
+In the reconstructed late domain:
+
+Draw:
+    614,382 compact rows
+
+Dispatch:
+    46,748
+
+CopyResource:
+    10,931
+
+ClearRTV:
+    6,394
+
+ClearDSV:
+    13,958
+
+ExecuteCommandList:
+    9,473
+
+No significant late population was observed for the other explicit operation
+kinds in this bounded late-domain parse.
+
+The ExecuteCommandList count here is 9,473 because the additional 14 events
+occur on UI/transition frames outside the active-scene late-domain threshold.
+
+======================================================================
+16. DATA VOLUME OPTIMIZATION TARGET IS NOW OBVIOUS
+======================================================================
+
+The entire renderer session:
+
+    ~14.63 million compact rows
+    ~4,638 structural families
+
+The unresolved late domain:
+
+    ~701,886 compact rows
+    only 107 structural families
+
+Therefore a future listener does not need to dump wide repeated CSV for every
+known early geometry/material run.
+
+A data-efficient architecture can preserve MORE useful late detail while
+writing LESS total data by using:
+
+    structural family dictionary
+    family IDs
+    per-frame sequence
+    resource-binding deltas
+    full explicit-op operands
+    deferred-context family stream
+    full concrete identities only in selected/unmapped domains
+
+This conclusion is derived from the telemetry itself.
+
+No implementation is started here.
+
+======================================================================
+17. THIRD-PASS VERDICT
+======================================================================
+
+The third pass strengthens the first-pass late-stack model.
+
+New high-confidence facts:
+
+1. The late unknown domain is only 107 structural families.
+2. Twenty-one families form an invariant every-active-frame post spine.
+3. A 2x2 RGBA16F history pair alternates perfectly and strongly marks the
+   HDR/exposure/adaptation lane.
+4. A full-resolution RGBA8 history pair alternates perfectly and strongly
+   marks the global temporal/TAA lane.
+5. The global temporal lane exists before all normal deferred command-list
+   work.
+6. The exterior R16_FLOAT volumetric temporal pair also alternates perfectly.
+7. The late full-resolution sink cannot be completed in the graph until
+   explicit copy operands are logged.
+8. The global post spine operates even before normal world-environment
+   classification and pauses only on seven load-transition frames.
+
+No first-pass architecture conclusion was invalidated.
+
+Several hypotheses are now strong enough to justify targeted research and
+possible semantic/stage promotion in the NEXT phase.
+
+RESEARCH HAS NOT STARTED.
+
+END THIRD DATA PASS
