@@ -1,0 +1,236 @@
+GZFX 0.0.28 PRE-FIELD LIFECYCLE + PROXY HARDENING
+FINAL ENGINEERING RESULT
+Closure date: October 25, 2026
+
+STATUS:
+    IMPLEMENTED
+    PR GREEN
+    MERGED
+    MERGED-MAIN GREEN
+    PACKAGED
+    PACKAGE REFRESH VERIFIED ZIP-ONLY
+    READY FOR REAL-SKYRIM FIELD VALIDATION
+
+RUNTIME:
+    0.0.28-pre-field-lifecycle-hardening
+
+CONTROLLING INPUTS:
+    GZFX_0.0.27_PRE_FIELD_FULL_RED_TEAM_FINDINGS.txt
+    GZFX_RESEARCH_PASS_11_FRONTDOOR_EXIT_LIFECYCLE_PROXY_ABI_AND_RUNTIME_CATALOG.txt
+    GZFX_0.0.28_PRE_FIELD_LIFECYCLE_HARDENING_BLUEPRINT.txt
+
+PURPOSE:
+    Eliminate avoidable startup, proxy, shutdown, and evidence ambiguity before
+    spending another real-Skyrim field run. No new graphics feature.
+
+FINAL PROOF:
+    PR #31
+    final head 360c08e8b2a0861513bf5e2f964738b007a86d65
+    PR workflow 40243270381
+    30/30 PASS
+    0 failures
+    total test time 28.31 sec
+
+    merge 709c25502f8178b2e24150915c10b33d94b9bbee
+    merged-main workflow 40243580991
+    30/30 PASS
+    0 failures
+    total test time 31.06 sec
+
+    package refresh 8c9018b13021b60522701cc696500c52b41b13ff
+    refresh changed ONLY:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+PACKAGE:
+    path:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    Git blob:
+        294fe0495dcaa071a6eb4a52b8b30d427ed40c44
+    bytes:
+        400,927
+    exact contents:
+        GZFX.dll
+        d3d11.dll
+        dinput8.dll
+
+MERGED-MAIN ARTIFACT:
+    id 12617264052
+    bytes 400,241
+    digest sha256:679aa4d9c7f3617105074b0f7de1844d0d164502212e7d3dd2b723e635bf3fde
+
+The Actions digest is for the artifact container and is not asserted to equal
+the repository inner ZIP byte digest.
+
+IMPLEMENTED HARDENING:
+
+1. PROCESS-SCOPED STARTUP TRACE
+   renderer_startup.csv now truncates on first event in each process.
+   Columns include:
+       pid, sequence, qpc, thread, event, result, pointer_a, pointer_b
+   Stale prior-launch evidence cannot contaminate current startup ordering.
+
+2. TRUTHFUL D3D11 PUBLIC PROXY
+   Local GZFX d3d11.dll now exports exactly:
+       D3D11CreateDevice
+       D3D11CreateDeviceAndSwapChain
+       D3D11On12CreateDevice
+
+   Removed partial undocumented public proxy exports:
+       D3D11CoreCreateDevice
+       D3D11CoreCreateLayeredDevice
+       D3D11CoreGetLayeredDeviceSize
+       D3D11CoreRegisterLayers
+
+   D3D11On12 is forward-only and never selects Skyrim primary.
+
+3. PRIMARY DEVICE QUALIFICATION
+   Production primary selection rejects:
+       WARP
+       REFERENCE
+       SOFTWARE
+       NULL
+       Microsoft Basic Render Driver
+       foreign-process swapchain window
+
+   Direct proxy path also requires main-executable caller provenance.
+   Test override:
+       GZFX_TEST_ALLOW_SOFTWARE_PRIMARY=1
+
+4. STARTUP-PATH PARITY
+   D3D-first and dinput/GZFX-first paths now converge on:
+       AttachPrimaryRendererObjects
+
+   GZFX-first acceptance proves a unique context operation before first Present
+   is already observed by renderer-forensics.
+
+5. SAFE PROCESS EXIT
+   Removed runtime std::atexit telemetry shutdown.
+   d3d11 bootstrap installs an ExitProcess hook outside DllMain.
+
+   Before real ExitProcess teardown:
+       once guard
+       process_exit_intercepted event
+       GZFX_Shutdown when state is ready
+       writer drain/join/flush
+       original ExitProcess
+
+   No writer-thread shutdown occurs from DllMain.
+
+6. GZFX MODULE LIFETIME
+   If dinput loaded GZFX first, d3d11 bootstrap retains one module lifetime
+   reference before caching GZFX lifecycle exports so ExitProcess cannot use
+   stale function pointers.
+
+7. ONE-ZIP FIELD EVIDENCE
+   At clean telemetry Shutdown:
+       Diagnostics/renderer_startup.csv
+   is copied to:
+       session_*/renderer_startup.csv
+
+   The next field handoff requires one newest telemetry session ZIP only.
+
+8. RUNTIME CATALOG
+   Known diagnostic versions now include:
+       1.5.97
+       1.6.318
+       1.6.323
+       1.6.342
+       1.6.353
+       1.6.629
+       1.6.640
+       1.6.659
+       1.6.1130
+       1.6.1170
+       1.6.1179
+       1.7.99
+       1.7.104
+
+   Only 1.6.1170 currently has the independently validated optional executable
+   engine profile.
+
+   Unknown future runtime:
+       renderer core enabled
+       runtimeKnown=false
+       engineProfileAvailable=false
+
+   Catalog recognition is NOT field certification.
+
+9. LATE RENDERER CONTRACTS PRESERVED
+   No contradiction found against:
+       Waves 1-3 closure
+       Wave 4 ownership architecture
+       stable shader identity
+       command-list ownership
+       physical Present epochs
+       global TAA structural contract
+       bounded interior HDR ancestry
+       true <=2x2 HDR terminal
+       BeforeTonemap eligibility
+
+   Still intentionally unpromoted:
+       WaterDomain
+       PostTonemapPreUi
+       AfterShadowProduction
+
+TEST SUITE:
+    25 -> 30 tests
+
+New isolated contracts:
+    d3d11_primary_qualification
+    natural_process_exit_completion
+    d3d11_public_export_contract
+    startup_trace_process_scope
+    skyrim_runtime_catalog
+
+Natural-exit child:
+    returns normally from main
+    NEVER calls GZFX_Shutdown manually
+
+Acceptance requires:
+    session_close_state.txt state=complete
+    telemetry_session_complete.txt status=complete
+    session renderer_startup.csv contains process_exit_intercepted
+
+Result:
+    PASS on final PR
+    PASS on merged main
+
+PRESERVED FAILURE HISTORY:
+    Intermediate run 40242821335 failed at compile due C4456 variable
+    shadowing in natural_exit_harness.cpp promoted to error by /WX.
+    Variable was renamed; assertions were not weakened.
+
+    Additional source-audit repairs before final green:
+        observe dinput-loaded GZFX without claiming helper device
+        retain GZFX module lifetime through ExitProcess
+        unify primary startup evidence across both attach paths
+
+NEXT FIELD OBJECTIVE:
+    One fresh Skyrim 1.7.104 session from the 0.0.28 package.
+
+Verify from ONE telemetry ZIP:
+    qualified primary accepted
+    primary attach before first real Skyrim resource birth
+    improved MAIN_HDR / MAIN_DEPTH / MOTION / NORMAL provenance
+    HDRReduction exterior + interior
+    true 2x2 terminal
+    BeforeTonemap
+    BeforeGlobalTAA / AfterGlobalTAA remains 1:1
+    command-list ownership remains coherent
+    process_exit_intercepted
+    session_close_state=complete
+    telemetry_session_complete=status=complete
+    dropped=0
+    no Waves 1-4 regression
+
+CLOSURE VERDICT:
+    0.0.28 IMPLEMENTATION COMPLETE.
+    PR #31 MERGED.
+    FINAL PR CI GREEN.
+    MERGED-MAIN CI GREEN.
+    30/30 PASS.
+    PACKAGE VERIFIED.
+    PACKAGE REFRESH ZIP-ONLY.
+    READY FOR REAL-SKYRIM FIELD VALIDATION.
+
+END ENGINEERING RESULT

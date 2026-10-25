@@ -1,0 +1,146 @@
+GZFX 0.0.28 NEW CHAT TECHNICAL APPENDIX
+Date: October 25, 2026
+
+FRONT-DOOR ABI:
+    GZFX d3d11.dll exports:
+        D3D11CreateDevice
+        D3D11CreateDeviceAndSwapChain
+        D3D11On12CreateDevice
+
+    Removed partial public D3D11Core* contract.
+
+    D3D11On12 is forward-only and never primary-attaches.
+
+PRIMARY QUALIFICATION:
+    Direct proxy path requires:
+        main-executable caller
+        real device + immediate context
+        hardware-class driver
+        non-Basic adapter
+        current-process swapchain window when supplied
+
+    Reject production:
+        WARP
+        REFERENCE
+        SOFTWARE
+        NULL
+        Microsoft Basic Render Driver
+        foreign window
+
+    Test override:
+        GZFX_TEST_ALLOW_SOFTWARE_PRIMARY=1
+
+STARTUP ORDERS:
+    D3D-first:
+        proxy -> real device -> qualify -> load/init GZFX -> attach
+
+    GZFX-first:
+        dinput -> GZFX -> IAT hook -> D3D creation -> qualify -> same attach
+
+    Both record:
+        primary_candidate_accepted/rejected
+        primary_attach_complete
+
+STARTUP TRACE:
+    Diagnostics/renderer_startup.csv is per-process.
+
+    Columns:
+        pid
+        sequence
+        qpc
+        thread
+        event
+        result
+        pointer_a
+        pointer_b
+
+    First event truncates stale content.
+    Sequence starts at 1.
+
+    Clean shutdown copies trace to:
+        session_*/renderer_startup.csv
+
+PROCESS EXIT:
+    std::atexit telemetry shutdown removed.
+
+    d3d11 bootstrap hooks ExitProcess outside DllMain.
+
+    Hook:
+        once guard
+        process_exit_intercepted
+        GZFX_Shutdown if ready
+        original ExitProcess
+
+    d3d11 bootstrap retains one GZFX module reference so cached lifecycle
+    exports stay valid through process exit.
+
+NATURAL EXIT ACCEPTANCE:
+    child returns from main without manual GZFX_Shutdown.
+
+    Parent requires:
+        session_close_state=complete
+        telemetry_session_complete=status=complete
+        renderer_startup contains process_exit_intercepted
+
+    PASS final PR and merged main.
+
+RUNTIME CATALOG:
+    1.5.97
+    1.6.318
+    1.6.323
+    1.6.342
+    1.6.353
+    1.6.629
+    1.6.640
+    1.6.659
+    1.6.1130
+    1.6.1170
+    1.6.1179
+    1.7.99
+    1.7.104
+
+    1.6.1170 only:
+        engineProfileAvailable=true
+
+    renderer core support remains independent.
+
+LATE CONTRACTS:
+    Global TAA:
+        field locked
+        structural, not hash-only
+
+    HDR:
+        bounded full-res ancestry
+        true <=2x2 terminal
+
+    BeforeTonemap:
+        awaiting real 0.0.28 field validation
+
+    still open:
+        WaterDomain
+        PostTonemapPreUi
+        AfterShadowProduction
+
+CI:
+    final PR head:
+        360c08e8b2a0861513bf5e2f964738b007a86d65
+        run 40243270381
+        30/30 PASS
+
+    merge:
+        709c25502f8178b2e24150915c10b33d94b9bbee
+
+    merged main:
+        run 40243580991
+        30/30 PASS
+
+    package refresh:
+        8c9018b13021b60522701cc696500c52b41b13ff
+
+    package blob:
+        294fe0495dcaa071a6eb4a52b8b30d427ed40c44
+
+    package bytes:
+        400,927
+
+END TECHNICAL APPENDIX

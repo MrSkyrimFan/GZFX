@@ -1,0 +1,133 @@
+GZFX NEW CHAT TAKEOVER — 0.0.28
+Date: October 25, 2026
+Status: CONTROLLING CURRENT HANDOFF
+
+READ FIRST:
+    AGENT.md
+    GZFXWorkFolder/old/GZFX_0.0.28_PRE_FIELD_LIFECYCLE_HARDENING_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.28.txt
+
+CURRENT STATE:
+    runtime 0.0.28-pre-field-lifecycle-hardening
+
+    PR #31
+    final head 360c08e8b2a0861513bf5e2f964738b007a86d65
+    final PR run 40243270381
+    30/30 PASS
+
+    merge 709c25502f8178b2e24150915c10b33d94b9bbee
+    merged-main run 40243580991
+    30/30 PASS
+
+    package refresh 8c9018b13021b60522701cc696500c52b41b13ff
+
+    package:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+        blob 294fe0495dcaa071a6eb4a52b8b30d427ed40c44
+        400,927 bytes
+
+    package contents:
+        GZFX.dll
+        d3d11.dll
+        dinput8.dll
+
+PRODUCT INTENT:
+    GZFX is standalone.
+    ENB/ReShade are research references only.
+    This is not a coexistence build.
+
+WHAT 0.0.28 CLOSED:
+    stale startup trace across runs
+    helper/software device primary poisoning
+    GZFX-first pre-Present attach asymmetry
+    partial undocumented D3D11Core proxy contract
+    missing public D3D11On12 export
+    unreliable real-process telemetry shutdown
+    GZFX lifecycle-pointer lifetime risk
+    narrow runtime-family catalog
+    two-ZIP field evidence requirement
+    continuity drift
+
+UNIVERSAL RUNTIME MODEL:
+    universal D3D core is independent of Skyrim executable offsets.
+
+    known catalog includes:
+        1.5.97
+        common 1.6.x families
+        1.7.99
+        1.7.104
+
+    only 1.6.1170 currently has the verified optional executable engine profile.
+
+    1.7.104 is valid for universal D3D core.
+    1.5.97/Nolvus is architecture-supported but not field-certified yet.
+
+CURRENT PHASE:
+    TEST / LIFECYCLE-HARDENED REAL-SKYRIM FIELD VALIDATION
+
+Do NOT start another graphics wave before reviewing the next field session.
+
+Still intentionally unpromoted:
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+EXACT NEXT ACTION:
+    Install newest:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+    Replace all previous GZFX root runtime files with:
+        GZFX.dll
+        d3d11.dll
+        dinput8.dll
+
+    Standalone GZFX only for this test.
+
+    Run Skyrim naturally for roughly 2-3 minutes:
+        exterior daylight
+        interior
+        exterior night
+        water/reflections
+        fire/particles if convenient
+        Modes 0 / 1 / 2 represented naturally
+
+    No manual capture hotkey.
+
+    Quit normally.
+    WAIT until SkyrimSE.exe is fully gone.
+
+    Upload ONLY newest:
+        Documents/My Games/Skyrim Special Edition/GZFX/Telemetry/session_*
+
+renderer_startup.csv is now copied into the session itself.
+
+NEXT DATA FIRST FILES:
+    renderer_startup.csv
+    listener_status.txt
+    session_close_state.txt
+    telemetry_session_complete.txt
+    manifest.txt
+    stages.csv
+    resources.csv
+    pipeline_shaders.csv
+    ownership.csv
+    present_timeline.csv
+    engine_events.csv
+    pipeline_runs_*.csv
+    semantics.csv
+    transitions.csv
+    seconds.csv
+
+PRIMARY NEXT QUESTIONS:
+    qualified primary?
+    attach before core Skyrim resource birth?
+    improved provenance?
+    HDR interior coverage?
+    true 2x2 terminal?
+    BeforeTonemap?
+    TAA still 1:1?
+    process_exit_intercepted?
+    complete clean shutdown?
+    late-stack cartography now closable?
+
+END TAKEOVER
