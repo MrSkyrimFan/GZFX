@@ -128,6 +128,11 @@ add_executable(GZFXD3D11ProbeHarness
 target_link_libraries(GZFXD3D11ProbeHarness PRIVATE d3d11)
 gzfx_apply_common(GZFXD3D11ProbeHarness)
 
+add_executable(GZFXEngineEpochHarness
+    tests/engine_epoch_harness.cpp
+)
+gzfx_apply_common(GZFXEngineEpochHarness)
+
 add_executable(GZFXRendererForensicsHarness
     tests/renderer_forensics_harness.cpp
 )
@@ -252,6 +257,13 @@ add_test(
         "$<TARGET_FILE:GZFXD3D11ProbeHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/probe-test-output"
+)
+
+add_test(
+    NAME engine_epoch_signatures
+    COMMAND
+        "$<TARGET_FILE:GZFXEngineEpochHarness>"
+        "$<TARGET_FILE:GZFX>"
 )
 
 add_test(
