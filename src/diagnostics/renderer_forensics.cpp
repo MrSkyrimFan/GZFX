@@ -2731,6 +2731,59 @@ namespace gzfx::diagnostics
             return true;
         }
 
+        bool IsQualifiedPrimaryDevice(
+            ID3D11Device* const device)
+        {
+            if (device == nullptr)
+            {
+                return false;
+            }
+
+            if (paths::TestOverrideActive())
+            {
+                return true;
+            }
+
+            IDXGIDevice* dxgiDevice = nullptr;
+            IDXGIAdapter* adapter = nullptr;
+            bool qualified = true;
+
+            if (SUCCEEDED(
+                    device->QueryInterface(
+                        __uuidof(IDXGIDevice),
+                        reinterpret_cast<void**>(
+                            &dxgiDevice))) &&
+                dxgiDevice != nullptr &&
+                SUCCEEDED(
+                    dxgiDevice->GetAdapter(
+                        &adapter)) &&
+                adapter != nullptr)
+            {
+                DXGI_ADAPTER_DESC desc{};
+
+                if (SUCCEEDED(
+                        adapter->GetDesc(
+                            &desc)) &&
+                    desc.VendorId == 0x1414 &&
+                    desc.DeviceId == 0x008C)
+                {
+                    qualified = false;
+                }
+            }
+
+            if (adapter != nullptr)
+            {
+                adapter->Release();
+            }
+
+            if (dxgiDevice != nullptr)
+            {
+                dxgiDevice->Release();
+            }
+
+            return qualified;
+        }
+
         bool IsProcessWindow(HWND window)
         {
             if (!window)
@@ -2846,6 +2899,13 @@ namespace gzfx::diagnostics
                     reinterpret_cast<void**>(&device))) ||
                 !device)
             {
+                return;
+            }
+
+            if (!IsQualifiedPrimaryDevice(
+                    device))
+            {
+                device->Release();
                 return;
             }
 
