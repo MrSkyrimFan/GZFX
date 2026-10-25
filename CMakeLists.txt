@@ -403,3 +403,17 @@ set_tests_properties(
     PROPERTIES
         ENVIRONMENT "GZFX_TEST_TELEMETRY_ACTIVE=1;GZFX_TEST_TELEMETRY_RING_CAPACITY=64;GZFX_TEST_TELEMETRY_FORCE_OVERFLOW=1;GZFX_TEST_TELEMETRY_EXPECT_OVERFLOW=1"
 )
+
+add_test(
+    NAME late_stack_cartography
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/late-stack-cartography-output"
+)
+
+set_tests_properties(
+    late_stack_cartography
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1"
+)
