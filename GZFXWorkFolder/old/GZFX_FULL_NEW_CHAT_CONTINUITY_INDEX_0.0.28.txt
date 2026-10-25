@@ -1,0 +1,242 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.28
+Created October 25, 2026 because the Project Chat reached its context limit.
+
+THIS FILE IS A CONTROLLING INDEX, NOT A SUBSTITUTE FOR THE FULL RECORDS.
+
+NEXT AGENT MUST NOT ASK LANCE TO RECONSTRUCT OR RE-UPLOAD PROJECT HISTORY.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+READ IN EXACT ORDER:
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.28.txt
+    5. GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.28.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.28_PRE_FIELD_LIFECYCLE_HARDENING_ENGINEERING_RESULT.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.27_PRE_FIELD_FULL_RED_TEAM_FINDINGS.txt
+    8. GZFXWorkFolder/old/GZFX_RESEARCH_PASS_11_FRONTDOOR_EXIT_LIFECYCLE_PROXY_ABI_AND_RUNTIME_CATALOG.txt
+    9. GZFXWorkFolder/old/GZFX_0.0.28_PRE_FIELD_LIFECYCLE_HARDENING_BLUEPRINT.txt
+
+For deeper history only if needed:
+    GZFX_NEW_CHAT_TAKEOVER_0.0.27.txt
+    GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.27.txt
+    GZFX_0.0.27_UNIVERSAL_RENDERER_FRONTDOOR_LATE_CONTRACT_ENGINEERING_RESULT.txt
+    GZFX_0.0.26_RENDERER_IDENTITY_ENGINE_EPOCH_FIELD_FINDINGS.txt
+    GZFX_RESEARCH_PASS_10_ENB_RESHADE_FRONT_DOOR_AND_1.7.104_RENDERER_STRATEGY.txt
+
+LIVE FRONTIER:
+    current runtime:
+        0.0.28-pre-field-lifecycle-hardening
+
+    current phase:
+        TEST / LIFECYCLE-HARDENED REAL-SKYRIM FIELD VALIDATION
+
+    IMPORTANT:
+        Lance has NOT yet performed the 0.0.28 real-Skyrim field run.
+
+    Do NOT start another graphics feature before that field DATA is reviewed.
+
+FINAL PRODUCT PROOF:
+    PR #31
+    final PR head:
+        360c08e8b2a0861513bf5e2f964738b007a86d65
+    final PR workflow:
+        40243270381
+    final PR:
+        30/30 PASS
+
+    product merge:
+        709c25502f8178b2e24150915c10b33d94b9bbee
+
+    merged-main workflow:
+        40243580991
+    merged-main:
+        30/30 PASS
+        0 failures
+
+    package refresh:
+        8c9018b13021b60522701cc696500c52b41b13ff
+
+    package:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+        Git blob 294fe0495dcaa071a6eb4a52b8b30d427ed40c44
+        400,927 bytes
+
+    package contents EXACTLY:
+        GZFX.dll
+        d3d11.dll
+        dinput8.dll
+
+    package refresh changed ONLY the ZIP.
+
+ARCHIVE STATE:
+    The 0.0.27 red-team findings, Research Pass 11, 0.0.28 blueprint,
+    0.0.28 engineering result, 0.0.28 takeover, and 0.0.28 technical appendix
+    are archived in GZFXWorkFolder/old/.
+
+    GZFXWorkFolder/new/ contains README.md ONLY.
+
+WHY THE EXTRA 0.0.28 WAVE HAPPENED:
+    After 0.0.27 closure, Lance requested one more complete:
+        DATA -> RESEARCH -> BLUEPRINT -> IMPLEMENTATION
+    pass before spending another field run.
+
+    The pass re-opened raw 0.0.26 telemetry and red-teamed the entire 0.0.27
+    front-door/lifecycle architecture.
+
+    It found and fixed:
+        startup trace contamination across launches;
+        first-successful-device primary poisoning;
+        D3D-first/GZFX-first pre-Present attach asymmetry;
+        partial undocumented D3D11Core proxy contract;
+        missing documented D3D11On12 export;
+        unreliable real-process telemetry closure;
+        cached GZFX lifecycle pointer lifetime risk;
+        narrow Skyrim runtime-family diagnostics;
+        two-ZIP field evidence ergonomics;
+        continuity documentation drift.
+
+0.0.28 IMPORTANT CONTRACTS:
+    d3d11 public exports:
+        D3D11CreateDevice
+        D3D11CreateDeviceAndSwapChain
+        D3D11On12CreateDevice
+
+    production primary rejects:
+        WARP
+        REFERENCE
+        SOFTWARE
+        NULL
+        Microsoft Basic Render Driver
+        foreign-process swapchain window
+
+    both startup orders converge on:
+        AttachPrimaryRendererObjects
+
+    startup trace is process-scoped:
+        pid
+        sequence
+        qpc
+        thread
+        event
+        result
+        pointer_a
+        pointer_b
+
+    telemetry shutdown:
+        ExitProcess hook outside DllMain
+        process_exit_intercepted
+        GZFX_Shutdown before Windows teardown
+        writer drain/join/flush
+        original ExitProcess
+
+    natural-exit child test:
+        NEVER manually calls GZFX_Shutdown
+        still passes complete telemetry closure.
+
+    renderer_startup.csv is copied into the telemetry session at clean shutdown.
+
+KNOWN RUNTIME CATALOG:
+    1.5.97
+    1.6.318
+    1.6.323
+    1.6.342
+    1.6.353
+    1.6.629
+    1.6.640
+    1.6.659
+    1.6.1130
+    1.6.1170
+    1.6.1179
+    1.7.99
+    1.7.104
+
+    Only 1.6.1170 currently has the verified optional executable engine profile.
+
+    Runtime catalog recognition is NOT field certification.
+
+    Universal D3D renderer-core support is independent from engine profiles.
+
+FIELD-LOCKED / PRESERVE:
+    Waves 1-3 closure
+    Wave 4 renderer ownership architecture
+    creation-time shader/resource identity
+    command-list ownership
+    physical Present epochs
+    global TAA structural contract
+    bounded full-resolution HDR ancestry
+    true <=2x2 HDR terminal
+    fail-closed engine profiles
+
+STILL UNPROMOTED:
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+Do not invent these from hashes or names.
+
+ENB / RESHADE:
+    They were research references.
+    GZFX is not being built as an ENB/ReShade coexistence layer.
+    Next field test uses GZFX's own d3d11.dll standalone.
+
+EXACT NEXT USER ACTION:
+    Download newest:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+    Replace/install all three root DLLs:
+        GZFX.dll
+        d3d11.dll
+        dinput8.dll
+
+    Run one fresh natural Skyrim session about 2-3 minutes.
+
+    Cover:
+        exterior daylight
+        interior
+        exterior night
+        water/reflections
+        fire/particles if convenient
+        Modes 0, 1, 2 naturally
+
+    No manual capture hotkey.
+
+    Quit normally.
+    Wait until SkyrimSE.exe is completely gone.
+
+    Upload ONLY newest:
+        Documents/My Games/Skyrim Special Edition/GZFX/Telemetry/session_*
+
+    renderer_startup.csv should now be inside that session.
+
+NEXT DATA REVIEW FIRST QUESTIONS:
+    Was the qualified real primary accepted?
+    Did primary attach precede core Skyrim resource birth?
+    Did MAIN_HDR / MAIN_DEPTH / MOTION / NORMAL provenance improve?
+    Did HDRReduction cover exterior AND interior?
+    Did the true terminal reach 2x2?
+    Did BeforeTonemap fire?
+    Did Before/AfterGlobalTAA remain 1:1?
+    Did command-list ownership remain coherent?
+    Did process_exit_intercepted appear?
+    Did session_close_state reach complete?
+    Did telemetry_session_complete report complete?
+    Were drops zero?
+    Is late-stack cartography now closable?
+
+WORKFLOW REMAINS:
+    DATA
+    -> FINDINGS in new/
+    -> RESEARCH in new/
+    -> BLUEPRINT in new/
+    -> IMPLEMENT
+    -> CI / PR / MERGE / PACKAGE
+    -> ENGINEERING RESULT in old/
+    -> archive cycle
+    -> clear new/
+    -> exact in-game test
+    -> repeat
+
+END CONTINUITY INDEX
