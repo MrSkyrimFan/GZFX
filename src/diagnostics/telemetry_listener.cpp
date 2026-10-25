@@ -1842,6 +1842,69 @@ namespace gzfx::diagnostics::telemetry_listener
                 g_bytesWritten.fetch_add(
                     row.str().size());
                 break;
+
+            case EventType::DeferredList:
+                row
+                    << event.sequence << ","
+                    << event.qpc << ","
+                    << event.frame;
+
+                for (std::size_t i = 0;
+                     i <= 11;
+                     ++i)
+                {
+                    row
+                        << ","
+                        << event.u[i];
+                }
+
+                row << "\n";
+                files.deferredLists
+                    << row.str();
+                g_bytesWritten.fetch_add(
+                    row.str().size());
+                break;
+
+            case EventType::DeferredRun:
+            {
+                row
+                    << event.sequence << ","
+                    << event.qpc << ","
+                    << event.frame;
+
+                for (std::size_t i = 0;
+                     i <= 87;
+                     ++i)
+                {
+                    row
+                        << ","
+                        << event.u[i];
+                }
+
+                row << "\n";
+                const auto text =
+                    row.str();
+
+                if (files.deferredRunBytes +
+                        text.size() >
+                    kPipelineSegmentBytes)
+                {
+                    if (!OpenDeferredRunSegment(
+                            files))
+                    {
+                        g_lastError =
+                            "deferred segment rotation failed";
+                    }
+                }
+
+                files.deferredRuns
+                    << text;
+                files.deferredRunBytes +=
+                    text.size();
+                g_bytesWritten.fetch_add(
+                    text.size());
+                break;
+            }
             }
 
             g_written.fetch_add(
@@ -2696,6 +2759,215 @@ namespace gzfx::diagnostics::telemetry_listener
         catch (...)
         {
         }
+    }
+
+    void OnDeferredList(
+        const DeferredListInfo& info) noexcept
+    {
+        if (!IsInitialized() ||
+            (!g_fullPipelineDetail &&
+             !g_detailActive.load(
+                 std::memory_order_acquire)))
+        {
+            return;
+        }
+
+        Event event{};
+        event.type =
+            EventType::DeferredList;
+        event.frame =
+            info.frame;
+        event.ordinal =
+            info.executeOrdinal;
+
+        event.u[0] =
+            info.executeOrdinal;
+        event.u[1] =
+            info.commandListIdentity;
+        event.u[2] =
+            info.commandListGeneration;
+        event.u[3] =
+            info.contextIdentity;
+        event.u[4] =
+            info.contextGeneration;
+        event.u[5] =
+            info.recordingGeneration;
+        event.u[6] =
+            info.originalPassCount;
+        event.u[7] =
+            info.retainedRunCount;
+        event.u[8] =
+            info.finishRestoreState ? 1ull : 0ull;
+        event.u[9] =
+            info.executeRestoreState ? 1ull : 0ull;
+        event.u[10] =
+            info.complete ? 1ull : 0ull;
+        event.u[11] =
+            info.overflow ? 1ull : 0ull;
+
+        Enqueue(event);
+    }
+
+    void OnDeferredRun(
+        const std::uint64_t frame,
+        const std::uint64_t executeOrdinal,
+        const std::uint64_t commandListGeneration,
+        const std::uint64_t contextGeneration,
+        const std::uint64_t recordingGeneration,
+        const std::uint64_t runIndex,
+        const std::uint64_t firstRecordingOrdinal,
+        const std::uint64_t lastRecordingOrdinal,
+        const std::uint64_t repeatCount,
+        const pipeline_cartography::PassTelemetry& pass) noexcept
+    {
+        if (!IsInitialized() ||
+            (!g_fullPipelineDetail &&
+             !g_detailActive.load(
+                 std::memory_order_acquire)))
+        {
+            return;
+        }
+
+        Event event{};
+        event.type =
+            EventType::DeferredRun;
+        event.frame =
+            frame;
+        event.ordinal =
+            executeOrdinal;
+
+        event.u[0] =
+            executeOrdinal;
+        event.u[1] =
+            commandListGeneration;
+        event.u[2] =
+            contextGeneration;
+        event.u[3] =
+            recordingGeneration;
+        event.u[4] =
+            runIndex;
+        event.u[5] =
+            firstRecordingOrdinal;
+        event.u[6] =
+            lastRecordingOrdinal;
+        event.u[7] =
+            repeatCount;
+        event.u[8] =
+            static_cast<std::uint64_t>(
+                pass.kind);
+        event.u[9] =
+            static_cast<std::uint64_t>(
+                pass.drawKind);
+
+        for (std::size_t i = 0;
+             i < pass.shaderHashes.size();
+             ++i)
+        {
+            event.u[10 + i] =
+                pass.shaderHashes[i];
+        }
+
+        for (std::size_t i = 0;
+             i < pass.rtvs.size();
+             ++i)
+        {
+            event.u[16 + i] =
+                pass.rtvs[i];
+        }
+
+        event.u[20] =
+            pass.dsv;
+        event.u[21] =
+            pass.omUavHash;
+        event.u[22] =
+            pass.csUavHash;
+        event.u[23] =
+            pass.readHash;
+        event.u[24] =
+            pass.writeHash;
+        event.u[25] =
+            pass.totalReadResourceCount;
+        event.u[26] =
+            pass.totalWriteResourceCount;
+        event.u[27] =
+            pass.retainedReadResourceCount;
+        event.u[28] =
+            pass.retainedWriteResourceCount;
+        event.u[29] =
+            pass.readOverflow ? 1ull : 0ull;
+        event.u[30] =
+            pass.writeOverflow ? 1ull : 0ull;
+
+        for (std::size_t i = 0;
+             i < pass.readResources.size();
+             ++i)
+        {
+            event.u[31 + i] =
+                pass.readResources[i];
+        }
+
+        for (std::size_t i = 0;
+             i < pass.writeResources.size();
+             ++i)
+        {
+            event.u[55 + i] =
+                pass.writeResources[i];
+        }
+
+        for (std::size_t i = 0;
+             i < pass.explicitReads.size();
+             ++i)
+        {
+            event.u[67 + i] =
+                pass.explicitReads[i];
+        }
+
+        for (std::size_t i = 0;
+             i < pass.explicitWrites.size();
+             ++i)
+        {
+            event.u[69 + i] =
+                pass.explicitWrites[i];
+        }
+
+        event.u[71] =
+            pass.explicitReadCount;
+        event.u[72] =
+            pass.explicitWriteCount;
+        event.u[73] =
+            pass.sourceSubresource;
+        event.u[74] =
+            pass.destinationSubresource;
+        event.u[75] =
+            pass.explicitFormat;
+        event.u[76] =
+            pass.explicitFlags;
+        event.u[77] =
+            pass.constantBufferHash;
+        event.u[78] =
+            pass.samplerHash;
+        event.u[79] =
+            pass.blendHash;
+        event.u[80] =
+            pass.depthHash;
+        event.u[81] =
+            pass.rasterHash;
+        event.u[82] =
+            pass.topology;
+        event.u[83] =
+            pass.viewportWidth;
+        event.u[84] =
+            pass.viewportHeight;
+
+        for (std::size_t i = 0;
+             i < pass.args.size();
+             ++i)
+        {
+            event.u[85 + i] =
+                pass.args[i];
+        }
+
+        Enqueue(event);
     }
 
     void OnResize(
