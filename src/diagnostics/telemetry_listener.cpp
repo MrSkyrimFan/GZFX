@@ -1555,8 +1555,14 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "engine_profile="
                 << Hex(engineStatus.runtimeProfile)
                 << "\n"
-                << "engine_runtime_supported="
-                << (engineStatus.runtimeSupported ? "true" : "false")
+                << "renderer_core_supported="
+                << (engineStatus.rendererCoreSupported ? "true" : "false")
+                << "\n"
+                << "engine_runtime_known="
+                << (engineStatus.runtimeKnown ? "true" : "false")
+                << "\n"
+                << "engine_profile_available="
+                << (engineStatus.engineProfileAvailable ? "true" : "false")
                 << "\n"
                 << "engine_post_processing_anchor="
                 << (engineStatus.postProcessingArmed ? "armed" : "unavailable")
