@@ -6,10 +6,8 @@ GZFX is a standalone, SKSE-free Direct3D 11 graphics framework for Skyrim SE/AE.
 
 ```text
 SkyrimSE.exe
-  -> dinput8.dll
-  -> GZFX.dll
-  -> D3D11 / DXGI
-  -> HLSL / GPU
+  -> d3d11.dll -> GZFX.dll -> D3D11 / DXGI -> HLSL / GPU
+  -> dinput8.dll -> GZFX.dll -> input bridge
 ```
 
 The long-term product target is a native graphics framework capable of replacing the graphics role of ENB + ReShade with integrated lighting, ambient visibility, indirect radiance, shadows, atmosphere, volumetrics, materials, water, reflections, HDR/post, presets, a live editor, compatibility systems, and a public renderer API.
@@ -23,15 +21,15 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.27-universal-frontdoor-late-contracts
-current phase: TEST / UNIVERSAL FRONT-DOOR + LATE-CONTRACT FIELD VALIDATION
+current runtime: 0.0.28-pre-field-lifecycle-hardening
+current phase: TEST / PRE-FIELD LIFECYCLE-HARDENED RENDERER VALIDATION
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: standalone GZFX d3d11.dll bootstrap + dinput8 input bridge
 stable shader/resource identity: observed at D3D11 creation time
 physical DXGI present timeline: explicit present epochs
 deferred command lists: owner-tagged with late-detail-independent retained evidence
 universal renderer core: runtime-independent D3D11/DXGI architecture
-known runtime families: 1.5.97 / 1.6.1170 / 1.7.104
+known runtime families: 1.5.97 / common 1.6.x / 1.7.99 / 1.7.104
 verified optional engine epoch profile: Steam AE 1.6.1170 only; other runtimes keep full D3D core and fail closed on engine hooks
 field-locked late contract: BeforeGlobalTAA / AfterGlobalTAA structural family
 field-validation candidates: HDRReduction / BeforeTonemap
@@ -45,7 +43,7 @@ The 0.0.26 real-Skyrim field campaign proved the renderer-identity architecture 
 
 0.0.27 moves renderer ownership to the graphics front door with a tiny standalone `d3d11.dll` bootstrap while retaining `dinput8.dll` for input. The renderer core remains runtime-independent and engine executable hooks are optional profiles: 1.5.97, 1.6.1170 and 1.7.104 are recognized Skyrim runtime families, but only the already-validated 1.6.1170 engine-epoch profile is allowed to patch the executable. Missing engine profiles do not disable GZFX's D3D renderer core. The HDR detector now accepts bounded full-resolution HDR ancestry and commits the observed 2x2 terminal instead of stopping at 3x2.
 
-**Important:** GZFX 0.0.27 is standalone. ENB and ReShade were architecture research references, not runtime dependencies or coexistence targets. The field package contains only GZFX's own `dinput8.dll`, `d3d11.dll`, and `GZFX.dll`. `WaterDomain`, `PostTonemapPreUi`, and `AfterShadowProduction` remain intentionally unclaimed pending real-Skyrim evidence.
+**Important:** GZFX 0.0.28 is standalone. ENB and ReShade were architecture research references, not runtime dependencies or coexistence targets. The field package contains only GZFX's own `dinput8.dll`, `d3d11.dll`, and `GZFX.dll`. `WaterDomain`, `PostTonemapPreUi`, and `AfterShadowProduction` remain intentionally unclaimed pending real-Skyrim evidence.
 
 ## Permanent authority workflow
 
