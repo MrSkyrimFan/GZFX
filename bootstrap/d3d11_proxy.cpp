@@ -2,8 +2,10 @@
 #include <d3d11.h>
 #include <dxgi.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
+#include <iterator>
 #include <cstdint>
 #include <filesystem>
 #include <mutex>
@@ -72,6 +74,7 @@ namespace
 
     std::array<PendingEvent, 16> g_pending{};
     std::atomic<std::uint32_t> g_pendingCount{0};
+    std::atomic<bool> g_firstExportLogged{false};
 
     thread_local bool g_insideGzfxInitialization = false;
 
@@ -169,6 +172,10 @@ namespace
                 event.pointerA,
                 event.pointerB);
         }
+
+        g_pendingCount.store(
+            0,
+            std::memory_order_relaxed);
     }
 
     fs::path ModulePath(
@@ -344,6 +351,8 @@ namespace
                     g_gzfxModule,
                     "GZFX_RecordBootstrapEvent"));
 
+        ReplayPendingEvents();
+
         if (g_gzfxInitialize != nullptr)
         {
             g_insideGzfxInitialization = true;
@@ -357,8 +366,6 @@ namespace
                 "gzfx_initialize_complete",
                 initialized ? 0 : 1);
         }
-
-        ReplayPendingEvents();
     }
 
     void EnsureGzfxLoaded() noexcept
@@ -426,8 +433,13 @@ extern "C" HRESULT WINAPI D3D11CreateDevice(
     D3D_FEATURE_LEVEL* const featureLevel,
     ID3D11DeviceContext** const immediateContext)
 {
-    EmitEvent(
-        "first_d3d11_export_enter");
+    if (!g_firstExportLogged.exchange(
+            true,
+            std::memory_order_acq_rel))
+    {
+        EmitEvent(
+            "first_d3d11_export_enter");
+    }
 
     if (!EnsureRealD3D11() ||
         g_createDevice == nullptr)
@@ -490,8 +502,13 @@ extern "C" HRESULT WINAPI D3D11CreateDeviceAndSwapChain(
     D3D_FEATURE_LEVEL* const featureLevel,
     ID3D11DeviceContext** const immediateContext)
 {
-    EmitEvent(
-        "first_d3d11_export_enter");
+    if (!g_firstExportLogged.exchange(
+            true,
+            std::memory_order_acq_rel))
+    {
+        EmitEvent(
+            "first_d3d11_export_enter");
+    }
 
     if (!EnsureRealD3D11() ||
         g_createDeviceAndSwapChain == nullptr)
