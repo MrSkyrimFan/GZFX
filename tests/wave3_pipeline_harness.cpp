@@ -330,6 +330,14 @@ int wmain(int argc, wchar_t** argv)
             static_cast<DWORD>(
                 std::size(lateStackValue))) > 0;
 
+    wchar_t taaWithoutHdrValue[8]{};
+    const bool taaWithoutHdrActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_TAA_WITHOUT_HDR_ACTIVE",
+            taaWithoutHdrValue,
+            static_cast<DWORD>(
+                std::size(taaWithoutHdrValue))) > 0;
+
     wchar_t deferredOutsideDetailValue[8]{};
     const bool deferredOutsideDetailActive =
         GetEnvironmentVariableW(
@@ -822,51 +830,21 @@ int wmain(int argc, wchar_t** argv)
 
             if (lateStackActive)
             {
-                // Synthetic late image-space spine. First emit a false
-                // MAIN_HDR downsample candidate that is smaller than the real
-                // chain root. The detector must restart when the later real
-                // root appears instead of carrying the poisoned candidate.
-                context->OMSetRenderTargets(
-                    1,
-                    &hdrFalseRoot.rtv,
-                    nullptr);
-
-                context->PSSetShaderResources(
-                    0,
-                    1,
-                    &hdr.srv);
-
-                context->Draw(3, 0);
-
-                context->PSSetShaderResources(
-                    0,
-                    1,
-                    nullSrvs);
-
-                // Real HDR reduction -> tonemap entry -> global temporal pass.
-                ID3D11ShaderResourceView* reduceInput =
-                    hdr.srv;
-
-                Target* reductions[4] =
+                if (!taaWithoutHdrActive)
                 {
-                    &hdrReduceA,
-                    &hdrReduceB,
-                    &hdrReduceC,
-                    &hdrReduceD
-                };
-
-                for (Target* reduction :
-                     reductions)
-                {
+                    // Synthetic late image-space spine. First emit a false
+                    // MAIN_HDR downsample candidate that is smaller than the
+                    // real chain root. The detector must restart when the
+                    // later real root appears.
                     context->OMSetRenderTargets(
                         1,
-                        &reduction->rtv,
+                        &hdrFalseRoot.rtv,
                         nullptr);
 
                     context->PSSetShaderResources(
                         0,
                         1,
-                        &reduceInput);
+                        &hdr.srv);
 
                     context->Draw(3, 0);
 
@@ -875,27 +853,60 @@ int wmain(int argc, wchar_t** argv)
                         1,
                         nullSrvs);
 
-                    reduceInput =
-                        reduction->srv;
+                    ID3D11ShaderResourceView* reduceInput =
+                        hdr.srv;
+
+                    Target* reductions[4] =
+                    {
+                        &hdrReduceA,
+                        &hdrReduceB,
+                        &hdrReduceC,
+                        &hdrReduceD
+                    };
+
+                    for (Target* reduction :
+                         reductions)
+                    {
+                        context->OMSetRenderTargets(
+                            1,
+                            &reduction->rtv,
+                            nullptr);
+
+                        context->PSSetShaderResources(
+                            0,
+                            1,
+                            &reduceInput);
+
+                        context->Draw(3, 0);
+
+                        context->PSSetShaderResources(
+                            0,
+                            1,
+                            nullSrvs);
+
+                        reduceInput =
+                            reduction->srv;
+                    }
+
+                    context->OMSetRenderTargets(
+                        1,
+                        &tonemapCurrent.rtv,
+                        nullptr);
+
+                    context->PSSetShaderResources(
+                        0,
+                        1,
+                        &hdrReduceD.srv);
+
+                    context->Draw(3, 0);
+
+                    context->PSSetShaderResources(
+                        0,
+                        1,
+                        nullSrvs);
                 }
 
-                context->OMSetRenderTargets(
-                    1,
-                    &tonemapCurrent.rtv,
-                    nullptr);
-
-                context->PSSetShaderResources(
-                    0,
-                    1,
-                    &hdrReduceD.srv);
-
-                context->Draw(3, 0);
-
-                context->PSSetShaderResources(
-                    0,
-                    1,
-                    nullSrvs);
-
+                // Global temporal recognition must not depend on HDR completion.
                 ID3D11RenderTargetView* taaOutputs[2] =
                 {
                     taaColor.rtv,
@@ -1440,18 +1451,29 @@ int wmain(int argc, wchar_t** argv)
         const bool lateStageCoverage =
             !lateStackActive ||
             (
-                stages.find(
-                    "hdr_reduction") !=
-                        std::string::npos &&
-                stages.find(
-                    "before_tonemap") !=
-                        std::string::npos &&
-                stages.find(
-                    "before_global_taa") !=
-                        std::string::npos &&
-                stages.find(
-                    "after_global_taa") !=
-                        std::string::npos
+                taaWithoutHdrActive
+                    ? (
+                        stages.find(
+                            "before_global_taa") !=
+                                std::string::npos &&
+                        stages.find(
+                            "after_global_taa") !=
+                                std::string::npos
+                    )
+                    : (
+                        stages.find(
+                            "hdr_reduction") !=
+                                std::string::npos &&
+                        stages.find(
+                            "before_tonemap") !=
+                                std::string::npos &&
+                        stages.find(
+                            "before_global_taa") !=
+                                std::string::npos &&
+                        stages.find(
+                            "after_global_taa") !=
+                                std::string::npos
+                    )
             );
 
         const bool semanticCoverage =
