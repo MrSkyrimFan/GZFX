@@ -291,6 +291,12 @@ add_test(
         "${CMAKE_BINARY_DIR}/frontdoor-test-output"
 )
 
+set_tests_properties(
+    d3d11_frontdoor_bootstrap
+    PROPERTIES
+        TIMEOUT 30
+)
+
 add_test(
     NAME engine_epoch_signatures
     COMMAND
