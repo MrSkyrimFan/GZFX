@@ -2064,8 +2064,10 @@ namespace gzfx::render::semantic_authority
                     });
             }
 
-            if (!g_frame.tonemapEntrySignaled ||
-                g_frame.taaComplete ||
+            // Global temporal structure is strong enough to be recognized
+            // independently. A failed HDR/tonemap detector must not suppress
+            // downstream TAA evidence.
+            if (g_frame.taaComplete ||
                 g_frame.taaPending)
             {
                 return;
@@ -2189,6 +2191,30 @@ namespace gzfx::render::semantic_authority
                 if (!consumesPrevious ||
                     !descends)
                 {
+                    // The first plausible MAIN_HDR downsample is not
+                    // necessarily the real terminal reduction chain. If a
+                    // later pass starts a fresh MAIN_HDR-descendant candidate,
+                    // replace the poisoned candidate instead of carrying it
+                    // for the rest of the frame.
+                    const bool freshRoot =
+                        mainHdr != 0 &&
+                        ReadsLocked(mainHdr) &&
+                        output.shape.width <=
+                            g_screenWidth / 2 &&
+                        output.shape.height <=
+                            g_screenHeight / 2;
+
+                    if (freshRoot)
+                    {
+                        g_frame.hdrReductionStep = 1;
+                        g_frame.hdrReductionLastIdentity =
+                            output.identity;
+                        g_frame.hdrReductionLastWidth =
+                            output.shape.width;
+                        g_frame.hdrReductionLastHeight =
+                            output.shape.height;
+                    }
+
                     continue;
                 }
 
