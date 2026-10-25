@@ -70,7 +70,7 @@ namespace gzfx::diagnostics::telemetry_listener
             std::uint64_t qpc = 0;
             std::uint64_t frame = 0;
             std::uint64_t ordinal = 0;
-            std::array<std::uint64_t, 40> u{};
+            std::array<std::uint64_t, 64> u{};
             std::array<double, 4> d{};
         };
 
@@ -733,27 +733,48 @@ namespace gzfx::diagnostics::telemetry_listener
             event.u[19] =
                 pass.writeHash;
             event.u[20] =
-                pass.constantBufferHash;
+                pass.readResourceCount;
             event.u[21] =
+                pass.writeResourceCount;
+
+            for (std::size_t i = 0;
+                 i < pass.readResources.size();
+                 ++i)
+            {
+                event.u[22 + i] =
+                    pass.readResources[i];
+            }
+
+            for (std::size_t i = 0;
+                 i < pass.writeResources.size();
+                 ++i)
+            {
+                event.u[30 + i] =
+                    pass.writeResources[i];
+            }
+
+            event.u[38] =
+                pass.constantBufferHash;
+            event.u[39] =
                 pass.samplerHash;
-            event.u[22] =
+            event.u[40] =
                 pass.blendHash;
-            event.u[23] =
+            event.u[41] =
                 pass.depthHash;
-            event.u[24] =
+            event.u[42] =
                 pass.rasterHash;
-            event.u[25] =
+            event.u[43] =
                 pass.topology;
-            event.u[26] =
+            event.u[44] =
                 pass.viewportWidth;
-            event.u[27] =
+            event.u[45] =
                 pass.viewportHeight;
 
             for (std::size_t i = 0;
                  i < pass.args.size();
                  ++i)
             {
-                event.u[28 + i] =
+                event.u[46 + i] =
                     pass.args[i];
             }
 
@@ -1158,7 +1179,7 @@ namespace gzfx::diagnostics::telemetry_listener
                 files.pipeline,
                 g_sessionRoot /
                     name.str(),
-                "sequence,qpc,frame,first_ordinal,last_ordinal,repeat,kind,draw_kind,vs,hs,ds,gs,ps,cs,rtv0,rtv1,rtv2,rtv3,dsv,om_uav_hash,cs_uav_hash,read_hash,write_hash,cb_hash,sampler_hash,blend_hash,depth_hash,raster_hash,topology,viewport_width,viewport_height,arg0,arg1,arg2,arg3\n");
+                "sequence,qpc,frame,first_ordinal,last_ordinal,repeat,kind,draw_kind,vs,hs,ds,gs,ps,cs,rtv0,rtv1,rtv2,rtv3,dsv,om_uav_hash,cs_uav_hash,read_hash,write_hash,read_count,write_count,read0,read1,read2,read3,read4,read5,read6,read7,write0,write1,write2,write3,write4,write5,write6,write7,cb_hash,sampler_hash,blend_hash,depth_hash,raster_hash,topology,viewport_width,viewport_height,arg0,arg1,arg2,arg3\n");
         }
 
         bool OpenWriterFiles(
@@ -1455,10 +1476,20 @@ namespace gzfx::diagnostics::telemetry_listener
                 row
                     << event.sequence << ","
                     << event.qpc << ","
-                    << event.frame;
+                    << event.frame
+                    << ","
+                    << event.u[2]
+                    << ","
+                    << event.u[3]
+                    << ","
+                    << event.u[4]
+                    << ","
+                    << event.u[0]
+                    << ","
+                    << event.u[1];
 
-                for (std::size_t i = 2;
-                     i < 32;
+                for (std::size_t i = 5;
+                     i <= 49;
                      ++i)
                 {
                     row
