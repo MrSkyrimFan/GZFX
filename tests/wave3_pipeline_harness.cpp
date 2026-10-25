@@ -896,6 +896,9 @@ int wmain(int argc, wchar_t** argv)
 
     std::string statusFinal = statusC;
 
+    std::array<std::uint64_t, 5>
+        lateListIdentities{};
+
     for (int frame = 3;
          frame < 35;
          ++frame)
@@ -905,6 +908,135 @@ int wmain(int argc, wchar_t** argv)
                 (frame & 1) == 0
                     ? normal
                     : normalB);
+    }
+
+    if (lateStackActive)
+    {
+        ID3D11DeviceContext* deferredContext =
+            nullptr;
+
+        if (FAILED(
+                device->CreateDeferredContext(
+                    0,
+                    &deferredContext)) ||
+            deferredContext == nullptr)
+        {
+            return 19;
+        }
+
+        std::array<ID3D11CommandList*, 5>
+            lists{};
+
+        // List 1: state + explicit copy, then FALSE resets.
+        deferredContext->OMSetRenderTargets(
+            1,
+            &tonemapCurrent.rtv,
+            nullptr);
+
+        deferredContext->PSSetShaderResources(
+            0,
+            1,
+            &taaHistory.srv);
+
+        deferredContext->Draw(3, 0);
+
+        deferredContext->CopyResource(
+            tonemapCurrent.texture,
+            taaColor.texture);
+
+        if (FAILED(
+                deferredContext->
+                    FinishCommandList(
+                        FALSE,
+                        &lists[0])) ||
+            lists[0] == nullptr)
+        {
+            return 20;
+        }
+
+        // List 2: no rebind. FALSE must have reset tracked state.
+        deferredContext->Draw(3, 0);
+
+        if (FAILED(
+                deferredContext->
+                    FinishCommandList(
+                        FALSE,
+                        &lists[1])) ||
+            lists[1] == nullptr)
+        {
+            return 21;
+        }
+
+        // List 3: bind target and finish TRUE.
+        deferredContext->OMSetRenderTargets(
+            1,
+            &tonemapCurrent.rtv,
+            nullptr);
+
+        deferredContext->Draw(3, 0);
+
+        if (FAILED(
+                deferredContext->
+                    FinishCommandList(
+                        TRUE,
+                        &lists[2])) ||
+            lists[2] == nullptr)
+        {
+            return 22;
+        }
+
+        // List 4: no rebind. TRUE must preserve tracked state.
+        deferredContext->Draw(3, 0);
+
+        if (FAILED(
+                deferredContext->
+                    FinishCommandList(
+                        FALSE,
+                        &lists[3])) ||
+            lists[3] == nullptr)
+        {
+            return 23;
+        }
+
+        // List 5: nested playback of a known child list.
+        deferredContext->ExecuteCommandList(
+            lists[2],
+            TRUE);
+
+        if (FAILED(
+                deferredContext->
+                    FinishCommandList(
+                        FALSE,
+                        &lists[4])) ||
+            lists[4] == nullptr)
+        {
+            return 24;
+        }
+
+        for (std::size_t i = 0;
+             i < lists.size();
+             ++i)
+        {
+            lateListIdentities[i] =
+                CanonicalIdentity(
+                    lists[i]);
+
+            context->ExecuteCommandList(
+                lists[i],
+                TRUE);
+        }
+
+        swap->Present(0, 0);
+
+        for (auto* list : lists)
+        {
+            if (list != nullptr)
+            {
+                list->Release();
+            }
+        }
+
+        deferredContext->Release();
     }
 
     const bool executed =
