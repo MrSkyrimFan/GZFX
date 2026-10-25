@@ -2739,6 +2739,31 @@ namespace gzfx::diagnostics
             return pid == GetCurrentProcessId();
         }
 
+        bool IsPrimaryPresentSwap(
+            IDXGISwapChain* const swap)
+        {
+            if (swap == nullptr)
+            {
+                return false;
+            }
+
+            std::scoped_lock lock(g_mutex);
+
+            if (g_primarySwap != nullptr)
+            {
+                return swap == g_primarySwap;
+            }
+
+            DXGI_SWAP_CHAIN_DESC description{};
+
+            return
+                SUCCEEDED(
+                    swap->GetDesc(
+                        &description)) &&
+                IsProcessWindow(
+                    description.OutputWindow);
+        }
+
         void AcquireSwapChain(IDXGISwapChain* swap)
         {
             if (!swap || g_primarySwap)
@@ -3199,15 +3224,23 @@ namespace gzfx::diagnostics
 
         HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain* swap, UINT sync, UINT flags)
         {
+            const bool primary =
+                IsPrimaryPresentSwap(
+                    swap);
+
             const std::uint64_t frame =
                 g_frame;
 
             const std::uint64_t epoch =
-                g_presentEpochs.fetch_add(
-                    1,
-                    std::memory_order_relaxed) + 1;
+                primary
+                    ? g_presentEpochs.fetch_add(
+                        1,
+                        std::memory_order_relaxed) + 1
+                    : 0;
 
-            telemetry_listener::OnPresentTimeline(
+            if (primary)
+            {
+                telemetry_listener::OnPresentTimeline(
                 frame,
                 epoch,
                 telemetry_listener::PresentPhase::HookEnter,
@@ -3216,46 +3249,53 @@ namespace gzfx::diagnostics
                 flags,
                 S_OK);
 
-            telemetry_listener::OnPresentTimeline(
-                frame,
-                epoch,
-                telemetry_listener::PresentPhase::CallbacksBegin,
-                GetCurrentThreadId(),
-                sync,
-                flags,
-                S_OK);
+                telemetry_listener::OnPresentTimeline(
+                    frame,
+                    epoch,
+                    telemetry_listener::PresentPhase::CallbacksBegin,
+                    GetCurrentThreadId(),
+                    sync,
+                    flags,
+                    S_OK);
+            }
 
             Safe([&]{ OnPresent(swap); });
 
-            telemetry_listener::OnPresentTimeline(
-                frame,
-                epoch,
-                telemetry_listener::PresentPhase::CallbacksEnd,
-                GetCurrentThreadId(),
-                sync,
-                flags,
-                S_OK);
+            if (primary)
+            {
+                telemetry_listener::OnPresentTimeline(
+                    frame,
+                    epoch,
+                    telemetry_listener::PresentPhase::CallbacksEnd,
+                    GetCurrentThreadId(),
+                    sync,
+                    flags,
+                    S_OK);
 
-            telemetry_listener::OnPresentTimeline(
-                frame,
-                epoch,
-                telemetry_listener::PresentPhase::BeforeOriginalPresent,
-                GetCurrentThreadId(),
-                sync,
-                flags,
-                S_OK);
+                telemetry_listener::OnPresentTimeline(
+                    frame,
+                    epoch,
+                    telemetry_listener::PresentPhase::BeforeOriginalPresent,
+                    GetCurrentThreadId(),
+                    sync,
+                    flags,
+                    S_OK);
+            }
 
             const HRESULT result =
                 g_present(swap, sync, flags);
 
-            telemetry_listener::OnPresentTimeline(
-                frame,
-                epoch,
-                telemetry_listener::PresentPhase::AfterOriginalPresent,
-                GetCurrentThreadId(),
-                sync,
-                flags,
-                result);
+            if (primary)
+            {
+                telemetry_listener::OnPresentTimeline(
+                    frame,
+                    epoch,
+                    telemetry_listener::PresentPhase::AfterOriginalPresent,
+                    GetCurrentThreadId(),
+                    sync,
+                    flags,
+                    result);
+            }
 
             return result;
         }
@@ -3266,51 +3306,63 @@ namespace gzfx::diagnostics
             UINT flags,
             const DXGI_PRESENT_PARAMETERS* params)
         {
+            const bool primary =
+                IsPrimaryPresentSwap(
+                    swap);
+
             const std::uint64_t frame =
                 g_frame;
 
             const std::uint64_t epoch =
-                g_presentEpochs.fetch_add(
-                    1,
-                    std::memory_order_relaxed) + 1;
+                primary
+                    ? g_presentEpochs.fetch_add(
+                        1,
+                        std::memory_order_relaxed) + 1
+                    : 0;
 
-            telemetry_listener::OnPresentTimeline(
-                frame,
-                epoch,
-                telemetry_listener::PresentPhase::HookEnter,
+            if (primary)
+            {
+                telemetry_listener::OnPresentTimeline(
+                    frame,
+                    epoch,
+                    telemetry_listener::PresentPhase::HookEnter,
                 GetCurrentThreadId(),
                 sync,
                 flags,
                 S_OK);
 
-            telemetry_listener::OnPresentTimeline(
-                frame,
-                epoch,
-                telemetry_listener::PresentPhase::CallbacksBegin,
-                GetCurrentThreadId(),
-                sync,
-                flags,
-                S_OK);
+                telemetry_listener::OnPresentTimeline(
+                    frame,
+                    epoch,
+                    telemetry_listener::PresentPhase::CallbacksBegin,
+                    GetCurrentThreadId(),
+                    sync,
+                    flags,
+                    S_OK);
+            }
 
             Safe([&]{ OnPresent(swap); });
 
-            telemetry_listener::OnPresentTimeline(
-                frame,
-                epoch,
-                telemetry_listener::PresentPhase::CallbacksEnd,
-                GetCurrentThreadId(),
-                sync,
-                flags,
-                S_OK);
+            if (primary)
+            {
+                telemetry_listener::OnPresentTimeline(
+                    frame,
+                    epoch,
+                    telemetry_listener::PresentPhase::CallbacksEnd,
+                    GetCurrentThreadId(),
+                    sync,
+                    flags,
+                    S_OK);
 
-            telemetry_listener::OnPresentTimeline(
-                frame,
-                epoch,
-                telemetry_listener::PresentPhase::BeforeOriginalPresent,
-                GetCurrentThreadId(),
-                sync,
-                flags,
-                S_OK);
+                telemetry_listener::OnPresentTimeline(
+                    frame,
+                    epoch,
+                    telemetry_listener::PresentPhase::BeforeOriginalPresent,
+                    GetCurrentThreadId(),
+                    sync,
+                    flags,
+                    S_OK);
+            }
 
             const HRESULT result =
                 g_present1(
@@ -3319,14 +3371,17 @@ namespace gzfx::diagnostics
                     flags,
                     params);
 
-            telemetry_listener::OnPresentTimeline(
-                frame,
-                epoch,
-                telemetry_listener::PresentPhase::AfterOriginalPresent,
-                GetCurrentThreadId(),
-                sync,
-                flags,
-                result);
+            if (primary)
+            {
+                telemetry_listener::OnPresentTimeline(
+                    frame,
+                    epoch,
+                    telemetry_listener::PresentPhase::AfterOriginalPresent,
+                    GetCurrentThreadId(),
+                    sync,
+                    flags,
+                    result);
+            }
 
             return result;
         }
