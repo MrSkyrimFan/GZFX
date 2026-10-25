@@ -466,34 +466,15 @@ namespace
         }
     }
 
-    void ResolveGzfxExports() noexcept
+    void ResolveExportsFromLoadedGzfx(
+        HMODULE const module) noexcept
     {
-        const fs::path proxyPath =
-            ModulePath(
-                g_proxyModule);
-
-        if (proxyPath.empty())
+        if (module == nullptr)
         {
             return;
         }
 
-        EmitEvent(
-            "gzfx_load_begin");
-
-        const fs::path gzfxPath =
-            proxyPath.parent_path() /
-            L"GZFX.dll";
-
-        // LoadLibrary is intentional even when already loaded so the graphics
-        // bootstrap owns one lifetime reference through process exit.
-        g_gzfxModule =
-            LoadLibraryW(
-                gzfxPath.c_str());
-
-        if (g_gzfxModule == nullptr)
-        {
-            return;
-        }
+        g_gzfxModule = module;
 
         g_gzfxInitialize =
             reinterpret_cast<
@@ -531,6 +512,56 @@ namespace
                         "GZFX_RecordBootstrapEvent"));
 
         ReplayPendingEvents();
+    }
+
+    void ObserveExistingGzfx() noexcept
+    {
+        if (g_gzfxModule != nullptr)
+        {
+            return;
+        }
+
+        const HMODULE existing =
+            GetModuleHandleW(
+                L"GZFX.dll");
+
+        if (existing != nullptr)
+        {
+            ResolveExportsFromLoadedGzfx(
+                existing);
+        }
+    }
+
+    void ResolveGzfxExports() noexcept
+    {
+        const fs::path proxyPath =
+            ModulePath(
+                g_proxyModule);
+
+        if (proxyPath.empty())
+        {
+            return;
+        }
+
+        EmitEvent(
+            "gzfx_load_begin");
+
+        const fs::path gzfxPath =
+            proxyPath.parent_path() /
+            L"GZFX.dll";
+
+        // LoadLibrary owns one bootstrap lifetime reference through process exit.
+        HMODULE const module =
+            LoadLibraryW(
+                gzfxPath.c_str());
+
+        if (module == nullptr)
+        {
+            return;
+        }
+
+        ResolveExportsFromLoadedGzfx(
+            module);
 
         const std::uint32_t state =
             g_gzfxGetInitializationState !=
@@ -802,6 +833,8 @@ extern "C" HRESULT WINAPI D3D11CreateDevice(
                 ? *immediateContext
                 : nullptr));
 
+    ObserveExistingGzfx();
+
     if (SUCCEEDED(result) &&
         !g_insideGzfxInitialization)
     {
@@ -903,6 +936,8 @@ extern "C" HRESULT WINAPI D3D11CreateDeviceAndSwapChain(
             swapChain != nullptr
                 ? *swapChain
                 : nullptr));
+
+    ObserveExistingGzfx();
 
     if (SUCCEEDED(result) &&
         !g_insideGzfxInitialization)
