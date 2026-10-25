@@ -4114,10 +4114,30 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
             std::vector<double> absoluteErrors;
             std::vector<double> relativeErrors;
 
+            float stockFar = 0.0f;
+
+            for (const float value : stockValues)
+            {
+                if (std::isfinite(value))
+                {
+                    stockFar =
+                        std::max(
+                            stockFar,
+                            value);
+                }
+            }
+
+            const float stockFarEpsilon =
+                std::max(
+                    std::abs(stockFar) * 1.0e-5f,
+                    1.0e-4f);
+
             std::uint64_t common = 0;
             std::uint64_t gzfxOnlyCount = 0;
             std::uint64_t stockOnlyCount = 0;
             std::uint64_t bothBackground = 0;
+            std::uint64_t stockBackgroundCount = 0;
+            std::uint64_t stockGeometryCount = 0;
 
             for (std::size_t i = 0;
                  i < stockValues.size();
@@ -4128,8 +4148,26 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
 
                 const bool gzfxValid =
                     std::isfinite(gzfx) && gzfx > 0.0f;
+
+                const bool stockBackground =
+                    std::isfinite(native) &&
+                    std::abs(native - stockFar) <=
+                        stockFarEpsilon;
+
                 const bool stockValid =
-                    std::isfinite(native) && native > 0.0f;
+                    std::isfinite(native) &&
+                    native > 0.0f &&
+                    !stockBackground;
+
+                if (stockBackground)
+                {
+                    ++stockBackgroundCount;
+                }
+
+                if (stockValid)
+                {
+                    ++stockGeometryCount;
+                }
 
                 if (gzfxValid && stockValid)
                 {
@@ -4197,6 +4235,10 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
             out
                 << "status=complete\n"
                 << "frame=" << frame << "\n"
+                << "stock_far_value=" << stockFar << "\n"
+                << "stock_far_epsilon=" << stockFarEpsilon << "\n"
+                << "stock_background_pixels=" << stockBackgroundCount << "\n"
+                << "stock_geometry_pixels=" << stockGeometryCount << "\n"
                 << "common_geometry=" << common << "\n"
                 << "gzfx_only_geometry=" << gzfxOnlyCount << "\n"
                 << "stock_only_geometry=" << stockOnlyCount << "\n"
