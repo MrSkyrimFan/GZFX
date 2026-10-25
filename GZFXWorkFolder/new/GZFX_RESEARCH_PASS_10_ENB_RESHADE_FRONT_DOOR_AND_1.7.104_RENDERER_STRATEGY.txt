@@ -1,0 +1,1200 @@
+GZFX RESEARCH PASS 10
+ENB + RESHADE 6.8 SIDE-BY-SIDE, D3D FRONT-DOOR TIMING, AND SKYRIM 1.7.104 STRATEGY
+Research date: October 25, 2026
+Status: RESEARCH COMPLETE
+Purpose: Use the 0.0.26 field evidence and mature ENB/ReShade architectures to determine the next renderer-ownership strategy.
+
+CONTROLLING DATA:
+    GZFXWorkFolder/new/GZFX_0.0.26_RENDERER_IDENTITY_ENGINE_EPOCH_FIELD_FINDINGS.txt
+
+CONTROLLING HISTORY:
+    GZFXWorkFolder/old/GZFX_RESEARCH_PASS_7_RENDER_TIMELINE_ENGINE_ANCHORS_AND_LATE_STACK_CLOSURE.txt
+    GZFXWorkFolder/old/GZFX_RESEARCH_PASS_8_ENB_3DMIGOTO_SKYRIM_SHADER_IDENTITY_ARCHITECTURE.txt
+    GZFXWorkFolder/old/GZFX_RESEARCH_PASS_9_RUNTIME_SAFE_ENGINE_EPOCHS_AND_FINAL_ADVERSARIAL_REVIEW.txt
+
+======================================================================
+1. EXECUTIVE CONCLUSION
+======================================================================
+
+Yes: inspecting ReShade side-by-side with ENB was useful and materially changes
+the next architecture recommendation.
+
+The two frameworks solve different halves of the problem exceptionally well.
+
+ENB demonstrates:
+
+    deep Skyrim-specific renderer semantics;
+    graphics-front-door ownership;
+    persistent wrapped D3D objects;
+    explicit pre/post display lifecycle;
+    a multi-stage HDR / adaptation / post / water effect architecture;
+    shader-specific Skyrim knowledge.
+
+ReShade demonstrates:
+
+    generic D3D11/DXGI lifecycle correctness;
+    persistent wrapper identity;
+    complete deferred-context / command-list lifecycle;
+    explicit present AND finish-present events;
+    resource/pipeline creation lifecycle;
+    robust third-party-hook coexistence machinery;
+    delayed module-hook installation;
+    API-agnostic effect/runtime boundaries.
+
+The key shared architecture is:
+
+    graphics API front door
+    ->
+    persistent identity
+    ->
+    explicit object lifecycle
+    ->
+    explicit frame/present lifecycle
+    ->
+    game-specific semantics layered on top.
+
+GZFX 0.0.26 now proves that its current D3D observation architecture can
+provide stable identities and strong semantic reconstruction.
+
+However, the field DATA exposes one remaining architectural weakness:
+
+    GZFX.dll itself is not guaranteed to initialize at the graphics front door.
+
+The current dinput8 bootstrap DLL is loaded early, but it lazy-loads GZFX.dll
+only from Prepare(), which is called when Skyrim invokes one of the exported
+DirectInput functions.
+
+Therefore some long-lived core renderer resources can exist before GZFX's D3D
+creation hooks arm.
+
+This is consistent with 0.0.26 field evidence:
+
+    23,230 resources were observed at creation;
+    16,126 shaders were observed at creation;
+    late Skyrim image-space shaders have strong SkyrimSE.exe provenance;
+    yet important long-lived core semantic targets remain
+        unknown/preexisting.
+
+This does NOT justify moving heavy GZFX initialization into DllMain.
+
+Microsoft explicitly warns that DllMain runs under the loader lock and that
+LoadLibrary/LoadLibraryEx must not be called from there.
+
+The strongest next architecture is therefore a SAFE graphics-front-door
+bootstrap, not a loader-lock hack.
+
+Research recommendation for the next BLUEPRINT:
+
+    1. preserve the proven GZFX renderer core;
+    2. add a minimal graphics-front-door bootstrap mechanism that invokes
+       GZFX initialization from a real D3D11/DXGI API call, outside DllMain;
+    3. retain dinput8 for input/bootstrap compatibility where useful;
+    4. design explicit proxy chaining/coexistence rather than assuming GZFX is
+       the only graphics proxy;
+    5. add a verified Skyrim 1.7.104 engine profile;
+    6. repair the two now-proven HDR detector defects;
+    7. lock global TAA only after blueprint acceptance rules are written;
+    8. keep ENB and ReShade as architectural references, not code donors.
+
+This is no longer broad renderer discovery.
+
+It is renderer-entry, version-profile, and semantic-contract hardening.
+
+======================================================================
+2. USER-SUPPLIED RESHADE ARTIFACT
+======================================================================
+
+Uploaded:
+
+    ReShade_Setup_6.8.0.exe
+
+Bytes:
+
+    4,075,064
+
+SHA256:
+
+    207aea16205fbf952bc8fe1879966672454cf04002e7ad34237c7990a5b3c0b4
+
+The installer contains an appended ZIP payload.
+
+Contained files:
+
+    ReShade32.dll          4,136,216 bytes
+    ReShade32.json               526 bytes
+    ReShade32_XR.json            326 bytes
+    ReShade64.dll          5,255,448 bytes
+    ReShade64.json               526 bytes
+    ReShade64_XR.json            326 bytes
+
+Extracted ReShade64.dll SHA256:
+
+    b2945c29e7095491a901746b400e58db9b1592ab092bacf2a888ce37f02d08da
+
+The supplied setup version corresponds to the public ReShade 6.8.0 source/tag.
+
+Primary public source reference:
+
+    https://github.com/crosire/reshade/tree/v6.8.0
+
+The investigation used:
+
+    supplied installer structure;
+    public v6.8.0 ReShade source;
+    public add-on API;
+    installer source.
+
+No proprietary issue exists here: ReShade is public source.
+
+======================================================================
+3. RESHADE INSTALLATION / GRAPHICS FRONT DOOR
+======================================================================
+
+ReShade's 6.8 setup selects a graphics proxy module based on the target API.
+
+For D3D11:
+
+    modulePath = d3d11.dll
+
+For DXGI:
+
+    modulePath = dxgi.dll
+
+For other APIs it uses their corresponding graphics DLL names.
+
+For a DirectX target, the setup extracts:
+
+    ReShade64.dll
+
+under the chosen proxy filename next to the application.
+
+The installer explicitly treats these filenames as mutually conflicting ReShade
+proxy installations:
+
+    d3d9.dll
+    d3d10.dll
+    d3d11.dll
+    d3d12.dll
+    dxgi.dll
+    opengl32.dll
+
+It also supports a proxy-chain configuration:
+
+    [PROXY]
+    EnableProxyLibrary
+    ProxyLibrary
+
+Research lesson:
+
+    ReShade gets control because the application asks for the graphics API.
+
+This is not dependent on the game first touching an unrelated input subsystem.
+
+======================================================================
+4. RESHADE PERSISTENT D3D11 WRAPPER MODEL
+======================================================================
+
+ReShade's public D3D11 implementation wraps persistent interfaces.
+
+Examples:
+
+    D3D11Device
+    D3D11DeviceContext
+    D3D11CommandList
+    DXGISwapChain
+
+CreateDeferredContext:
+
+    calls the original device;
+    obtains the real deferred context;
+    creates a ReShade D3D11DeviceContext proxy;
+    returns the proxy to the application.
+
+The application therefore continues calling through ReShade for the entire
+lifetime of that context.
+
+CreateVertexShader / CreatePixelShader / other shader creation:
+
+    receive the real shader bytecode;
+    expose a pipeline/shader description to the add-on layer;
+    call original creation;
+    emit pipeline initialization lifecycle events.
+
+The architecture maintains identity from birth rather than discovering it only
+when an object later appears bound.
+
+This independently validates GZFX 0.0.26's creation-time identity direction.
+
+======================================================================
+5. RESHADE COMMAND-LIST LIFECYCLE
+======================================================================
+
+ReShade's D3D11 deferred-command lifecycle is explicit.
+
+FinishCommandList:
+
+    emits close_command_list;
+    calls the original FinishCommandList;
+    wraps the returned ID3D11CommandList;
+    associates the returned command list with the recording context;
+    emits execute_secondary_command_list relationship evidence;
+    emits reset_command_list when RestoreDeferredContextState is false.
+
+ExecuteCommandList:
+
+    receives the wrapped list;
+    emits execute_secondary_command_list;
+    unwraps to the original D3D11 command list;
+    executes the original list;
+    emits default-state behavior when RestoreContextState is false.
+
+Immediate-context Flush:
+
+    emits execute_command_list for the immediate command list.
+
+Research lesson:
+
+    command-list identity is a lifecycle contract, not a pointer classification.
+
+GZFX 0.0.26 reached the same conceptual model independently and the field
+session confirmed its ownership repair:
+
+    26,370 / 26,370 lists = GZFX-owned
+    external = 0.
+
+Therefore ReShade supports preserving the current GZFX command-list architecture
+rather than replacing it.
+
+======================================================================
+6. RESHADE PRESENT LIFECYCLE
+======================================================================
+
+ReShade's DXGI swap-chain wrapper explicitly separates:
+
+    on_present(...)
+    ->
+    original IDXGISwapChain::Present / Present1
+    ->
+    on_finish_present(hr)
+
+Its public add-on API exposes both:
+
+    addon_event::present
+    addon_event::finish_present
+
+It also has distinct ReShade-effect lifecycle events:
+
+    reshade_begin_effects
+    reshade_finish_effects
+    reshade_present
+
+This closely matches the 0.0.26 GZFX correction:
+
+    hook_enter
+    callbacks_begin
+    callbacks_end
+    before_original_present
+    original Present
+    after_original_present.
+
+Research conclusion:
+
+    0.0.26's physical Present epoch model is correct and should be retained.
+
+The old GZFX UiPresent semantic event must remain separate from physical
+presentation.
+
+======================================================================
+7. RESHADE THIRD-PARTY HOOK COMPATIBILITY
+======================================================================
+
+ReShade contains explicit machinery for coexistence with other hook layers.
+
+Its hook manager:
+
+    supports queued/batched hook application;
+
+    supports function hooks and vtable hooks;
+
+    notices when a vtable entry has been replaced by a third party;
+
+    contains explicit comments around third-party replacements such as NVIDIA
+    Streamline;
+
+    installs delayed hooks when target DLLs load;
+
+    uses DLL-load notifications where available;
+
+    falls back to LoadLibraryA/W hooks;
+
+    contains Steam-overlay-specific ordering logic so hooks can be installed
+    after the overlay when necessary.
+
+This is especially relevant if GZFX moves to an earlier graphics-front-door
+bootstrap.
+
+A production graphics framework cannot assume:
+
+    "we own d3d11.dll and nobody else exists."
+
+It needs explicit chain/coexistence policy.
+
+======================================================================
+8. ENB VS RESHADE — SIDE-BY-SIDE
+======================================================================
+
+ENB
+
+Primary strength:
+    deep Skyrim-specific graphics ownership.
+
+Front door:
+    local d3d11.dll proxy.
+
+Identity:
+    persistent wrapped D3D objects;
+    game-specific shader knowledge.
+
+Game semantics:
+    strong.
+
+Public Skyrim-specific stages exposed through shipped SDK/FX include:
+    HDR prepass
+    depth/DOF
+    adaptation
+    bloom
+    lens
+    main HDR/color transform
+    LDR postpass
+    underwater.
+
+Frame lifecycle:
+    EndFrame before display
+    BeginFrame after display.
+
+Deep feature ownership publicly documented:
+    AO/indirect
+    water
+    shadows
+    reflections
+    materials
+    particles
+    HDR/post
+    terrain/grass/etc.
+
+Implementation transparency:
+    proprietary core.
+    use public behavior/SDK/FX facts only.
+
+----------------------------------------------------------------------
+ReShade 6.8
+
+Primary strength:
+    generic graphics-API lifecycle correctness and compatibility.
+
+Front door:
+    graphics proxy selected per API;
+    D3D11 -> d3d11.dll.
+
+Identity:
+    persistent device/context/swapchain/command-list wrappers.
+
+Game semantics:
+    generic by default.
+
+Public lifecycle:
+    resource creation/init/destroy
+    pipeline creation/init/destroy
+    command-list reset/close/execute
+    secondary command-list execute
+    swapchain init/reset/destroy
+    present
+    finish_present
+    effect begin/end/present.
+
+Compatibility:
+    mature delayed-hook / proxy / third-party coexistence machinery.
+
+Implementation transparency:
+    public source.
+
+----------------------------------------------------------------------
+SHARED DESIGN PRINCIPLES
+
+Both effectively rely on:
+
+    graphics-front-door interception;
+    persistent graphics object identity;
+    explicit state/lifecycle tracking;
+    deterministic frame/present boundaries;
+    proxy/chaining concepts.
+
+----------------------------------------------------------------------
+WHAT GZFX SHOULD LEARN
+
+From ENB:
+    Skyrim semantics;
+    multi-stage owned renderer architecture;
+    deep feature integration.
+
+From ReShade:
+    lifecycle rigor;
+    proxy/wrapper timing;
+    command-list model;
+    present model;
+    compatibility/hook coexistence.
+
+GZFX's desired destination is:
+
+    ENB-level Skyrim semantic ownership
+    +
+    ReShade-level lifecycle/compatibility rigor
+    +
+    GZFX's own independent deterministic architecture.
+
+======================================================================
+9. GZFX CURRENT BOOTSTRAP — IMPORTANT TIMING FACT
+======================================================================
+
+Current package:
+
+    SkyrimSE.exe
+    -> local dinput8.dll
+    -> GZFX.dll
+
+But source review shows an important timing distinction.
+
+bootstrap/dinput8_proxy.cpp:
+
+DllMain on DLL_PROCESS_ATTACH only:
+
+    stores g_proxyModule;
+    calls DisableThreadLibraryCalls.
+
+It does NOT:
+
+    LoadLibrary(GZFX.dll);
+    initialize GZFX;
+    arm D3D hooks.
+
+GZFX is lazy-loaded through:
+
+    exported dinput8 function
+    ->
+    Prepare()
+    ->
+    EnsureRealDInput()
+    ->
+    EnsureGzfx()
+    ->
+    LoadGzfx()
+    ->
+    LoadLibraryW(GZFX.dll)
+    ->
+    GZFX_Initialize()
+
+Therefore the actual renderer instrumentation start time is:
+
+    first use of a dinput8 exported function
+
+not:
+
+    dinput8 proxy DLL load time.
+
+This is a meaningful difference from ENB/ReShade.
+
+They are activated by the graphics API entry path itself.
+
+======================================================================
+10. WHY THIS MATTERS TO 0.0.26 FIELD DATA
+======================================================================
+
+The 0.0.26 creation hooks clearly worked.
+
+They captured:
+
+    16,126 shaders
+    23,230 resources
+
+and stable SkyrimSE.exe shader hashes throughout the late stack.
+
+Yet several long-lived semantic render targets remain:
+
+    unknown/preexisting.
+
+The most plausible architecture-level explanation is:
+
+    those objects were created before GZFX.dll initialized and armed the D3D
+    creation hooks.
+
+This is not yet absolute proof of exact startup chronology.
+
+A future implementation should record:
+
+    bootstrap load QPC
+    GZFX initialization QPC
+    D3D11 module load QPC
+    first D3D11CreateDevice call QPC
+    first observed resource/shader creation
+
+so startup ordering becomes measured.
+
+But the source architecture and field symptom are consistent.
+
+======================================================================
+11. DO NOT MOVE HEAVY INITIALIZATION INTO DLLMAIN
+======================================================================
+
+A naive response would be:
+
+    "just LoadLibrary GZFX.dll from dinput8 DllMain."
+
+Do NOT do that.
+
+Microsoft's DLL guidance states:
+
+    DllMain executes while the process loader lock is held.
+
+Microsoft explicitly warns against:
+
+    LoadLibrary
+    LoadLibraryEx
+
+inside DllMain because it can deadlock or crash.
+
+It recommends minimizing DllMain and deferring significant initialization.
+
+Therefore:
+
+    current minimal dinput8 DllMain is good loader-lock discipline.
+
+The next architecture must obtain earlier graphics timing WITHOUT doing unsafe
+heavy work under loader lock.
+
+Microsoft references:
+
+    https://learn.microsoft.com/windows/win32/Dlls/dynamic-link-library-best-practices
+    https://learn.microsoft.com/windows/win32/Dlls/dllmain
+
+======================================================================
+12. SAFE GRAPHICS-FRONT-DOOR OPTIONS
+======================================================================
+
+Research ranks the options as follows.
+
+----------------------------------------------------------------------
+OPTION A — MINIMAL D3D11 FRONT-DOOR PROXY / BOOTSTRAP
+
+Shape:
+
+    SkyrimSE.exe
+    -> GZFX d3d11.dll bootstrap
+    -> first exported D3D11 API call
+    -> initialize GZFX OUTSIDE DllMain
+    -> forward to real/chained D3D11
+
+Advantages:
+
+    earliest deterministic renderer entry;
+    captures device/resources/shaders from birth;
+    same proven architectural class as ENB/ReShade;
+    cleanly outside loader-lock once the exported D3D call is invoked;
+    directly solves preexisting core-resource problem.
+
+Risks:
+
+    filename collision with ENB/ReShade;
+    proxy chaining complexity;
+    additional package/bootstrap component;
+    COM/API forwarding correctness must be extremely robust.
+
+Mitigation:
+
+    implement explicit chain support;
+    keep the bootstrap tiny;
+    forward all exports faithfully;
+    test with system D3D11 and known proxy-chain arrangements;
+    do not move renderer logic into the shim.
+
+Research rank:
+
+    STRONGEST ARCHITECTURAL OPTION
+
+----------------------------------------------------------------------
+OPTION B — EARLIER DINPUT8-BASED THUNK / IMPORT PATCH
+
+Concept:
+
+    keep dinput8 as the only proxy;
+    install only a tiny early D3D interception thunk before GZFX.dll loads;
+    thunk lazily initializes GZFX on first graphics API call.
+
+Potential advantage:
+
+    avoids claiming d3d11.dll filename.
+
+Problems:
+
+    to beat resource creation, the patch itself must be installed before the
+    first D3D call;
+    doing PE/IAT patching from DllMain increases loader-lock complexity;
+    implementation becomes a custom miniature loader/hook system inside the
+    bootstrap;
+    harder to reason about than a graphics proxy.
+
+Research rank:
+
+    POSSIBLE BUT NOT PREFERRED WITHOUT STRONGER NEED
+
+----------------------------------------------------------------------
+OPTION C — KEEP CURRENT LAZY DINPUT BOOTSTRAP
+
+Advantages:
+
+    already proven;
+    least disruptive;
+    compatible with graphics proxies.
+
+Disadvantage:
+
+    cannot guarantee observation of core renderer-object birth.
+
+This may be acceptable if GZFX can identify all required core resources later,
+but the project's long-term goal is complete renderer ownership.
+
+Research rank:
+
+    SAFE FALLBACK
+    PROBABLY INSUFFICIENT AS FINAL ARCHITECTURE
+
+----------------------------------------------------------------------
+OPTION D — HEAVY DLLMAIN INITIALIZATION
+
+Research rank:
+
+    REJECTED
+
+Reason:
+
+    loader-lock risk;
+    Microsoft explicitly warns against LoadLibrary from DllMain.
+
+======================================================================
+13. PROXY-CHAIN DESIGN IS NOT OPTIONAL IF OPTION A IS CHOSEN
+======================================================================
+
+GZFX's long-term product intends to replace ENB/ReShade graphics roles.
+
+During development and for user compatibility, graphics-proxy coexistence still
+matters.
+
+Both ENB and ReShade expose proxy/chaining concepts.
+
+A GZFX graphics bootstrap should therefore be designed to:
+
+    load the real system d3d11.dll by absolute system path when no chain exists;
+
+    optionally load a configured chained proxy library;
+
+    never recursively load itself;
+
+    expose/forward the full expected D3D11 export surface;
+
+    record which downstream module actually supplies each D3D11 export;
+
+    detect known/unknown proxy layers;
+
+    fail closed rather than overwrite another local d3d11.dll silently.
+
+Possible package model:
+
+    dinput8.dll
+        retains GZFX input interception
+
+    optional/new d3d11.dll
+        renderer bootstrap only
+
+    GZFX.dll
+        all actual renderer logic
+
+    configurable chain filename
+        e.g. d3d11_gzfx_chain.dll
+
+The exact filename/config is a BLUEPRINT decision, not established here.
+
+======================================================================
+14. RESHADE DOES NOT REPLACE SKYRIM SEMANTIC RESEARCH
+======================================================================
+
+ReShade solves the generic graphics API problem exceptionally well.
+
+It does NOT inherently tell us:
+
+    this is Skyrim global TAA;
+    this is Skyrim water temporal;
+    this is Skyrim HDR adaptation;
+    this is the specific pre-UI Skyrim engine function.
+
+Therefore ReShade cannot replace:
+
+    stable Skyrim shader identities;
+    Community Shaders / public engine semantic research;
+    GZFX field evidence;
+    version-safe Skyrim engine anchors.
+
+ReShade is the lifecycle reference.
+
+ENB/Community Shaders/Nukem9-style knowledge is the Skyrim semantics reference.
+
+======================================================================
+15. SKYRIM 1.7.104 IS NOW A REAL PUBLIC ECOSYSTEM TARGET
+======================================================================
+
+The 0.0.26 field session detected:
+
+    Skyrim 1.7.104.0
+
+Public ecosystem research confirms 1.7 is not an unknown/private build.
+
+Current public CommonLib work includes:
+
+    runtime constants for 1.7.104;
+    Address Library format 5 support;
+    layouts checked against 1.7.104.
+
+Address Library V5 files use:
+
+    versionlib-1-7-104-0.bin
+
+Public reports identify Steam runtime:
+
+    1.7.104.0
+
+and SKSE:
+
+    2.3.1
+
+Community Shaders release 1.9.0 explicitly added:
+
+    support Skyrim 1.7.99+
+
+Current Community Shaders renderer code still uses the semantic hooks:
+
+    Main_PostProcessing
+        REL::RelocationID(100430, 107148)
+
+    MenuManagerDrawInterfaceStart
+        REL::RelocationID(79947, 82084)
+
+for its upscaling/HDR pipeline.
+
+This is important.
+
+It means:
+
+    the post-processing and pre-UI semantic concepts survived into supported
+    1.7.x Community Shaders architecture.
+
+It does NOT mean GZFX may hardcode the old 1.6.1170 RVAs.
+
+GZFX remains SKSE-free.
+
+It must independently resolve/validate the 1.7.104 addresses.
+
+Public references:
+
+    https://github.com/community-shaders/skyrim-community-shaders/releases
+    https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Features/Upscaling.cpp
+    https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Features/HDRDisplay.cpp
+
+======================================================================
+16. COMMUNITY SHADERS 1.7 SUPPORT IS ALSO A WARNING
+======================================================================
+
+The Community Shaders 1.7 support work was not simply:
+
+    "same binary, new version number."
+
+Its public 1.7-support commit updated CommonLib and added version-aware graphics
+compatibility logic.
+
+It introduced:
+
+    detection for Skyrim 1.7.99+;
+    1.7-specific engine/layout selection;
+    shader/constant adaptations for renderer changes;
+    version-aware address resolution;
+    preflight/validation work for legacy paths.
+
+This reinforces GZFX's fail-closed policy.
+
+Do NOT assume:
+
+    1.6.1170 function body
+    ==
+    1.7.104 function body
+
+merely because a semantic Address Library ID remains conceptually related.
+
+The next GZFX engine profile must be derived/validated from 1.7.104 evidence.
+
+======================================================================
+17. RECOMMENDED 1.7.104 ENGINE-PROFILE RESEARCH METHOD
+======================================================================
+
+GZFX should remain independent of SKSE and Address Library at runtime.
+
+For the blueprint/implementation, research recommends:
+
+A. obtain the 1.7.104 function locations from independently verifiable public
+   reverse-engineering evidence and/or the live executable;
+
+B. define exact runtime fingerprint:
+       product/file version
+       PE timestamp
+       image size
+       optional .text hash;
+
+C. locate callsite/function candidates by bounded signature scan;
+
+D. validate:
+       unique match
+       expected call opcode/control-flow shape
+       target inside SkyrimSE.exe executable section
+       surrounding byte contract
+       expected ordering against stable D3D evidence;
+
+E. hook observationally only;
+
+F. if any validation fails:
+       no engine hook
+       continue universal D3D telemetry.
+
+Potential initial 1.7.104 anchors remain:
+
+    post_processing
+    pre_ui
+
+Do not expand to dozens of engine hooks until these two are field-proven.
+
+======================================================================
+18. GLOBAL TAA CAN PROBABLY BE LOCKED WITHOUT WAITING FOR ENGINE ANCHOR
+======================================================================
+
+0.0.26 field evidence for global TAA is unusually strong.
+
+Every active scene frame:
+
+    exactly one BeforeGlobalTAA;
+    exactly one AfterGlobalTAA;
+    same stable SkyrimSE.exe PS hash;
+    same full-resolution current/history + motion + depth structure;
+    same two-output temporal pattern.
+
+Stable PS:
+
+    0xE8D58B595587B316
+
+Population:
+
+    9,103 / 9,103
+
+This no longer depends on volatile object addresses.
+
+Research finds no contradiction from ENB/ReShade/public Skyrim architecture.
+
+Recommendation for BLUEPRINT:
+
+    promote BeforeGlobalTAA / AfterGlobalTAA to locked field contracts,
+    while retaining engine-anchor correlation as independent confirmation.
+
+Do NOT hardcode the shader hash as the sole semantic rule.
+
+The contract should be:
+
+    stable hash family
+    +
+    resource structure
+    +
+    ordering
+    +
+    active-frame consistency.
+
+======================================================================
+19. HDR REDUCTION FIX IS NOW MECHANICAL
+======================================================================
+
+Research does not reveal a new unknown here.
+
+The field evidence already explains both defects.
+
+DEFECT A — interior root
+
+Current:
+    reduction root must read canonical MAIN_HDR.
+
+Required:
+    permit a verified same-frame full-resolution RGBA16F descendant of MAIN_HDR
+    to seed the reduction chain.
+
+DEFECT B — terminal identity
+
+Current:
+    commit on first <=4x4 node.
+    3x2 becomes final.
+
+Actual:
+    3x2 -> 2x2 continues.
+
+Required:
+    treat 2x2 as the terminal exposure/adaptation node for the observed family
+    or otherwise delay commit until no coherent further reduction successor
+    exists.
+
+The stable reduction PS family:
+
+    0xE137371A74F69AA2
+
+and downstream 2x2 family:
+
+    0x877420B175E42589
+
+provide independent evidence.
+
+The repair should remain structural, not hash-only.
+
+======================================================================
+20. BEFORETONEMAP / FULL-RES CURRENT
+======================================================================
+
+The pre-TAA full-resolution pass is stable on:
+
+    9,103 / 9,103 active frames.
+
+PS:
+
+    0x99D22A3D198A3B69
+
+It:
+
+    consumes final 2x2 exposure/adaptation state;
+    consumes processed HDR-family input;
+    writes full-resolution R8G8B8A8_UNORM;
+    immediately precedes global TAA.
+
+This strongly matches the expected HDR->LDR/current-image transition.
+
+Research recommendation:
+
+    after fixing the HDR terminal identity,
+    BeforeTonemap should be detected structurally from the true 2x2 terminal
+    and the stable full-resolution transition.
+
+A 1.7.104 post-processing engine epoch should then independently bound/confirm
+the semantic region.
+
+======================================================================
+21. POSTTONEMAPPREUI
+======================================================================
+
+ReShade reinforces the importance of distinguishing:
+
+    effect work before Present
+    from
+    physical Present itself.
+
+ENB reinforces a distinct LDR postpass after main HDR/color processing.
+
+Community Shaders provides a real Skyrim pre-UI semantic landmark.
+
+Therefore PostTonemapPreUi should eventually be bounded by:
+
+    AfterGlobalTAA
+    ->
+    stable late full-resolution operations / copies
+    ->
+    verified Skyrim pre_ui engine epoch
+    ->
+    physical DXGI Present later.
+
+Do NOT define PostTonemapPreUi from Present alone.
+
+The missing 1.7.104 pre-UI anchor is currently the main semantic gap.
+
+======================================================================
+22. WATERDOMAIN
+======================================================================
+
+ReShade contributes little Skyrim-specific naming here.
+
+ENB and Community Shaders remain the stronger semantic references.
+
+Current GZFX already has:
+
+    PRE_WATER_DEPTH_CURRENT
+    exterior-only volumetric boundaries
+    exterior-only water/reflection families
+    stable shader identity.
+
+Next research/blueprint should correlate stable field hashes with public Skyrim
+water names such as:
+
+    Main_RenderWaterEffects
+    ISTemporalAA_Water
+    ISWaterBlend
+    ISApplyReflections
+
+on 1.7.104.
+
+Do not use an exterior-only hash as the sole WaterDomain contract.
+
+======================================================================
+23. CLEAN SHUTDOWN REMAINS A SMALL BUT REAL ISSUE
+======================================================================
+
+The 0.0.26 archive again lacks:
+
+    telemetry_session_complete.txt
+
+even though:
+
+    enqueued == written
+    queue_depth == 0
+    dropped == 0.
+
+Research interpretation:
+
+    data through the captured status is valid;
+    user behavior cannot be blamed from current evidence;
+    shutdown/zip timing needs explicit proof.
+
+Possible next diagnostic:
+
+    a tiny session-close state file written before writer join begins;
+    a process-exit/bootstrap event;
+    clearer "safe_to_zip" marker;
+    optional final heartbeat indicating shutdown request observed.
+
+This should remain bounded and must not block DllMain.
+
+======================================================================
+24. WHAT NOT TO DO NEXT
+======================================================================
+
+Do NOT:
+
+    rewrite GZFX into ReShade;
+    rewrite GZFX into ENB;
+    adopt a full COM-wrapper rewrite merely because ReShade uses one;
+    copy ENB proprietary core behavior;
+    copy GPL Community Shaders implementation;
+    add SKSE;
+    add Address Library runtime dependency;
+    LoadLibrary GZFX.dll from dinput8 DllMain;
+    hardcode 1.6.1170 RVAs on 1.7.104;
+    restart broad shader-pointer cartography;
+    reopen the fake Skyrim deferred-list branch;
+    start new graphics features before this closure wave is blueprint-complete.
+
+======================================================================
+25. RECOMMENDED NEXT BLUEPRINT SHAPE
+======================================================================
+
+This RESEARCH record does not itself authorize implementation.
+
+A coherent next blueprint should likely contain:
+
+LANE A — SAFE EARLY GRAPHICS BOOTSTRAP
+
+    choose and implement the minimal graphics-front-door mechanism;
+    likely D3D11 proxy/bootstrap;
+    initialization from exported D3D call, not DllMain;
+    absolute system-D3D forwarding;
+    chain/coexistence support;
+    startup timing telemetry.
+
+LANE B — 1.7.104 ENGINE PROFILE
+
+    exact runtime fingerprint;
+    post_processing anchor;
+    pre_ui anchor;
+    signature/target validation;
+    fail closed.
+
+LANE C — LOCK GLOBAL TAA
+
+    promote BeforeGlobalTAA/AfterGlobalTAA from the 9,103/9,103 field proof;
+    preserve structural validation;
+    do not make hash alone authoritative.
+
+LANE D — HDR REDUCTION / TONEMAP REPAIR
+
+    full-res HDR descendant root support;
+    true 2x2 terminal identity;
+    BeforeTonemap from final exposure resource + full-res transition.
+
+LANE E — LATE SEMANTIC CORRELATION
+
+    post_processing -> HDR -> tonemap/current -> TAA -> pre_ui -> Present;
+    close PostTonemapPreUi if field evidence agrees.
+
+LANE F — WATER TARGETED CARTOGRAPHY
+
+    stable shader identities + existing pre-water semantics;
+    optional 1.7.104 water engine anchor only if needed.
+
+LANE G — SESSION COMPLETION PROOF
+
+    make safe-to-zip state unambiguous.
+
+This should remain one coherent renderer-closure wave.
+
+======================================================================
+26. SIDE-BY-SIDE FINAL VERDICT
+======================================================================
+
+The side-by-side inspection was worth doing.
+
+ENB answers:
+
+    "How does a Skyrim-specific framework get deep enough to replace major
+    portions of Skyrim graphics?"
+
+ReShade answers:
+
+    "How does a mature graphics framework make graphics-object, command-list,
+    swapchain and present lifecycle deterministic and coexist with other hooks?"
+
+0.0.26 field DATA answers:
+
+    "Which of those architecture classes are GZFX still missing?"
+
+The answer is now narrow:
+
+    GZFX already has most renderer observation/ownership machinery.
+
+The main remaining architecture gap is:
+
+    guaranteed graphics-front-door timing.
+
+The main runtime-specific gap is:
+
+    Skyrim 1.7.104 engine semantic anchors.
+
+The main detector gaps are:
+
+    HDR root/terminal correctness.
+
+The main semantic promotion opportunity is:
+
+    global TAA, which now has complete active-frame stable-identity evidence.
+
+RESEARCH PASS 10 COMPLETE.
+
+NEXT WORKFLOW PHASE:
+
+    BLUEPRINT
+
+No implementation is authorized by this research record alone.
+
+END RESEARCH PASS 10
