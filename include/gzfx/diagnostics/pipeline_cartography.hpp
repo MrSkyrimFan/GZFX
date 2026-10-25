@@ -58,6 +58,10 @@ namespace gzfx::diagnostics::pipeline_cartography
         std::uint64_t csUavHash = 0;
         std::uint64_t readHash = 0;
         std::uint64_t writeHash = 0;
+        std::array<std::uintptr_t, 8> readResources{};
+        std::array<std::uintptr_t, 8> writeResources{};
+        std::uint32_t readResourceCount = 0;
+        std::uint32_t writeResourceCount = 0;
         std::uint64_t constantBufferHash = 0;
         std::uint64_t samplerHash = 0;
 
