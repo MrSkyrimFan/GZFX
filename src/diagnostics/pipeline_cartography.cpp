@@ -640,10 +640,10 @@ namespace gzfx::diagnostics::pipeline_cartography
                     bool alreadyListed = false;
 
                     for (std::uint32_t i = 0;
-                         i < out.readResourceCount;
+                         i < uniqueReadCount;
                          ++i)
                     {
-                        if (out.readResources[i] ==
+                        if (uniqueReads[i] ==
                             binding.resource)
                         {
                             alreadyListed = true;
@@ -651,13 +651,23 @@ namespace gzfx::diagnostics::pipeline_cartography
                         }
                     }
 
-                    if (!alreadyListed &&
-                        out.readResourceCount <
-                            out.readResources.size())
+                    if (!alreadyListed)
                     {
-                        out.readResources[
-                            out.readResourceCount++] =
-                            binding.resource;
+                        if (uniqueReadCount <
+                            uniqueReads.size())
+                        {
+                            uniqueReads[
+                                uniqueReadCount++] =
+                                binding.resource;
+                        }
+
+                        if (out.retainedReadResourceCount <
+                            out.readResources.size())
+                        {
+                            out.readResources[
+                                out.retainedReadResourceCount++] =
+                                binding.resource;
+                        }
                     }
                 }
 
@@ -725,21 +735,29 @@ namespace gzfx::diagnostics::pipeline_cartography
                     }
 
                     for (std::uint32_t i = 0;
-                         i < out.writeResourceCount;
+                         i < uniqueWriteCount;
                          ++i)
                     {
-                        if (out.writeResources[i] ==
+                        if (uniqueWrites[i] ==
                             identity)
                         {
                             return;
                         }
                     }
 
-                    if (out.writeResourceCount <
+                    if (uniqueWriteCount <
+                        uniqueWrites.size())
+                    {
+                        uniqueWrites[
+                            uniqueWriteCount++] =
+                            identity;
+                    }
+
+                    if (out.retainedWriteResourceCount <
                         out.writeResources.size())
                     {
                         out.writeResources[
-                            out.writeResourceCount++] =
+                            out.retainedWriteResourceCount++] =
                             identity;
                     }
                 };
@@ -817,6 +835,34 @@ namespace gzfx::diagnostics::pipeline_cartography
                 HashMix(
                     writeHash,
                     hash);
+
+                addWriteResource(
+                    binding.resource);
+            }
+
+            out.totalReadResourceCount =
+                uniqueReadCount;
+            out.totalWriteResourceCount =
+                uniqueWriteCount;
+            out.readOverflow =
+                out.totalReadResourceCount >
+                out.retainedReadResourceCount;
+            out.writeOverflow =
+                out.totalWriteResourceCount >
+                out.retainedWriteResourceCount;
+
+            if (suppressBoundAccess)
+            {
+                out.readResources.fill(0);
+                out.writeResources.fill(0);
+                out.totalReadResourceCount = 0;
+                out.totalWriteResourceCount = 0;
+                out.retainedReadResourceCount = 0;
+                out.retainedWriteResourceCount = 0;
+                out.readOverflow = false;
+                out.writeOverflow = false;
+                readHash = 0;
+                writeHash = 0;
             }
 
             out.omUavHash =
