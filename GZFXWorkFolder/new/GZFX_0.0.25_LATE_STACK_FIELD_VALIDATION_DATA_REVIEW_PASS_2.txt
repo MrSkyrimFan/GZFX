@@ -1,0 +1,383 @@
+GZFX 0.0.25 LATE-STACK FIELD VALIDATION — DATA REVIEW PASS 2
+Review date: October 25, 2026
+Status: SECOND DATA REVIEW COMPLETE
+Purpose: adversarially re-check the 0.0.25 field session before blueprint/implementation and try to falsify Research Passes 7/8.
+
+======================================================================
+1. EXECUTIVE VERDICT
+======================================================================
+
+The second DATA review strengthens, rather than weakens, the renderer-identity
+architecture proposed by Research Passes 7 and 8.
+
+No new evidence invalidates the locked Waves 1-3 foundation.
+
+No new evidence supports treating the 0.0.25 untagged ExecuteCommandList
+population as proven Skyrim renderer work.
+
+The stronger conclusion is:
+
+    most or all of the dominant untagged command-list population is GZFX's
+    own work that bypasses renderer_execution_service ownership tagging.
+
+The real remaining field blockers are therefore narrower:
+
+    1. stable shader identity was not available in the normal field build;
+    2. the HDR detector latched onto the wrong candidate and could not recover;
+    3. the real DXGI present timeline was conflated with an internal UiPresent
+       semantic marker;
+    4. detailed deferred telemetry was gated off before the dominant untagged
+       command list executed;
+    5. engine semantic epochs were not captured.
+
+The correct next wave is a renderer identity/timeline consolidation wave,
+not more broad renderer archaeology.
+
+======================================================================
+2. RE-ANALYZED SESSION
+======================================================================
+
+Session:
+    session_20261025_140006_144216
+
+Runtime:
+    0.0.25-late-stack-cartography-closure
+
+Frames:
+    1..9290
+
+Active scene frames:
+    8,379
+
+Environment:
+    exterior 4,834
+    interior 3,545
+    transition/unknown 911
+
+Telemetry:
+    enqueued 1,227,887
+    written 1,227,887
+    dropped 0
+    queue depth at snapshot 0
+    queue high water 486 / 65,536
+
+Deferred:
+    contexts attached 7
+    lists finished 22,329
+    lists executed through untagged observer 6,420
+    opaque executions 0
+    recorded runs 81,719
+    overflows 0
+    evictions 0
+
+======================================================================
+3. OWNERSHIP ARITHMETIC
+======================================================================
+
+ownership.csv contains:
+
+    gzfx rows:   15,909
+    "skyrim":     6,420
+    total:       22,329
+
+This total exactly equals:
+
+    deferred_lists_finished = 22,329
+
+The registered GZFX owned-pass distribution is:
+
+    owned_pass 2 / Wave3TemporalGeometry: 8,379
+    owned_pass 4 / Wave4AmbientVisibility: 3,765
+    owned_pass 5 / Wave4AmbientInjection:  3,765
+
+The 8,379 Wave3TemporalGeometry executions exactly equal the 8,379 active scene
+frames.
+
+The remaining 6,420 rows were labeled "skyrim" only because
+renderer_execution_service did not contain an ownership tag for those command
+lists.
+
+That label is not proof of Skyrim ownership.
+
+======================================================================
+4. UNTAGGED COMMAND-LIST POPULATION
+======================================================================
+
+The 6,420 untagged executions occur on only:
+
+    6,376 unique frames.
+
+Distribution:
+
+    6,374 frames: exactly 1 untagged command list
+    1 frame:      4 untagged command lists
+    1 frame:     42 untagged command lists
+
+Dominant command-list identity:
+
+    0x229CC2F36D0
+
+Executions:
+
+    6,375
+
+Therefore one single reused command-list object accounts for:
+
+    99.30% of the entire untagged population.
+
+The remaining 45 executions are the already-known burst cases:
+
+    frame 852: 42
+    frame 900:  3 additional retained-list rows
+    plus the ordinary per-frame execution on frame 900.
+
+This shape is not evidence of a broad hidden deferred Skyrim renderer.
+
+It is highly consistent with:
+
+    one recurring GZFX pass
+    +
+    bounded GZFX diagnostics/capture bursts.
+
+======================================================================
+5. SOURCE CORRELATION
+======================================================================
+
+Current source independently exposes a direct GZFX command-list path:
+
+    src/render/visible_pass.cpp
+
+It records:
+
+    deferred->FinishCommandList(FALSE, &commands)
+
+then executes:
+
+    context->ExecuteCommandList(commands, TRUE)
+
+directly.
+
+It does NOT use:
+
+    renderer_execution_service::ExecuteOwned(...)
+
+and therefore cannot receive a GZFX ownership tag.
+
+Renderer Forensics calls:
+
+    semantic_authority::OnPresent(...)
+    ->
+    RenderVisiblePass(...)
+    ->
+    telemetry_listener::OnPresent(...)
+
+The visible pass therefore executes after semantic_authority has already emitted
+its current UiPresent marker.
+
+This precisely matches the dominant field ordering:
+
+    UiPresent
+    ->
+    dominant untagged ExecuteCommandList
+    ->
+    original DXGI Present later.
+
+Other GZFX diagnostic subsystems also contain direct deferred-list execution
+paths, including resource_intelligence and semantic_probe, and can explain
+bounded burst behavior.
+
+DATA verdict:
+
+    DOMINANT "SKYRIM" COMMAND LIST = HIGH-CONFIDENCE GZFX MISCLASSIFICATION.
+
+Do not spend another wave reverse engineering it as vanilla Skyrim work.
+
+======================================================================
+6. UNTAGGED EXECUTION TIMING
+======================================================================
+
+Dominant untagged command-list executions with matched UiPresent:
+
+    6,375 / 6,375
+
+All 6,375 occur after the current UiPresent telemetry event.
+
+QPC frequency:
+
+    10,000,000 Hz
+
+Observed delay after UiPresent:
+
+    minimum 676 ticks
+    median  922 ticks
+    maximum 2,591,777 ticks
+
+Median:
+
+    ~92.2 microseconds.
+
+This is exactly compatible with an additional GZFX Present-callback pass that
+runs after the semantic marker but before the original DXGI Present call.
+
+Therefore the previous late-stack frame interpretation must distinguish:
+
+    internal semantic marker
+    GZFX callback work
+    actual original Present invocation.
+
+======================================================================
+7. DEFERRED CSV GATE FAILURE RECONFIRMED
+======================================================================
+
+deferred_lists.csv contains only:
+
+    45 rows.
+
+The 6,375 dominant recurring untagged executions are absent because
+telemetry_listener disables detailed deferred emission at UiPresent.
+
+Therefore:
+
+    deferred recorder = worked
+    record lookup = worked
+    detailed transport policy = hid the dominant stream.
+
+The fix should be compact:
+
+    deferred list metadata and bounded retained deferred runs should not depend
+    on the late immediate-pipeline detail gate.
+
+81,719 total recorded runs are small enough to retain globally compared with
+the millions of immediate pipeline rows in 0.0.24.
+
+======================================================================
+8. HDR/TAA RECHECK
+======================================================================
+
+The four 0.0.25 late-stage boundaries remain absent:
+
+    HDRReduction       0
+    BeforeTonemap      0
+    BeforeGlobalTAA    0
+    AfterGlobalTAA     0
+
+The underlying structural chain remains present on all active scene frames.
+
+Terminal HDR reduction shapes:
+
+    40x23
+    10x6
+    3x2
+    2x2
+
+each occur on all 8,379 active scene frames.
+
+The full-resolution temporal family remains immediately downstream and reads:
+
+    full-resolution current color
+    full-resolution history color
+    MOTION
+    MAIN_DEPTH_CURRENT
+
+while writing two full-resolution RGBA8 outputs.
+
+Therefore:
+
+    structural HDR/TAA evidence survives;
+    0.0.25 detector logic fails.
+
+No evidence supports deleting the HDR/TAA hypotheses.
+
+======================================================================
+9. SHADER IDENTITY RECHECK
+======================================================================
+
+Current source confirms that PassTelemetry.shaderHashes[] is semantically
+overloaded.
+
+If pipeline_cartography has a creation-time bytecode hash:
+
+    shaderHashes[i] = bytecode hash
+
+otherwise:
+
+    shaderHashes[i] = shader object identity/pointer.
+
+Normal 0.0.25 field builds keep the broad device creation interception lane
+disabled.
+
+Therefore field values shaped like:
+
+    0x229...
+    0x25E...
+    0x25ECC...
+
+must not be interpreted as stable cross-run shader hashes unless creation-time
+identity explicitly proves that.
+
+This validates Research Pass 8's recommendation to split:
+
+    stable shader content identity
+    from
+    process-local object identity.
+
+======================================================================
+10. CLEAN-SHUTDOWN STATUS
+======================================================================
+
+The session still lacks:
+
+    telemetry_session_complete.txt
+
+and listener_status reports:
+
+    writer_alive=true
+    complete=false
+
+At the captured snapshot:
+
+    enqueued == written
+    queue_depth == 0
+    dropped == 0
+
+Therefore evidence remains valid through the captured endpoint.
+
+The next wave should preserve the existing heartbeat/PID evidence and improve
+the user-facing completion proof, but no current finding depends on tail data
+that was demonstrably dropped.
+
+======================================================================
+11. WHAT THE SECOND DATA PASS CHANGES
+======================================================================
+
+Stronger than Pass 1:
+
+    - the untagged command-list mystery is now highly likely to be self-inflicted
+      GZFX ownership incompleteness;
+    - the command-list population no longer justifies broad deferred-Skyrim
+      research as the next priority;
+    - creation-time shader identity is now a direct field blocker, not a nice
+      future enhancement;
+    - a real present epoch is required to prevent semantic/timeline
+      misclassification.
+
+Unchanged:
+
+    - Waves 1-3 remain closed;
+    - Wave 4 ownership architecture remains proven;
+    - final visual tuning remains deferred;
+    - HDR/TAA structural candidates remain strong;
+    - WaterDomain/PostTonemapPreUi remain unpromoted.
+
+======================================================================
+12. DATA PASS 2 ACCEPTANCE
+======================================================================
+
+DATA PASS 2 = COMPLETE.
+
+The evidence is sufficient to proceed to one final targeted research pass and
+then BLUEPRINT.
+
+No additional pre-blueprint Skyrim field run is required.
+
+END DATA REVIEW PASS 2
