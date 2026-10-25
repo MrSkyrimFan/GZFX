@@ -23,17 +23,21 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.24-renderer-telemetry-listener
-current phase: TEST / FULL-STACK DISCOVERY
+current runtime: 0.0.25-late-stack-cartography-closure
+current phase: TEST / LATE-STACK FIELD VALIDATION
 primary discovery authority: Continuous Renderer Telemetry Listener
+detailed pipeline telemetry: late-stack only by default
+deferred Skyrim command-list internals: instrumented at record time
+field-supported stage candidates: HDRReduction / BeforeTonemap / BeforeGlobalTAA / AfterGlobalTAA
+still unpromoted: WaterDomain / PostTonemapPreUi / AfterShadowProduction
 next graphics wave: NOT YET SELECTED
 ```
 
-Wave 3 remains field-closed. Wave 4 proved that GZFX can generate its own full-resolution ambient visibility and replace Skyrim's final filtered SAO input before Skyrim's native Ambient Screen-Space Composite. The current project priority is **not** final AO tuning: it is discovering and owning Skyrim's complete renderer stack.
+Wave 3 remains field-closed. Wave 4 proved that GZFX can generate its own ambient-visibility signal and replace Skyrim's filtered SAO input before Skyrim's native Ambient Screen-Space Composite. Final artistic tuning remains intentionally deferred until the renderer architecture is sufficiently owned.
 
-0.0.24 adds a continuous asynchronous telemetry listener. Normal forensic sessions now record frame timelines, stage transitions, semantic changes, resources, compressed pass families, concrete producer/consumer resource IDs, command-list ownership, transitions, and Wave 3/Wave 4 timing/health into a timestamped `GZFX/Telemetry/session_*/` directory. Manual Shift+Numpad5 captures remain optional visual evidence rather than the primary discovery workflow.
+The 0.0.24 continuous listener campaign was triple-reviewed and exposed the remaining late-stack blind spots. 0.0.25 closes those instrumentation gaps by recording Skyrim deferred D3D11 contexts while command lists are built, preserving true explicit copy/resolve/clear operands, reporting total-versus-retained resource-access counts, and limiting detailed pass logging to the unresolved late renderer. It also adds resource-driven stage detection for HDR reduction, tonemap entry, and the global TAA lane.
 
-**Important:** 0.0.24 is a forensic build. Its FPS is not release-performance evidence. Clean performance and final artistic quality are deferred until the renderer architecture is sufficiently mapped and heavy telemetry can be disabled.
+**Important:** 0.0.25 is still a forensic build. Its FPS is not release-performance evidence. `WaterDomain`, `PostTonemapPreUi`, and `AfterShadowProduction` remain intentionally unclaimed until real Skyrim telemetry proves them. The next graphics feature is not selected until the 0.0.25 field DATA pass closes or narrows those remaining gaps.
 
 ## Permanent authority workflow
 
