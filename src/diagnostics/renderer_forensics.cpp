@@ -3342,6 +3342,25 @@ namespace gzfx::diagnostics
 
             if (primary)
             {
+                if (!g_firstPresentLogged.exchange(
+                        true,
+                        std::memory_order_acq_rel))
+                {
+                    LARGE_INTEGER presentQpc{};
+                    QueryPerformanceCounter(
+                        &presentQpc);
+
+                    startup_trace::Record(
+                        "first_present",
+                        static_cast<std::uint64_t>(
+                            presentQpc.QuadPart),
+                        GetCurrentThreadId(),
+                        S_OK,
+                        reinterpret_cast<std::uintptr_t>(
+                            swap),
+                        0);
+                }
+
                 telemetry_listener::OnPresentTimeline(
                 frame,
                 epoch,
@@ -3365,6 +3384,25 @@ namespace gzfx::diagnostics
 
             if (primary)
             {
+                if (!g_firstPresentLogged.exchange(
+                        true,
+                        std::memory_order_acq_rel))
+                {
+                    LARGE_INTEGER presentQpc{};
+                    QueryPerformanceCounter(
+                        &presentQpc);
+
+                    startup_trace::Record(
+                        "first_present",
+                        static_cast<std::uint64_t>(
+                            presentQpc.QuadPart),
+                        GetCurrentThreadId(),
+                        S_OK,
+                        reinterpret_cast<std::uintptr_t>(
+                            swap),
+                        0);
+                }
+
                 telemetry_listener::OnPresentTimeline(
                     frame,
                     epoch,
