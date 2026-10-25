@@ -1554,6 +1554,7 @@ int wmain(int argc, wchar_t** argv)
             }
 
             bool copyExact = false;
+            bool accessOverflow = false;
             bool falseReset = false;
             bool truePreserve = false;
             bool nestedVisible = false;
@@ -1604,6 +1605,14 @@ int wmain(int argc, wchar_t** argv)
                     CsvColumn(
                         header,
                         "total_write_count");
+                const auto retainedReadColumn =
+                    CsvColumn(
+                        header,
+                        "retained_read_count");
+                const auto readOverflowColumn =
+                    CsvColumn(
+                        header,
+                        "read_overflow");
 
                 std::uint64_t parentRows = 0;
 
@@ -1653,6 +1662,31 @@ int wmain(int argc, wchar_t** argv)
                         generations[4])
                     {
                         ++parentRows;
+                    }
+
+                    if (generation ==
+                            generations[0] &&
+                        kind == 0 &&
+                        totalReadColumn <
+                            row.size() &&
+                        retainedReadColumn <
+                            row.size() &&
+                        readOverflowColumn <
+                            row.size() &&
+                        std::stoull(
+                            row[
+                                totalReadColumn]) >
+                            24 &&
+                        std::stoull(
+                            row[
+                                retainedReadColumn]) ==
+                            24 &&
+                        std::stoull(
+                            row[
+                                readOverflowColumn]) ==
+                            1)
+                    {
+                        accessOverflow = true;
                     }
 
                     if (generation ==
@@ -1722,6 +1756,7 @@ int wmain(int argc, wchar_t** argv)
             deferredCoverage =
                 allMapped &&
                 copyExact &&
+                accessOverflow &&
                 falseReset &&
                 truePreserve &&
                 nestedVisible &&
@@ -1735,6 +1770,8 @@ int wmain(int argc, wchar_t** argv)
                     << allMapped
                     << " copy="
                     << copyExact
+                    << " access_overflow="
+                    << accessOverflow
                     << " false_reset="
                     << falseReset
                     << " true_preserve="
