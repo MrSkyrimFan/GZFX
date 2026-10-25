@@ -14,6 +14,8 @@ namespace gzfx::render::execution
         Wave3DepthHierarchy,
         Wave3TemporalGeometry,
         Wave3Diagnostics,
+        Wave4AmbientVisibility,
+        Wave4AmbientInjection,
         Count
     };
 

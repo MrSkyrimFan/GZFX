@@ -4,6 +4,7 @@
 #include "gzfx/paths.hpp"
 #include "gzfx/settings.hpp"
 #include "gzfx/render/wave3_pipeline.hpp"
+#include "gzfx/render/ambient_visibility_v2.hpp"
 
 #include <Windows.h>
 #include <windowsx.h>
@@ -137,8 +138,8 @@ namespace gzfx::ui
             switch (mode)
             {
             case 0: return L"OFF";
-            case 1: return L"SPLIT CONTACT";
-            case 2: return L"FULL CONTACT";
+            case 1: return L"SPLIT AMBIENT VISIBILITY";
+            case 2: return L"FULL AMBIENT VISIBILITY";
             case 3: return L"DEPTH";
             case 4: return L"PRE-UI COLOR";
             default: return L"UNKNOWN";
@@ -1576,9 +1577,12 @@ namespace gzfx::ui
                 gzfx::render::wave3::
                     RequestManualCapture();
 
+                gzfx::render::ambient_visibility_v2::
+                    RequestManualCapture();
+
                 WriteState(
                     frame,
-                    "semantic_wave3_capture_requested");
+                    "semantic_wave3_wave4_capture_requested");
             }
         }
         catch (...)

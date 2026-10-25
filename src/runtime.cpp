@@ -5,6 +5,7 @@
 #include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
 #include "gzfx/render/wave3_pipeline.hpp"
+#include "gzfx/render/ambient_visibility_v2.hpp"
 
 #include <Windows.h>
 
@@ -71,6 +72,10 @@ namespace
         const bool wave3Initialized =
             gzfx::render::wave3::Initialize();
 
+        const bool wave4Initialized =
+            gzfx::render::ambient_visibility_v2::
+                Initialize();
+
         const fs::path logPath = runtimeRoot / L"GZFX.log";
         std::ofstream log(logPath, std::ios::out | std::ios::app);
         if (!log)
@@ -100,6 +105,9 @@ namespace
             << "\n";
         log << "wave3_pipeline="
             << (wave3Initialized ? "initialized" : "failed")
+            << "\n";
+        log << "ambient_visibility_v2="
+            << (wave4Initialized ? "initialized" : "failed")
             << "\n";
         log << "status=initialized\n";
         log << "===============================\n";

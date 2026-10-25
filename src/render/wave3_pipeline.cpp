@@ -4952,4 +4952,93 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
         {
         }
     }
+
+    bool AcquireFrameView(
+        const std::uint64_t frame,
+        FrameView* const outView) noexcept
+    {
+        if (outView == nullptr)
+        {
+            return false;
+        }
+
+        *outView = {};
+
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+
+            if (!g_initialized ||
+                !g_history.valid ||
+                g_history.lastFrame != frame ||
+                g_runtime.hierarchySrv == nullptr ||
+                g_runtime.debugMask.srv == nullptr)
+            {
+                return false;
+            }
+
+            const auto& current =
+                g_runtime.history[
+                    g_history.readIndex];
+
+            if (current.confidence.srv == nullptr)
+            {
+                return false;
+            }
+
+            outView->frame = frame;
+            outView->historyGeneration =
+                g_history.generation;
+            outView->width =
+                g_runtime.width;
+            outView->height =
+                g_runtime.height;
+            outView->mipCount =
+                g_runtime.mipCount;
+
+            outView->depthHierarchy =
+                g_runtime.hierarchySrv;
+            outView->depthHierarchy->AddRef();
+
+            outView->geometryConfidence =
+                current.confidence.srv;
+            outView->geometryConfidence->AddRef();
+
+            outView->reprojectionMask =
+                g_runtime.debugMask.srv;
+            outView->reprojectionMask->AddRef();
+
+            outView->historyValid =
+                g_history.valid;
+            outView->valid = true;
+
+            return true;
+        }
+        catch (...)
+        {
+            ReleaseFrameView(*outView);
+            return false;
+        }
+    }
+
+    void ReleaseFrameView(
+        FrameView& view) noexcept
+    {
+        if (view.reprojectionMask != nullptr)
+        {
+            view.reprojectionMask->Release();
+        }
+
+        if (view.geometryConfidence != nullptr)
+        {
+            view.geometryConfidence->Release();
+        }
+
+        if (view.depthHierarchy != nullptr)
+        {
+            view.depthHierarchy->Release();
+        }
+
+        view = {};
+    }
 }

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.22
+    VERSION 0.0.23
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -74,6 +74,7 @@ add_library(GZFX SHARED
     src/render/renderer_execution_service.cpp
     src/render/native_input_broker.cpp
     src/render/wave3_pipeline.cpp
+    src/render/ambient_visibility_v2.cpp
     src/render/ambient_visibility_stack.cpp
     src/render/scene_effects.cpp
     src/render/visible_pass.cpp
@@ -363,4 +364,12 @@ add_test(
         "$<TARGET_FILE:GZFXWave3PipelineHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/wave3-pipeline-output"
+)
+
+add_test(
+    NAME ambient_visibility_v2
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/ambient-visibility-v2-output"
 )

@@ -4,6 +4,7 @@
 #include "gzfx/paths.hpp"
 #include "gzfx/render/runtime_state.hpp"
 #include "gzfx/render/scene_effects.hpp"
+#include "gzfx/render/ambient_visibility_v2.hpp"
 #include "gzfx/settings.hpp"
 #include "gzfx/ui/settings_menu.hpp"
 #include "gzfx/version.hpp"
@@ -143,8 +144,19 @@ namespace gzfx::render
             switch (mode)
             {
             case 0: return "off";
-            case 1: return "split_ambient_contact";
-            case 2: return "full_ambient_contact";
+            case 1:
+                return gzfx::render::
+                    ambient_visibility_v2::
+                    OwnsDevelopmentMode(1)
+                    ? "split_ambient_visibility_v2"
+                    : "split_ambient_contact";
+
+            case 2:
+                return gzfx::render::
+                    ambient_visibility_v2::
+                    OwnsDevelopmentMode(2)
+                    ? "full_ambient_visibility_v2"
+                    : "full_ambient_contact";
             case 3: return "depth_view";
             case 4: return "pre_ui_scene_color";
             default: return "unknown";
@@ -1645,8 +1657,13 @@ float4 PSMain(VSOutput input) : SV_TARGET
                     menuOverlay.height);
 
             parameters.preUiInjected =
-                gzfx::render::scene_effects::
-                    WasInjectedFrame(frame)
+                (
+                    gzfx::render::scene_effects::
+                        WasInjectedFrame(frame) ||
+                    gzfx::render::
+                        ambient_visibility_v2::
+                        WasAppliedFrame(frame)
+                )
                 ? 1u
                 : 0u;
 

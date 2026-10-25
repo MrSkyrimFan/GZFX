@@ -3,6 +3,7 @@
 #include "gzfx/paths.hpp"
 #include "gzfx/render/ambient_depth_stack.hpp"
 #include "gzfx/render/runtime_state.hpp"
+#include "gzfx/render/ambient_visibility_v2.hpp"
 #include "gzfx/settings.hpp"
 #include "gzfx/version.hpp"
 
@@ -1112,6 +1113,18 @@ float4 PSMain(VSOutput input) : SV_TARGET
             const std::uint32_t mode =
                 gzfx::render::state::
                     GetDevelopmentMode();
+
+            if (gzfx::render::
+                    ambient_visibility_v2::
+                    OwnsDevelopmentMode(mode))
+            {
+                WriteLog(
+                    frame,
+                    drawOrdinal,
+                    "skipped_wave4_owns_mode");
+
+                return false;
+            }
 
             if (mode != 1 &&
                 mode != 2)

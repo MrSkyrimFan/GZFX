@@ -489,6 +489,10 @@ namespace gzfx::render::execution
             return "wave3_temporal_geometry";
         case OwnedPass::Wave3Diagnostics:
             return "wave3_diagnostics";
+        case OwnedPass::Wave4AmbientVisibility:
+            return "wave4_ambient_visibility";
+        case OwnedPass::Wave4AmbientInjection:
+            return "wave4_ambient_injection";
         case OwnedPass::Unknown:
         case OwnedPass::Count:
         default:
