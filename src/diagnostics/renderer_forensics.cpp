@@ -2870,15 +2870,13 @@ namespace gzfx::diagnostics
             ID3D11Device* device,
             const DescT* description,
             const D3D11_SUBRESOURCE_DATA* data,
-            ResourceT** resource)
+            ResourceT** resource,
+            const std::string& owner)
         {
             if (original == nullptr)
             {
                 return E_FAIL;
             }
-
-            const std::string owner =
-                CallerModuleName(_ReturnAddress());
 
             const HRESULT result =
                 original(
@@ -2915,7 +2913,8 @@ namespace gzfx::diagnostics
                     device,
                     description,
                     data,
-                    buffer);
+                    buffer,
+                    CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateTexture1D(
@@ -2930,7 +2929,8 @@ namespace gzfx::diagnostics
                     device,
                     description,
                     data,
-                    texture);
+                    texture,
+                    CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateTexture2D(
@@ -2945,7 +2945,8 @@ namespace gzfx::diagnostics
                     device,
                     description,
                     data,
-                    texture);
+                    texture,
+                    CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateTexture3D(
@@ -2960,7 +2961,8 @@ namespace gzfx::diagnostics
                     device,
                     description,
                     data,
-                    texture);
+                    texture,
+                    CallerModuleName(_ReturnAddress()));
         }
 
         template <class ShaderT, class Fn>
@@ -2971,15 +2973,13 @@ namespace gzfx::diagnostics
             const void* bytecode,
             const SIZE_T bytecodeBytes,
             ID3D11ClassLinkage* linkage,
-            ShaderT** shader)
+            ShaderT** shader,
+            const std::string& owner)
         {
             if (original == nullptr)
             {
                 return E_FAIL;
             }
-
-            const std::string owner =
-                CallerModuleName(_ReturnAddress());
 
             const HRESULT result =
                 original(
@@ -3023,7 +3023,8 @@ namespace gzfx::diagnostics
                 bytecode,
                 bytecodeBytes,
                 linkage,
-                shader);
+                shader,
+                CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateGeometryShader(
@@ -3040,7 +3041,8 @@ namespace gzfx::diagnostics
                 bytecode,
                 bytecodeBytes,
                 linkage,
-                shader);
+                shader,
+                CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateGeometryShaderWithStreamOutput(
@@ -3110,7 +3112,8 @@ namespace gzfx::diagnostics
                 bytecode,
                 bytecodeBytes,
                 linkage,
-                shader);
+                shader,
+                CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateHullShader(
@@ -3127,7 +3130,8 @@ namespace gzfx::diagnostics
                 bytecode,
                 bytecodeBytes,
                 linkage,
-                shader);
+                shader,
+                CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateDomainShader(
@@ -3144,7 +3148,8 @@ namespace gzfx::diagnostics
                 bytecode,
                 bytecodeBytes,
                 linkage,
-                shader);
+                shader,
+                CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateComputeShader(
@@ -3161,7 +3166,8 @@ namespace gzfx::diagnostics
                 bytecode,
                 bytecodeBytes,
                 linkage,
-                shader);
+                shader,
+                CallerModuleName(_ReturnAddress()));
         }
 
         HRESULT STDMETHODCALLTYPE HookCreateDeferredContext(
