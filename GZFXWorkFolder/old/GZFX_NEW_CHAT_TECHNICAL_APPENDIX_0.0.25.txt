@@ -1,0 +1,406 @@
+GZFX NEW CHAT TECHNICAL APPENDIX — 0.0.25
+Companion to GZFX_NEW_CHAT_TAKEOVER_0.0.25.txt
+
+0.0.24 SOURCE SESSION
+Archive: GZFXholyshitthisis400mb.zip
+Bytes: 417196650
+SHA256: 719cb8078e249f3fe40fea002d86fdb73f8ecd11657a37e72e594b4daa1c2fb5
+Session: session_20261024_222813_93584
+Frames: 11508
+Duration: 386.555 sec
+Events: 14967211
+Dropped: 0
+Queue high-water: 2260 / 65536
+Uncompressed bytes_written: 7153887916
+Compact pass rows: 14627763
+Represented operations: ~36430713
+Resources discovered: 2170
+Resources used: 2114
+Skyrim/unknown command-list events: 9487
+
+SESSION END CAVEAT
+0.0.24 upload had complete=false/writer_alive=true and no completion marker.
+But enqueued==written, queue_depth=0, dropped=0. Evidence through final snapshot
+was accounted for. 0.0.25 added stronger heartbeat/PID evidence. Next test must
+wait until SkyrimSE.exe is gone before copying.
+
+ENVIRONMENT TIMELINE
+1-602 startup/transition
+603-4422 exterior
+4423-4464 transition
+4465-8215 interior
+8216-8229 transition
+8230-11508 exterior
+
+ACTIVE SCENE FRAMES
+10850
+
+LOCKED STAGE COUNTS
+AfterOpaqueWorldMRT 10850
+AfterCameraZ 10850
+AfterStockAO 10850
+BeforeAmbientScreenSpaceComposite 10850
+AtAmbientScreenSpaceComposite 10850
+AfterAmbientScreenSpaceComposite 10850
+AfterDepthPrepass 10849
+Exterior BeforeVolumetricApply 7099
+Exterior AfterVolumetricApply 7099
+Exterior PublishPreWaterDepth 7099
+
+SEMANTICS OBSERVED
+MAIN_HDR
+MAIN_DEPTH_CURRENT
+MOTION
+NORMAL_MASK_CURRENT
+AUXILIARY_RT3
+DEPTH_EARLY_COPY
+STOCK_CAMERAZ
+SAO_RAWAO_CURRENT
+SAO_RAWAO_PREVIOUS
+SAO_FILTER_TEMP
+SAO_FILTERED
+RAW_INDIRECT
+SHADOW_MASK
+VOLUMETRIC_DENSITY_A
+VOLUMETRIC_DENSITY_B
+VOLUMETRIC_PREVIOUS_DEPTH
+PRE_WATER_DEPTH_CURRENT
+
+Still unresolved:
+REDUCED_REFLECTION_LIGHTING
+REDUCED_TEMPORAL_LIGHTING_HISTORY
+
+TEMPORAL FAMILY A — 2x2 HDR/ADAPTATION CANDIDATE
+0x25E68BC0210
+0x25E68BC04D0
+2x2 R16G16B16A16_FLOAT
+11334 write frames
+begins frame 168
+perfect alternation
+0 same-target consecutive violations
+
+TEMPORAL FAMILY B — GLOBAL FULL-RES TAA CANDIDATE
+0x25E68BBFC90
+0x25E68BC0FD0
+2560x1440 R8G8B8A8_UNORM
+11335 write frames
+begins frame 167
+perfect alternation
+0 violations
+field shader evidence:
+VS 0x25ECC9EC9C0
+PS 0x25ECC9EBBB0
+DO NOT HARDCODE.
+
+Stable full-res current resource:
+0x25E68B75E70
+field producer:
+VS 0x25ECC9DABD0
+PS 0x25ECC9DAEF0
+DO NOT HARDCODE.
+
+Post-temporal/depth-aware field family:
+VS 0x25ECC9DA270
+PS 0x25ECC9D8FB0
+DO NOT HARDCODE.
+
+Late full-res sink candidate:
+0x25E68A00490
+2560x1440 R8G8B8A8_UNORM
+Many writes / no SRV reads in 0.0.24.
+True final copy lineage was not visible until 0.0.25 explicit-op repair.
+
+TEMPORAL FAMILY C — EXTERIOR R16
+0x25E68B943F0
+0x25E68B94970
+2560x1440 R16_FLOAT
+7099 exterior frames
+perfect alternation
+0 violations
+Associated with verified volumetric temporal apply.
+Does NOT invalidate existing volumetric/pre-water stage.
+
+EXTERIOR-ONLY LATE LANDMARK
+VS 0x25ECC9E6430
+PS 0x25ECC9E7A10
+7099/7099 exterior active frames
+0 interior
+writes MAIN_HDR
+occurs after verified volumetric temporal apply / pre-water publication.
+Possible later volumetric/reflection/water/atmosphere apply.
+DO NOT call WaterDomain without new evidence.
+
+DEFERRED COMMAND LIST FACTS
+9487 total.
+9441 frames had exactly 1.
+Frame 636 had 42.
+Frame 900 had 4.
+Dominant raw pointer 0x25EA78F9D10 used 9442 times.
+Second pointer 0x25ECB2BAD10 used 42 times on frame 636.
+Raw pointer reuse is why 0.0.25 assigns generations.
+
+Placement:
+Exterior normal lists occur after PublishPreWaterDepth.
+Interior normal lists occur after AfterAmbientScreenSpaceComposite.
+All 9487 occur after strong global temporal candidate.
+9473/9473 normal active-scene events occur after post-temporal full-res family.
+14 additional events are transition/UI-only.
+
+FRAME 636
+~1610.9 ms
+42 command lists
+telemetry queue depth only 19/65536.
+Therefore ring saturation did not cause the stall.
+Correlation only.
+
+LATE DOMAIN NORMALIZATION
+Late compact rows: 701886
+Represented executions: 790770
+Structural families: 107
+37 both environments
+11 exterior-only
+59 interior-only
+21 universal active-frame families
+
+OLD 0.0.24 READ CAP
+read_count=8 rows: 503194
+71.69% of late rows.
+Because capacity was 8, this meant 8 OR MORE.
+
+0.0.25 DEFERRED MODULE
+Files:
+include/gzfx/diagnostics/deferred_context_cartography.hpp
+src/diagnostics/deferred_context_cartography.cpp
+
+CreateDeferredContext device vtable index: 27
+Deferred context vtable count: 115
+FinishCommandList index: 114
+Bounds:
+65536 compact runs per active recording
+256 sealed command-list records
+
+Context-local tracked state:
+shaders, SRVs, CBs, samplers, RTVs, DSV, OM/CS UAVs, blend, depth,
+raster, topology, viewport, recording generation, runs, overflow.
+
+FinishCommandList seals:
+list identity + generation
+context identity + generation
+recording generation
+restore semantics
+complete/overflow
+original pass count
+retained run stream
+
+FinishCommandList(FALSE): tracked state reset.
+FinishCommandList(TRUE): tracked state preserved.
+Nested deferred lists: known child linked/expanded; unknown child opaque.
+Immediate ExecuteCommandList joins known list internals to real frame.
+
+DEFERRED RESOURCE HAZARDS
+0.0.25 mirrors D3D11 hazard behavior:
+when resource becomes output, conflicting tracked SRV reads are removed.
+Product-significant repair commit:
+719d6d6e — fix: mirror D3D11 deferred resource hazard unbinding
+
+EXPLICIT OPERATION FIELDS
+explicitReads[2]
+explicitWrites[2]
+explicitReadCount
+explicitWriteCount
+sourceSubresource
+destinationSubresource
+explicitFormat
+explicitFlags
+
+Explicit fields are authoritative for Copy/Resolve/Clear/GenerateMips.
+
+0.0.25 RESOURCE ACCESS CAP
+retained reads 24
+retained writes 12
+plus:
+totalReadResourceCount
+totalWriteResourceCount
+retainedReadResourceCount
+retainedWriteResourceCount
+readOverflow
+writeOverflow
+Never treat retained list as complete when overflow=true.
+
+0.0.25 STAGE DETECTORS
+Late eligibility begins after AfterAmbientScreenSpaceComposite.
+
+HDRReduction:
+coherent descending RGBA16F chain
+next step consumes prior output
+progresses to tiny <=4x4 target
+signal AfterExecution reason hdr_reduction_complete
+
+BeforeTonemap:
+after HDR reduction
+first qualifying full-res R8G8B8A8_UNORM output
+consumes final reduction/adaptation resource
+signal BeforeExecution reason hdr_tonemap_entry
+
+Global TAA:
+after tonemap entry
+reads MOTION
+reads MAIN_DEPTH_CURRENT
+reads >=2 full-res R8G8B8A8_UNORM
+writes exactly 2 full-res R8G8B8A8_UNORM
+signal BeforeGlobalTAA global_taa_entry
+then AfterGlobalTAA global_taa_complete
+
+No field shader pointers are used in runtime detection.
+
+Stage rank:
+WaterDomain 70
+HDRReduction 80
+BeforeTonemap 90
+BeforeGlobalTAA 100
+AfterGlobalTAA 101
+PostTonemapPreUi 110
+UiPresent 120
+
+WaterDomain remains unsignaled.
+PostTonemapPreUi remains unsignaled.
+AfterShadowProduction remains unsignaled.
+
+LATE-ONLY DETAIL
+Normal 0.0.25 detailed pipeline recording:
+start AfterAmbientScreenSpaceComposite/AfterExecution
+stop UiPresent
+Global frames/stages/semantics/resources/transitions/ownership/timings/health remain.
+Test override: GZFX_TEST_TELEMETRY_FULL_PIPELINE=1
+
+NEW OUTPUT
+deferred_lists.csv
+deferred_runs_0001.csv etc.
+
+listener_status deferred health:
+deferred_contexts_attached
+deferred_lists_finished
+deferred_lists_executed
+deferred_opaque_executions
+deferred_recorded_runs
+deferred_record_overflows
+deferred_registry_evictions
+
+CI
+New test: late_stack_cartography
+Final suite: 20
+
+PR run 40166589782
+20/20 PASS
+20.67 sec
+
+Merged-main run 40166807536
+20/20 PASS
+20.35 sec
+
+Test 20 covers:
+late detail gate
+synthetic HDR reduction
+synthetic global temporal chain
+deferred context creation
+FinishCommandList FALSE
+FinishCommandList TRUE
+nested deferred list
+exact CopyResource operands
+resource access overflow evidence
+deferred CSV output
+
+MEANINGFUL COMMITS
+c43186a5 resource access completeness
+02380680 explicit access payload
+50513409 retained vs total
+5740cc92 resource catalog helper
+6e66806a true explicit operands
+c96a0992 serialize explicit/access evidence
+aa5f2cc8 late-only detail
+b3ee2bc1 HDR/TAA stages
+1725153f deferred telemetry transport
+5ad351ad deferred API
+2986d50e deferred recorder
+f2eb4666 deferred files/health
+8b031be7 deferred internals serialization
+80735511 all deferred args
+d51fde35 hook deferred creation/expand lists
+aa3fbb96 build integration
+238c92bf runtime 0.0.25
+d99597c3 heartbeat/PID
+719d6d6e hazard unbinding
+c195c693 final harness shadow repair
+
+FAILURE HISTORY
+Initial semantic_authority warning C4100 treated as error: unused frame parameter.
+Fixed by 8dfcf361.
+
+Late-stack harness construction had intermediate failed heads.
+Recurring final compile warning C4458 treated as error:
+local depthSrv shadowed harness/member depthSrv.
+Fixed by c195c693.
+
+Do not interpret intermediate red CI as final product failure.
+Final head is green.
+
+PACKAGE
+PR #28
+Final PR head c195c693eedbbe548690175475f38f532d4ebdda
+Merge ec0294172be4659560ab8c34989374e64eb3994a
+Package refresh 050a13243022ef8ba4e51de16aa0603c6238b0ff
+ZIP:
+LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+blob 953465c6a67a73372e503d39480d022283a8287f
+size 362110 bytes
+Package-refresh diff changed only that ZIP.
+
+CURRENT CLOSURE
+At handoff inspection main had advanced to:
+241fe59d0cb82b081f4960009af2b512c11da5b5
+docs: lock 0.0.25 late-stack field-validation state
+
+new/ contained only README.md.
+Therefore completed 0.0.24 DATA + Research 6 + 0.0.25 Blueprint + engineering
+result were already archived and docs locked before the old chat died.
+
+NEXT TEST
+Install newest Lance ZIP.
+Run ~2-3 minutes:
+exterior day 20-30 sec
+interior 20-30 sec
+exterior night 20-30 sec
+water/reflections 20-30 sec
+fire/particles/transparency if convenient
+represent Modes 0/1/2
+no Shift+Numpad5 required.
+Quit Skyrim.
+WAIT until SkyrimSE.exe is fully gone.
+ZIP ONLY newest Documents/My Games/Skyrim Special Edition/GZFX/Telemetry/session_*
+Upload to Project Chat.
+
+NEXT DATA FIRST CHECK
+manifest.txt
+listener_status.txt
+seconds.csv
+transitions.csv
+stages.csv
+then deferred_lists.csv / deferred_runs_*.csv / explicit lineage.
+
+Validate:
+contexts attached >0
+lists finished/executed >0
+opaque fraction
+no/known overflows
+queue drops
+clean completion
+archive size
+HDRReduction -> BeforeTonemap -> BeforeGlobalTAA -> AfterGlobalTAA ordering
+true final sink lineage
+post-TAA deferred families
+WaterDomain evidence
+PostTonemapPreUi evidence
+
+Do not begin another feature until that DATA is reviewed.
+
+END TECHNICAL APPENDIX
