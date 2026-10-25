@@ -3975,6 +3975,33 @@ namespace gzfx::diagnostics
         }
     }
 
+    bool AttachPrimaryRendererObjects(
+        IDXGISwapChain* const swapChain,
+        ID3D11Device* const device,
+        ID3D11DeviceContext* const immediate) noexcept
+    {
+        try
+        {
+            if (!g_armed ||
+                device == nullptr ||
+                immediate == nullptr)
+            {
+                return false;
+            }
+
+            std::scoped_lock lock(g_mutex);
+
+            return AttachPrimaryLocked(
+                swapChain,
+                device,
+                immediate);
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
     std::uint64_t CurrentRendererFrame() noexcept
     {
         return g_frame;
