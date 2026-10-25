@@ -120,6 +120,8 @@ namespace gzfx::render::semantic_authority
 
             bool lateStageEligible = false;
             std::uint32_t hdrReductionStep = 0;
+            std::uintptr_t hdrReductionSourceIdentity = 0;
+            std::uint32_t hdrFullResAncestryDepth = 0;
             std::uintptr_t hdrReductionLastIdentity = 0;
             UINT hdrReductionLastWidth = 0;
             UINT hdrReductionLastHeight = 0;
@@ -2146,8 +2148,40 @@ namespace gzfx::render::semantic_authority
 
                 if (g_frame.hdrReductionStep == 0)
                 {
-                    if (mainHdr == 0 ||
-                        !ReadsLocked(mainHdr) ||
+                    const std::uintptr_t sourceIdentity =
+                        g_frame.hdrReductionSourceIdentity != 0
+                            ? g_frame.hdrReductionSourceIdentity
+                            : mainHdr;
+
+                    const bool fullResolution =
+                        output.shape.width ==
+                            g_screenWidth &&
+                        output.shape.height ==
+                            g_screenHeight;
+
+                    // Interior rendering can perform one or more coherent
+                    // full-resolution HDR transforms before the actual
+                    // downsample spine. Preserve a deliberately tiny ancestry
+                    // budget so this cannot turn into arbitrary graph walking.
+                    if (fullResolution &&
+                        sourceIdentity != 0 &&
+                        output.identity !=
+                            sourceIdentity &&
+                        ReadsLocked(
+                            sourceIdentity) &&
+                        g_frame.hdrFullResAncestryDepth <
+                            3)
+                    {
+                        g_frame.hdrReductionSourceIdentity =
+                            output.identity;
+
+                        ++g_frame.hdrFullResAncestryDepth;
+                        continue;
+                    }
+
+                    if (sourceIdentity == 0 ||
+                        !ReadsLocked(
+                            sourceIdentity) ||
                         output.shape.width >
                             g_screenWidth / 2 ||
                         output.shape.height >
@@ -2191,14 +2225,18 @@ namespace gzfx::render::semantic_authority
                 if (!consumesPrevious ||
                     !descends)
                 {
-                    // The first plausible MAIN_HDR downsample is not
-                    // necessarily the real terminal reduction chain. If a
-                    // later pass starts a fresh MAIN_HDR-descendant candidate,
-                    // replace the poisoned candidate instead of carrying it
-                    // for the rest of the frame.
+                    const std::uintptr_t sourceIdentity =
+                        g_frame.hdrReductionSourceIdentity != 0
+                            ? g_frame.hdrReductionSourceIdentity
+                            : mainHdr;
+
+                    // If an earlier plausible root was wrong, a later
+                    // downsample from the verified HDR source is allowed to
+                    // restart the bounded chain.
                     const bool freshRoot =
-                        mainHdr != 0 &&
-                        ReadsLocked(mainHdr) &&
+                        sourceIdentity != 0 &&
+                        ReadsLocked(
+                            sourceIdentity) &&
                         output.shape.width <=
                             g_screenWidth / 2 &&
                         output.shape.height <=
@@ -2226,9 +2264,12 @@ namespace gzfx::render::semantic_authority
                 g_frame.hdrReductionLastHeight =
                     output.shape.height;
 
+                // 0.0.26 field evidence proved that the real Skyrim chain
+                // continues from 3x2 to 2x2. Do not commit at the first
+                // <=4x4 node.
                 if (g_frame.hdrReductionStep >= 4 &&
-                    output.shape.width <= 4 &&
-                    output.shape.height <= 4)
+                    output.shape.width <= 2 &&
+                    output.shape.height <= 2)
                 {
                     g_frame.hdrReductionComplete =
                         true;
@@ -2241,7 +2282,7 @@ namespace gzfx::render::semantic_authority
                                 HDRReduction,
                             stage_scheduler::Phase::
                                 AfterExecution,
-                            "hdr_reduction_complete"
+                            "hdr_reduction_complete_2x2_terminal"
                         });
 
                     return;
