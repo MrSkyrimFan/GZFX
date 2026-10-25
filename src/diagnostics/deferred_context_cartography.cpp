@@ -494,6 +494,65 @@ namespace gzfx::diagnostics::deferred_context_cartography
             return result;
         }
 
+        bool ConflictsWithOutputs(
+            const CurrentState& state,
+            const std::uintptr_t identity)
+        {
+            if (identity == 0)
+            {
+                return false;
+            }
+
+            for (const auto output : state.rtvs)
+            {
+                if (output == identity)
+                {
+                    return true;
+                }
+            }
+
+            if (state.dsv == identity)
+            {
+                return true;
+            }
+
+            for (const auto output : state.omUavs)
+            {
+                if (output == identity)
+                {
+                    return true;
+                }
+            }
+
+            for (const auto output : state.csUavs)
+            {
+                if (output == identity)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        void UnbindComputeUavs(
+            CurrentState& state,
+            const std::uintptr_t identity)
+        {
+            if (identity == 0)
+            {
+                return;
+            }
+
+            for (auto& output : state.csUavs)
+            {
+                if (output == identity)
+                {
+                    output = 0;
+                }
+            }
+        }
+
         void UnbindReads(
             CurrentState& state,
             const std::uintptr_t identity)
@@ -1002,12 +1061,19 @@ namespace gzfx::diagnostics::deferred_context_cartography
                  startSlot + i < kSrvSlots;
                  ++i)
             {
-                record->state.srvs[
-                    stage][startSlot + i] =
+                const auto identity =
                     ViewResourceId(
                         resources != nullptr
                             ? resources[i]
                             : nullptr);
+
+                record->state.srvs[
+                    stage][startSlot + i] =
+                    ConflictsWithOutputs(
+                        record->state,
+                        identity)
+                        ? 0
+                        : identity;
             }
         }
 
@@ -1399,6 +1465,9 @@ namespace gzfx::diagnostics::deferred_context_cartography
 
                         r->state.rtvs[i] = id;
                         UnbindReads(r->state, id);
+                        UnbindComputeUavs(
+                            r->state,
+                            id);
                     }
 
                     r->state.dsv =
@@ -1407,6 +1476,11 @@ namespace gzfx::diagnostics::deferred_context_cartography
                     UnbindReads(
                         r->state,
                         r->state.dsv);
+                    UnbindComputeUavs(
+                        r->state,
+                        r->state.dsv);
+
+                    r->state.omUavs.fill(0);
 
                     original =
                         OriginalLocked<
@@ -1458,12 +1532,18 @@ namespace gzfx::diagnostics::deferred_context_cartography
                             UnbindReads(
                                 r->state,
                                 id);
+                            UnbindComputeUavs(
+                                r->state,
+                                id);
                         }
 
                         r->state.dsv =
                             ViewResourceId(dsv);
 
                         UnbindReads(
+                            r->state,
+                            r->state.dsv);
+                        UnbindComputeUavs(
                             r->state,
                             r->state.dsv);
                     }
@@ -1488,6 +1568,9 @@ namespace gzfx::diagnostics::deferred_context_cartography
                                 id;
 
                             UnbindReads(
+                                r->state,
+                                id);
+                            UnbindComputeUavs(
                                 r->state,
                                 id);
                         }
