@@ -177,14 +177,14 @@ Never make hue discrimination necessary for acceptance.
 
 ## 10. GZFX current locked foundation
 
-Current state after the 0.0.23 Wave 4 implementation:
+Current state after the 0.0.24 telemetry-listener implementation:
 
 ```text
 foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.23-ambient-visibility-v2
+0.0.24-renderer-telemetry-listener
 
 Wave 1:
 CLOSED
@@ -198,23 +198,31 @@ CLOSED
 broad foundation renderer cartography:
 COMPLETE
 
-current phase:
-TEST
-
 Wave 4:
-CODE / CI / PACKAGE PASS
-REAL-SKYRIM FIELD QUALITY GATE PENDING
+renderer-stack ownership architecture PROVEN
+final artistic quality intentionally deferred
 
-current production graphics feature:
-Ambient Visibility v2
+current phase:
+TEST / FULL-STACK DISCOVERY
 
-next likely feature after Wave 4 passes:
-Indirect Radiance
+primary renderer-discovery authority:
+Continuous Renderer Telemetry Listener
+
+manual Shift+Numpad5 capture:
+optional secondary visual evidence
+
+next graphics wave:
+NOT YET SELECTED
+wait for listener DATA
 ```
 
-Do not reopen Wave 1, Wave 2, or Wave 3 unless new verified real-Skyrim evidence directly invalidates them.
+The current priority is to discover and understand Skyrim's complete graphics pipeline and progressively own the full rendering stack. Do not grade unfinished effect presets as final product quality and do not treat forensic-build FPS as release performance.
 
-Do not begin Wave 5 until the 0.0.23 Ambient Visibility v2 field gate is reviewed and Wave 4 is explicitly closed.
+For renderer-discovery sessions, prefer one natural-play telemetry session over manual capture choreography. The user should be able to cycle modes, day/night, interiors/exteriors, water, weather, shadows, particles and transitions naturally, quit normally, then upload the newest `GZFX/Telemetry/session_*/` directory.
+
+The listener records frame timelines, Stage Scheduler events, Semantic Authority changes, resource metadata, compressed pass families, concrete read/write resource IDs, GZFX-vs-Skyrim command-list ownership, transitions, and Wave3/Wave4 health/timing. Manual capture remains available only when extra visual evidence materially helps.
+
+Do not start another graphics-quality wave until the 0.0.24 telemetry DATA pass maps what remains unknown and chooses the next architecture target from evidence.
 
 ## 11. Repository lifecycle proof
 
