@@ -218,6 +218,30 @@ namespace gzfx::render::ambient_visibility_v2
             return out.str();
         }
 
+        bool DisabledForLegacyHarness()
+        {
+            wchar_t outputRoot[4]{};
+            wchar_t wave4[4]{};
+
+            const bool testHarness =
+                GetEnvironmentVariableW(
+                    L"GZFX_TEST_OUTPUT_ROOT",
+                    outputRoot,
+                    static_cast<DWORD>(
+                        std::size(outputRoot))) > 0;
+
+            const bool wave4Enabled =
+                GetEnvironmentVariableW(
+                    L"GZFX_TEST_WAVE4_ACTIVE",
+                    wave4,
+                    static_cast<DWORD>(
+                        std::size(wave4))) > 0;
+
+            return
+                testHarness &&
+                !wave4Enabled;
+        }
+
         fs::path DiagnosticsRoot()
         {
             const fs::path root =
@@ -3894,7 +3918,8 @@ void PackCS(
             {
                 if (event.boundary !=
                     stage_scheduler::Boundary::
-                        AfterOpaqueWorldMRT)
+                        AfterOpaqueWorldMRT ||
+                    DisabledForLegacyHarness())
                 {
                     return;
                 }
@@ -4145,7 +4170,8 @@ void PackCS(
             {
                 if (event.boundary !=
                     stage_scheduler::Boundary::
-                        AfterStockAO)
+                        AfterStockAO ||
+                    DisabledForLegacyHarness())
                 {
                     return;
                 }
@@ -4405,6 +4431,7 @@ void PackCS(
     {
         return
             g_initialized &&
+            !DisabledForLegacyHarness() &&
             (mode == 1 ||
              mode == 2);
     }
