@@ -535,6 +535,18 @@ namespace gzfx::diagnostics::pipeline_cartography
             return out;
         }
 
+        struct ExplicitTelemetryAccess
+        {
+            std::array<std::uintptr_t, 2> reads{};
+            std::array<std::uintptr_t, 2> writes{};
+            std::uint32_t readCount = 0;
+            std::uint32_t writeCount = 0;
+            std::uint32_t sourceSubresource = 0;
+            std::uint32_t destinationSubresource = 0;
+            std::uint32_t format = 0;
+            std::uint32_t flags = 0;
+        };
+
         PassTelemetry BuildPassTelemetryLocked(
             const std::uint64_t frame,
             const std::uint64_t ordinal,
@@ -542,7 +554,9 @@ namespace gzfx::diagnostics::pipeline_cartography
             const DrawKind drawKind,
             const std::array<
                 std::uint64_t,
-                4>& args)
+                4>& args,
+            const ExplicitTelemetryAccess& explicitAccess,
+            const bool suppressBoundAccess)
         {
             PassTelemetry out{};
             out.frame = frame;
@@ -550,6 +564,19 @@ namespace gzfx::diagnostics::pipeline_cartography
             out.kind = kind;
             out.drawKind = drawKind;
             out.args = args;
+            out.explicitReads = explicitAccess.reads;
+            out.explicitWrites = explicitAccess.writes;
+            out.explicitReadCount = explicitAccess.readCount;
+            out.explicitWriteCount = explicitAccess.writeCount;
+            out.sourceSubresource = explicitAccess.sourceSubresource;
+            out.destinationSubresource = explicitAccess.destinationSubresource;
+            out.explicitFormat = explicitAccess.format;
+            out.explicitFlags = explicitAccess.flags;
+
+            std::array<std::uintptr_t, kSrvSlots * kStageCount> uniqueReads{};
+            std::uint32_t uniqueReadCount = 0;
+            std::array<std::uintptr_t, kRtvSlots + (kUavSlots * 2) + 1> uniqueWrites{};
+            std::uint32_t uniqueWriteCount = 0;
 
             for (std::size_t i = 0;
                  i < out.shaderHashes.size();
@@ -830,7 +857,9 @@ namespace gzfx::diagnostics::pipeline_cartography
             const DrawKind drawKind = DrawKind::Draw,
             const std::array<
                 std::uint64_t,
-                4> args = {}) noexcept
+                4> args = {},
+            const ExplicitTelemetryAccess& explicitAccess = {},
+            const bool suppressBoundAccess = false) noexcept
         {
             try
             {
@@ -854,7 +883,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                             ordinal,
                             kind,
                             drawKind,
-                            args);
+                            args,
+                            explicitAccess,
+                            suppressBoundAccess);
 
                     sink =
                         g_passTelemetrySink;
