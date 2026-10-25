@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.21-native-input-temporal-core";
+        "0.0.22-temporal-continuity-repair";
 }
 
 extern "C" __declspec(dllexport)
