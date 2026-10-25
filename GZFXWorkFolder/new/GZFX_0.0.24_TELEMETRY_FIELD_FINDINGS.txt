@@ -1,0 +1,1259 @@
+GZFX 0.0.24 CONTINUOUS TELEMETRY FIELD FINDINGS
+Full-Stack Renderer Discovery Session 1
+Evidence bundle: GZFXholyshitthisis400mb.zip
+Data review date: October 24, 2026
+Status: DATA PHASE COMPLETE
+Research phase: NOT STARTED
+
+======================================================================
+1. EXECUTIVE VERDICT
+======================================================================
+
+THE 400 MB SESSION WAS WORTH IT.
+
+The telemetry listener worked as an evidence transport:
+
+    14,967,211 events enqueued
+    14,967,211 events written
+    0 dropped
+    queue high-water 2,260 / 65,536
+    queue depth 0 at evidence snapshot
+
+It continuously recorded:
+
+    11,508 frames
+    ~386.56 seconds of rendered frame history
+    108,754 stage events
+    169,483 semantic rows
+    31,215 command-list ownership events
+    16,286 timing rows
+    2,170 discovered resources
+    2,114 resources actually referenced by pipeline telemetry
+    107 segmented pipeline files
+
+The 107 pipeline segments contain:
+
+    14,627,763 compressed pass-run rows
+
+representing approximately:
+
+    36,430,713 repeated/raw pass executions
+
+The DATA normalization found:
+
+    4,638 structural pass families
+
+The session is therefore materially more informative than the old isolated
+manual-capture system.
+
+It exposes both:
+
+A. major new pipeline structure;
+
+and
+
+B. the exact remaining blind spots in the listener that prevent claiming
+   full renderer ownership yet.
+
+The most important DATA conclusions are:
+
+1. The existing locked foundation remains coherent.
+2. The late image-space/post pipeline is now structurally visible.
+3. Strong candidates now exist for HDR reduction / tonemap and global temporal
+   processing.
+4. The currently named Stage Scheduler still stops too early.
+5. Skyrim deferred command lists remain the largest pipeline blind spot.
+6. Continuous compact telemetry currently loses exact operands for some copy /
+   resolve / clear operations.
+7. The listener records far too much text for routine iteration and needs a
+   smarter structural/delta representation.
+8. The session does not contain a clean telemetry shutdown marker, although
+   all queued data through the final captured frame was written.
+
+Do NOT begin final artistic tuning from this evidence.
+
+The project priority remains:
+
+    full renderer discovery
+    ->
+    full-stack ownership
+    ->
+    quiet production performance
+    ->
+    final artistic quality.
+
+======================================================================
+2. SOURCE EVIDENCE
+======================================================================
+
+Archive:
+
+    GZFXholyshitthisis400mb.zip
+
+Bytes:
+
+    417,196,650
+
+SHA256:
+
+    719cb8078e249f3fe40fea002d86fdb73f8ecd11657a37e72e594b4daa1c2fb5
+
+ZIP entries:
+
+    214
+
+Telemetry session:
+
+    GZFX/Telemetry/session_20261024_222813_93584/
+
+Runtime:
+
+    0.0.24-renderer-telemetry-listener
+
+Listener-reported text bytes written:
+
+    7,153,887,916
+
+Approximate uncompressed telemetry rate over the frame stream:
+
+    ~18.5 MB/s
+
+The uploaded ZIP compresses this extremely repetitive structured text by
+roughly 17:1.
+
+That explains why the user's ~400 MB archive corresponds to more than 7 GB of
+actual listener output.
+
+======================================================================
+3. LISTENER HEALTH
+======================================================================
+
+listener_status.txt at the evidence snapshot reports:
+
+    initialized=true
+    writer_alive=true
+    complete=false
+    enqueued=14967211
+    written=14967211
+    dropped=0
+    queue_depth=0
+    queue_high_water=2260
+    ring_capacity=65536
+    bytes_written=7153887916
+    pipeline_segment=107
+    last_error=
+    status=healthy
+
+Transport verdict:
+
+    PASS
+
+No event loss occurred.
+
+Peak queue use:
+
+    2,260 / 65,536
+    ~3.45%
+
+The bounded asynchronous writer therefore had substantial headroom during this
+session.
+
+======================================================================
+4. UNCLEAN SESSION END
+======================================================================
+
+The archive does NOT contain:
+
+    telemetry_session_complete.txt
+
+and listener_status reports:
+
+    complete=false
+    writer_alive=true
+
+The DATA cannot prove whether:
+
+A. the telemetry directory was copied while Skyrim/listener was still active;
+
+or
+
+B. the real-game shutdown path failed to execute the listener's clean shutdown
+   callback.
+
+Do NOT blame the operator without evidence.
+
+What IS proven:
+
+    enqueued == written
+    queue_depth == 0
+    dropped == 0
+
+at the captured status snapshot.
+
+Therefore all telemetry through the final captured frame is internally
+accounted for.
+
+Verdict:
+
+    EVIDENCE USABLE
+    CLEAN-SHUTDOWN LIFECYCLE = UNPROVEN / NEEDS FOLLOW-UP
+
+======================================================================
+5. SESSION TIMELINE
+======================================================================
+
+Frame stream:
+
+    frame 1
+    through
+    frame 11,508
+
+Duration between first and final Present:
+
+    386.555 seconds
+    ~6 minutes 26.6 seconds
+
+The listener begins approximately 2.45 seconds before first recorded Present.
+
+Environment states:
+
+    0 = unknown / transition
+    1 = exterior
+    2 = interior
+
+Observed environment intervals:
+
+startup / transition:
+    frames 1-602
+    ~16.7 sec
+
+exterior block 1:
+    frames 603-4422
+    ~133.8 sec
+
+transition:
+    frames 4423-4464
+    ~0.83 sec
+
+interior:
+    frames 4465-8215
+    ~107.3 sec
+
+transition:
+    frames 8216-8229
+    ~0.23 sec
+
+exterior block 2:
+    frames 8230-11508
+    ~127.3 sec
+
+The listener does not yet possess a canonical day/night semantic.
+
+Therefore DATA does NOT assert which exterior block was daylight/night.
+
+It only proves two long exterior populations separated by a long interior
+population.
+
+======================================================================
+6. MODE COVERAGE
+======================================================================
+
+Total frames by development mode:
+
+    Mode 0:
+        4,880
+
+    Mode 1:
+        3,543
+
+    Mode 2:
+        2,497
+
+    Mode 3:
+        410
+
+    Mode 4:
+        178
+
+Sustained mode intervals exist in both exterior and interior scenes.
+
+The session therefore gives meaningful comparisons across:
+
+    stock / control
+    split / ownership
+    full replacement
+    diagnostics
+
+without depending on manual capture timing.
+
+======================================================================
+7. FOUNDATION STAGE REGRESSION
+======================================================================
+
+All active rendered scene frames retain the locked common stage spine.
+
+Active frames with semantic renderer:
+
+    10,850
+
+Observed counts:
+
+    AfterOpaqueWorldMRT:
+        10,850
+
+    AfterCameraZ:
+        10,850
+
+    AfterStockAO:
+        10,850
+
+    BeforeAmbientScreenSpaceComposite:
+        10,850
+
+    AtAmbientScreenSpaceComposite:
+        10,850
+
+    AfterAmbientScreenSpaceComposite:
+        10,850
+
+    AfterDepthPrepass:
+        10,849
+
+The one missing depth-prepass signal is the first environment-entry frame and
+is not a recurring regression.
+
+Exterior-only stage counts:
+
+    BeforeVolumetricApply:
+        7,099
+
+    AfterVolumetricApply:
+        7,099
+
+    PublishPreWaterDepth:
+        7,099
+
+Interior:
+
+    0 volumetric/pre-water signals
+
+Stage verdict:
+
+    Wave 1 / Wave 2 / Wave 3 stage foundation remains coherent.
+
+======================================================================
+8. STAGES STILL NOT MAPPED
+======================================================================
+
+The Stage Scheduler enum currently contains additional intended boundaries:
+
+    AfterShadowProduction
+    WaterDomain
+    BeforeGlobalTAA
+    AfterGlobalTAA
+    HDRReduction
+    BeforeTonemap
+    PostTonemapPreUi
+
+This continuous real-Skyrim session emitted ZERO events for those boundaries.
+
+Therefore these are NOT currently field-mapped stage contracts.
+
+This is now explicit rather than assumed.
+
+The last consistently named exterior landmark remains:
+
+    PublishPreWaterDepth
+
+and the last consistently named interior landmark remains:
+
+    AfterAmbientScreenSpaceComposite
+
+Everything later must currently be reconstructed from raw pass/resource
+telemetry.
+
+======================================================================
+9. SEMANTIC AUTHORITY CONTINUITY
+======================================================================
+
+Seventeen current semantic families are continuously observed:
+
+    MAIN_HDR
+    MAIN_DEPTH_CURRENT
+    MOTION
+    NORMAL_MASK_CURRENT
+    AUXILIARY_RT3
+    DEPTH_EARLY_COPY
+    STOCK_CAMERAZ
+    SAO_RAWAO_CURRENT
+    SAO_RAWAO_PREVIOUS
+    SAO_FILTER_TEMP
+    SAO_FILTERED
+    RAW_INDIRECT
+    SHADOW_MASK
+    VOLUMETRIC_DENSITY_A
+    VOLUMETRIC_DENSITY_B
+    VOLUMETRIC_PREVIOUS_DEPTH
+    PRE_WATER_DEPTH_CURRENT
+
+Two declared semantic families remain wholly unresolved:
+
+    REDUCED_REFLECTION_LIGHTING
+    REDUCED_TEMPORAL_LIGHTING_HISTORY
+
+Each appears only as the initial unavailable zero row.
+
+Do NOT treat those names as proven resources yet.
+
+======================================================================
+10. STABLE SEMANTIC RESOURCE BEHAVIOR
+======================================================================
+
+Stable one-identity resources across the active session include:
+
+    MAIN_HDR
+    MAIN_DEPTH_CURRENT
+    MOTION
+    AUXILIARY_RT3
+    DEPTH_EARLY_COPY
+    STOCK_CAMERAZ
+    SAO_FILTER_TEMP
+    SAO_FILTERED
+    RAW_INDIRECT
+    VOLUMETRIC_DENSITY_A
+    VOLUMETRIC_DENSITY_B
+    VOLUMETRIC_PREVIOUS_DEPTH / PRE_WATER_DEPTH_CURRENT
+
+Expected ping-pong:
+
+NORMAL_MASK_CURRENT:
+    2 physical identities
+    physical generation changes every active frame
+
+SAO_RAWAO_CURRENT / PREVIOUS:
+    2 physical identities
+    current/previous role alternates every active frame
+
+SHADOW_MASK:
+    3 physical identities
+    54 physical generations in this session
+
+No Wave 3 semantic-contract reset regression returned.
+
+======================================================================
+11. PIPELINE DATA VOLUME
+======================================================================
+
+Continuous pipeline files:
+
+    pipeline_runs_0001.csv
+    through
+    pipeline_runs_0107.csv
+
+Compressed pass-run rows:
+
+    14,627,763
+
+Represented repeated/raw passes:
+
+    36,430,713
+
+Median per-frame compact run count:
+
+    ~1,167
+
+Median per-frame represented pass count:
+
+    ~3,093
+
+The current family compression therefore reduces some adjacent repetition but
+does NOT compress enough for long routine sessions.
+
+This is why the session generated more than 7 GB of text.
+
+DATA verdict:
+
+    LISTENER EVIDENCE QUALITY = HIGH
+    LISTENER STORAGE EFFICIENCY = POOR
+
+No repair is authorized in DATA phase.
+
+======================================================================
+12. PIPELINE DISTRIBUTION
+======================================================================
+
+Compact run rows by currently-known region:
+
+startup / unknown:
+    27,205
+
+through depth prepass:
+    7,103,105
+
+opaque world:
+    5,933,264
+
+CameraZ:
+    119,350
+
+stock AO:
+    32,550
+
+ambient composite:
+    36,253
+
+exterior:
+post ambient -> pre-water:
+    720,851
+
+exterior:
+post pre-water -> Present:
+    379,724
+
+interior:
+post ambient -> Present:
+    275,461
+
+The majority of raw activity naturally lives in geometry-heavy depth/opaque
+work.
+
+The late image-space domain is much smaller and therefore highly tractable for
+exact pass-chain reconstruction.
+
+======================================================================
+13. STRUCTURAL PASS FAMILIES
+======================================================================
+
+After normalizing away material/resource identity churn while retaining:
+
+    pass kind
+    shader identities
+    output shapes
+    DSV shape
+    topology
+    viewport
+
+DATA finds approximately:
+
+    4,638 structural pass families
+
+across the session.
+
+This is dramatically smaller than the 14.6 million continuous run rows.
+
+This proves that future telemetry can be compressed much more aggressively
+without losing renderer architecture.
+
+A likely better future representation is:
+
+    structural pass-family dictionary
+    +
+    per-frame family sequence
+    +
+    resource binding deltas
+
+rather than repeating full CSV binding state for every run.
+
+No redesign is started in this DATA phase.
+
+======================================================================
+14. STRONG LATE-PIPELINE DISCOVERY #1
+LOW-RES TEMPORAL / LIGHTING FAMILY
+======================================================================
+
+Immediately after the currently-known ambient/pre-water region, a stable
+low-resolution image-space family appears in BOTH exterior and interior.
+
+Observed resource shapes include:
+
+    640x360 R16G16B16A16_FLOAT
+    160x360 R16G16B16A16_FLOAT
+    80x360 R16G16B16A16_FLOAT
+    160x90 R16G16B16A16_FLOAT
+
+The family:
+
+- consumes MOTION;
+- repeatedly reads history-like low-resolution surfaces;
+- performs horizontal/vertical or multi-scale transforms;
+- reconstructs back to 640x360;
+- culminates in a write to MAIN_HDR.
+
+Two 640x360 renderable/UAV-capable resources:
+
+    0x25e68bc2050
+    0x25e68bc1550
+
+are read on alternating frame populations:
+
+    ~5,425 reads each
+
+but have no producer visible in the compact immediate-context lineage.
+
+This family exists in:
+
+    exterior
+    interior
+
+and is therefore not purely water-specific.
+
+DATA verdict:
+
+    STRUCTURE VERIFIED
+    EXACT SEMANTIC UNRESOLVED
+
+It is a strong candidate lane for the currently-unresolved:
+
+    reduced reflection / temporal lighting
+
+semantics, but DATA does NOT promote either name yet.
+
+======================================================================
+15. STRONG LATE-PIPELINE DISCOVERY #2
+HDR REDUCTION / EXPOSURE / TONEMAP CANDIDATE
+======================================================================
+
+A remarkably stable once-per-active-frame chain begins from MAIN_HDR.
+
+Representative exterior sequence:
+
+    MAIN_HDR 2560x1440 R16G16B16A16_FLOAT
+    ->
+    640x360 R16G16B16A16_FLOAT
+    ->
+    160x90 R16G16B16A16_FLOAT
+    ->
+    40x23 R16G16B16A16_FLOAT
+    ->
+    10x6 R16G16B16A16_FLOAT
+    ->
+    3x2 R16G16B16A16_FLOAT
+    ->
+    2x2 R16G16B16A16_FLOAT
+
+The 2x2 result then participates in additional 640x360 processing before a
+full-resolution:
+
+    R8G8B8A8_UNORM
+
+surface is written.
+
+This exact structural chain is present in both:
+
+    exterior
+    interior
+
+and appears on every active frame.
+
+This is the strongest field evidence GZFX has yet captured for the currently
+unmapped:
+
+    HDR reduction
+    exposure
+    tonemap
+
+domain.
+
+DATA classification:
+
+    VERY STRONG FUNCTIONAL CANDIDATE
+    NOT YET A LOCKED SEMANTIC/STAGE CONTRACT
+
+Research must verify the exact shader/resource role before promotion.
+
+======================================================================
+16. STRONG LATE-PIPELINE DISCOVERY #3
+FULL-RESOLUTION TEMPORAL CANDIDATE
+======================================================================
+
+Immediately after the full-resolution R8G8B8A8 output above, another stable
+pass reads:
+
+    current full-resolution R8G8B8A8
+    history-like full-resolution R8G8B8A8
+    MOTION
+    MAIN_DEPTH_CURRENT
+
+and writes:
+
+    two full-resolution R8G8B8A8 resources.
+
+Representative resource IDs:
+
+input/current:
+    0x25e68b75e70
+
+history-like:
+    0x25e68bc0fd0
+
+motion:
+    0x25e68b71030
+
+depth:
+    0x25e68b938f0
+
+outputs:
+    0x25e68b74df0
+    0x25e68bbfc90
+
+This appears once per active frame.
+
+That is a VERY STRONG global temporal/TAA-style signature.
+
+However:
+
+DATA alone cannot prove whether this is exactly Skyrim's global TAA pass or a
+different full-resolution temporal image-space operation.
+
+Therefore:
+
+    candidate = strong
+    semantic promotion = withheld
+
+======================================================================
+17. STRONG LATE-PIPELINE DISCOVERY #4
+DEPTH-AWARE FULL-RESOLVE CANDIDATE
+======================================================================
+
+The following stable pass consumes:
+
+    full-resolution R8G8B8A8
+    640x360 R8G8B8A8
+    MAIN_DEPTH_CURRENT
+    STOCK_CAMERAZ
+
+and writes another:
+
+    full-resolution R8G8B8A8
+
+resource.
+
+Representative output:
+
+    0x25e68a00490
+
+This resource is heavily written late in the frame and not subsequently
+observed as an SRV read by the compact pipeline.
+
+Possible interpretation lanes include:
+
+    final post-temporal composite
+    image-space resolve
+    late LDR target
+
+But DATA does not assign a final name.
+
+It is a high-value boundary candidate for the next research pass.
+
+======================================================================
+18. EXTERIOR-ONLY LATE LANDMARK
+======================================================================
+
+One late pass family is especially clean:
+
+VS:
+    0x25ecc9e6430
+
+PS:
+    0x25ecc9e7a10
+
+Occurrence:
+
+    exactly 7,099 times
+
+which equals:
+
+    all 7,099 exterior active frames
+
+Interior occurrence:
+
+    0
+
+It consumes, among other inputs:
+
+    0x25e68b94970
+
+Resource 0x25e68b94970 is:
+
+    2560x1440
+    R16_FLOAT
+    render-target/UAV capable
+
+Observed:
+
+    7,098 writes
+    10,650 reads
+
+Environment:
+
+    exterior only
+
+The pass writes:
+
+    MAIN_HDR
+
+This is a clean exterior-only late-rendering landmark.
+
+It may eventually identify an outdoor lighting / atmospheric / water /
+reflection domain, but DATA alone does not distinguish those possibilities.
+
+Do NOT name it prematurely.
+
+======================================================================
+19. INTERIOR / EXTERIOR DIFFERENTIATION
+======================================================================
+
+The generic low-resolution reduction/temporal and HDR/tonemap candidate
+families exist in both environments.
+
+Interior also contains many extra late geometry/material shader families.
+
+Exterior has a much smaller set of truly exterior-specific late structural
+families.
+
+This separation is useful:
+
+    generic post-processing
+    can now be distinguished from
+    environment-specific late rendering.
+
+The second exterior block plus interior block therefore materially improved
+cartography.
+
+======================================================================
+20. COMMAND-LIST OWNERSHIP
+======================================================================
+
+Ownership events:
+
+    31,215
+
+GZFX-owned command lists:
+
+Wave3 pass 2:
+    10,850
+
+Wave4 pass 4:
+    5,439
+
+Wave4 pass 5:
+    5,439
+
+Skyrim / unknown-owned command lists:
+
+    9,487
+
+Exterior Skyrim command-list events:
+
+    ~7,107
+
+Interior Skyrim command-list events:
+
+    ~2,366
+
+Transition/startup:
+
+    14
+
+The GZFX ownership split remains healthy.
+
+But this exposes the largest remaining cartography problem.
+
+======================================================================
+21. MAJOR BLIND SPOT:
+SKYRIM DEFERRED COMMAND-LIST INTERNALS
+======================================================================
+
+Current continuous Pipeline Cartography records immediate-context work.
+
+When Skyrim executes its own ID3D11CommandList, the listener records:
+
+    frame
+    ordinal
+    command list identity
+    restore-state behavior
+
+but DOES NOT see the individual draws/dispatches recorded INSIDE that deferred
+command list.
+
+This occurred:
+
+    9,487 times
+
+during the session.
+
+That is not a minor edge case.
+
+It means the present listener still cannot claim:
+
+    complete Skyrim renderer pass coverage.
+
+This is now the primary architecture blind spot for full-stack discovery.
+
+Future work will need to consider safe instrumentation of Skyrim-created
+deferred D3D11 contexts / FinishCommandList content, not merely the immediate
+ExecuteCommandList event.
+
+No such implementation is started in DATA phase.
+
+======================================================================
+22. MAJOR LINEAGE BLIND SPOT:
+COPY / RESOLVE / CLEAR OPERANDS
+======================================================================
+
+The compact continuous PassTelemetry currently captures rich bound-state
+resource information for normal draw/dispatch work.
+
+However, for operations such as:
+
+    CopyResource
+    CopySubresourceRegion
+    ResolveSubresource
+    ClearRenderTarget
+    ClearDepthStencil
+    ClearUAV
+
+the compact event is currently emitted from bound pipeline state rather than
+carrying the operation's explicit source/destination/view operands.
+
+Result:
+
+some resources that are known to be produced by copies or other explicit
+operations appear as:
+
+    read-only
+
+inside the compact producer/consumer graph.
+
+Examples include known copy-based semantic resources such as:
+
+    DEPTH_EARLY_COPY
+    PRE_WATER_DEPTH_CURRENT
+
+This means:
+
+    continuous resource lineage is strong for draw/dispatch bindings
+    but incomplete for explicit copy/resolve/clear operations.
+
+This must be repaired before calling the resource graph complete.
+
+======================================================================
+23. READ-ONLY RENDERABLE RESOURCES AS BLIND-SPOT EVIDENCE
+======================================================================
+
+Resources used by continuous telemetry:
+
+    2,114
+
+Observed read-only:
+
+    2,052
+
+Most are ordinary texture assets and are expected to be read-only.
+
+However, at least:
+
+    10
+
+read-only resources have render-target/depth/UAV-capable bind flags.
+
+Some are already explained by copy-operation telemetry limitations.
+
+Others are plausible hidden producers inside deferred command lists.
+
+High-value examples:
+
+0x25eced43650
+    320x320 R8G8B8A8_UNORM
+    UAV-capable
+    ~1.85 million reads
+    no visible producer
+
+0x25e68bdff30
+    1280x720 R16G16B16A16_FLOAT
+    render-target/UAV capable
+    ~452k reads
+    no visible producer
+
+0x25e68bc2050 / 0x25e68bc1550
+    640x360 R16G16B16A16_FLOAT
+    render-target/UAV capable
+    alternating history-like read populations
+    no visible producer
+
+These are exactly the kind of evidence expected when deferred-context internals
+are opaque.
+
+======================================================================
+24. WAVE 3 / WAVE 4 OWNERSHIP HEALTH
+======================================================================
+
+Wave 3 executes on all:
+
+    10,850 active scene frames
+
+and remains valid.
+
+Wave 4 ownership command lists appear only in the intended development modes,
+apart from a few transition-frame edge cases.
+
+Mode 1 / Mode 2 continuously show:
+
+    Wave4AmbientVisibility
+    Wave4AmbientInjection
+
+Mode 0 / 4 do not show sustained Wave4 ownership.
+
+This confirms the listener is capable of correlating GZFX ownership with mode
+changes over long sessions.
+
+======================================================================
+25. TIMING EVIDENCE
+======================================================================
+
+Timing source 3 (Wave 3):
+
+rows:
+    10,848
+
+median:
+    ~0.609 ms
+
+mean:
+    ~1.174 ms
+
+p95:
+    ~2.451 ms
+
+max:
+    ~167.5 ms
+
+Timing source 4 (Wave 4):
+
+rows:
+    5,438
+
+median:
+    ~3.157 ms
+
+mean:
+    ~3.835 ms
+
+p95:
+    ~6.315 ms
+
+max:
+    ~88.2 ms
+
+These values remain FORENSIC-BUILD observations.
+
+They are NOT release-performance gates.
+
+The current session continuously produced roughly 18.5 MB/s of text and
+tracked millions of renderer events.
+
+Therefore do not interpret these timing tails as pure production GZFX cost.
+
+======================================================================
+26. DATA VOLUME IS ITSELF A FINDING
+======================================================================
+
+The user's 400 MB ZIP corresponds to:
+
+    >7.15 GB
+
+of listener text.
+
+For a one-off cartography campaign this is acceptable and was useful.
+
+For repeated normal iteration it is excessive.
+
+The DATA proves a more efficient representation is possible because:
+
+    14.63 million pass-run rows
+
+collapse to roughly:
+
+    4,638 structural pass families
+
+when material/resource churn is normalized.
+
+Future research should consider reducing telemetry through:
+
+    pass-family dictionary IDs
+    binding/resource deltas
+    per-frame family sequence
+    dedicated resource lineage events
+    targeted late-stack full detail
+
+instead of repeating wide CSV rows.
+
+No compression redesign is authorized during DATA phase.
+
+======================================================================
+27. WHAT THE SESSION PROVED ABOUT THE LISTENER
+======================================================================
+
+PASS:
+
+- continuous frame history;
+- zero dropped events;
+- queue headroom;
+- mode transitions;
+- environment transitions;
+- stage continuity;
+- semantic continuity;
+- resource catalog;
+- GZFX ownership timeline;
+- Skyrim command-list visibility at execute level;
+- Wave3/Wave4 timing correlation;
+- structural late-pipeline discovery;
+- enough concrete resource IDs to expose real producer/consumer chains.
+
+PARTIAL:
+
+- exact producer/consumer graph;
+- full late-stage semantic naming.
+
+FAIL / OPEN:
+
+- deferred command-list internals;
+- exact copy/resolve/clear operand lineage;
+- clean-shutdown marker in this evidence;
+- storage efficiency.
+
+======================================================================
+28. WHAT THE SESSION PROVED ABOUT SKYRIM'S LATE PIPELINE
+======================================================================
+
+The current known stage map is incomplete, but the raw renderer data now shows
+a repeatable post-lighting architecture.
+
+At a high level:
+
+    opaque / depth
+    ->
+    CameraZ
+    ->
+    stock AO
+    ->
+    ambient composite
+    ->
+    exterior volumetric/pre-water branch where applicable
+    ->
+    stable low-resolution temporal/lighting family
+    ->
+    MAIN_HDR update
+    ->
+    stable HDR reduction / tiny-resolution exposure chain candidate
+    ->
+    full-resolution R8 output candidate
+    ->
+    full-resolution motion/depth temporal family candidate
+    ->
+    depth-aware full-resolution resolve candidate
+    ->
+    late geometry / command-list domain
+    ->
+    Present/UI
+
+The exact names of the unresolved middle/late passes are NOT yet locked.
+
+But their order, dimensions, resource dependencies and repeatability are now
+evidence rather than speculation.
+
+======================================================================
+29. CURRENT DATA-ONLY NEXT QUESTIONS
+======================================================================
+
+The next research phase should answer, from this evidence:
+
+1. How can Skyrim deferred contexts be instrumented safely so command-list
+   contents become visible?
+
+2. How should compact telemetry encode explicit operands for copy/resolve/clear
+   operations?
+
+3. Can the once-per-frame MAIN_HDR -> tiny reduction chain be formally
+   identified and promoted as HDRReduction / tonemap boundaries?
+
+4. Can the full-resolution R8 + motion + depth temporal pass be formally
+   promoted as Before/AfterGlobalTAA?
+
+5. What exact semantic family owns the 640x360 / 160x360 / 80x360 / 160x90
+   temporal-lighting chain?
+
+6. What is the exterior-only full-resolution R16_FLOAT resource
+   0x25e68b94970 and its once-per-exterior-frame MAIN_HDR apply pass?
+
+7. How should telemetry be reduced from ~18.5 MB/s without losing exact
+   architecture/resource lineage?
+
+8. Why was the clean session completion marker absent in this real-game
+   archive?
+
+These are research questions.
+
+They are NOT answered by guessing during DATA.
+
+======================================================================
+30. OWNER INTERVENTION
+======================================================================
+
+No repeat of this 400 MB session is required.
+
+The evidence is sufficient to proceed.
+
+The owner does NOT need to intervene in renderer architecture before research.
+
+However, before implementation after research, the owner may want to review
+the proposed next instrumentation step because it will likely involve:
+
+    deferred-context / command-list internals
+
+rather than another graphics effect.
+
+This is the correct direction if the goal remains:
+
+    fully discover Skyrim
+    and own the stack
+    before final quality tuning.
+
+======================================================================
+31. DATA PHASE VERDICT
+======================================================================
+
+Was the 400 MB worth it?
+
+YES.
+
+It gave GZFX:
+
+- a six-minute continuous renderer timeline;
+- zero-loss listener validation;
+- millions of real pass/resource observations;
+- strong late-pipeline landmark candidates;
+- a concrete HDR-reduction/tonemap candidate chain;
+- a concrete global-temporal/TAA candidate chain;
+- environment/mode ownership correlation;
+- exact proof of where the current listener is still blind.
+
+Most importantly:
+
+the next problem is now sharply defined.
+
+The blocker to true full-stack ownership is no longer lack of data.
+
+It is:
+
+    hidden deferred-command-list work
+    +
+    incomplete explicit-operation resource lineage
+    +
+    unnamed late image-space boundaries.
+
+DATA is complete.
+
+RESEARCH HAS NOT STARTED.
+
+END OF GZFX 0.0.24 TELEMETRY FIELD FINDINGS
