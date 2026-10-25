@@ -1873,7 +1873,7 @@ namespace gzfx::diagnostics::telemetry_listener
                     << event.frame;
 
                 for (std::size_t i = 0;
-                     i <= 87;
+                     i <= 88;
                      ++i)
                 {
                     row
