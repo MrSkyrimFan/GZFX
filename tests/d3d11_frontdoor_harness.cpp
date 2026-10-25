@@ -281,6 +281,16 @@ int wmain(
         firstResource != std::string::npos &&
         firstPresent != std::string::npos;
 
+    const bool startupOrdered =
+        startupComplete &&
+        processAttach < firstExport &&
+        firstExport < deviceCreated &&
+        deviceCreated < loadBegin &&
+        loadBegin < initialized &&
+        initialized < attached &&
+        attached < firstResource &&
+        firstResource < firstPresent;
+
     const fs::path telemetryRoot =
         outputRoot /
         L"GZFX" /
@@ -330,10 +340,11 @@ int wmain(
     swapChain->Release();
     DestroyWindow(window);
 
-    if (!startupComplete)
+    if (!startupComplete ||
+        !startupOrdered)
     {
         std::cerr
-            << "Graphics-front-door startup evidence incomplete.\n"
+            << "Graphics-front-door startup evidence incomplete or misordered.\n"
             << startup
             << "\n";
 
