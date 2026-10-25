@@ -609,6 +609,29 @@ namespace gzfx::diagnostics::pipeline_cartography
                         readHash,
                         HashViewBinding(
                             binding));
+
+                    bool alreadyListed = false;
+
+                    for (std::uint32_t i = 0;
+                         i < out.readResourceCount;
+                         ++i)
+                    {
+                        if (out.readResources[i] ==
+                            binding.resource)
+                        {
+                            alreadyListed = true;
+                            break;
+                        }
+                    }
+
+                    if (!alreadyListed &&
+                        out.readResourceCount <
+                            out.readResources.size())
+                    {
+                        out.readResources[
+                            out.readResourceCount++] =
+                            binding.resource;
+                    }
                 }
 
                 for (std::size_t slot = 0;
@@ -666,6 +689,34 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::uint64_t writeHash =
                 14695981039346656037ull;
 
+            const auto addWriteResource =
+                [&](const std::uintptr_t identity)
+                {
+                    if (identity == 0)
+                    {
+                        return;
+                    }
+
+                    for (std::uint32_t i = 0;
+                         i < out.writeResourceCount;
+                         ++i)
+                    {
+                        if (out.writeResources[i] ==
+                            identity)
+                        {
+                            return;
+                        }
+                    }
+
+                    if (out.writeResourceCount <
+                        out.writeResources.size())
+                    {
+                        out.writeResources[
+                            out.writeResourceCount++] =
+                            identity;
+                    }
+                };
+
             for (const auto& binding :
                  g_state.rtvs)
             {
@@ -675,6 +726,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                         writeHash,
                         HashViewBinding(
                             binding));
+
+                    addWriteResource(
+                        binding.resource);
                 }
             }
 
@@ -684,6 +738,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                     writeHash,
                     HashViewBinding(
                         g_state.dsv));
+
+                addWriteResource(
+                    g_state.dsv.resource);
             }
 
             std::uint64_t omUavHash =
@@ -710,6 +767,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                 HashMix(
                     writeHash,
                     hash);
+
+                addWriteResource(
+                    binding.resource);
             }
 
             for (const auto& binding :
