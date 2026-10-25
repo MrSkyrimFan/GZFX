@@ -65,6 +65,7 @@ add_library(GZFX SHARED
     src/version.cpp
     src/diagnostics/d3d11_lifecycle.cpp
     src/diagnostics/deferred_context_cartography.cpp
+    src/diagnostics/engine_epochs.cpp
     src/diagnostics/pipeline_cartography.cpp
     src/diagnostics/renderer_forensics.cpp
     src/diagnostics/resource_intelligence.cpp
@@ -95,6 +96,7 @@ target_link_libraries(
         ole32
         user32
         gdi32
+        version
         d3dcompiler
         dxguid
         minhook
