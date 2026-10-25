@@ -527,8 +527,23 @@ namespace
 
         if (existing != nullptr)
         {
+            const fs::path existingPath =
+                ModulePath(
+                    existing);
+
+            // Own one graphics-bootstrap lifetime reference so cached GZFX
+            // lifecycle exports remain valid through ExitProcess even if the
+            // original loader releases its reference first.
+            HMODULE owned =
+                existingPath.empty()
+                    ? nullptr
+                    : LoadLibraryW(
+                        existingPath.c_str());
+
             ResolveExportsFromLoadedGzfx(
-                existing);
+                owned != nullptr
+                    ? owned
+                    : existing);
         }
     }
 
