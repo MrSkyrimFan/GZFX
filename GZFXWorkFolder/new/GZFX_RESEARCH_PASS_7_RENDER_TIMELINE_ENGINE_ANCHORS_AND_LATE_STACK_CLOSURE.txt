@@ -1,0 +1,1870 @@
+GZFX RESEARCH PASS 7
+Renderer Timeline, Skyrim Engine Semantic Anchors, and Late-Stack Closure
+Research date: October 25, 2026
+Status: RESEARCH COMPLETE
+Controlling DATA:
+    GZFXWorkFolder/new/GZFX_0.0.25_LATE_STACK_FIELD_VALIDATION_FINDINGS.txt
+
+======================================================================
+1. EXECUTIVE CONCLUSION
+======================================================================
+
+The correct next architecture is NOT another broad anonymous-D3D cartography
+pass and NOT a one-line repair to the 0.0.25 HDR state machine.
+
+The 0.0.25 field evidence plus public renderer research now supports a much
+stronger model:
+
+    Skyrim engine semantic anchors
+    +
+    GZFX D3D11 resource/pass telemetry
+    +
+    explicit GZFX command-list ownership
+    +
+    explicit DXGI Present timeline
+
+This hybrid model should become the next renderer-cartography authority.
+
+The most important research conclusions are:
+
+1. The core 0.0.25 deferred-context observation model was technically valid
+   D3D11 engineering, but the old "Skyrim deferred command-list blind spot"
+   was misclassified.
+
+2. A GZFX source audit found direct GZFX command-list execution paths that
+   bypass renderer_execution_service ownership tagging. The dominant
+   once-per-frame "skyrim" / unknown list is overwhelmingly likely to be
+   GZFX visible_pass work, not hidden vanilla Skyrim rendering.
+
+3. The current UiPresent event is not the actual DXGI Present boundary.
+   It fires inside GZFX's pre-original-Present callback work. GZFX then runs
+   visible_pass, which can create and execute a command list, before the real
+   IDXGISwapChain::Present is called.
+
+4. Skyrim's renderer already exposes named engine-level image-space effects
+   that correspond directly to the semantic stages GZFX has been inferring:
+       HDR downsample / luminance / adaptation
+       HDR tonemap variants
+       temporal AA
+       temporal AA for water
+       water blend
+       reflection apply
+       image copies
+       post-processing
+       UI/menu draw start
+
+5. Community Shaders demonstrates that these named Skyrim engine stages can be
+   observed directly by hooking known engine functions and image-space shader
+   vtables, then correlated with D3D11 work.
+
+6. ReShade independently demonstrates the correct API-lifecycle model:
+       wrap deferred contexts when created
+       observe recording
+       close at FinishCommandList
+       execute secondary command lists explicitly
+       distinguish present-entry from post-present/finish-present.
+
+7. ENB provides useful high-level evidence that a mature Skyrim graphics
+   framework must own both graphics interception and engine/post-processing
+   integration, but current Skyrim SE ENB internals are proprietary and must
+   NOT be reverse-copied or assumed.
+
+8. GZFX can implement the useful engine-anchor ideas while remaining fully
+   SKSE-free. The project already links MinHook v1.3.4. What is missing is a
+   small fail-closed SkyrimSE.exe anchor resolver, not a new hook library.
+
+9. The 0.0.25 greedy HDR detector should be retired as primary semantic
+   authority. Structural D3D inference should remain as independent evidence
+   and fallback, but named engine anchors should become the primary
+   late-renderer semantic source where available.
+
+10. The next coherent engineering wave should fix ownership/timeline truth
+    first, add a small set of verified engine anchors second, correlate those
+    anchors with the existing D3D telemetry third, and only then promote
+    WaterDomain / HDR / TAA / PostTonemapPreUi.
+
+This is a materially better path than trying to infer the entire Skyrim
+renderer forever from anonymous texture dimensions and shader pointers.
+
+======================================================================
+2. CONTROLLING FIELD FACTS
+======================================================================
+
+0.0.25 real-Skyrim validation:
+
+    active scene frames: 8,379
+
+Existing locked foundation remained coherent.
+
+New 0.0.25 promotions:
+
+    HDRReduction       0
+    BeforeTonemap      0
+    BeforeGlobalTAA    0
+    AfterGlobalTAA     0
+
+The real renderer structure nevertheless remained visible every active frame:
+
+    MAIN_HDR
+    ->
+    640x360 RGBA16F
+    ->
+    160x90 RGBA16F
+    ->
+    40x23 RGBA16F
+    ->
+    10x6 RGBA16F
+    ->
+    3x2 RGBA16F
+    ->
+    2x2 RGBA16F
+    ->
+    reconstruction / adaptation descendants
+    ->
+    full-resolution RGBA8
+    ->
+    full-resolution temporal current/history + MOTION + DEPTH
+    ->
+    two full-resolution RGBA8 outputs
+
+Therefore the renderer discovery was not disproven.
+
+The detector was.
+
+The 0.0.25 deferred instrumentation also reported:
+
+    deferred_contexts_attached=7
+    deferred_lists_finished=22,329
+    deferred_lists_executed=6,420
+    deferred_opaque_executions=0
+    deferred_recorded_runs=81,719
+    overflows=0
+    registry evictions=0
+
+But only 45 "unknown/skyrim" executions landed in deferred_lists.csv because
+the late-detail gate closes at UiPresent.
+
+The dominant untagged command list executed 6,375 times and always after the
+current UiPresent telemetry event.
+
+======================================================================
+3. MAJOR RESEARCH CORRECTION:
+THE "SKYRIM DEFERRED LIST" IS VERY LIKELY GZFX
+======================================================================
+
+A direct current-source audit materially changes the old interpretation.
+
+Current ownership logic in renderer_forensics does:
+
+    if renderer_execution_service::QueryOwnedCommandList(...) succeeds:
+        owner = gzfx
+    else:
+        owner = skyrim
+
+Therefore:
+
+    owner=skyrim
+
+has NEVER meant:
+
+    proven vanilla Skyrim ownership.
+
+It means only:
+
+    not registered with renderer_execution_service.
+
+Current GZFX contains direct command-list execution paths that bypass that
+ownership service.
+
+Most importantly:
+
+    src/render/visible_pass.cpp
+
+does:
+
+    deferred->FinishCommandList(FALSE, &commands)
+    context->ExecuteCommandList(commands, TRUE)
+
+directly.
+
+It does NOT route through:
+
+    renderer_execution_service::ExecuteOwned(...)
+
+and therefore does NOT receive an OwnedTag.
+
+Renderer Forensics OnPresent calls:
+
+    semantic_authority::OnPresent(...)
+    ->
+    RenderVisiblePass(...)
+    ->
+    telemetry_listener::OnPresent(...)
+
+The UiPresent semantic marker is produced before the visible pass executes.
+
+This exactly matches the field pattern:
+
+    UiPresent event
+    ->
+    short QPC delay
+    ->
+    dominant untagged ExecuteCommandList
+    ->
+    actual original IDXGISwapChain::Present later
+
+The dominant unknown list:
+
+    6,375 executions
+
+is therefore highly likely to be the GZFX visible pass.
+
+Additional direct GZFX command-list paths exist in diagnostics such as:
+
+    resource_intelligence
+    semantic_probe
+
+and can explain exceptional/burst untagged lists.
+
+The arithmetic also supports this correction:
+
+    registered GZFX execution events: 15,909
+    untagged/"skyrim" execution events: 6,420
+    total: 22,329
+
+which exactly equals:
+
+    deferred_lists_finished: 22,329
+
+This strongly suggests the seven deferred contexts attached in this field
+session are primarily or entirely GZFX-owned contexts, not evidence of a large
+hidden vanilla Skyrim deferred renderer.
+
+Research verdict:
+
+    OLD CLAIM:
+        "Skyrim's late renderer is hidden inside its own deferred lists"
+
+    NEW STATUS:
+        NOT PROVEN
+        LIKELY SUBSTANTIALLY FALSE FOR THIS SESSION
+
+The next implementation must repair ownership first before spending another
+wave instrumenting "Skyrim" deferred work.
+
+The safe next owner categories should be:
+
+    gzfx_registered
+    gzfx_internal_unregistered
+    skyrimse_exe
+    external_module
+    system_runtime
+    unknown
+
+and "skyrim" must never again be assigned merely because a GZFX tag is absent.
+
+======================================================================
+4. MICROSOFT D3D11 FACTS
+======================================================================
+
+Microsoft documentation confirms that the original 0.0.25 observation
+architecture is valid:
+
+- ID3D11Device::CreateDeferredContext creates a deferred context that records
+  commands into command lists.
+
+- Multiple deferred contexts may exist.
+
+- FinishCommandList produces the ID3D11CommandList.
+
+- ExecuteCommandList on the immediate context is required to execute recorded
+  commands on the GPU.
+
+- Executing a command list on another deferred context can merge lists.
+
+- ID3D11CommandList itself exposes no API for enumerating its recorded draws
+  and dispatches after creation. Its public command-list-specific method is
+  GetContextFlags.
+
+Therefore:
+
+    observe while deferred context records
+    ->
+    seal our own record at FinishCommandList
+    ->
+    join at ExecuteCommandList
+
+remains the correct D3D11 strategy whenever true external deferred work exists.
+
+Microsoft also documents:
+
+    CreateDeferredContext1
+    CreateDeferredContext2
+    CreateDeferredContext3
+
+on newer device interfaces.
+
+ReShade wraps all of these, not only the base method.
+
+Research implication:
+
+    base CreateDeferredContext coverage was sufficient for the current field
+    evidence, but production-grade compatibility should eventually cover the
+    interface-version variants if evidence shows they are used.
+
+This is NOT the current primary blocker.
+
+Primary blocker is semantic/timeline truth.
+
+Primary sources:
+
+https://learn.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11device-createdeferredcontext
+https://learn.microsoft.com/en-us/windows/win32/api/d3d11_1/nf-d3d11_1-id3d11device1-createdeferredcontext1
+https://learn.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-executecommandlist
+https://learn.microsoft.com/en-us/windows/desktop/api/d3d11/nn-d3d11-id3d11commandlist
+https://learn.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-render-multi-thread-command-list-play
+https://learn.microsoft.com/en-us/windows/win32/api/d3d11/ns-d3d11-d3d11_feature_data_threading
+
+======================================================================
+5. RESHADE ARCHITECTURE — REUSABLE FACTS
+======================================================================
+
+ReShade is a useful public architectural reference because it solves the same
+general API-observation problem without needing game-specific semantics.
+
+Current ReShade D3D11 code:
+
+    source/d3d11/d3d11_device.cpp
+
+wraps:
+
+    CreateDeferredContext
+    CreateDeferredContext1
+    CreateDeferredContext2
+    CreateDeferredContext3
+
+and returns a proxy D3D11DeviceContext around the original context.
+
+Current:
+
+    source/d3d11/d3d11_device_context.cpp
+
+treats command-list lifecycle explicitly.
+
+FinishCommandList:
+
+    closes the recorded command list
+    creates/wraps the command-list object
+    emits add-on lifecycle events.
+
+ExecuteCommandList:
+
+    recognizes secondary command-list execution
+    invokes lifecycle events
+    calls the underlying runtime
+    restores/emits default-state behavior when necessary.
+
+ReShade also distinguishes present lifecycle events rather than using one
+ambiguous "present" concept.
+
+Recent public ReShade changes are especially relevant:
+
+- a finish_present event exists after successful presentation;
+- D3D11 deferred-event behavior has received explicit fixes;
+- ExecuteCommandList without restore-state causes default-state event handling;
+- older changes distinguish command-list execution/flush behavior that may be
+  implicit around presentation.
+
+Research lesson for GZFX:
+
+A. Every command list needs explicit lifecycle identity.
+
+B. Every command list needs explicit provenance.
+
+C. Present needs explicit phases:
+       entry
+       GZFX pre-original work
+       immediately before original DXGI call
+       return/success
+
+D. State restoration must be modeled as an API fact, not guessed from later
+   bindings.
+
+GZFX does NOT need to copy ReShade.
+
+Its public architecture simply validates the lifecycle model.
+
+ReShade source:
+
+https://github.com/crosire/reshade/blob/main/source/d3d11/d3d11_device.cpp
+https://github.com/crosire/reshade/blob/main/source/d3d11/d3d11_device_context.cpp
+https://github.com/crosire/reshade
+
+ReShade LICENSE.md is a permissive three-clause-style license, but GZFX should
+still implement its own code rather than importing large subsystems.
+
+======================================================================
+6. COMMUNITY SHADERS:
+SKYRIM ALREADY NAMES THE PASSES WE NEED
+======================================================================
+
+Community Shaders is the most important public Skyrim-specific research source
+for the next architecture.
+
+Its current FrameAnnotations implementation demonstrates that Skyrim exposes
+named image-space shader classes/effects for the exact late stages GZFX has
+been trying to reconstruct from resource shapes.
+
+FrameAnnotations hooks image-space Render/Dispatch paths and labels them using:
+
+    RE::ImageSpaceManager::ImageSpaceEffectEnum
+
+Examples directly present in the current public source include:
+
+Global temporal:
+
+    ISTemporalAA
+    ISTemporalAA_UI
+    ISTemporalAA_Water
+
+HDR / adaptation:
+
+    ISHDRDownSample16
+    ISHDRDownSample4
+    ISHDRDownSample16Lum
+    ISHDRDownSample4RGB2Lum
+    ISHDRDownSample4LumClamp
+    ISHDRDownSample4LightAdapt
+    ISHDRDownSample16LumClamp
+    ISHDRDownSample16LightAdapt
+
+Tonemap family:
+
+    ISHDRTonemapBlendCinematic
+    ISHDRTonemapBlendCinematicFade
+
+Copies / distribution:
+
+    ISCopy
+    ISCopyDynamicFetchDisabled
+    ISCopyScaleBias
+    ISCopyCustomViewport
+    ISCopyGrayScale
+
+Water / reflections:
+
+    ISWaterBlend
+    ISApplyReflections
+    ISTemporalAA_Water
+
+The public project also annotates higher-level engine phases:
+
+    Main_RenderDepth
+    Main_RenderShadowmasks
+    Main_RenderWorld
+    Main_RenderFirstPersonView
+    Main_RenderPlayerView
+    Main_RenderWaterEffects
+    BSShaderAccumulator render phases
+    Volumetric Lighting
+
+This changes the strategy.
+
+GZFX no longer needs to ask only:
+
+    "what anonymous D3D pass looks like TAA?"
+
+It can ask:
+
+    "when Skyrim invokes its named ISTemporalAA engine effect, which exact
+     D3D resources and pass family are active?"
+
+That produces both:
+
+    semantic identity
+    AND
+    independent resource proof.
+
+Community Shaders reference:
+
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/FrameAnnotations.cpp
+
+======================================================================
+7. HDR / TONEMAP:
+ENGINE ANCHORS ARE STRONGER THAN THE GREEDY DETECTOR
+======================================================================
+
+The 0.0.25 resource-driven HDR detector failed because it committed to the
+first plausible MAIN_HDR -> smaller RGBA16F pass.
+
+Skyrim's named image-space effects provide a much stronger route.
+
+The public names above distinguish:
+
+    generic downsample
+    luminance extraction
+    luminance clamp
+    light adaptation
+    tonemap
+
+These names line up extremely well with the exact real field chain:
+
+    MAIN_HDR
+    ->
+    640x360
+    ->
+    160x90
+    ->
+    40x23
+    ->
+    10x6
+    ->
+    3x2
+    ->
+    2x2
+    ->
+    temporal/adaptation descendants
+
+Research recommendation:
+
+Primary HDR semantic source:
+
+    verified Skyrim named image-space events
+
+D3D resource graph:
+
+    independent cross-check and resource binding authority.
+
+A field-locked HDRReduction boundary should be promoted only after the next
+run proves:
+
+    named HDR downsample/adaptation engine event(s)
+    correlate in time and D3D ordinal
+    with the already-observed terminal 2x2 chain.
+
+The old greedy detector should NOT remain the sole source of truth.
+
+If retained as fallback, it must become multi-candidate and restartable.
+
+======================================================================
+8. GLOBAL TAA:
+DIRECT ISTemporalAA ANCHOR
+======================================================================
+
+The strongest current D3D signature is:
+
+    full-resolution RGBA8 current
+    + full-resolution RGBA8 history
+    + MOTION
+    + MAIN_DEPTH_CURRENT
+    ->
+    two full-resolution RGBA8 outputs
+
+This already matches public Skyrim temporal-AA architecture.
+
+Community Shaders directly hooks:
+
+    ISTemporalAA
+
+and separately:
+
+    ISTemporalAA_UI
+    ISTemporalAA_Water
+
+Therefore global scene TAA can be distinguished from:
+
+    UI temporal behavior
+    water temporal behavior.
+
+Research recommendation:
+
+    BeforeGlobalTAA
+        should be emitted at verified entry to global ISTemporalAA
+
+    AfterGlobalTAA
+        should be emitted at verified return from global ISTemporalAA
+
+and the D3D telemetry should verify that during that bracket the expected:
+
+    MOTION
+    MAIN_DEPTH_CURRENT
+    full-res current/history
+    two-output temporal graph
+
+is actually present.
+
+This is dramatically stronger than a resource-only heuristic.
+
+If named engine anchor and D3D structure disagree:
+
+    fail closed
+    record contradiction
+    do not silently promote.
+
+======================================================================
+9. WATERDOMAIN:
+PUBLIC SKYRIM ANCHORS EXIST
+======================================================================
+
+WaterDomain was deliberately withheld in 0.0.25 because the exterior-only
+late apply could not be safely named.
+
+Public Skyrim renderer research now gives several candidate semantic anchors.
+
+Community Shaders hooks:
+
+    Main_RenderWaterEffects
+
+and explicitly annotates it as:
+
+    "Water Effects"
+
+Its Deferred implementation also marks a transition after its world/blended
+decal work and pre-water depth copy with the comment:
+
+    after this point, water starts rendering
+
+It also exposes:
+
+    ISTemporalAA_Water
+    ISWaterBlend
+    ISApplyReflections
+
+and creates/uses named water temporal history surfaces.
+
+This gives a much safer WaterDomain research strategy.
+
+Do NOT define WaterDomain from one anonymous exterior-only shader pair.
+
+Instead correlate:
+
+A. Main_RenderWaterEffects begin/end.
+
+B. the water-start world-render boundary.
+
+C. ISTemporalAA_Water.
+
+D. ISWaterBlend.
+
+E. ISApplyReflections.
+
+F. GZFX's existing PRE_WATER_DEPTH_CURRENT publication.
+
+G. the field exterior-only R16 temporal family and later MAIN_HDR apply.
+
+Expected result:
+
+    an engine-defined water interval
+    +
+    D3D resource graph inside it.
+
+Only then should WaterDomain become a stage contract.
+
+Community Shaders references:
+
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Deferred.cpp
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/FrameAnnotations.cpp
+https://github.com/community-shaders/skyrim-community-shaders/tree/dev/src/EngineFixes
+
+======================================================================
+10. POST-PROCESSING:
+MAIN_POSTPROCESSING IS A HIGH-VALUE ENGINE ANCHOR
+======================================================================
+
+Community Shaders Upscaling hooks a Skyrim engine call it names:
+
+    Main_PostProcessing
+
+Public source comments state that this location performs upscaling:
+
+    between volumetric lighting and post processing.
+
+The thunk performs its upscaling work and then calls the original Skyrim
+ImageSpaceManager post-processing path.
+
+The same engine location is used by Community Shaders HDR Display when the
+upscaler is absent.
+
+This is exactly the kind of semantic anchor GZFX currently lacks.
+
+It can give GZFX a verified:
+
+    BEGIN_SKYRIM_POSTPROCESSING
+
+landmark independent of texture dimensions.
+
+Community Shaders also has a dedicated hook around the HDR tonemap cinematic
+render path and comments that its post-processing pipeline operates through
+named Skyrim render targets such as:
+
+    kMAIN
+    kMAIN_COPY
+
+before the vanilla HDR path continues.
+
+Research implication:
+
+    GZFX should distinguish:
+        end of world/volumetric work
+        start of Skyrim image-space post
+        HDR/adaptation
+        tonemap
+        TAA
+        final image-space copies
+        UI
+
+instead of treating everything after ambient composite as one anonymous
+late blob.
+
+Reference:
+
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Features/Upscaling.cpp
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Features/HDRDisplay.cpp
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Hooks.cpp
+
+======================================================================
+11. UI / POSTTONEMAPPREUI:
+MENU DRAW START IS A REAL ENGINE LANDMARK
+======================================================================
+
+Community Shaders and independent Skyrim upscaler work both use a hook around:
+
+    MenuManager::DrawInterfaceStart
+
+to distinguish scene/post-processing from UI rendering.
+
+Community Shaders HDR Display redirects the framebuffer at UI start.
+
+This gives GZFX a credible way to define a pre-UI interval.
+
+Potential next contract:
+
+    PostTonemapPreUi
+
+must NOT be emitted merely because a late full-resolution sink appears.
+
+It should be field-derived from a bracket like:
+
+    verified post/tonemap/TAA completion
+    ->
+    final Skyrim image-space copy/distribution
+    ->
+    before MenuManager DrawInterfaceStart.
+
+The exact boundary name still needs field proof, but the engine UI anchor makes
+the question measurable.
+
+Community Shaders public relocation references currently include:
+
+    MenuManagerDrawInterfaceStart:
+        REL::RelocationID(79947, 82084)
+
+These IDs are research references ONLY.
+
+GZFX MUST NOT use Address Library IDs as its runtime mechanism because GZFX is
+SKSE-free.
+
+======================================================================
+12. IMPORTANT PUBLIC EVIDENCE:
+POST-PRESENT CAN BE TOO LATE
+======================================================================
+
+Community Shaders HDR discussion contains a highly relevant renderer fact.
+
+Its developers documented that Skyrim's internal ISCopy distribution can occur
+before a post-Present HDR operation, making post-Present work too late for some
+engine-visible consumers.
+
+Their proposed/used solution is to intercept the relevant image-space copy
+earlier.
+
+Independent open Skyrim upscaler work reached the same architectural
+conclusion from a different direction.
+
+DynamicShaderFrameGen documents that it moved upscaling from Present-time into
+Main_PostProcessing so the engine's later post-processing, including ENB
+compatibility paths, sees the upscaled image correctly.
+
+This is strong independent corroboration:
+
+    Present is NOT a substitute for understanding Skyrim's internal
+    post-processing timeline.
+
+GZFX needs both:
+
+    engine semantic timeline
+    AND
+    real DXGI Present timeline.
+
+Reference:
+
+https://github.com/jatelop8/DynamicShaderFrameGen
+
+======================================================================
+13. DXGI PRESENT TIMELINE:
+REPLACE ONE AMBIGUOUS MARKER WITH EXPLICIT EPOCHS
+======================================================================
+
+Current GZFX naming conflates an internal semantic event with actual
+presentation.
+
+The next architecture should add explicit present phases.
+
+Recommended telemetry events:
+
+    PresentHookEnter
+        first instruction of GZFX IDXGISwapChain::Present detour
+
+    PresentCallbacksBegin
+
+    PresentCallbackSemanticProbeBegin/End
+    PresentCallbackResourceIntelligenceBegin/End
+    PresentCallbackSemanticAuthorityBegin/End
+    PresentCallbackVisiblePassBegin/End
+    PresentCallbackTelemetryBegin/End
+
+    BeforeOriginalDxgiPresent
+        immediately before calling the original swap-chain Present
+
+    AfterOriginalDxgiPresent
+        immediately after original returns
+
+    PresentResult
+        HRESULT / flags / sync interval
+
+Do not call any of these UiPresent unless they actually refer to UI.
+
+Keep:
+
+    engine UI start
+
+as a separate semantic event.
+
+The existing integer frame number should not be the only temporal coordinate.
+
+Add a monotonically increasing:
+
+    present_epoch
+
+and keep QPC on every event.
+
+A command list should therefore be locatable as:
+
+    engine frame
+    present epoch
+    callback phase
+    D3D ordinal
+    thread
+    caller module.
+
+This removes the ambiguity that caused the 0.0.24/0.0.25 deferred
+misclassification.
+
+======================================================================
+14. GZFX COMMAND-LIST OWNERSHIP MUST BECOME COMPLETE
+======================================================================
+
+The current registered ownership service is good but incomplete.
+
+Current registered path:
+
+    renderer_execution_service::TagCommandList
+    ->
+    ExecuteOwned
+    ->
+    RetireCommandList
+
+Current bypasses include direct ExecuteCommandList use in:
+
+    visible_pass
+    resource_intelligence
+    semantic_probe
+
+and possibly any future diagnostic subsystem that records its own deferred
+list.
+
+The next blueprint should require one of two equivalent repairs:
+
+Preferred:
+
+    route all GZFX command-list execution through one ownership-aware service.
+
+Alternative:
+
+    expose Tag/Execute/Retire helpers that every direct path must use.
+
+No GZFX-produced command list may remain "unknown".
+
+Telemetry should include:
+
+    owner_class
+    owner_subsystem
+    logical pass
+    creation context identity
+    command-list generation
+    finish thread
+    execute thread
+    execute callback phase.
+
+This single repair likely eliminates the fake "Skyrim deferred renderer"
+population.
+
+======================================================================
+15. EXTERNAL COMMAND-LIST PROVENANCE
+======================================================================
+
+After GZFX ownership is complete, any remaining untagged list should be
+classified by evidence rather than assumption.
+
+Cheap per-list-generation provenance:
+
+At CreateDeferredContext:
+
+    thread ID
+    immediate return address
+    caller module
+    context identity/generation
+
+At FinishCommandList:
+
+    thread ID
+    return address
+    caller module
+    context identity
+    command-list identity/generation
+
+At ExecuteCommandList:
+
+    thread ID
+    return address
+    caller module
+    present epoch / callback phase.
+
+Caller module can be resolved from the return address using Windows module
+lookup APIs.
+
+No full stack walk is needed on every draw.
+
+If additional confidence is needed:
+
+    perform one bounded stack sample only for a previously unseen
+    context/caller combination.
+
+Final owner classes:
+
+    gzfx
+    SkyrimSE.exe
+    external graphics module
+    system runtime
+    unknown.
+
+Do not infer owner from command-list pointer reuse.
+
+======================================================================
+16. SKSE-FREE ENGINE ANCHOR RESOLUTION
+======================================================================
+
+GZFX must remain:
+
+    SKSE-free.
+
+Community Shaders/CommonLib use Address Library relocations because they are
+SKSE ecosystem projects.
+
+That mechanism should NOT be imported as a runtime dependency.
+
+GZFX already links:
+
+    MinHook v1.3.4
+
+through root CMakeLists.txt.
+
+Therefore the missing production piece is only:
+
+    Skyrim engine address resolution.
+
+Recommended standalone resolver design:
+
+A. Runtime fingerprint.
+
+Record:
+
+    SkyrimSE.exe product/file version
+    PE timestamp
+    image size
+    .text section size
+    optional bounded .text hash/fingerprint.
+
+B. Version-aware signatures.
+
+Maintain a small table for only the required engine anchors.
+
+Use byte signatures with wildcards around relocations and call targets.
+
+C. Decode target.
+
+For a callsite anchor:
+
+    locate signature
+    validate opcode
+    decode relative call target
+    validate target in SkyrimSE.exe executable section.
+
+D. Multi-factor validation.
+
+For each anchor require several of:
+
+    expected section
+    expected nearby instruction shape
+    expected call target range
+    expected referenced RTTI/string/vtable relationship
+    unique match
+    expected function prologue / control-flow properties.
+
+E. Fail closed.
+
+If an anchor has:
+
+    zero matches
+    multiple matches
+    failed validation
+    unexpected pre-existing patch state
+
+then:
+
+    do not hook it
+    log unavailable
+    retain D3D fallback evidence.
+
+F. Record evidence.
+
+Write:
+
+    engine_anchors.csv
+
+with:
+
+    anchor name
+    resolver method
+    runtime fingerprint
+    resolved RVA
+    validation status
+    call count
+    conflict state.
+
+Absolute runtime addresses are evidence only.
+
+They are NOT renderer contracts.
+
+======================================================================
+17. RTTI / VTABLE RESOLUTION AS A SECONDARY OPTION
+======================================================================
+
+For polymorphic BSImagespaceShader classes, MSVC RTTI gives a second possible
+SKSE-free resolution lane.
+
+Candidate strategy:
+
+    locate the SkyrimSE.exe RTTI/type descriptor for a named class
+    ->
+    identify its Complete Object Locator / vtable relationship
+    ->
+    validate vtable function entries point into executable SkyrimSE.exe code
+    ->
+    hook only the required Render/Dispatch slot.
+
+Advantages:
+
+    semantic class identity
+    no dependency on field shader pointers
+    often more stable than a raw absolute address.
+
+Risks:
+
+    compiler/runtime layout differences
+    inheritance complexity
+    vtable hook collisions with other graphics mods
+    more resolver engineering than a simple callsite.
+
+Research recommendation:
+
+    use signature-scanned engine callsites/functions as the primary first
+    implementation;
+
+    use RTTI/vtable discovery as:
+        independent validation
+        or for named image-space effects that lack a cleaner central callsite.
+
+Do not build a giant generic RTTI framework before a real need exists.
+
+======================================================================
+18. MINIMIZE HOOK SURFACE
+======================================================================
+
+Community Shaders FrameAnnotations hooks a very large set of image-space
+vtables because it is a developer annotation system.
+
+GZFX does NOT need to mirror that breadth.
+
+The first late-stack closure pass should hook only the semantic landmarks
+needed to answer current blockers.
+
+Candidate minimum set:
+
+Global frame / renderer:
+
+    Main_PostProcessing
+    MenuManager::DrawInterfaceStart
+
+HDR:
+
+    selected HDR downsample/adaptation effect(s)
+    HDR tonemap effect
+
+Temporal:
+
+    ISTemporalAA
+
+Water:
+
+    Main_RenderWaterEffects
+    ISTemporalAA_Water
+    ISWaterBlend
+    optional ISApplyReflections
+
+Copies:
+
+    ISCopy only if needed to resolve final framebuffer distribution.
+
+Shadow:
+
+    Main_RenderShadowmasks exit as candidate evidence for
+    AfterShadowProduction.
+
+Each should be independently optional/fail-closed.
+
+No feature should require all anchors to resolve just to boot GZFX.
+
+======================================================================
+19. MOD COMPATIBILITY / HOOK COLLISION RESEARCH
+======================================================================
+
+Independent open Skyrim graphics projects document real hook collisions.
+
+DynamicShaderFrameGen explicitly documents that it and Community Shaders can
+detour the same engine function heads, causing immediate crashes if both write
+over the same prologue.
+
+This is highly relevant to a future public GZFX.
+
+Therefore engine-anchor hooking must include conflict awareness.
+
+Recommendations:
+
+1. Prefer a stable callsite hook over a shared function-head hook when one
+   specific callsite is all GZFX needs.
+
+2. Before applying a MinHook detour or callsite patch:
+       verify expected bytes/signature;
+       detect whether target is already patched.
+
+3. If an unknown pre-existing detour is found:
+       fail closed for that anchor;
+       log conflict;
+       continue with D3D fallback.
+
+4. Do not blindly overwrite another framework's trampoline.
+
+5. Vtable hooks should preserve and call the currently installed previous
+   function pointer when safe, but GZFX should still record that a chain was
+   detected.
+
+6. Later compatibility work can deliberately support known frameworks, but
+   cartography must first remain deterministic in the user's current clean
+   field environment.
+
+======================================================================
+20. ENB RESEARCH — USEFUL BUT BOUNDED
+======================================================================
+
+Official ENBSeries Skyrim SE documentation confirms:
+
+- Skyrim SE ENB is a DirectX 11-specific implementation distinct from the old
+  DX9 Skyrim version.
+
+- Modern ENB replaces/extends substantial graphics behavior including:
+      HDR/post
+      water
+      terrain/material effects
+      shadows
+      reflections
+      complex materials
+      many post-processing functions.
+
+- ENB has historically supported proxy/chaining concepts at the graphics
+  library boundary.
+
+This proves the high-level feasibility of a standalone graphics framework
+deeply integrating with Skyrim without being a normal SKSE gameplay plugin.
+
+However:
+
+    current ENB Skyrim SE internals are proprietary.
+
+The official 0.505 release also carries explicit restrictions against
+technical extraction and unauthorized reuse.
+
+Therefore GZFX research policy must be:
+
+    read official public behavior/docs
+    observe interoperability from our own runtime
+    do NOT decompile/copy proprietary implementation
+    do NOT invent undocumented internal hook details.
+
+ENB is useful as proof of architecture class, not as code to reproduce.
+
+Official sources:
+
+https://enbdev.com/download_mod_tesskyrimse.html
+https://enbdev.com/mod_tesskyrimse_v0505.htm
+https://enbdev.com/news.html
+
+======================================================================
+21. COMMONLIB / COMMUNITY SHADERS LICENSING BOUNDARY
+======================================================================
+
+Community Shaders and modern CommonLibSSE-NG are GPL-family projects with
+specific exceptions.
+
+GZFX currently has no root LICENSE file detected in repository review.
+
+Until GZFX licensing is explicitly settled:
+
+    do not copy GPL implementation code into GZFX.
+
+Use public reverse-engineered facts such as:
+
+    class names
+    stage names
+    existence/order of engine functions
+    behavior observed from public documentation
+    independently verified field relationships.
+
+Then implement GZFX's own resolver/hook/correlation code.
+
+CommonLib itself is also not an acceptable dependency because:
+
+    GZFX is SKSE-free
+    modern CommonLibSSE-NG expects SKSE/Address Library runtime support
+    its licensing would materially affect GZFX distribution.
+
+Source:
+
+https://github.com/alandtse/CommonLibSSE-NG
+https://github.com/community-shaders/skyrim-community-shaders
+
+======================================================================
+22. BETTER STRUCTURAL FALLBACK DETECTOR
+======================================================================
+
+Even after engine semantic anchors exist, structural D3D detection remains
+valuable for:
+
+    independent validation
+    compatibility fallback
+    detecting modded/replaced paths
+    proving resource identity.
+
+The HDR fallback must be redesigned.
+
+Do NOT:
+
+    latch first candidate forever.
+
+Use a candidate graph.
+
+Per frame:
+
+1. Start a candidate whenever a qualifying MAIN_HDR-descendant RGBA16F
+   downsample appears after the correct engine/postprocessing epoch.
+
+2. Maintain several bounded candidates simultaneously.
+
+3. Extend a candidate only when:
+       output dimensions descend
+       dependency consumes previous candidate output
+       format/domain remains coherent.
+
+4. Allow replacement / restart.
+
+5. Expire stale candidates after:
+       bounded ordinal distance
+       leaving postprocessing epoch
+       contradictory growth/path.
+
+6. Commit HDRReduction only when a candidate reaches:
+       tiny terminal target <=4x4
+   AND downstream evidence supports:
+       adaptation descendant
+       full-resolution tonemap/current output.
+
+7. Score the full graph, not the first edge.
+
+This prevents the exact 0.0.25 poisoning failure.
+
+======================================================================
+23. INDEPENDENT TAA FALLBACK
+======================================================================
+
+TAA fallback should not be hard-gated on the HDR detector.
+
+The 0.0.25 architecture had:
+
+    failed HDR
+    ->
+    no tonemap
+    ->
+    no TAA eligibility
+
+even though the TAA structure itself was obvious.
+
+New fallback rule:
+
+Global TAA candidate can be recognized independently when:
+
+    within verified Skyrim postprocessing epoch
+    reads MOTION
+    reads MAIN_DEPTH_CURRENT
+    reads current/history full-resolution color
+    writes two full-resolution temporal outputs.
+
+If engine ISTemporalAA anchor exists:
+
+    engine event + D3D structure must correlate.
+
+If engine anchor is unavailable:
+
+    structural detector can report:
+        high-confidence candidate
+
+but stage promotion remains provisional until acceptance rules are met.
+
+This prevents one upstream detector defect from blacking out all downstream
+cartography.
+
+======================================================================
+24. PER-PREDICATE DIAGNOSTICS
+======================================================================
+
+The next detector must explain WHY a candidate failed.
+
+Add bounded counters such as:
+
+HDR:
+
+    candidate_started
+    candidate_extended
+    candidate_restarted
+    candidate_expired
+    rejected_wrong_format
+    rejected_not_descending
+    rejected_missing_dependency
+    terminal_reached
+    engine_anchor_mismatch
+
+TAA:
+
+    motion_present
+    depth_present
+    current_history_present
+    output_count_match
+    engine_ISTemporalAA_enter
+    engine_ISTemporalAA_exit
+    structural_match
+    mismatch
+
+Water:
+
+    Main_RenderWaterEffects_enter/exit
+    ISTemporalAA_Water
+    ISWaterBlend
+    ISApplyReflections
+    prewater_depth_seen
+
+These counters make the next failure self-explanatory instead of requiring
+another 400 MB archaeological expedition.
+
+======================================================================
+25. TELEMETRY ARCHITECTURE
+======================================================================
+
+The 0.0.25 late-only volume reduction worked and should be preserved.
+
+Do NOT return to full early-pipeline CSV firehose.
+
+Keep:
+
+    global lightweight frame/stage/semantic/resource/health evidence
+
+Keep immediate detailed pipeline:
+
+    late / unresolved domains only.
+
+Change deferred telemetry policy:
+
+    DeferredList metadata must NOT depend on the late-detail gate.
+
+Once GZFX ownership is fixed, write compact metadata for every command list.
+
+For genuinely external lists:
+
+    preserve internal deferred runs regardless of UiPresent gate
+    OR
+    store a structural-family stream + resource deltas.
+
+Current recorded run volume:
+
+    81,719 runs
+
+is small enough that writing it globally is not remotely comparable to the old
+14.6-million-row immediate firehose.
+
+Also add:
+
+    engine_events.csv
+    engine_anchors.csv
+    present_timeline.csv
+    command_list_provenance.csv
+
+These should be compact.
+
+======================================================================
+26. FRAME / TIMELINE CORRELATION MODEL
+======================================================================
+
+Recommended unified event key:
+
+    frame_id
+    present_epoch
+    qpc
+    thread_id
+    engine_phase
+    present_phase
+    d3d_ordinal
+
+Engine events:
+
+    engine_event_id
+    name
+    enter/exit
+    anchor
+    caller
+
+D3D events:
+
+    pass kind
+    resource graph
+    shader/resource state
+    explicit operands
+
+Command lists:
+
+    list identity/generation
+    context identity/generation
+    owner
+    provenance
+    record interval
+    execution interval.
+
+This lets future DATA answer:
+
+    "What D3D operations happened inside ISTemporalAA?"
+
+instead of:
+
+    "Which random full-res pass looks TAA-ish?"
+
+======================================================================
+27. STAGE-BY-STAGE PROPOSED SEMANTIC SOURCES
+======================================================================
+
+These are RESEARCH recommendations for the blueprint, not yet implemented
+contracts.
+
+AfterShadowProduction:
+
+Primary candidate:
+    exit from verified Main_RenderShadowmasks / shadow-production engine phase
+
+Cross-check:
+    existing SHADOW_MASK semantic publication and pass graph.
+
+WaterDomain:
+
+Primary:
+    verified Main_RenderWaterEffects / water-start engine phase
+
+Secondary named effects:
+    ISTemporalAA_Water
+    ISWaterBlend
+    ISApplyReflections
+
+Cross-check:
+    PRE_WATER_DEPTH_CURRENT
+    exterior R16 temporal pair
+    later MAIN_HDR apply.
+
+HDRReduction:
+
+Primary:
+    verified named HDR downsample/adaptation effects.
+
+Cross-check:
+    real RGBA16F reduction DAG terminating at <=4x4.
+
+BeforeTonemap:
+
+Primary:
+    verified tonemap engine effect entry.
+
+Cross-check:
+    final adaptation resource consumed by first full-res LDR/current output.
+
+BeforeGlobalTAA:
+
+Primary:
+    ISTemporalAA entry.
+
+Cross-check:
+    current/history + MOTION + DEPTH structure.
+
+AfterGlobalTAA:
+
+Primary:
+    ISTemporalAA exit.
+
+Cross-check:
+    two full-res temporal outputs / feedback family.
+
+PostTonemapPreUi:
+
+Primary interval:
+    after tonemap/TAA / final image-space copy distribution
+    AND
+    before MenuManager DrawInterfaceStart.
+
+Cross-check:
+    stable final full-res target lineage.
+
+UiPresent:
+
+Retire ambiguous meaning.
+
+Use separate:
+    UI start/end engine events
+    PresentHookEnter
+    BeforeOriginalDxgiPresent
+    AfterOriginalDxgiPresent.
+
+======================================================================
+28. WHAT SHOULD NOT BE DONE NEXT
+======================================================================
+
+Do NOT:
+
+- merely change hdrReductionStep reset logic and call the problem solved;
+
+- hardcode 0.0.24/0.0.25 shader pointer addresses;
+
+- hardcode observed draw ordinals;
+
+- keep calling untagged command lists "Skyrim";
+
+- assume the seven observed deferred contexts belong to Skyrim;
+
+- expand deferred instrumentation into another huge subsystem before
+  provenance proves external lists exist;
+
+- add SKSE or Address Library;
+
+- statically link CommonLibSSE-NG;
+
+- copy Community Shaders GPL implementation code;
+
+- reverse engineer proprietary ENB internals;
+
+- reopen Waves 1-3;
+
+- start final Ambient Visibility tuning;
+
+- start indirect radiance;
+
+- replace TAA or tonemap;
+
+- implement water replacement;
+
+- optimize forensic FPS.
+
+======================================================================
+29. RECOMMENDED NEXT ENGINEERING SHAPE
+======================================================================
+
+The next BLUEPRINT should likely authorize one coherent renderer-semantic
+closure wave with five tightly related lanes.
+
+LANE A — ownership truth
+
+    tag every GZFX command list
+    eliminate false "skyrim" classification
+    record provenance for any remaining external lists.
+
+LANE B — actual timeline truth
+
+    explicit PresentHookEnter
+    callback subphases
+    BeforeOriginalDxgiPresent
+    AfterOriginalDxgiPresent
+    UI engine phase separately.
+
+LANE C — SKSE-free engine anchors
+
+    runtime fingerprint
+    small validated signature resolver
+    MinHook/callsite hooks
+    fail closed
+    engine_anchors.csv.
+
+LANE D — named late renderer semantics
+
+Minimum initial anchors:
+    Main_PostProcessing
+    HDR/adaptation
+    tonemap
+    ISTemporalAA
+    Main_RenderWaterEffects / water events
+    UI draw start
+    optional ISCopy.
+
+LANE E — correlation / fallback
+
+    correlate engine events to D3D resource graph
+    multi-candidate HDR fallback
+    independent TAA fallback
+    per-predicate diagnostics.
+
+This should be one coherent pass because each lane validates the others.
+
+======================================================================
+30. FIELD ACCEPTANCE FOR THE NEXT IMPLEMENTATION
+======================================================================
+
+A future real-Skyrim session should be able to prove, without inference-only
+guessing:
+
+1. Every GZFX command list is labeled as GZFX.
+
+2. Any remaining external command list has caller-module provenance.
+
+3. PresentHookEnter / BeforeOriginalDxgiPresent / AfterOriginalDxgiPresent
+   appear in correct order.
+
+4. Named Skyrim postprocessing engine phase is observed.
+
+5. Named HDR/downsample/adaptation events correlate with the known 2x2
+   reduction family.
+
+6. Named global ISTemporalAA correlates with the current/history +
+   MOTION + DEPTH D3D family.
+
+7. Water engine events correlate with existing pre-water and exterior temporal
+   resources.
+
+8. UI start is distinct from actual DXGI present.
+
+9. PostTonemapPreUi can be bounded by engine evidence rather than guessed from
+   a sink resource.
+
+10. The late full-resolution sink can be related to:
+        named image-space copy
+        UI target
+        swap-chain backbuffer
+        or another explicit engine/D3D step.
+
+11. No broad telemetry firehose is required.
+
+If these pass, cartography can plausibly be declared sufficiently closed to
+return to graphics ownership work.
+
+======================================================================
+31. SOURCE / LICENSE DISCIPLINE
+======================================================================
+
+GZFX must use public external projects as architecture/research references,
+not code donors.
+
+Microsoft:
+    authoritative D3D11 API behavior.
+
+ReShade:
+    public D3D11 lifecycle architecture.
+    implement independently.
+
+Community Shaders:
+    public Skyrim semantic names / reverse-engineered renderer facts.
+    do not copy GPL implementation.
+
+CommonLibSSE-NG:
+    public reverse-engineered class/function facts.
+    do not depend/link.
+
+PureDark / open Skyrim upscaler work:
+    independent confirmation of Skyrim postprocessing placement.
+    use facts, not copied implementation.
+
+ENB:
+    official public feature/proxy behavior only.
+    no proprietary extraction.
+
+No root GZFX LICENSE file was found during this research pass.
+Until the owner establishes a distribution license, the safest engineering
+rule is:
+
+    clean independent implementation
+    +
+    documented factual research sources.
+
+======================================================================
+32. PUBLIC REFERENCES
+======================================================================
+
+MICROSOFT D3D11
+
+CreateDeferredContext:
+https://learn.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11device-createdeferredcontext
+
+CreateDeferredContext1:
+https://learn.microsoft.com/en-us/windows/win32/api/d3d11_1/nf-d3d11_1-id3d11device1-createdeferredcontext1
+
+ExecuteCommandList:
+https://learn.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-executecommandlist
+
+ID3D11CommandList:
+https://learn.microsoft.com/en-us/windows/desktop/api/d3d11/nn-d3d11-id3d11commandlist
+
+Command-list playback:
+https://learn.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-render-multi-thread-command-list-play
+
+D3D11 threading support:
+https://learn.microsoft.com/en-us/windows/win32/api/d3d11/ns-d3d11-d3d11_feature_data_threading
+
+RESHADE
+
+Repository:
+https://github.com/crosire/reshade
+
+D3D11 device:
+https://github.com/crosire/reshade/blob/main/source/d3d11/d3d11_device.cpp
+
+D3D11 device context:
+https://github.com/crosire/reshade/blob/main/source/d3d11/d3d11_device_context.cpp
+
+License:
+https://github.com/crosire/reshade/blob/main/LICENSE.md
+
+COMMUNITY SHADERS
+
+Repository:
+https://github.com/community-shaders/skyrim-community-shaders
+
+Frame annotations:
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/FrameAnnotations.cpp
+
+Deferred/world-water research:
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Deferred.cpp
+
+Upscaling / Main_PostProcessing:
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Features/Upscaling.cpp
+
+HDR display:
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Features/HDRDisplay.cpp
+
+Hooks:
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Hooks.cpp
+
+GPL text / exceptions:
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/COPYING.txt
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/EXCEPTIONS.md
+
+COMMONLIBSSE-NG
+
+Repository:
+https://github.com/alandtse/CommonLibSSE-NG
+
+PUREDARK / SKYRIM UPSCALER
+
+Repository:
+https://github.com/PureDark/Skyrim-Upscaler
+
+INDEPENDENT OPEN SKYRIM UPSCALER / FRAME GENERATION
+
+Repository:
+https://github.com/jatelop8/DynamicShaderFrameGen
+
+ENB
+
+Skyrim SE download/history:
+https://enbdev.com/download_mod_tesskyrimse.html
+
+0.505:
+https://enbdev.com/mod_tesskyrimse_v0505.htm
+
+News:
+https://enbdev.com/news.html
+
+======================================================================
+33. FINAL RESEARCH VERDICT
+======================================================================
+
+The 0.0.25 field test did not close late-stack cartography, but it exposed a
+better route and removed a false blocker.
+
+Most important correction:
+
+    the dominant "Skyrim" deferred command list is very likely GZFX's own
+    untagged visible-pass work.
+
+Most important architecture discovery:
+
+    Skyrim exposes named engine-level post-processing, HDR, temporal, water,
+    copy, world, shadow, and UI landmarks that can be correlated directly
+    with GZFX's already-proven D3D telemetry.
+
+Therefore the project should stop trying to make anonymous D3D inference carry
+the entire semantic burden.
+
+Recommended model:
+
+    ENGINE SEMANTICS
+        tell us WHAT Skyrim says it is doing
+
+    D3D TELEMETRY
+        tells us WHAT resources/passes actually execute
+
+    OWNERSHIP / PROVENANCE
+        tells us WHO issued the work
+
+    PRESENT TIMELINE
+        tells us WHEN the work occurs relative to real presentation
+
+When all four agree, a renderer boundary can be locked with much higher
+confidence and dramatically less telemetry.
+
+RESEARCH PASS 7 COMPLETE.
+
+NEXT WORKFLOW PHASE:
+
+    BLUEPRINT
+
+No implementation is authorized by this research record alone.
+
+END RESEARCH PASS 7
