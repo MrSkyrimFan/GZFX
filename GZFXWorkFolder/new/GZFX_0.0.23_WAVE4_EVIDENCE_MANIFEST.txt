@@ -1,0 +1,40 @@
+GZFX 0.0.23 WAVE 4 FIELD EVIDENCE MANIFEST
+Data review date: October 24, 2026
+Source archive: GZFX66ftffjhfjhfaaaaaaaa.zip
+Source archive bytes: 135833877
+Source archive SHA256: 22e8761749cdefcf142546a143959681d85506493b907fa7d90c21a18b7dcff5
+
+Archive inventory:
+- ZIP entries: 1401
+- BMP diagnostic images: 955
+- TXT/CSV/LOG/INI files: 415
+- AmbientVisibilityV2 manual captures: 13
+- Wave3 manual captures: 14
+- Semantic Authority / Stage Scheduler manual windows: 14
+- AmbientVisibilityV2 capture range: manual0001 through manual0013
+- Wave3 capture range: manual0001 through manual0014
+- Semantic capture range: manual_0001 through manual_0014
+
+All 13 AmbientVisibilityV2 captures report:
+- version=0.0.23-ambient-visibility-v2
+- resolution=2560x1440
+- algorithm=gtao_inspired_full_resolution
+- integration=replace_sao_filtered_before_ambient_composite
+- radius_world=240
+- slices=3
+- steps_per_slice=6
+- capture=complete
+
+Repository-native DATA records created from this archive:
+- GZFX_0.0.23_WAVE4_FIELD_FINDINGS.txt
+- GZFX_0.0.23_WAVE4_CAPTURE_MATRIX.csv
+- GZFX_0.0.23_WAVE3_REGRESSION_MATRIX.csv
+- GZFX_0.0.23_STAGE_MATRIX.csv
+- this manifest
+
+The original user-supplied binary archive is represented by its exact byte size,
+SHA256, inventory, and extracted machine-readable evidence. The available GitHub
+connector does not provide a streaming/LFS path for preserving this 135.8 MB
+binary archive as one repository object, so the raw ZIP itself was not duplicated
+into Git history. The analyzed evidence and controlling findings are preserved in
+the repository.
