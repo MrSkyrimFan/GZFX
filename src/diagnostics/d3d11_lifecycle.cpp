@@ -1,6 +1,7 @@
 #include "gzfx/diagnostics/d3d11_lifecycle.hpp"
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/diagnostics/renderer_forensics.hpp"
+#include "gzfx/diagnostics/startup_trace.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/render/renderer_execution_service.hpp"
 
@@ -72,6 +73,16 @@ namespace gzfx::diagnostics
         std::atomic<std::uint64_t> g_createFactoryCalls{ 0 };
         std::atomic<std::uint64_t> g_createFactory1Calls{ 0 };
         std::atomic<std::uint64_t> g_createFactory2Calls{ 0 };
+
+        std::uint64_t QpcNow() noexcept
+        {
+            LARGE_INTEGER value{};
+            QueryPerformanceCounter(&value);
+
+            return
+                static_cast<std::uint64_t>(
+                    value.QuadPart);
+        }
 
         std::string Timestamp()
         {
@@ -422,21 +433,48 @@ namespace gzfx::diagnostics
                     (cartography ? "armed" : "failed"));
 
                 if (immediateContext != nullptr &&
-                    *immediateContext != nullptr &&
-                    IsQualifiedPrimary(
-                        driverType,
-                        *device,
-                        nullptr))
+                    *immediateContext != nullptr)
                 {
-                    const bool attached =
-                        AttachPrimaryRendererObjects(
-                            nullptr,
+                    const bool qualified =
+                        IsQualifiedPrimary(
+                            driverType,
                             *device,
-                            *immediateContext);
+                            nullptr);
 
-                    WriteDiagnostic(
-                        std::string("renderer_primary_attach=") +
-                        (attached ? "armed" : "failed"));
+                    startup_trace::Record(
+                        qualified
+                            ? "primary_candidate_accepted"
+                            : "primary_candidate_rejected",
+                        QpcNow(),
+                        GetCurrentThreadId(),
+                        qualified ? 0 : 1,
+                        reinterpret_cast<std::uintptr_t>(
+                            *device),
+                        reinterpret_cast<std::uintptr_t>(
+                            *immediateContext));
+
+                    if (qualified)
+                    {
+                        const bool attached =
+                            AttachPrimaryRendererObjects(
+                                nullptr,
+                                *device,
+                                *immediateContext);
+
+                        startup_trace::Record(
+                            "primary_attach_complete",
+                            QpcNow(),
+                            GetCurrentThreadId(),
+                            attached ? 0 : 1,
+                            reinterpret_cast<std::uintptr_t>(
+                                *device),
+                            reinterpret_cast<std::uintptr_t>(
+                                *immediateContext));
+
+                        WriteDiagnostic(
+                            std::string("renderer_primary_attach=") +
+                            (attached ? "armed" : "failed"));
+                    }
                 }
             }
 
@@ -511,21 +549,50 @@ namespace gzfx::diagnostics
                     (cartography ? "armed" : "failed"));
 
                 if (immediateContext != nullptr &&
-                    *immediateContext != nullptr &&
-                    IsQualifiedPrimary(
-                        driverType,
-                        *device,
-                        swapChainDescription))
+                    *immediateContext != nullptr)
                 {
-                    const bool attached =
-                        AttachPrimaryRendererObjects(
-                            swapChain != nullptr ? *swapChain : nullptr,
+                    const bool qualified =
+                        IsQualifiedPrimary(
+                            driverType,
                             *device,
-                            *immediateContext);
+                            swapChainDescription);
 
-                    WriteDiagnostic(
-                        std::string("renderer_primary_attach=") +
-                        (attached ? "armed" : "failed"));
+                    startup_trace::Record(
+                        qualified
+                            ? "primary_candidate_accepted"
+                            : "primary_candidate_rejected",
+                        QpcNow(),
+                        GetCurrentThreadId(),
+                        qualified ? 0 : 1,
+                        reinterpret_cast<std::uintptr_t>(
+                            *device),
+                        reinterpret_cast<std::uintptr_t>(
+                            swapChain != nullptr
+                                ? *swapChain
+                                : nullptr));
+
+                    if (qualified)
+                    {
+                        const bool attached =
+                            AttachPrimaryRendererObjects(
+                                swapChain != nullptr ? *swapChain : nullptr,
+                                *device,
+                                *immediateContext);
+
+                        startup_trace::Record(
+                            "primary_attach_complete",
+                            QpcNow(),
+                            GetCurrentThreadId(),
+                            attached ? 0 : 1,
+                            reinterpret_cast<std::uintptr_t>(
+                                *device),
+                            reinterpret_cast<std::uintptr_t>(
+                                *immediateContext));
+
+                        WriteDiagnostic(
+                            std::string("renderer_primary_attach=") +
+                            (attached ? "armed" : "failed"));
+                    }
                 }
             }
 
