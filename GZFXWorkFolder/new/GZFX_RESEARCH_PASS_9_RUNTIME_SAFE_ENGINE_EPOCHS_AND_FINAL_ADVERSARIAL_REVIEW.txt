@@ -1,0 +1,550 @@
+GZFX RESEARCH PASS 9
+Runtime-Safe Engine Epoch Hooks and Final Pre-Blueprint Adversarial Review
+Research date: October 25, 2026
+Status: RESEARCH COMPLETE
+Purpose: final targeted research pass before blueprint/implementation.
+
+CONTROLLING INPUTS:
+    GZFXWorkFolder/new/GZFX_0.0.25_LATE_STACK_FIELD_VALIDATION_FINDINGS.txt
+    GZFXWorkFolder/new/GZFX_0.0.25_LATE_STACK_FIELD_VALIDATION_DATA_REVIEW_PASS_2.txt
+    GZFXWorkFolder/new/GZFX_RESEARCH_PASS_7_RENDER_TIMELINE_ENGINE_ANCHORS_AND_LATE_STACK_CLOSURE.txt
+    GZFXWorkFolder/new/GZFX_RESEARCH_PASS_8_ENB_3DMIGOTO_SKYRIM_SHADER_IDENTITY_ARCHITECTURE.txt
+
+======================================================================
+1. EXECUTIVE VERDICT
+======================================================================
+
+The final adversarial research pass supports implementation, with one important
+scope correction.
+
+Do NOT attempt to hook every named Skyrim BSImagespaceShader class in the next
+wave.
+
+That would require one of:
+
+    Address Library dependency;
+    broad RTTI/vtable reconstruction;
+    version-specific unverified vtable offsets.
+
+None is necessary to solve the current field blockers.
+
+Instead, implement two verified Skyrim engine EPOCH anchors for the currently
+verified Steam AE 1.6.1170 profile:
+
+    POST_PROCESSING
+    PRE_UI
+
+and combine them with:
+
+    creation-time stable shader identity;
+    creation-time resource provenance;
+    D3D resource/pass graph;
+    complete GZFX command-list ownership;
+    explicit real DXGI Present phases.
+
+This is enough to make the next field run answer:
+
+    which stable shader families execute inside Skyrim post-processing;
+    which exact D3D/resource families correspond to HDR reduction and TAA;
+    which work occurs before the UI boundary;
+    which command lists are actually GZFX-owned;
+    what truly occurs before and after the original DXGI Present.
+
+Named per-effect hooks such as ISTemporalAA and ISHDRDownSample should be added
+later only if epoch+identity correlation still leaves ambiguity.
+
+======================================================================
+2. RUNTIME-SAFE PUBLIC PRECEDENT
+======================================================================
+
+Current public Skyrim renderer projects independently validate the exact same
+engine hook problem.
+
+UFGU publishes explicit runtime profiles for:
+
+    Skyrim SE 1.5.97
+    Skyrim AE 1.6.1170
+
+and treats hook layouts as versioned contracts.
+
+For AE 1.6.1170, its public RuntimeCompatibility profile contains approved byte
+signatures around:
+
+    main/pre-UI draw call
+    post-processing call
+
+including expected call-target RVAs.
+
+Theo's Render Pipeline independently implements a startup preflight that:
+
+    selects an exact Skyrim runtime profile;
+    validates the target bytes/call shape;
+    validates the decoded call target;
+    validates target ownership/executable range;
+    refuses to install renderer game-code patches when the contract does not
+    match.
+
+This is the correct safety pattern for GZFX.
+
+GZFX must implement the principle independently:
+
+    detect runtime;
+    scan/validate;
+    decode;
+    fail closed.
+
+======================================================================
+3. VERIFIED AE 1.6.1170 POST-PROCESSING SIGNATURE
+======================================================================
+
+Public AE 1.6.1170 profile evidence gives a 24-byte contract around the
+post-processing callsite.
+
+Signature bytes:
+
+    00 48 8B 0D 29 BD E5 01
+    E8 04 32 FB FF
+    48 8B 05 65 DF EB 01
+    48 8B 88 28
+
+The direct CALL opcode is at:
+
+    match + 8
+
+Expected decoded call target RVA:
+
+    0x1481B80
+
+Community Shaders and related public renderer work identify this call as the
+ImageSpaceManager post-processing transition used for inserting work between
+volumetric/world work and Skyrim post-processing.
+
+Research interpretation:
+
+    hook entry to the decoded target as POST_PROCESSING_ENTER;
+    hook return as POST_PROCESSING_EXIT.
+
+Do not assume every call to that function is the same semantic until the field
+run proves per-frame behavior.
+
+Record all invocations.
+
+======================================================================
+4. VERIFIED AE 1.6.1170 PRE-UI / MAIN-DRAW SIGNATURE
+======================================================================
+
+Public AE 1.6.1170 profile evidence gives a 24-byte contract around the
+pre-UI/main-draw callsite.
+
+Signature bytes:
+
+    D2 48 8D 0D 46 37 2E 02
+    E8 D1 F7 E9 FF
+    48 8B 05 42 C1 64 02
+    48 8B 48 10
+
+The direct CALL opcode is at:
+
+    match + 8
+
+Expected decoded call target RVA:
+
+    0xE44850
+
+PureDark/UFGU-style public integrations use this boundary for work that must be
+complete before Skyrim UI composition.
+
+Research interpretation:
+
+    treat entry to this target as PRE_UI_ENTER candidate;
+    treat return as PRE_UI_EXIT.
+
+Field evidence must establish exact ordering relative to:
+
+    post-processing;
+    global TAA structural family;
+    final full-resolution target;
+    actual DXGI Present.
+
+Do not rename it PostTonemapPreUi until the correlation proves the semantic
+interval.
+
+======================================================================
+5. WHY ONLY 1.6.1170 IN THIS WAVE
+======================================================================
+
+The GZFX project targets Skyrim SE/AE broadly, but engine hooks must not claim
+support that has not been verified.
+
+Historical project context indicates the user's Steam Skyrim setup has used
+AE 1.6.1170, but the current 0.0.25 telemetry package does not itself encode
+the executable product version.
+
+Therefore implementation must:
+
+    obtain the live SkyrimSE.exe file/product version at runtime;
+
+    arm the engine epoch profile ONLY when it is exactly:
+        1.6.1170.0
+
+    otherwise:
+        engine anchors remain disabled;
+        GZFX continues using D3D telemetry;
+        diagnostics clearly report unsupported/unverified runtime;
+        the game must continue normally.
+
+This preserves broad GZFX boot compatibility while making engine-hook support
+truthful.
+
+======================================================================
+6. DO NOT PATCH CALLSITES IN THIS WAVE
+======================================================================
+
+A 5-byte x64 relative CALL patch introduces relay-distance and hook-chain
+complexity.
+
+GZFX already links MinHook and successfully uses it.
+
+Recommended next implementation:
+
+    locate and validate the callsite;
+    decode its original target;
+    confirm expected target RVA;
+    inspect target entry for obvious pre-existing redirection;
+    install MinHook on the validated target.
+
+Advantages:
+
+    uses existing infrastructure;
+    avoids hand-built near trampolines;
+    preserves original through MinHook;
+    can fail closed cleanly.
+
+Risk:
+
+    function-entry hooks may collide with another renderer mod.
+
+Mitigation:
+
+    if target entry already looks redirected/unsupported, do not hook;
+    log conflict;
+    retain D3D fallback.
+
+The current field environment does not show ENB/ReShade/Community Shaders
+modules loaded, so the immediate validation campaign remains clean.
+
+======================================================================
+7. CREATION-TIME IDENTITY HOOK OWNER
+======================================================================
+
+Research Pass 8 identified an old experimental pipeline_cartography device
+vtable clone.
+
+The final code audit shows another safer path.
+
+renderer_forensics already:
+
+    creates a WARP D3D11 device to resolve real D3D11 method targets;
+    installs MinHook detours for Present/Resize/CreateDeferredContext.
+
+Therefore the next wave should extend this SAME hook owner to selected D3D11
+creation methods:
+
+    CreateBuffer
+    CreateTexture1D
+    CreateTexture2D
+    CreateTexture3D
+
+    CreateVertexShader
+    CreateGeometryShader
+    CreateGeometryShaderWithStreamOutput
+    CreatePixelShader
+    CreateHullShader
+    CreateDomainShader
+    CreateComputeShader
+
+This avoids competing per-device vtable clones.
+
+The hook bodies should:
+
+    call original first;
+    on success register immutable creation identity/provenance in
+    pipeline_cartography;
+    never mutate descriptors;
+    never replace bytecode;
+    never change returned objects.
+
+The old experimental broad creation hook remains disabled.
+
+======================================================================
+8. STABLE SHADER IDENTITY CONTRACT
+======================================================================
+
+The current field schema mixes:
+
+    content hash
+    object pointer
+
+inside one field named shaderHashes.
+
+That must end.
+
+New pass identity should expose at minimum:
+
+    shader_hash[6]
+        stable bytecode content hash
+        zero when unknown
+
+    shader_object[6]
+        process-local canonical COM identity
+
+    shader_hash_known_mask
+        one bit per stage.
+
+Pass-run compression may use:
+
+    stable hash when known;
+    otherwise object identity.
+
+But serialized evidence must never silently substitute one for the other.
+
+Deferred-context run serialization must follow the same rule.
+
+======================================================================
+9. SHADER HASH ALGORITHM
+======================================================================
+
+The next wave does not need a complex DXBC parser before field validation.
+
+Use the already-existing exact full-bytecode FNV-1a hash as:
+
+    exact_shader_hash.
+
+This immediately solves the pointer/hash semantic confusion.
+
+A structural DXBC hash and reflection signature can be added later if exact
+hashes prove too version-sensitive.
+
+Do not expand the wave unnecessarily.
+
+The immediate field question is stable identity within the same Skyrim runtime
+across runs.
+
+Exact bytecode hash is sufficient for that.
+
+======================================================================
+10. RESOURCE BIRTH PROVENANCE
+======================================================================
+
+Use the same creation hooks to register:
+
+    object identity;
+    birth sequence;
+    creator module;
+    descriptor metadata.
+
+Current pipeline_cartography already has the required registry code.
+
+The next implementation should expose a narrow public creation-observation API
+rather than enabling the old experimental vtable clone.
+
+No resource descriptor mutation is authorized.
+
+======================================================================
+11. COMMAND-LIST OWNERSHIP CONSOLIDATION
+======================================================================
+
+All GZFX-created command lists must pass through:
+
+    renderer_execution_service
+
+or at minimum be explicitly tagged before execution and retired afterward.
+
+Direct paths currently identified include:
+
+    visible_pass
+    resource_intelligence diagnostic rendering
+    semantic_probe diagnostic rendering.
+
+The next wave should eliminate the recurring untagged GZFX path.
+
+Telemetry owner labels must become:
+
+    gzfx
+    external
+
+not:
+
+    gzfx
+    skyrim
+
+unless SkyrimSE.exe provenance has actually been proven.
+
+This is both a correctness fix and a terminology fix.
+
+======================================================================
+12. DEFERRED TELEMETRY POLICY
+======================================================================
+
+Deferred-list metadata and retained run bodies should not be suppressed by the
+late immediate-pipeline detail gate.
+
+The field session recorded only:
+
+    81,719 deferred runs
+
+which is tiny compared with the old immediate-pipeline firehose.
+
+Therefore:
+
+    always emit DeferredList;
+    always emit bounded retained DeferredRun evidence;
+
+while continuing to gate the huge immediate pipeline stream late-only.
+
+This preserves the 0.0.25 telemetry-size win.
+
+======================================================================
+13. PRESENT TIMELINE CONTRACT
+======================================================================
+
+The next wave must record explicit phases:
+
+    HookEnter
+    GzfxCallbacksBegin
+    GzfxCallbacksEnd
+    BeforeOriginalPresent
+    AfterOriginalPresent
+
+with:
+
+    frame
+    monotonically increasing present_epoch
+    QPC
+    thread ID
+    HRESULT where applicable.
+
+This must be independent of the semantic stage currently called UiPresent.
+
+The existing UiPresent boundary should remain temporarily for backward
+compatibility/evidence, but documentation must no longer describe it as the
+actual DXGI Present point.
+
+======================================================================
+14. ENGINE EVENT CONTRACT
+======================================================================
+
+Compact engine events should record:
+
+    frame
+    QPC
+    thread
+    anchor
+    enter/exit
+    runtime profile
+    validated target RVA.
+
+Initial anchors:
+
+    post_processing
+    pre_ui
+
+No color/visual diagnostic is required.
+
+No user choreography is required.
+
+======================================================================
+15. HDR DETECTOR FALLBACK
+======================================================================
+
+Do not allow another single irreversible candidate to suppress downstream
+detection.
+
+The structural HDR fallback must either:
+
+    support bounded candidate restart/replacement
+
+or, at minimum in this wave:
+
+    reset when the current chain cannot extend and a new MAIN_HDR-descendant
+    candidate appears.
+
+TAA structural recognition must become independent of HDR completion.
+
+The engine epochs then provide ordering context:
+
+    post_processing epoch
+    ->
+    structural HDR candidate
+    ->
+    structural TAA candidate
+    ->
+    pre-UI epoch.
+
+This is enough for the next field run to prove or reject the late-stage map.
+
+======================================================================
+16. TEST REQUIREMENTS
+======================================================================
+
+The implementation must add/extend automated coverage for:
+
+A. shader identity:
+    known hash does not fall back to object pointer;
+    unknown hash remains zero and object identity remains separate.
+
+B. creation hooks:
+    WARP harness shader/resource creation produces registry evidence.
+
+C. ownership:
+    visible-pass-style GZFX command list is labeled GZFX, not external.
+
+D. deferred gate:
+    deferred metadata/run emission works even when immediate late detail is off.
+
+E. runtime profile:
+    1.6.1170 signature decoder accepts the verified fixture;
+    altered byte fails closed;
+    unsupported runtime leaves anchors disabled.
+
+F. present timeline:
+    phase order is monotonic.
+
+G. HDR fallback:
+    false early reduction candidate can be abandoned;
+    real descending chain reaches terminal;
+    TAA can still be recognized independently.
+
+No existing acceptance test may be removed.
+
+======================================================================
+17. FINAL RESEARCH VERDICT
+======================================================================
+
+The architecture survived the adversarial pass.
+
+The one correction is deliberate scope control:
+
+    do not build a universal Skyrim engine-hook framework yet;
+    build a verified AE 1.6.1170 engine epoch profile plus universal D3D
+    identity/ownership/timeline improvements.
+
+This gives the next field run enough independent evidence to close or sharply
+narrow:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+    PostTonemapPreUi
+    WaterDomain
+
+without another broad telemetry campaign.
+
+RESEARCH PASS 9 COMPLETE.
+
+NEXT PHASE:
+
+    BLUEPRINT
+
+END RESEARCH PASS 9
