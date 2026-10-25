@@ -3,6 +3,7 @@
 #include "gzfx/diagnostics/semantic_probe.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/settings.hpp"
+#include "gzfx/render/wave3_pipeline.hpp"
 
 #include <Windows.h>
 #include <windowsx.h>
@@ -1572,9 +1573,12 @@ namespace gzfx::ui
                     semantic_probe::
                     RequestManualCapture();
 
+                gzfx::render::wave3::
+                    RequestManualCapture();
+
                 WriteState(
                     frame,
-                    "semantic_capture_requested");
+                    "semantic_wave3_capture_requested");
             }
         }
         catch (...)
