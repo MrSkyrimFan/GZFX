@@ -2,6 +2,7 @@
 
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/diagnostics/deferred_context_cartography.hpp"
+#include "gzfx/diagnostics/engine_epochs.hpp"
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/render/ambient_visibility_v2.hpp"
@@ -1545,6 +1546,29 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "\n"
                 << "present_epochs="
                 << rendererStatus.presentEpochs
+                << "\n";
+
+            const auto engineStatus =
+                engine_epochs::GetStatus();
+
+            out
+                << "engine_profile="
+                << Hex(engineStatus.runtimeProfile)
+                << "\n"
+                << "engine_runtime_supported="
+                << (engineStatus.runtimeSupported ? "true" : "false")
+                << "\n"
+                << "engine_post_processing_anchor="
+                << (engineStatus.postProcessingArmed ? "armed" : "unavailable")
+                << "\n"
+                << "engine_pre_ui_anchor="
+                << (engineStatus.preUiArmed ? "armed" : "unavailable")
+                << "\n"
+                << "engine_post_processing_events="
+                << engineStatus.postProcessingEvents
+                << "\n"
+                << "engine_pre_ui_events="
+                << engineStatus.preUiEvents
                 << "\n";
 
             const auto deferred =
