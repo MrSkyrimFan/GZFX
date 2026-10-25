@@ -3,6 +3,7 @@
 #include "gzfx/diagnostics/d3d11_lifecycle.hpp"
 #include "gzfx/diagnostics/engine_epochs.hpp"
 #include "gzfx/diagnostics/renderer_forensics.hpp"
+#include "gzfx/diagnostics/startup_trace.hpp"
 #include "gzfx/diagnostics/telemetry_listener.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
@@ -162,4 +163,37 @@ extern "C" __declspec(dllexport) bool GZFX_Initialize() noexcept
 extern "C" __declspec(dllexport) void GZFX_Shutdown() noexcept
 {
     gzfx::diagnostics::telemetry_listener::Shutdown();
+}
+
+
+extern "C" __declspec(dllexport)
+bool GZFX_AttachPrimaryD3D11(
+    IDXGISwapChain* const swapChain,
+    ID3D11Device* const device,
+    ID3D11DeviceContext* const immediate) noexcept
+{
+    return
+        gzfx::diagnostics::
+            AttachPrimaryRendererObjects(
+                swapChain,
+                device,
+                immediate);
+}
+
+extern "C" __declspec(dllexport)
+void GZFX_RecordBootstrapEvent(
+    const char* const event,
+    const std::uint64_t qpc,
+    const std::uint32_t threadId,
+    const std::int32_t result,
+    const std::uintptr_t pointerA,
+    const std::uintptr_t pointerB) noexcept
+{
+    gzfx::diagnostics::startup_trace::Record(
+        event,
+        qpc,
+        threadId,
+        result,
+        pointerA,
+        pointerB);
 }
