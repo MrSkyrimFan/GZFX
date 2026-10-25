@@ -21,14 +21,19 @@ foundation baseline: 0.0.20-foundation-epochs-stage-correctness
 Wave 1: CLOSED
 Wave 2: CLOSED
 Wave 3: CLOSED
-broad renderer foundation cartography: COMPLETE
-active engineering wave: Wave 4
-current runtime: 0.0.23-ambient-visibility-v2
-current phase: TEST
-Wave 4 field status: OPEN — code/CI/package PASS; real-Skyrim quality gate pending
+broad foundation renderer cartography: COMPLETE
+Wave 4: renderer-stack ownership architecture PROVEN
+current runtime: 0.0.24-renderer-telemetry-listener
+current phase: TEST / FULL-STACK DISCOVERY
+primary discovery authority: Continuous Renderer Telemetry Listener
+next graphics wave: NOT YET SELECTED
 ```
 
-Wave 3 is field-closed: the renderer execution service, Native Input Broker, post-opaque R32 hierarchy, native normals/motion, temporal geometry, disocclusion, confidence history, stage integration, and owned command-list isolation are all production foundation. Wave 4 is the first production graphics-quality feature: full-resolution GTAO-family Ambient Visibility v2 is computed from the Wave 3 hierarchy and injected into Skyrim's final filtered SAO surface before Skyrim's own Ambient Screen-Space Composite. Wave 4 now awaits real-Skyrim visual/performance acceptance.
+Wave 3 remains field-closed. Wave 4 proved that GZFX can generate its own full-resolution ambient visibility and replace Skyrim's final filtered SAO input before Skyrim's native Ambient Screen-Space Composite. The current project priority is **not** final AO tuning: it is discovering and owning Skyrim's complete renderer stack.
+
+0.0.24 adds a continuous asynchronous telemetry listener. Normal forensic sessions now record frame timelines, stage transitions, semantic changes, resources, compressed pass families, concrete producer/consumer resource IDs, command-list ownership, transitions, and Wave 3/Wave 4 timing/health into a timestamped `GZFX/Telemetry/session_*/` directory. Manual Shift+Numpad5 captures remain optional visual evidence rather than the primary discovery workflow.
+
+**Important:** 0.0.24 is a forensic build. Its FPS is not release-performance evidence. Clean performance and final artistic quality are deferred until the renderer architecture is sufficiently mapped and heavy telemetry can be disabled.
 
 ## Permanent authority workflow
 
