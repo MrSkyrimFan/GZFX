@@ -348,10 +348,40 @@ int wmain(int argc, wchar_t** argv)
         true);
     Target rawIndirect = CreateTarget(device, width, height, DXGI_FORMAT_R11G11B10_FLOAT);
 
+    Target hdrReduceA = CreateTarget(
+        device, width / 4, height / 4,
+        DXGI_FORMAT_R16G16B16A16_FLOAT);
+    Target hdrReduceB = CreateTarget(
+        device, width / 16, height / 16,
+        DXGI_FORMAT_R16G16B16A16_FLOAT);
+    Target hdrReduceC = CreateTarget(
+        device, 5, 3,
+        DXGI_FORMAT_R16G16B16A16_FLOAT);
+    Target hdrReduceD = CreateTarget(
+        device, 2, 2,
+        DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+    Target tonemapCurrent = CreateTarget(
+        device, width, height,
+        DXGI_FORMAT_R8G8B8A8_UNORM);
+    Target taaHistory = CreateTarget(
+        device, width, height,
+        DXGI_FORMAT_R8G8B8A8_UNORM);
+    Target taaColor = CreateTarget(
+        device, width, height,
+        DXGI_FORMAT_R8G8B8A8_UNORM);
+    Target taaFeedback = CreateTarget(
+        device, width, height,
+        DXGI_FORMAT_R8G8B8A8_UNORM);
+
     if (!hdr.texture || !motion.texture || !normal.texture ||
         !normalB.texture || !aux.texture ||
         !aoA.texture || !aoB.texture || !aoTemp.texture ||
-        !aoFinal.texture || !rawIndirect.texture)
+        !aoFinal.texture || !rawIndirect.texture ||
+        !hdrReduceA.texture || !hdrReduceB.texture ||
+        !hdrReduceC.texture || !hdrReduceD.texture ||
+        !tonemapCurrent.texture || !taaHistory.texture ||
+        !taaColor.texture || !taaFeedback.texture)
     {
         return 9;
     }
@@ -376,6 +406,25 @@ int wmain(int argc, wchar_t** argv)
     dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
     dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     if (FAILED(device->CreateDepthStencilView(depth, &dsvDesc, &dsv))) return 11;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC depthSrvDesc{};
+    depthSrvDesc.Format =
+        DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    depthSrvDesc.ViewDimension =
+        D3D11_SRV_DIMENSION_TEXTURE2D;
+    depthSrvDesc.Texture2D.MostDetailedMip = 0;
+    depthSrvDesc.Texture2D.MipLevels = 1;
+
+    ID3D11ShaderResourceView* depthSrv = nullptr;
+
+    if (FAILED(
+            device->CreateShaderResourceView(
+                depth,
+                &depthSrvDesc,
+                &depthSrv)))
+    {
+        return 11;
+    }
 
     std::array<float, 180> camera{};
     for (int matrix = 0; matrix < 10; ++matrix)
@@ -1015,12 +1064,21 @@ int wmain(int argc, wchar_t** argv)
     for (auto*& rtv : cameraRtvs) if (rtv) rtv->Release();
     if (cameraZSrv) cameraZSrv->Release();
     if (cameraZ) cameraZ->Release();
+    Release(taaFeedback);
+    Release(taaColor);
+    Release(taaHistory);
+    Release(tonemapCurrent);
+    Release(hdrReduceD);
+    Release(hdrReduceC);
+    Release(hdrReduceB);
+    Release(hdrReduceA);
     Release(rawIndirect);
     Release(aoFinal);
     Release(aoTemp);
     Release(aoB);
     Release(aoA);
     if (cameraBuffer) cameraBuffer->Release();
+    if (depthSrv) depthSrv->Release();
     if (dsv) dsv->Release();
     if (depth) depth->Release();
     Release(aux);
