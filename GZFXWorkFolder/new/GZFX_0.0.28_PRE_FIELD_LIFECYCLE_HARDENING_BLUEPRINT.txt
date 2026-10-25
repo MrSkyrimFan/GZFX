@@ -1,0 +1,522 @@
+GZFX 0.0.28 PRE-FIELD LIFECYCLE + PROXY HARDENING BLUEPRINT
+Blueprint date: October 25, 2026
+Status: APPROVED FOR IMPLEMENTATION BY OWNER DIRECTIVE
+Target runtime string:
+    0.0.28-pre-field-lifecycle-hardening
+
+CONTROLLING AUTHORITY:
+    GZFXWorkFolder/new/GZFX_0.0.27_PRE_FIELD_FULL_RED_TEAM_FINDINGS.txt
+    GZFXWorkFolder/new/GZFX_RESEARCH_PASS_11_FRONTDOOR_EXIT_LIFECYCLE_PROXY_ABI_AND_RUNTIME_CATALOG.txt
+
+======================================================================
+1. OBJECTIVE
+======================================================================
+
+0.0.28 exists to make the NEXT real-Skyrim field session maximally trustworthy.
+
+It is not a graphics-feature wave.
+
+It must eliminate the remaining avoidable lifecycle/proxy/evidence ambiguities:
+
+    process-scoped startup evidence;
+    truthful D3D11 proxy API;
+    correct primary renderer selection;
+    identical pre-Present attach semantics for both startup orders;
+    reliable telemetry closure before process teardown;
+    self-contained one-ZIP field evidence;
+    honest broad runtime-family diagnostics.
+
+======================================================================
+2. NON-GOALS
+======================================================================
+
+Do NOT:
+
+    add ENB/ReShade runtime coexistence;
+    add proxy chaining;
+    add SKSE;
+    add Address Library runtime dependency;
+    add 1.5.97/1.7.104 executable hooks without validated signatures;
+    promote WaterDomain;
+    promote PostTonemapPreUi;
+    start a new graphics feature;
+    reopen Waves 1-4;
+    replace the proven 0.0.27 HDR/TAA logic without contradictory evidence.
+
+======================================================================
+3. LANE A — PROCESS-SCOPED STARTUP TRACE
+======================================================================
+
+Current file:
+
+    Diagnostics/renderer_startup.csv
+
+must become one-process evidence.
+
+At first startup_trace::Record() in a process:
+
+    open with truncation;
+    write header;
+    sequence = 1.
+
+Subsequent calls:
+
+    append.
+
+New columns:
+
+    pid
+    sequence
+    qpc
+    thread
+    event
+    result
+    pointer_a
+    pointer_b
+
+Requirements:
+
+    thread-safe;
+    no file I/O from DllMain;
+    buffered d3d11-proxy events replay after GZFX is available;
+    first replayed event initializes/truncates the file.
+
+Add test:
+
+    pre-seed a stale marker;
+    execute a new startup;
+    assert stale marker is gone;
+    assert current PID appears;
+    assert sequence is monotonic.
+
+======================================================================
+4. LANE B — TRUTHFUL PUBLIC D3D11 PROXY CONTRACT
+======================================================================
+
+Change GZFX d3d11.dll exports to the documented/public D3D11 front-door set:
+
+    D3D11CreateDevice
+    D3D11CreateDeviceAndSwapChain
+    D3D11On12CreateDevice
+
+Remove from GZFX's public proxy export contract:
+
+    D3D11CoreCreateDevice
+    D3D11CoreCreateLayeredDevice
+    D3D11CoreGetLayeredDeviceSize
+    D3D11CoreRegisterLayers
+
+D3D11On12CreateDevice:
+
+    resolve from absolute System32 d3d11.dll;
+    forward arguments/result exactly;
+    never initialize/attach it as Skyrim primary;
+    optionally record one compact startup event.
+
+Add acceptance:
+
+    GetProcAddress local d3d11.dll for all 3 documented exports succeeds;
+    removed D3D11Core exports are absent from local GZFX proxy;
+    D3D11On12 symbol resolution/forward path is non-recursive.
+
+No D3D12 device creation is required merely to validate symbol availability.
+
+======================================================================
+5. LANE C — PRIMARY RENDERER QUALIFICATION
+======================================================================
+
+Before GZFX_AttachPrimaryD3D11 is invoked from the d3d11 proxy, qualify the
+candidate.
+
+Normal product acceptance requires:
+
+A. caller provenance
+
+    call originated in the main executable module;
+
+B. driver class
+
+    reject:
+        D3D_DRIVER_TYPE_WARP
+        D3D_DRIVER_TYPE_REFERENCE
+        D3D_DRIVER_TYPE_SOFTWARE
+        D3D_DRIVER_TYPE_NULL
+
+    allow:
+        D3D_DRIVER_TYPE_HARDWARE
+        D3D_DRIVER_TYPE_UNKNOWN when an explicit adapter is used and the actual
+        adapter passes hardware checks;
+
+C. adapter identity
+
+    query the created device's IDXGIDevice/adapter;
+    reject Microsoft Basic Render Driver:
+        VendorId 0x1414
+        DeviceId 0x008C;
+
+D. swapchain window, when present
+
+    if OutputWindow is non-null:
+        require it belongs to current process.
+
+Test-only override:
+
+    GZFX_TEST_ALLOW_SOFTWARE_PRIMARY=1
+
+permits WARP/reference software testing.
+
+It must not be consulted/required in normal product runs.
+
+Startup telemetry events:
+
+    primary_candidate_accepted
+    primary_candidate_rejected
+
+with result/reason codes.
+
+Do not permanently bind a rejected device.
+
+======================================================================
+6. LANE D — STARTUP-PATH PARITY
+======================================================================
+
+D3D-first path already calls:
+
+    GZFX_AttachPrimaryD3D11.
+
+GZFX-first / dinput-first path through:
+
+    diagnostics::d3d11_lifecycle
+
+must call the SAME renderer-forensics explicit attach path after successful
+primary device creation.
+
+Required successful creation flow:
+
+    pipeline_cartography::AttachDevice
+    ->
+    renderer_forensics::AttachPrimaryRendererObjects
+    ->
+    renderer_execution_service state is therefore established by the shared
+    attach implementation.
+
+Avoid duplicate divergent primary-attach logic.
+
+Add GZFX-first acceptance:
+
+    Load/initialize GZFX before D3D;
+    create WARP test device/swapchain under test override;
+    issue a context operation BEFORE first Present;
+    prove renderer-forensics observed it before Present.
+
+======================================================================
+7. LANE E — SAFE PROCESS-EXIT TELEMETRY CLOSURE
+======================================================================
+
+Remove runtime.cpp std::atexit telemetry Shutdown registration.
+
+Install a process-level ExitProcess detour from the long-lived d3d11 bootstrap.
+
+Bootstrap additions:
+
+    static MinHook link;
+    ExitProcessFn original;
+    atomic exit-hook-installed;
+    atomic shutdown-once guard.
+
+Install hook lazily on first relevant D3D bootstrap use, outside DllMain.
+
+Hook behavior:
+
+    if first invocation:
+        record process_exit_intercepted when possible;
+        resolve/check GZFX module;
+        if GZFX initialization state == ready:
+            call exported GZFX_Shutdown();
+
+    call original ExitProcess(exitCode);
+
+Never return.
+
+If GZFX is absent/not ready:
+
+    call original ExitProcess immediately.
+
+Do NOT:
+
+    join threads from DllMain;
+    call GZFX_Shutdown from DLL_PROCESS_DETACH;
+    retain std::atexit as a competing second mechanism.
+
+======================================================================
+8. LANE F — NATURAL-EXIT ACCEPTANCE
+======================================================================
+
+Add child executable:
+
+    GZFXNaturalExitChild
+
+Child:
+
+    sets test output root;
+    enables telemetry;
+    permits WARP primary via test override;
+    creates D3D device/swapchain through local d3d11 proxy;
+    performs small renderer activity;
+    Presents;
+    returns from main normally;
+    NEVER calls GZFX_Shutdown.
+
+Add parent harness:
+
+    GZFXNaturalExitHarness
+
+Parent:
+
+    prepares output root;
+    CreateProcess child;
+    waits with finite timeout;
+    validates child exit success;
+    finds newest telemetry session;
+    requires:
+
+        session_close_state.txt
+            state=complete
+
+        telemetry_session_complete.txt
+            status=complete
+
+        transitions contains listener stop where applicable.
+
+This is the real automatic process-exit closure proof.
+
+======================================================================
+9. LANE G — SELF-CONTAINED FIELD SESSION
+======================================================================
+
+After telemetry writer join/flush during successful Shutdown:
+
+    copy current process's:
+        Diagnostics/renderer_startup.csv
+
+to:
+
+        current telemetry session/
+        renderer_startup.csv
+
+Keep the Diagnostics copy too.
+
+The copy must happen before final session_close_state=complete.
+
+The natural-exit test requires the telemetry session copy.
+
+Next user field upload should again require ONE newest session_* ZIP only.
+
+======================================================================
+10. LANE H — UNIVERSAL RUNTIME CATALOG
+======================================================================
+
+Expand runtimeKnown diagnostics to common Skyrim families.
+
+Recognize at minimum:
+
+    1.5.97
+
+    1.6.318
+    1.6.323
+    1.6.342
+    1.6.353
+    1.6.629
+    1.6.640
+    1.6.659
+    1.6.1130
+    1.6.1170
+    1.6.1179
+
+    1.7.99
+    1.7.104
+
+Only the independently validated engine profile remains:
+
+    1.6.1170
+
+unless implementation-time evidence separately validates another profile.
+
+Classification semantics:
+
+    rendererCoreSupported = true
+        for all runtimes unless an explicit renderer incompatibility is proven;
+
+    runtimeKnown =
+        catalog recognition only;
+
+    engineProfileAvailable =
+        separately verified executable-profile status.
+
+Unknown future runtime:
+
+    rendererCoreSupported=true
+    runtimeKnown=false
+    engineProfileAvailable=false
+
+No support claim may conflate catalog recognition with field certification.
+
+Expand test table accordingly.
+
+======================================================================
+11. LANE I — DOCUMENTATION / CONTINUITY
+======================================================================
+
+Update AGENT.md current locked-foundation section to:
+
+    0.0.28 pre-field lifecycle hardening
+    universal renderer core
+    standalone d3d11+dinput8 bootstrap
+    field phase.
+
+Update README opening architecture diagram to include:
+
+    SkyrimSE.exe
+       -> d3d11.dll -> GZFX.dll -> D3D11/DXGI
+       -> dinput8.dll -> GZFX.dll input bridge
+
+Keep explicit statement:
+
+    GZFX is standalone;
+    ENB/ReShade are research references, not runtime dependencies.
+
+======================================================================
+12. EXISTING LATE CONTRACTS MUST REMAIN
+======================================================================
+
+Preserve:
+
+    global TAA structural contract;
+    HDR full-resolution ancestry;
+    true <=2x2 terminal;
+    BeforeTonemap eligibility from true terminal;
+    command-list ownership;
+    physical Present epochs;
+    creation-time shader/resource identity;
+    late-only telemetry volume policy.
+
+All current 25 tests remain unless a test is explicitly superseded by a
+stronger equivalent.
+
+======================================================================
+13. TARGET TEST SUITE
+======================================================================
+
+Existing:
+
+    25
+
+Add/expand approximately:
+
+    d3d11_public_export_contract
+    primary_device_qualification
+    gzfx_first_pre_present_attach
+    natural_process_exit_completion
+    startup_trace_process_scope
+
+Runtime classification test expanded in place.
+
+Target:
+
+    >= 30 acceptance tests.
+
+Exact count may vary with implementation organization.
+
+No test may manually call GZFX_Shutdown when it is intended to prove natural
+process exit.
+
+======================================================================
+14. FAILURE POLICY
+======================================================================
+
+If a test exposes:
+
+    startup deadlock;
+    proxy ABI issue;
+    primary-selection ambiguity;
+    shutdown lifecycle defect;
+    stale evidence contamination;
+
+repair the root cause.
+
+Preserve failed CI history.
+
+Do not weaken assertions merely to obtain green.
+
+======================================================================
+15. PACKAGING
+======================================================================
+
+Root package remains exactly:
+
+    GZFX.dll
+    d3d11.dll
+    dinput8.dll
+
+No new runtime files are authorized.
+
+CI must continue exact-package verification.
+
+Package refresh on main must change only:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+======================================================================
+16. FIELD ACCEPTANCE AFTER 0.0.28
+======================================================================
+
+The next real Skyrim 1.7.104 session should answer from ONE telemetry ZIP:
+
+Startup:
+
+    renderer_startup.csv current-process only;
+    qualified primary accepted;
+    primary attach before first Skyrim renderer resource;
+    no software/helper device poisoning.
+
+Resources:
+
+    core long-lived semantic provenance captured where created after attach;
+    creation hooks stable.
+
+Late stack:
+
+    HDRReduction exterior + interior;
+    true 2x2 terminal;
+    BeforeTonemap;
+    Before/AfterGlobalTAA remains 1:1.
+
+Ownership:
+
+    GZFX command lists remain fully owned;
+    no fake external population.
+
+Shutdown:
+
+    process_exit_intercepted;
+    session_close_state=complete;
+    telemetry_session_complete=status=complete.
+
+Health:
+
+    dropped=0;
+    queue drained;
+    no Waves 1-4 regressions.
+
+======================================================================
+17. IMPLEMENTATION AUTHORITY
+======================================================================
+
+Owner explicitly authorized a full DATA -> RESEARCH -> BLUEPRINT ->
+IMPLEMENTATION pass before another field run.
+
+This blueprint authorizes implementation, CI repair, PR, merge, merged-main
+verification, package refresh, archive/continuity closure, and final test
+handoff without another checkpoint.
+
+END 0.0.28 BLUEPRINT
