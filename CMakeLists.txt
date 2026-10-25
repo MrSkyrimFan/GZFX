@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.27
+    VERSION 0.0.28
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -121,6 +121,11 @@ gzfx_apply_common(GZFXBootstrap)
 add_library(GZFXD3D11Bootstrap SHARED
     bootstrap/d3d11_proxy.cpp
     bootstrap/d3d11.def
+)
+target_link_libraries(
+    GZFXD3D11Bootstrap
+    PRIVATE
+        minhook
 )
 set_target_properties(GZFXD3D11Bootstrap PROPERTIES OUTPUT_NAME "d3d11")
 gzfx_apply_common(GZFXD3D11Bootstrap)
