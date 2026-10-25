@@ -185,6 +185,21 @@ namespace gzfx::render::wave3
             ResetReason lastReset = ResetReason::FirstValidFrame;
         };
 
+        struct ResetEvent
+        {
+            std::uint64_t sequence = 0;
+            std::uint64_t frame = 0;
+            ResetReason reason = ResetReason::None;
+            std::uint64_t depthContract = 0;
+            std::uint64_t motionContract = 0;
+            std::uint64_t normalContract = 0;
+            std::uint64_t cameraGeneration = 0;
+            std::uint64_t deviceGeneration = 0;
+            std::uint64_t surfaceGeneration = 0;
+            semantic_authority::EnvironmentClass environment =
+                semantic_authority::EnvironmentClass::UnknownTransition;
+        };
+
         struct PendingCapture
         {
             bool active = false;
@@ -208,6 +223,10 @@ namespace gzfx::render::wave3
         std::uint64_t g_executeCount = 0;
         std::uint64_t g_skipCount = 0;
         std::uint64_t g_lastStatusFrame = 0;
+        std::uint64_t g_resetSequence = 0;
+        std::vector<ResetEvent> g_resetEvents{};
+        std::vector<GpuTiming> g_timingHistory{};
+        constexpr std::size_t kEvidenceHistoryLimit = 256;
 
         std::string HResultText(const HRESULT value)
         {
@@ -1757,6 +1776,20 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 g_runtime.latestTiming.temporalMs = delta(2, 3);
                 g_runtime.latestTiming.cameraStoreMs = delta(3, 4);
                 g_runtime.latestTiming.totalMs = delta(0, 4);
+
+                g_timingHistory.push_back(
+                    g_runtime.latestTiming);
+
+                if (g_timingHistory.size() >
+                    kEvidenceHistoryLimit)
+                {
+                    g_timingHistory.erase(
+                        g_timingHistory.begin(),
+                        g_timingHistory.begin() +
+                            static_cast<std::ptrdiff_t>(
+                                g_timingHistory.size() -
+                                kEvidenceHistoryLimit));
+                }
             }
         }
 
@@ -2510,23 +2543,28 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 root / L"wave3_status.txt",
                 out.str());
 
-            if (g_runtime.latestTiming.valid)
+            if (!g_timingHistory.empty())
             {
                 std::ostringstream timing;
                 timing
-                    << "frame,depth_base_ms,depth_tail_ms,temporal_ms,camera_store_ms,total_ms\n"
-                    << g_runtime.latestTiming.frame
-                    << ","
-                    << g_runtime.latestTiming.depthBaseMs
-                    << ","
-                    << g_runtime.latestTiming.depthTailMs
-                    << ","
-                    << g_runtime.latestTiming.temporalMs
-                    << ","
-                    << g_runtime.latestTiming.cameraStoreMs
-                    << ","
-                    << g_runtime.latestTiming.totalMs
-                    << "\n";
+                    << "frame,depth_base_ms,depth_tail_ms,temporal_ms,camera_store_ms,total_ms\n";
+
+                for (const auto& sample : g_timingHistory)
+                {
+                    timing
+                        << sample.frame
+                        << ","
+                        << sample.depthBaseMs
+                        << ","
+                        << sample.depthTailMs
+                        << ","
+                        << sample.temporalMs
+                        << ","
+                        << sample.cameraStoreMs
+                        << ","
+                        << sample.totalMs
+                        << "\n";
+                }
 
                 WriteText(
                     root / L"wave3_gpu_timing.csv",
@@ -3803,10 +3841,12 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
             const ResetReason resetReason)
         {
             if (!g_capture.active ||
-                g_capture.frame != inputs.frame)
+                inputs.frame < g_capture.frame)
             {
                 return true;
             }
+
+            g_capture.frame = inputs.frame;
 
             std::error_code ec;
             fs::create_directories(
@@ -3884,6 +3924,12 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 << ResetReasonName(resetReason) << "\n"
                 << "history_generation="
                 << g_history.generation << "\n"
+                << "depth_contract="
+                << inputs.mainDepth.contractToken << "\n"
+                << "motion_contract="
+                << inputs.motion.contractToken << "\n"
+                << "normal_contract="
+                << inputs.nativeNormal.contractToken << "\n"
                 << "normal_history_format="
                 << static_cast<unsigned>(g_runtime.normalHistoryFormat)
                 << "\n"
