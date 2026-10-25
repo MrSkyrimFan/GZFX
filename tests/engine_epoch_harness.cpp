@@ -11,6 +11,12 @@ using ValidateFn = bool (*)(
     std::uint64_t,
     std::uint64_t*);
 
+using ClassifyRuntimeFn = std::uint32_t (*)(
+    std::uint16_t,
+    std::uint16_t,
+    std::uint16_t,
+    std::uint16_t);
+
 namespace
 {
     std::uint64_t MatchRvaFor(
@@ -62,11 +68,34 @@ int wmain(int argc, wchar_t** argv)
                 module,
                 "GZFX_TestValidateAe1170PreUi"));
 
+    const auto classifyRuntime =
+        reinterpret_cast<ClassifyRuntimeFn>(
+            GetProcAddress(
+                module,
+                "GZFX_TestClassifyRuntime"));
+
     if (validatePost == nullptr ||
-        validatePreUi == nullptr)
+        validatePreUi == nullptr ||
+        classifyRuntime == nullptr)
     {
         FreeLibrary(module);
         return 4;
+    }
+
+    constexpr std::uint32_t knownRuntime =
+        1u << 0;
+
+    constexpr std::uint32_t engineProfile =
+        1u << 1;
+
+    if (classifyRuntime(1, 5, 97, 0) != knownRuntime ||
+        classifyRuntime(1, 6, 1170, 0) !=
+            (knownRuntime | engineProfile) ||
+        classifyRuntime(1, 7, 104, 0) != knownRuntime ||
+        classifyRuntime(1, 9, 999, 0) != 0)
+    {
+        FreeLibrary(module);
+        return 8;
     }
 
     constexpr std::array<std::uint8_t, 24> post =
