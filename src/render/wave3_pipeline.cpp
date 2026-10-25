@@ -3559,6 +3559,166 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 visible);
         }
 
+        bool CaptureTemporalStats(
+            const execution::ExecutionLease& lease,
+            const fs::path& directory,
+            const HistorySet& history)
+        {
+            std::vector<std::array<std::uint8_t, 4>> masks;
+            std::vector<float> confidence;
+
+            if (!ReadRgba8(
+                    lease.device,
+                    lease.immediate,
+                    g_runtime.debugMask.texture,
+                    g_runtime.width,
+                    g_runtime.height,
+                    masks) ||
+                !ReadScalarTexture(
+                    lease.device,
+                    lease.immediate,
+                    history.confidence.texture,
+                    g_runtime.confidenceFormat,
+                    g_runtime.width,
+                    g_runtime.height,
+                    confidence) ||
+                masks.size() != confidence.size() ||
+                masks.empty())
+            {
+                return false;
+            }
+
+            std::array<std::uint64_t, 4> counts{};
+            double confidenceSum = 0.0;
+            float confidenceMax = 0.0f;
+
+            for (std::size_t i = 0; i < masks.size(); ++i)
+            {
+                for (std::size_t channel = 0;
+                     channel < counts.size();
+                     ++channel)
+                {
+                    if (masks[i][channel] != 0)
+                    {
+                        ++counts[channel];
+                    }
+                }
+
+                const float value =
+                    std::clamp(
+                        confidence[i],
+                        0.0f,
+                        1.0f);
+
+                confidenceSum += value;
+                confidenceMax =
+                    std::max(
+                        confidenceMax,
+                        value);
+            }
+
+            const double scale =
+                100.0 /
+                static_cast<double>(
+                    masks.size());
+
+            std::ostringstream out;
+            out
+                << std::fixed
+                << std::setprecision(4)
+                << "history_accepted_percent="
+                << static_cast<double>(counts[0]) * scale
+                << "\n"
+                << "reject_depth_world_percent="
+                << static_cast<double>(counts[1]) * scale
+                << "\n"
+                << "reject_normal_percent="
+                << static_cast<double>(counts[2]) * scale
+                << "\n"
+                << "reject_uv_invalid_percent="
+                << static_cast<double>(counts[3]) * scale
+                << "\n"
+                << "mean_confidence="
+                << confidenceSum /
+                    static_cast<double>(
+                        confidence.size())
+                << "\n"
+                << "max_confidence="
+                << confidenceMax
+                << "\n";
+
+            WriteText(
+                directory / L"temporal_stats.txt",
+                out.str());
+
+            return true;
+        }
+
+        void CaptureTimingSummary(
+            const fs::path& directory)
+        {
+            if (g_timingHistory.empty())
+            {
+                WriteText(
+                    directory / L"gpu_timing_summary.txt",
+                    "status=no_resolved_samples\n");
+                return;
+            }
+
+            std::vector<double> totals;
+            totals.reserve(g_timingHistory.size());
+
+            double sum = 0.0;
+            double maximum = 0.0;
+
+            for (const auto& sample : g_timingHistory)
+            {
+                totals.push_back(sample.totalMs);
+                sum += sample.totalMs;
+                maximum =
+                    std::max(
+                        maximum,
+                        sample.totalMs);
+            }
+
+            std::sort(
+                totals.begin(),
+                totals.end());
+
+            const std::size_t p95Index =
+                static_cast<std::size_t>(
+                    std::floor(
+                        0.95 *
+                        static_cast<double>(
+                            totals.size() - 1)));
+
+            std::ostringstream out;
+            out
+                << std::fixed
+                << std::setprecision(4)
+                << "samples="
+                << totals.size()
+                << "\n"
+                << "latest_total_ms="
+                << g_timingHistory.back().totalMs
+                << "\n"
+                << "mean_total_ms="
+                << sum /
+                    static_cast<double>(
+                        totals.size())
+                << "\n"
+                << "p95_total_ms="
+                << totals[p95Index]
+                << "\n"
+                << "max_total_ms="
+                << maximum
+                << "\n";
+
+            WriteText(
+                directory / L"gpu_timing_summary.txt",
+                out.str());
+        }
+
         bool CaptureMotion(
             const execution::ExecutionLease& lease,
             const native_input::GeometryInputs& inputs,
@@ -3901,6 +4061,14 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 lease,
                 g_capture.directory,
                 g_runtime.history[writeIndex]) && ok;
+
+            ok = CaptureTemporalStats(
+                lease,
+                g_capture.directory,
+                g_runtime.history[writeIndex]) && ok;
+
+            CaptureTimingSummary(
+                g_capture.directory);
 
             ok = CaptureMotion(
                 lease,
@@ -4332,6 +4500,124 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 name.str();
         }
 
+        void WriteResetEvents()
+        {
+            const fs::path root = DiagnosticsRoot();
+
+            if (root.empty())
+            {
+                return;
+            }
+
+            std::ostringstream out;
+            out
+                << "sequence,frame,reason,depth_contract,motion_contract,"
+                   "normal_contract,camera_generation,device_generation,"
+                   "surface_generation,environment\n";
+
+            for (const auto& event : g_resetEvents)
+            {
+                out
+                    << event.sequence
+                    << ","
+                    << event.frame
+                    << ","
+                    << ResetReasonName(event.reason)
+                    << ","
+                    << event.depthContract
+                    << ","
+                    << event.motionContract
+                    << ","
+                    << event.normalContract
+                    << ","
+                    << event.cameraGeneration
+                    << ","
+                    << event.deviceGeneration
+                    << ","
+                    << event.surfaceGeneration
+                    << ","
+                    << semantic_authority::EnvironmentName(
+                        event.environment)
+                    << "\n";
+            }
+
+            WriteText(
+                root / L"wave3_reset_events.csv",
+                out.str());
+        }
+
+        void RecordResetEvent(
+            const native_input::GeometryInputs& inputs,
+            const execution::ExecutionLease& lease,
+            const ResetReason reason)
+        {
+            if (reason == ResetReason::None)
+            {
+                return;
+            }
+
+            ResetEvent event{};
+            event.sequence = ++g_resetSequence;
+            event.frame = inputs.frame;
+            event.reason = reason;
+            event.depthContract =
+                inputs.mainDepth.contractToken;
+            event.motionContract =
+                inputs.motion.contractToken;
+            event.normalContract =
+                inputs.nativeNormal.contractToken;
+            event.cameraGeneration =
+                inputs.cameraGeneration;
+            event.deviceGeneration =
+                lease.deviceGeneration;
+            event.surfaceGeneration =
+                lease.surfaceGeneration;
+            event.environment =
+                inputs.previousCompletedEnvironment;
+
+            g_resetEvents.push_back(event);
+
+            if (g_resetEvents.size() >
+                kEvidenceHistoryLimit)
+            {
+                g_resetEvents.erase(
+                    g_resetEvents.begin());
+            }
+
+            WriteResetEvents();
+        }
+
+        ResetReason CutResetReason(
+            const std::uint32_t flags)
+        {
+            if ((flags & 2u) != 0)
+            {
+                return ResetReason::CameraCutTranslation;
+            }
+
+            if ((flags & 4u) != 0)
+            {
+                return ResetReason::CameraCutRotation;
+            }
+
+            if ((flags & 8u) != 0)
+            {
+                return ResetReason::CameraMatrixDiscontinuity;
+            }
+
+            if ((flags & 16u) != 0)
+            {
+                return ResetReason::CameraProjectionDiscontinuity;
+            }
+
+            if ((flags & 32u) != 0)
+            {
+                return ResetReason::DynamicResolutionInvalid;
+            }
+
+            return ResetReason::None;
+        }
+
         void InvalidateHistory(
             const ResetReason reason)
         {
@@ -4436,7 +4722,7 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                     return;
                 }
 
-                const ResetReason resetReason =
+                ResetReason resetReason =
                     EvaluateReset(
                         inputs,
                         lease,
@@ -4512,14 +4798,52 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 }
 
                 ++g_executeCount;
+
+                if (resetReason == ResetReason::None)
+                {
+                    std::array<
+                        float,
+                        kCutStateElements * 4> cutValues{};
+
+                    if (ReadCutState(
+                            lease,
+                            cutValues))
+                    {
+                        std::uint32_t cutFlags = 0;
+                        std::memcpy(
+                            &cutFlags,
+                            &cutValues[0],
+                            sizeof(cutFlags));
+
+                        const ResetReason cutReason =
+                            CutResetReason(cutFlags);
+
+                        if (cutReason != ResetReason::None)
+                        {
+                            resetReason = cutReason;
+                            ++g_history.generation;
+                            g_history.lastReset =
+                                cutReason;
+                        }
+                    }
+                }
+
+                if (resetReason != ResetReason::None)
+                {
+                    RecordResetEvent(
+                        inputs,
+                        lease,
+                        resetReason);
+                }
+
                 CommitHistoryState(
                     inputs,
                     lease,
                     writeIndex,
-                    ResetReason::None);
+                    resetReason);
 
                 if (g_capture.active &&
-                    g_capture.frame == event.frame)
+                    event.frame >= g_capture.frame)
                 {
                     CaptureAfterOpaque(
                         lease,
