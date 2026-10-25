@@ -240,6 +240,25 @@ int wmain(int argc, wchar_t** argv)
         return 3;
     }
 
+    wchar_t lateStackValue[8]{};
+    const bool lateStackActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_LATE_STACK_ACTIVE",
+            lateStackValue,
+            static_cast<DWORD>(
+                std::size(lateStackValue))) > 0;
+
+    if (lateStackActive)
+    {
+        SetEnvironmentVariableW(
+            L"GZFX_TEST_TELEMETRY_ACTIVE",
+            L"1");
+
+        SetEnvironmentVariableW(
+            L"GZFX_TEST_TELEMETRY_FULL_PIPELINE",
+            L"1");
+    }
+
     wchar_t telemetryEnabledValue[8]{};
     const bool telemetryActive =
         GetEnvironmentVariableW(
