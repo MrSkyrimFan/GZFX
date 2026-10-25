@@ -1,0 +1,1116 @@
+GZFX 0.0.23 ENGINEERING RESULT
+Wave 4 Ambient Visibility v2
+Engineering date: October 24, 2026
+Status: CODE PASS / CI PASS / MERGED / PACKAGED / FIELD TEST PENDING
+
+======================================================================
+1. EXECUTIVE RESULT
+======================================================================
+
+Wave 4 implements the first production-quality graphics feature on top of the
+field-closed GZFX renderer foundation.
+
+Runtime:
+
+    0.0.23-ambient-visibility-v2
+
+Feature:
+
+    Ambient Visibility v2
+
+Architecture:
+
+    full-resolution clean-room GTAO-inspired visibility
+    ->
+    native Skyrim normal input
+    ->
+    GZFX post-opaque R32 hierarchy
+    ->
+    bilateral spatial filtering
+    ->
+    Wave 3 validated temporal signal history
+    ->
+    replacement of Skyrim SAO_FILTERED at AfterStockAO
+    ->
+    Skyrim's own Ambient Screen-Space Composite consumes GZFX visibility
+
+This is deliberately NOT:
+
+    late MAIN_HDR multiplication
+    the old half-resolution Horizon/HBAO prototype
+    fake GI
+    Local Glow
+    another independent depth/temporal subsystem
+
+Source implementation PR:
+
+    #26
+    Wave 4 renderer lighting
+
+Final PR head:
+
+    84279da0915d6eeb7f59ddba5ef23d5913f02969
+
+Source merge commit:
+
+    48a6b96c1fdfeaad1cbb787be327f5df82f91b59
+
+Post-merge package-refresh commit:
+
+    4714b0cf3f62ed8fadf550e3aca03dedcfb2f81a
+
+Package-refresh proof:
+
+    source merge -> package refresh
+    changed exactly one file:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Final package blob:
+
+    acabe467d607c7a121ca31991dcc5c3a081f233d
+
+Final package size:
+
+    313,931 bytes
+
+PR Windows x64 CI:
+
+    run 40152988797
+    SUCCESS
+    17 / 17 tests PASS
+
+Merged-main Windows x64 CI:
+
+    run 40153194904
+    SUCCESS
+    17 / 17 tests PASS
+
+======================================================================
+2. CONTROLLING AUTHORITY
+======================================================================
+
+This engineering pass was controlled by:
+
+    GZFX_0.0.22_WAVE3_FIELD_FINDINGS_CLOSED.txt
+    GZFX_WAVE4_AMBIENT_VISIBILITY_V2_RESEARCH.txt
+    GZFX_0.0.23_WAVE4_AMBIENT_VISIBILITY_V2_BLUEPRINT.txt
+
+The field findings closed Wave 3.
+
+The research selected the GTAO-family / stock ambient-composite architecture.
+
+The blueprint authorized one coherent 0.0.23 implementation pass.
+
+======================================================================
+3. WAVE 3 STATUS AT IMPLEMENTATION START
+======================================================================
+
+Wave 3 was formally field-closed before Wave 4 engineering began.
+
+Field-proven foundation consumed by Wave 4:
+
+    Renderer Execution Service
+    Native Input Broker
+    stable semantic contract tokens
+    GZFXSceneDepthHierarchy
+    post-opaque R32 view-space depth
+    native Skyrim normals
+    native Skyrim motion
+    current/previous dynamic-resolution architecture
+    temporal geometry history
+    world-normal history
+    confidence history
+    reprojection validation
+    disocclusion
+    owned command-list isolation
+    semantic Stage Scheduler
+    accessible bounded diagnostics
+
+Wave 4 does not reconstruct or replace these systems.
+
+======================================================================
+4. WAVE 3 PRODUCTION FRAME VIEW
+======================================================================
+
+Wave 3 now exposes a narrow production FrameView API.
+
+Added:
+
+    wave3::FrameView
+
+Fields include:
+
+    frame
+    historyGeneration
+    width
+    height
+    mipCount
+    depthHierarchy
+    geometryConfidence
+    reprojectionMask
+    historyValid
+    valid
+
+Added:
+
+    wave3::AcquireFrameView(...)
+    wave3::ReleaseFrameView(...)
+
+Contract:
+
+- exact current produced frame only;
+- AddRef'd SRVs;
+- no raw private Wave 3 ownership leaks;
+- failure on stale/mismatched frame;
+- consumers reuse Wave 3 resources instead of rebuilding them.
+
+Wave 4 is the first production consumer.
+
+======================================================================
+5. NEW AMBIENT VISIBILITY v2 MODULE
+======================================================================
+
+Added:
+
+    include/gzfx/render/ambient_visibility_v2.hpp
+    src/render/ambient_visibility_v2.cpp
+
+Public API:
+
+    Initialize
+    IsInitialized
+    WasAppliedFrame
+    OwnsDevelopmentMode
+    RequestManualCapture
+
+Wave 4 registers:
+
+    AfterOpaqueWorldMRT
+    AfterStockAO
+
+Runtime initialization is:
+
+    Wave 3
+    then
+    Wave 4
+
+The Stage Scheduler therefore invokes Wave 3 first at AfterOpaqueWorldMRT,
+allowing Wave 4 to consume the completed current hierarchy and temporal
+geometry state.
+
+======================================================================
+6. AMBIENT VISIBILITY ALGORITHM
+======================================================================
+
+The implementation is an independently authored GTAO-inspired horizon
+visibility pass informed by:
+
+- Activision GTAO research;
+- MIT XeGTAO concepts;
+- NVIDIA SAO/HBAO public research;
+- GZFX renderer evidence.
+
+No GPL Community Shaders implementation was copied.
+
+Primary algorithm properties:
+
+    full resolution
+
+    current positive view-space depth from GZFXSceneDepthHierarchy
+
+    native Skyrim view-space normal decode
+
+    camera projection/inverse reconstruction
+
+    world-space radius
+
+    projected screen-space sampling radius
+
+    procedural per-pixel/frame low-discrepancy noise
+
+    directional horizon slices
+
+    opposite-side horizon search
+
+    hierarchical mip selection from sample offset
+
+    world-radius rejection/falloff
+
+    analytic GTAO-style normal/horizon integration
+
+    scalar visibility [0,1]
+
+    background visibility = 1
+
+Initial production constants:
+
+    radius world = 240
+
+    falloff final fraction = 0.35
+
+    sample distribution power = 2
+
+    visibility power = 1
+
+    slices = 3
+
+    steps per slice = 6
+
+These are field-build engineering seeds.
+
+They are not yet exposed as a large user-facing tuning surface.
+
+======================================================================
+7. FULL-RESOLUTION BASELINE
+======================================================================
+
+Wave 4 intentionally begins at full active renderer resolution.
+
+No half-resolution shortcut was introduced.
+
+Reasons preserved from research:
+
+- the old half-resolution prototype flickered/crawled;
+- Wave 3 gives a high-quality full-res hierarchy;
+- the project quality target is ENB-class-or-better;
+- there was no measured requirement forcing a resolution compromise before
+  the real production effect existed.
+
+The field gate will determine whether the full-res cost is acceptable.
+
+======================================================================
+8. DEPTH HIERARCHY REUSE
+======================================================================
+
+Wave 4 does not create another depth hierarchy.
+
+It directly samples:
+
+    Wave3 FrameView.depthHierarchy
+
+This is the field-proven:
+
+    R32_FLOAT
+    full mip chain
+    post-opaque
+    positive view-space depth
+
+Hierarchy mip selection is based on sample pixel distance so larger-radius
+samples can use coarser depth without rebuilding or generating new mips.
+
+======================================================================
+9. NATIVE NORMALS
+======================================================================
+
+Wave 4 uses:
+
+    NORMAL_MASK_CURRENT.RG
+
+with the already-proven Skyrim native normal decode.
+
+It does not use RT2.B/A semantics.
+
+It does not silently fall back to depth-derived normals.
+
+If required current native geometry input cannot be acquired:
+
+    Wave 4 does not overwrite stock AO.
+
+Stock Skyrim AO remains the fail-soft path.
+
+======================================================================
+10. SPATIAL FILTER
+======================================================================
+
+Raw visibility is filtered full-resolution with two separable bilateral
+compute passes.
+
+Horizontal:
+
+    5 taps
+
+Vertical:
+
+    5 taps
+
+Weights include:
+
+    spatial distance
+    relative view-depth similarity
+    native-normal agreement
+
+Background does not intentionally bleed into geometry.
+
+This replaces the old prototype's broad unstable blur behavior.
+
+======================================================================
+11. TEMPORAL SIGNAL HISTORY
+======================================================================
+
+Wave 4 owns only signal history:
+
+    VisibilityHistory[2]
+    R16_FLOAT
+
+It does NOT create another geometry-history system.
+
+Inputs:
+
+    current spatial visibility
+    native motion
+    Wave 3 geometry confidence
+    Wave 3 reprojection/accepted mask
+    previous Wave 4 visibility
+    Skyrim current/previous dynamic-resolution ratios
+
+Reprojection remains:
+
+    previousUV =
+        currentUV +
+        nativeMotion.xy
+
+Previous history uses the previous dynamic-resolution ratio.
+
+Previous AO is accepted only where Wave 3 geometry reprojection is valid.
+
+A current 3x3 visibility neighborhood clamps the previous signal before blend.
+
+Temporal weight responds to:
+
+    Wave 3 confidence
+    motion magnitude
+
+Wave 4 history resets when:
+
+    frame continuity breaks
+    Wave 3 history generation changes
+    runtime resources rebuild
+
+Expected physical native-normal ping-pong therefore does not create a second
+history discontinuity model.
+
+======================================================================
+12. STOCK SKYRIM LIGHTING INTEGRATION
+======================================================================
+
+This is the most important Wave 4 architectural change.
+
+The previous prototype approach modified HDR scene color directly.
+
+Wave 4 does not.
+
+Renderer cartography proved:
+
+    stock temporal RawAO
+    ->
+    stock AO filter temp
+    ->
+    stock SAO_FILTERED
+    ->
+    stock RawIndirect
+    ->
+    stock Ambient Screen-Space Composite consumes:
+        RAW_INDIRECT
+        SAO_FILTERED
+        depth
+        normal
+        auxiliary/lighting resources
+    ->
+    MAIN_HDR
+
+Wave 4 computes its visibility earlier.
+
+Then at:
+
+    AfterStockAO
+
+it identifies the exact current:
+
+    AOFiltered / SAO_FILTERED
+
+resource through Semantic Authority plus current RT0 identity validation.
+
+Required contract:
+
+    current frame
+    full current dimensions
+    R8G8B8A8_UNORM
+    sample count 1
+    UAV bind capability
+
+Only after all checks pass does GZFX replace the stock AO content.
+
+The stock RawIndirect pass still executes.
+
+The stock Ambient Screen-Space Composite still executes.
+
+Skyrim therefore applies GZFX ambient visibility in Skyrim's own ambient
+lighting domain.
+
+======================================================================
+13. MODE 1 - STAGE-CORRECT SPLIT
+======================================================================
+
+Development Mode 1 now means:
+
+    SPLIT AMBIENT VISIBILITY
+
+Before replacement:
+
+    stock SAO_FILTERED is copied to a GZFX-owned stock reference texture.
+
+Wave 4 writes:
+
+    left half:
+        original stock AO
+
+    right half:
+        GZFX Ambient Visibility v2
+
+The resulting split is then consumed by Skyrim's normal ambient composite.
+
+This is not a late backbuffer split.
+
+It is a same-lighting-domain stock/GZFX comparison.
+
+======================================================================
+14. MODE 2 - FULL REPLACEMENT
+======================================================================
+
+Development Mode 2 now means:
+
+    FULL AMBIENT VISIBILITY
+
+Wave 4 fills SAO_FILTERED with:
+
+    float4(
+        visibility,
+        visibility,
+        visibility,
+        1)
+
+inside the active region.
+
+Dynamic-resolution inactive area is kept unoccluded.
+
+Skyrim then performs the normal downstream ambient composite.
+
+======================================================================
+15. STOCK FALLBACK
+======================================================================
+
+Wave 4 is fail-soft.
+
+If any of these fail:
+
+    Renderer Execution lease
+    Wave 3 FrameView
+    Native Input Broker geometry bundle
+    Wave 4 runtime creation
+    shader compilation
+    current-frame visibility production
+    current SAO_FILTERED semantic
+    current RT0 identity match
+    SAO format/dimensions/UAV contract
+    owned command-list recording/execution
+
+then:
+
+    Wave 4 leaves stock SAO_FILTERED untouched.
+
+The stock Skyrim lighting path continues.
+
+No guessed substitute is written.
+
+======================================================================
+16. RENDERER STATE ISOLATION
+======================================================================
+
+Wave 4 uses its own deferred context.
+
+Compute work is finished into command lists and executed through:
+
+    Renderer Execution Service
+    ExecuteOwned(..., TRUE)
+
+New owned pass classes:
+
+    Wave4AmbientVisibility
+    Wave4AmbientInjection
+
+The injection command list explicitly unbinds outputs in its own deferred
+state before binding SAO_FILTERED as UAV.
+
+Immediate Skyrim state is restored after command execution.
+
+GZFX-owned work remains distinct from opaque Skyrim command-list evidence.
+
+======================================================================
+17. CURRENT CAMERA HANDOFF
+======================================================================
+
+The AfterStockAO injection needs current camera dynamic-resolution parameters.
+
+Wave 4 does not heuristically reacquire a random 720-byte buffer later.
+
+At AfterOpaqueWorldMRT, Native Input Broker already supplies the validated
+current camera buffer.
+
+Wave 4 retains one AddRef'd reference for the current computed frame and uses
+that exact camera buffer when packing SAO_FILTERED later in the same frame.
+
+Frame mismatch fails soft.
+
+This preserves the production ownership model established by Wave 3.
+
+======================================================================
+18. LEGACY EFFECT SUPPRESSION
+======================================================================
+
+When Wave 4 owns development Mode 1 or Mode 2 in the real runtime:
+
+    old pre-UI ambient-depth stack does not execute;
+    old Horizon Occlusion does not mutate HDR;
+    old prototype SSIL does not mutate HDR;
+    old Local Glow does not contaminate the Wave 4 acceptance image.
+
+visible_pass also recognizes:
+
+    ambient_visibility_v2::WasAppliedFrame(frame)
+
+so the old Present-time Ambient Contact fallback is not applied over a
+successful Wave 4 frame.
+
+The legacy code remains compiled and regression-tested.
+
+It is not deleted.
+
+======================================================================
+19. LEGACY CI HARNESS ISOLATION
+======================================================================
+
+Initial Wave 4 CI correctly suppressed old mode1/2 effects everywhere.
+
+That caused historical regression harnesses, which intentionally expect the
+legacy prototype behavior, to fail.
+
+This was a test-environment ownership collision rather than a product
+rendering defect.
+
+A bounded test-only rule was added:
+
+If:
+
+    GZFX_TEST_OUTPUT_ROOT is set
+
+and:
+
+    GZFX_TEST_WAVE4_ACTIVE is NOT set
+
+then Wave 4 stays dormant and does not claim modes 1/2.
+
+The dedicated Wave 4 integration harness explicitly sets:
+
+    GZFX_TEST_WAVE4_ACTIVE=1
+
+Result:
+
+- historical harnesses continue proving legacy behavior;
+- Wave 4 integration harness proves the new production behavior;
+- real Skyrim has no test-output environment and therefore runs Wave 4
+  normally.
+
+Visible-pass legacy mode text is similarly preserved only in legacy harness
+mode.
+
+======================================================================
+20. HUMAN CAPTURE WORKFLOW
+======================================================================
+
+Shift+Numpad5 remains the single human capture owner.
+
+One key request fans out to:
+
+    Semantic Probe
+    Wave 3
+    Wave 4
+
+Wave 4 adds:
+
+    RequestManualCapture()
+
+and uses an arm-then-act delay.
+
+Current delay:
+
+    30 Wave 4 executions
+
+The user presses the capture chord first, releases it, then moves normally if
+the requested test requires motion.
+
+No simultaneous capture-key / WASD / mouse choreography is required.
+
+======================================================================
+21. WAVE 4 ACCESSIBLE CAPTURE PACKAGE
+======================================================================
+
+Wave 4 writes under:
+
+    Diagnostics/AmbientVisibilityV2/manualNNNN/
+
+Capture outputs include:
+
+    summary.txt
+    stats.txt
+    gpu_timing_summary.txt
+
+Accessible grayscale images:
+
+    stock_sao_filtered.bmp
+    gzfx_visibility_raw.bmp
+    gzfx_visibility_spatial.bmp
+    gzfx_visibility_temporal.bmp
+    final_sao_written.bmp
+    stock_vs_gzfx_difference.bmp
+
+The image previews are bounded downsampled diagnostic views.
+
+No required evidence relies on hue.
+
+======================================================================
+22. VISIBILITY STATISTICS
+======================================================================
+
+Captured signal statistics include:
+
+    min
+    max
+    mean
+    p01
+    p50
+    p95
+
+Final visibility additionally records fractions:
+
+    < 0.25
+    < 0.50
+    < 0.75
+    > 0.95
+
+This makes the first field run capable of detecting:
+
+    global-gray response
+    over-darkening
+    mostly-no-op signal
+    pathological clipping
+
+without relying only on screenshot interpretation.
+
+======================================================================
+23. GPU TIMING
+======================================================================
+
+Wave 4 adds asynchronous timing for:
+
+    raw GTAO
+    spatial horizontal
+    spatial vertical
+    temporal signal pass
+    SAO pack/injection
+
+Timing uses bounded query rings.
+
+Normal rendering does not map GPU resources to obtain timing.
+
+Recent timing history is bounded.
+
+Manual capture writes aggregate timing summary.
+
+Field performance remains pending.
+
+The engineering target remains:
+
+    typical total around or below ~1.5 ms at 2560x1440 RTX 4060 Laptop
+
+Sustained >~2.5 ms requires investigation.
+
+No precision/resolution downgrade is authorized before measurement.
+
+======================================================================
+24. SYNTHETIC RENDERER PIPELINE EXPANSION
+======================================================================
+
+The existing Wave 3 synthetic renderer harness was extended through the stock
+ambient-lighting domain.
+
+The synthetic sequence now includes:
+
+    main opaque MRT
+    CameraZ hierarchy
+    stock temporal RawAO-like pass
+    AO filter temp
+    final AOFiltered
+    Wave 4 AfterStockAO replacement
+    RawIndirect-like pass
+    Ambient Screen-Space Composite-like pass
+
+Synthetic AO resources include:
+
+    current/previous RGBA8 AO
+    filter temp
+    final AOFiltered with UAV capability
+    RawIndirect R11G11B10
+
+The native normal A/B ping-pong regression remains active.
+
+======================================================================
+25. STAGE-CORRECT SPLIT CI
+======================================================================
+
+The synthetic stock AO final surface is prefilled with a known stock value.
+
+Mode 1 requires:
+
+    left side approximately equals the stock AO value
+
+and:
+
+    right side differs in the expected GZFX visibility direction.
+
+The downstream synthetic RawIndirect and ambient-composite passes execute
+after the replacement.
+
+This proves GZFX is replacing the AO semantic at the intended renderer stage
+rather than modifying the final HDR image after the fact.
+
+======================================================================
+26. CI TEST GATE
+======================================================================
+
+Final test count:
+
+    17
+
+Tests:
+
+1. runtime_smoke
+2. d3d11_lifecycle_probe
+3. renderer_forensics
+4. resource_intelligence
+5. visible_pass
+6. menu_only
+7. pre_ui_effects
+8. ambient_depth_ao
+9. ambient_depth_ssil
+10. ambient_visibility_flat_ao
+11. ambient_visibility_uniform_ssil
+12. renderer_semantic_probe
+13. semantic_authority_foundation
+14. native_surface_temporal
+15. wave3_math
+16. wave3_pipeline
+17. ambient_visibility_v2
+
+PR run:
+
+    40152988797
+
+Result:
+
+    17 / 17 PASS
+    0 failed
+
+Merged-main run:
+
+    40153194904
+
+Result:
+
+    17 / 17 PASS
+    0 failed
+
+Merged-main total CTest time:
+
+    13.45 sec
+
+======================================================================
+27. ENGINEERING RETRIES / FAILURES
+======================================================================
+
+The engineering history is retained rather than erased.
+
+FAILURE 1:
+
+MSVC:
+
+    C2026
+    embedded HLSL string too large
+
+Cause:
+
+    one giant C++ raw string literal
+
+Repair:
+
+    split embedded shader text into bounded raw-string chunks
+    construct one static std::string
+    D3DCompile uses data()/size()
+
+FAILURE 2:
+
+The first split introduced a missing closing std::string constructor
+parenthesis at a chunk boundary.
+
+Compiler errors included:
+
+    C2110 cannot add two pointers
+    C2143 missing ')' before ';'
+
+Repair:
+
+    correct first chunk construction boundary.
+
+FAILURE 3:
+
+After product compilation succeeded, seven old tests failed because Wave 4
+correctly claimed modes 1/2 and suppressed the legacy paths those historical
+harnesses were designed to test.
+
+Repair:
+
+    explicit legacy harness dormancy unless GZFX_TEST_WAVE4_ACTIVE is set.
+
+After that:
+
+    16 / 17 passed
+
+Remaining failure:
+
+    visible_pass harness expected literal text:
+        split_ambient_contact
+
+while the real runtime correctly logged:
+        split_ambient_visibility_v2
+
+Repair:
+
+    preserve legacy log naming only when Wave 4 is dormant in the old harness.
+
+Final result:
+
+    17 / 17 PASS
+
+No product failure was hidden by deleting or weakening old tests.
+
+======================================================================
+28. SOURCE / PACKAGE PROOF
+======================================================================
+
+PR:
+
+    #26
+
+Final PR head:
+
+    84279da0915d6eeb7f59ddba5ef23d5913f02969
+
+PR CI:
+
+    Windows x64
+    run 40152988797
+    SUCCESS
+    17 / 17 PASS
+
+Source merge:
+
+    48a6b96c1fdfeaad1cbb787be327f5df82f91b59
+
+Merged-main CI:
+
+    Windows x64
+    run 40153194904
+    SUCCESS
+    17 / 17 PASS
+
+Package refresh:
+
+    4714b0cf3f62ed8fadf550e3aca03dedcfb2f81a
+
+Comparison:
+
+    48a6b96c...
+    ->
+    4714b0cf...
+
+changed only:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Final package:
+
+    blob:
+    acabe467d607c7a121ca31991dcc5c3a081f233d
+
+    size:
+    313,931 bytes
+
+No source drift exists in the package-refresh commit.
+
+======================================================================
+29. WHAT WAVE 4 DOES NOT CLAIM YET
+======================================================================
+
+Code/CI proves the architecture executes synthetically.
+
+Real Skyrim field quality is still pending.
+
+Therefore 0.0.23 does NOT yet claim:
+
+    ENB-quality AO achieved
+    final artistic radius/strength
+    final quality presets
+    final GPU cost
+    no real-world flicker
+    no real-world haloing
+    Wave 4 closed
+
+The next field run is specifically intended to answer those questions.
+
+======================================================================
+30. WHAT IS INTENTIONALLY NOT IN WAVE 4
+======================================================================
+
+Not implemented:
+
+    indirect radiance / GI
+    fake bounce color
+    bent-normal environment lighting
+    RawIndirect replacement
+    reflection replacement
+    water replacement
+    global TAA replacement
+    volumetric replacement
+    HDR / tonemap replacement
+    stock AO pass suppression
+    finished end-user preset surface
+
+Wave 4 is scalar Ambient Visibility only.
+
+Wave 5 is expected to research Indirect Radiance after Wave 4 closes.
+
+======================================================================
+31. NEXT FIELD GATE
+======================================================================
+
+The first real-Skyrim Wave 4 gate is six captures:
+
+DAY EXTERIOR
+
+1:
+    Mode 1
+    stationary stage-correct stock/GZFX split
+
+2:
+    Mode 2
+    arm capture first
+    then slow pan/move
+
+INTERIOR
+
+3:
+    Mode 1
+    stationary split
+
+4:
+    Mode 2
+    arm first
+    then move/turn
+
+NIGHT EXTERIOR
+
+5:
+    Mode 1
+    stationary split
+
+6:
+    Mode 2
+    arm first
+    then move/turn
+
+No artistic slider tuning during the first gate.
+
+The field evidence must determine whether the implementation is:
+
+    visually useful
+    geometrically local
+    stable
+    correctly integrated
+    performant
+
+before settings/presets are redesigned.
+
+======================================================================
+32. FIELD ACCEPTANCE TARGET
+======================================================================
+
+A real field pass requires:
+
+- meaningful local geometric grounding;
+- no whole-image gray wash;
+- no horizontal bands;
+- no stationary crawl/flicker;
+- no broad sky darkening;
+- no severe depth-edge haloing;
+- no long actor trails;
+- stable interior/exterior/night behavior;
+- motion remains temporally coherent;
+- stage-correct split clearly differentiates stock and GZFX;
+- GZFX difference is not merely "darker everywhere";
+- GPU cost remains acceptable;
+- Wave 3 remains stable/closed;
+- no crash/device removal.
+
+If field evidence is bad but does not explain why, the next DATA/RESEARCH cycle
+is authorized to add a bounded feature-specific high-cadence listener for:
+
+    visibility inputs
+    signal statistics
+    temporal acceptance
+    SAOFiltered before/after
+    ambient-composite consumption
+    timings
+
+Do not fall back to broad indiscriminate renderer logging unless the feature
+evidence actually requires it.
+
+======================================================================
+33. CURRENT PROJECT STATE
+======================================================================
+
+Wave 1:
+    CLOSED
+
+Wave 2:
+    CLOSED
+
+Wave 3:
+    CLOSED
+
+Wave 4:
+    CODE / CI / PACKAGE PASS
+    REAL-SKYRIM FIELD GATE PENDING
+
+Current runtime:
+
+    0.0.23-ambient-visibility-v2
+
+Current mode:
+
+    TEST
+
+Next DATA begins when the user uploads the new Skyrim evidence bundle.
+
+======================================================================
+END OF GZFX 0.0.23 ENGINEERING RESULT
+======================================================================
