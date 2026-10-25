@@ -162,7 +162,7 @@ int wmain(
                 entry.path() /
                 L"telemetry_session_complete.txt");
 
-        const std::string startup =
+        const std::string startupTrace =
             ReadAll(
                 entry.path() /
                 L"renderer_startup.csv");
@@ -173,7 +173,7 @@ int wmain(
             complete.find(
                 "status=complete") !=
                     std::string::npos &&
-            startup.find(
+            startupTrace.find(
                 "process_exit_intercepted") !=
                     std::string::npos)
         {
