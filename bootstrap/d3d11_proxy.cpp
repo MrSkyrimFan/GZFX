@@ -588,7 +588,7 @@ extern "C" HRESULT WINAPI D3D11CoreCreateLayeredDevice(
     const void* const unknown0,
     const DWORD unknown1,
     const void* const unknown2,
-    const REFIID riid,
+    REFIID riid,
     void** const object)
 {
     if (!EnsureRealD3D11() ||
