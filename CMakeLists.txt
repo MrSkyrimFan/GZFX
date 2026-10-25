@@ -365,3 +365,11 @@ add_test(
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/wave3-pipeline-output"
 )
+
+add_test(
+    NAME ambient_visibility_v2
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/ambient-visibility-v2-output"
+)
