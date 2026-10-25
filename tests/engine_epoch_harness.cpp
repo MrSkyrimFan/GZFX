@@ -88,14 +88,34 @@ int wmain(int argc, wchar_t** argv)
     constexpr std::uint32_t engineProfile =
         1u << 1;
 
+    const std::array<std::uint16_t, 9> ae16Known =
+    {
+        318, 323, 342, 353, 629,
+        640, 659, 1130, 1179
+    };
+
     if (classifyRuntime(1, 5, 97, 0) != knownRuntime ||
         classifyRuntime(1, 6, 1170, 0) !=
             (knownRuntime | engineProfile) ||
+        classifyRuntime(1, 7, 99, 0) != knownRuntime ||
         classifyRuntime(1, 7, 104, 0) != knownRuntime ||
         classifyRuntime(1, 9, 999, 0) != 0)
     {
         FreeLibrary(module);
         return 8;
+    }
+
+    for (const auto patch : ae16Known)
+    {
+        if (classifyRuntime(
+                1,
+                6,
+                patch,
+                0) != knownRuntime)
+        {
+            FreeLibrary(module);
+            return 8;
+        }
     }
 
     constexpr std::array<std::uint8_t, 24> post =
