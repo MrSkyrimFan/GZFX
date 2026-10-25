@@ -343,24 +343,36 @@ namespace gzfx::render::wave3
 
         bool TestCaptureRequest()
         {
-            wchar_t value[8]{};
+            static const bool enabled =
+                []()
+                {
+                    wchar_t value[8]{};
 
-            return GetEnvironmentVariableW(
-                L"GZFX_TEST_WAVE3_CAPTURE_REQUEST",
-                value,
-                static_cast<DWORD>(
-                    std::size(value))) > 0;
+                    return GetEnvironmentVariableW(
+                        L"GZFX_TEST_WAVE3_CAPTURE_REQUEST",
+                        value,
+                        static_cast<DWORD>(
+                            std::size(value))) > 0;
+                }();
+
+            return enabled;
         }
 
         bool TestStatusEveryFrame()
         {
-            wchar_t value[8]{};
+            static const bool enabled =
+                []()
+                {
+                    wchar_t value[8]{};
 
-            return GetEnvironmentVariableW(
-                L"GZFX_TEST_WAVE3_STATUS_EVERY_FRAME",
-                value,
-                static_cast<DWORD>(
-                    std::size(value))) > 0;
+                    return GetEnvironmentVariableW(
+                        L"GZFX_TEST_WAVE3_STATUS_EVERY_FRAME",
+                        value,
+                        static_cast<DWORD>(
+                            std::size(value))) > 0;
+                }();
+
+            return enabled;
         }
 
         fs::path DiagnosticsRoot()
