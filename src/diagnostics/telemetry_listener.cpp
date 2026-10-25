@@ -1,6 +1,7 @@
 #include "gzfx/diagnostics/telemetry_listener.hpp"
 
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
+#include "gzfx/diagnostics/deferred_context_cartography.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/render/ambient_visibility_v2.hpp"
 #include "gzfx/render/runtime_state.hpp"
@@ -42,7 +43,9 @@ namespace gzfx::diagnostics::telemetry_listener
             Semantic,
             Transition,
             Ownership,
-            Timing
+            Timing,
+            DeferredList,
+            DeferredRun
         };
 
         enum class TransitionKind : std::uint32_t
@@ -70,7 +73,7 @@ namespace gzfx::diagnostics::telemetry_listener
             std::uint64_t qpc = 0;
             std::uint64_t frame = 0;
             std::uint64_t ordinal = 0;
-            std::array<std::uint64_t, 64> u{};
+            std::array<std::uint64_t, 96> u{};
             std::array<double, 4> d{};
         };
 
@@ -279,9 +282,13 @@ namespace gzfx::diagnostics::telemetry_listener
             std::ofstream transitions;
             std::ofstream ownership;
             std::ofstream timings;
+            std::ofstream deferredLists;
             std::ofstream pipeline;
+            std::ofstream deferredRuns;
             std::uint32_t pipelineSegment = 0;
             std::uint64_t pipelineBytes = 0;
+            std::uint32_t deferredRunSegment = 0;
+            std::uint64_t deferredRunBytes = 0;
         };
 
         struct SecondAccumulator
@@ -318,6 +325,9 @@ namespace gzfx::diagnostics::telemetry_listener
         std::atomic<std::uint64_t> g_queueHighWater{0};
         std::atomic<std::uint64_t> g_bytesWritten{0};
         std::atomic<bool> g_overflowActive{false};
+        std::atomic<bool> g_detailActive{false};
+        bool g_fullPipelineDetail = false;
+        std::atomic<std::uint64_t> g_detailedPipelineRows{0};
 
         HANDLE g_wakeEvent = nullptr;
         std::thread g_writer{};
@@ -733,15 +743,23 @@ namespace gzfx::diagnostics::telemetry_listener
             event.u[19] =
                 pass.writeHash;
             event.u[20] =
-                pass.readResourceCount;
+                pass.totalReadResourceCount;
             event.u[21] =
-                pass.writeResourceCount;
+                pass.totalWriteResourceCount;
+            event.u[22] =
+                pass.retainedReadResourceCount;
+            event.u[23] =
+                pass.retainedWriteResourceCount;
+            event.u[24] =
+                pass.readOverflow ? 1ull : 0ull;
+            event.u[25] =
+                pass.writeOverflow ? 1ull : 0ull;
 
             for (std::size_t i = 0;
                  i < pass.readResources.size();
                  ++i)
             {
-                event.u[22 + i] =
+                event.u[26 + i] =
                     pass.readResources[i];
             }
 
@@ -749,36 +767,70 @@ namespace gzfx::diagnostics::telemetry_listener
                  i < pass.writeResources.size();
                  ++i)
             {
-                event.u[30 + i] =
+                event.u[50 + i] =
                     pass.writeResources[i];
             }
 
-            event.u[38] =
+            for (std::size_t i = 0;
+                 i < pass.explicitReads.size();
+                 ++i)
+            {
+                event.u[62 + i] =
+                    pass.explicitReads[i];
+            }
+
+            for (std::size_t i = 0;
+                 i < pass.explicitWrites.size();
+                 ++i)
+            {
+                event.u[64 + i] =
+                    pass.explicitWrites[i];
+            }
+
+            event.u[66] =
+                pass.explicitReadCount;
+            event.u[67] =
+                pass.explicitWriteCount;
+            event.u[68] =
+                pass.sourceSubresource;
+            event.u[69] =
+                pass.destinationSubresource;
+            event.u[70] =
+                pass.explicitFormat;
+            event.u[71] =
+                pass.explicitFlags;
+
+            event.u[72] =
                 pass.constantBufferHash;
-            event.u[39] =
+            event.u[73] =
                 pass.samplerHash;
-            event.u[40] =
+            event.u[74] =
                 pass.blendHash;
-            event.u[41] =
+            event.u[75] =
                 pass.depthHash;
-            event.u[42] =
+            event.u[76] =
                 pass.rasterHash;
-            event.u[43] =
+            event.u[77] =
                 pass.topology;
-            event.u[44] =
+            event.u[78] =
                 pass.viewportWidth;
-            event.u[45] =
+            event.u[79] =
                 pass.viewportHeight;
 
             for (std::size_t i = 0;
                  i < pass.args.size();
                  ++i)
             {
-                event.u[46 + i] =
+                event.u[80 + i] =
                     pass.args[i];
             }
 
-            Enqueue(event);
+            if (Enqueue(event))
+            {
+                g_detailedPipelineRows.fetch_add(
+                    1,
+                    std::memory_order_relaxed);
+            }
 
             g_pendingPass = {};
         }
@@ -790,6 +842,13 @@ namespace gzfx::diagnostics::telemetry_listener
         {
             try
             {
+                if (!g_fullPipelineDetail &&
+                    !g_detailActive.load(
+                        std::memory_order_acquire))
+                {
+                    return;
+                }
+
                 const auto signature =
                     PassSignature(
                         pass);
@@ -878,6 +937,33 @@ namespace gzfx::diagnostics::telemetry_listener
                 Event& stage,
             void*) noexcept
         {
+            using B =
+                render::stage_scheduler::Boundary;
+            using P =
+                render::stage_scheduler::Phase;
+
+            if (!g_fullPipelineDetail &&
+                stage.boundary ==
+                    B::AfterAmbientScreenSpaceComposite &&
+                stage.phase ==
+                    P::AfterExecution)
+            {
+                EnqueuePendingPass();
+                g_detailActive.store(
+                    true,
+                    std::memory_order_release);
+            }
+
+            if (!g_fullPipelineDetail &&
+                stage.boundary ==
+                    B::UiPresent)
+            {
+                EnqueuePendingPass();
+                g_detailActive.store(
+                    false,
+                    std::memory_order_release);
+            }
+
             Event event{};
             event.type =
                 EventType::Stage;
@@ -1179,7 +1265,60 @@ namespace gzfx::diagnostics::telemetry_listener
                 files.pipeline,
                 g_sessionRoot /
                     name.str(),
-                "sequence,qpc,frame,first_ordinal,last_ordinal,repeat,kind,draw_kind,vs,hs,ds,gs,ps,cs,rtv0,rtv1,rtv2,rtv3,dsv,om_uav_hash,cs_uav_hash,read_hash,write_hash,read_count,write_count,read0,read1,read2,read3,read4,read5,read6,read7,write0,write1,write2,write3,write4,write5,write6,write7,cb_hash,sampler_hash,blend_hash,depth_hash,raster_hash,topology,viewport_width,viewport_height,arg0,arg1,arg2,arg3\n");
+                "sequence,qpc,frame,first_ordinal,last_ordinal,repeat,kind,draw_kind,vs,hs,ds,gs,ps,cs,rtv0,rtv1,rtv2,rtv3,dsv,om_uav_hash,cs_uav_hash,read_hash,write_hash,total_read_count,total_write_count,retained_read_count,retained_write_count,read_overflow,write_overflow,read0,read1,read2,read3,read4,read5,read6,read7,read8,read9,read10,read11,read12,read13,read14,read15,read16,read17,read18,read19,read20,read21,read22,read23,write0,write1,write2,write3,write4,write5,write6,write7,write8,write9,write10,write11,explicit_read0,explicit_read1,explicit_write0,explicit_write1,explicit_read_count,explicit_write_count,source_subresource,destination_subresource,explicit_format,explicit_flags,cb_hash,sampler_hash,blend_hash,depth_hash,raster_hash,topology,viewport_width,viewport_height,arg0,arg1,arg2,arg3\n");
+        }
+
+        bool OpenDeferredRunSegment(
+            WriterFiles& files)
+        {
+            if (files.deferredRuns.is_open())
+            {
+                files.deferredRuns.flush();
+                files.deferredRuns.close();
+            }
+
+            ++files.deferredRunSegment;
+            files.deferredRunBytes = 0;
+
+            std::wostringstream name;
+            name
+                << L"deferred_runs_"
+                << std::setw(4)
+                << std::setfill(L'0')
+                << files.deferredRunSegment
+                << L".csv";
+
+            const std::string readColumns =
+                "read0,read1,read2,read3,read4,read5,read6,read7,"
+                "read8,read9,read10,read11,read12,read13,read14,read15,"
+                "read16,read17,read18,read19,read20,read21,read22,read23";
+
+            const std::string writeColumns =
+                "write0,write1,write2,write3,write4,write5,"
+                "write6,write7,write8,write9,write10,write11";
+
+            return OpenText(
+                files.deferredRuns,
+                g_sessionRoot /
+                    name.str(),
+                (
+                    "sequence,qpc,frame,execute_ordinal,list_generation,"
+                    "context_generation,recording_generation,run_index,"
+                    "first_recording_ordinal,last_recording_ordinal,repeat,"
+                    "kind,draw_kind,vs,hs,ds,gs,ps,cs,"
+                    "rtv0,rtv1,rtv2,rtv3,dsv,om_uav_hash,cs_uav_hash,"
+                    "read_hash,write_hash,total_read_count,total_write_count,"
+                    "retained_read_count,retained_write_count,"
+                    "read_overflow,write_overflow," +
+                    readColumns + "," +
+                    writeColumns +
+                    ",explicit_read0,explicit_read1,explicit_write0,"
+                    "explicit_write1,explicit_read_count,explicit_write_count,"
+                    "source_subresource,destination_subresource,explicit_format,"
+                    "explicit_flags,cb_hash,sampler_hash,blend_hash,depth_hash,"
+                    "raster_hash,topology,viewport_width,viewport_height,"
+                    "arg0,arg1,arg2,arg3\n"
+                ).c_str());
         }
 
         bool OpenWriterFiles(
@@ -1226,7 +1365,17 @@ namespace gzfx::diagnostics::telemetry_listener
                     g_sessionRoot /
                         L"timings.csv",
                     "sequence,qpc,frame,source,timing_frame,total_ms\n") &&
+                OpenText(
+                    files.deferredLists,
+                    g_sessionRoot /
+                        L"deferred_lists.csv",
+                    "sequence,qpc,frame,execute_ordinal,command_list,"
+                    "list_generation,context,context_generation,"
+                    "recording_generation,original_pass_count,retained_runs,"
+                    "finish_restore,execute_restore,complete,overflow\n") &&
                 OpenPipelineSegment(
+                    files) &&
+                OpenDeferredRunSegment(
                     files);
         }
 
@@ -1249,6 +1398,15 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "GZFX Renderer Telemetry Listener\n"
                 << "version="
                 << gzfx::kVersion
+                << "\n"
+                << "pid="
+                << GetCurrentProcessId()
+                << "\n"
+                << "last_heartbeat_qpc="
+                << QpcNow()
+                << "\n"
+                << "last_heartbeat_local_time="
+                << Timestamp()
                 << "\n"
                 << "initialized="
                 << (g_initialized.load()
@@ -1288,6 +1446,41 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "\n"
                 << "pipeline_segment="
                 << files.pipelineSegment
+                << "\n"
+                << "detail_gate="
+                << (g_fullPipelineDetail
+                    ? "full_pipeline"
+                    : "late_only")
+                << "\n"
+                << "detailed_pipeline_rows="
+                << g_detailedPipelineRows.load()
+                << "\n";
+
+            const auto deferred =
+                deferred_context_cartography::
+                    GetStatus();
+
+            out
+                << "deferred_contexts_attached="
+                << deferred.contextsAttached
+                << "\n"
+                << "deferred_lists_finished="
+                << deferred.listsFinished
+                << "\n"
+                << "deferred_lists_executed="
+                << deferred.listsExecuted
+                << "\n"
+                << "deferred_opaque_executions="
+                << deferred.opaqueExecutions
+                << "\n"
+                << "deferred_recorded_runs="
+                << deferred.recordedRuns
+                << "\n"
+                << "deferred_record_overflows="
+                << deferred.recordOverflows
+                << "\n"
+                << "deferred_registry_evictions="
+                << deferred.registryEvictions
                 << "\n"
                 << "last_error="
                 << g_lastError
@@ -1338,6 +1531,11 @@ namespace gzfx::diagnostics::telemetry_listener
                 << g_sessionRoot.string()
                 << "\n"
                 << "policy=continuous_async_structured_text\n"
+                << "detail_gate="
+                << (g_fullPipelineDetail
+                    ? "full_pipeline"
+                    : "late_only")
+                << "\n"
                 << "performance_note=forensic_build_not_release_fps_evidence\n";
         }
 
@@ -1489,7 +1687,7 @@ namespace gzfx::diagnostics::telemetry_listener
                     << event.u[1];
 
                 for (std::size_t i = 5;
-                     i <= 49;
+                     i <= 83;
                      ++i)
                 {
                     row
@@ -1653,6 +1851,69 @@ namespace gzfx::diagnostics::telemetry_listener
                 g_bytesWritten.fetch_add(
                     row.str().size());
                 break;
+
+            case EventType::DeferredList:
+                row
+                    << event.sequence << ","
+                    << event.qpc << ","
+                    << event.frame;
+
+                for (std::size_t i = 0;
+                     i <= 11;
+                     ++i)
+                {
+                    row
+                        << ","
+                        << event.u[i];
+                }
+
+                row << "\n";
+                files.deferredLists
+                    << row.str();
+                g_bytesWritten.fetch_add(
+                    row.str().size());
+                break;
+
+            case EventType::DeferredRun:
+            {
+                row
+                    << event.sequence << ","
+                    << event.qpc << ","
+                    << event.frame;
+
+                for (std::size_t i = 0;
+                     i <= 88;
+                     ++i)
+                {
+                    row
+                        << ","
+                        << event.u[i];
+                }
+
+                row << "\n";
+                const auto text =
+                    row.str();
+
+                if (files.deferredRunBytes +
+                        text.size() >
+                    kPipelineSegmentBytes)
+                {
+                    if (!OpenDeferredRunSegment(
+                            files))
+                    {
+                        g_lastError =
+                            "deferred segment rotation failed";
+                    }
+                }
+
+                files.deferredRuns
+                    << text;
+                files.deferredRunBytes +=
+                    text.size();
+                g_bytesWritten.fetch_add(
+                    text.size());
+                break;
+            }
             }
 
             g_written.fetch_add(
@@ -1741,7 +2002,9 @@ namespace gzfx::diagnostics::telemetry_listener
             files.transitions.flush();
             files.ownership.flush();
             files.timings.flush();
+            files.deferredLists.flush();
             files.pipeline.flush();
+            files.deferredRuns.flush();
         }
 
         void WriterMain()
@@ -2025,6 +2288,18 @@ namespace gzfx::diagnostics::telemetry_listener
 
             QueryPerformanceFrequency(
                 &g_qpcFrequency);
+
+            wchar_t fullPipeline[8]{};
+            g_fullPipelineDetail =
+                GetEnvironmentVariableW(
+                    L"GZFX_TEST_TELEMETRY_FULL_PIPELINE",
+                    fullPipeline,
+                    static_cast<DWORD>(
+                        std::size(fullPipeline))) > 0;
+
+            g_detailActive.store(
+                g_fullPipelineDetail,
+                std::memory_order_release);
 
             const auto capacity =
                 DefaultRingCapacity();
@@ -2493,6 +2768,215 @@ namespace gzfx::diagnostics::telemetry_listener
         catch (...)
         {
         }
+    }
+
+    void OnDeferredList(
+        const DeferredListInfo& info) noexcept
+    {
+        if (!IsInitialized() ||
+            (!g_fullPipelineDetail &&
+             !g_detailActive.load(
+                 std::memory_order_acquire)))
+        {
+            return;
+        }
+
+        Event event{};
+        event.type =
+            EventType::DeferredList;
+        event.frame =
+            info.frame;
+        event.ordinal =
+            info.executeOrdinal;
+
+        event.u[0] =
+            info.executeOrdinal;
+        event.u[1] =
+            info.commandListIdentity;
+        event.u[2] =
+            info.commandListGeneration;
+        event.u[3] =
+            info.contextIdentity;
+        event.u[4] =
+            info.contextGeneration;
+        event.u[5] =
+            info.recordingGeneration;
+        event.u[6] =
+            info.originalPassCount;
+        event.u[7] =
+            info.retainedRunCount;
+        event.u[8] =
+            info.finishRestoreState ? 1ull : 0ull;
+        event.u[9] =
+            info.executeRestoreState ? 1ull : 0ull;
+        event.u[10] =
+            info.complete ? 1ull : 0ull;
+        event.u[11] =
+            info.overflow ? 1ull : 0ull;
+
+        Enqueue(event);
+    }
+
+    void OnDeferredRun(
+        const std::uint64_t frame,
+        const std::uint64_t executeOrdinal,
+        const std::uint64_t commandListGeneration,
+        const std::uint64_t contextGeneration,
+        const std::uint64_t recordingGeneration,
+        const std::uint64_t runIndex,
+        const std::uint64_t firstRecordingOrdinal,
+        const std::uint64_t lastRecordingOrdinal,
+        const std::uint64_t repeatCount,
+        const pipeline_cartography::PassTelemetry& pass) noexcept
+    {
+        if (!IsInitialized() ||
+            (!g_fullPipelineDetail &&
+             !g_detailActive.load(
+                 std::memory_order_acquire)))
+        {
+            return;
+        }
+
+        Event event{};
+        event.type =
+            EventType::DeferredRun;
+        event.frame =
+            frame;
+        event.ordinal =
+            executeOrdinal;
+
+        event.u[0] =
+            executeOrdinal;
+        event.u[1] =
+            commandListGeneration;
+        event.u[2] =
+            contextGeneration;
+        event.u[3] =
+            recordingGeneration;
+        event.u[4] =
+            runIndex;
+        event.u[5] =
+            firstRecordingOrdinal;
+        event.u[6] =
+            lastRecordingOrdinal;
+        event.u[7] =
+            repeatCount;
+        event.u[8] =
+            static_cast<std::uint64_t>(
+                pass.kind);
+        event.u[9] =
+            static_cast<std::uint64_t>(
+                pass.drawKind);
+
+        for (std::size_t i = 0;
+             i < pass.shaderHashes.size();
+             ++i)
+        {
+            event.u[10 + i] =
+                pass.shaderHashes[i];
+        }
+
+        for (std::size_t i = 0;
+             i < pass.rtvs.size();
+             ++i)
+        {
+            event.u[16 + i] =
+                pass.rtvs[i];
+        }
+
+        event.u[20] =
+            pass.dsv;
+        event.u[21] =
+            pass.omUavHash;
+        event.u[22] =
+            pass.csUavHash;
+        event.u[23] =
+            pass.readHash;
+        event.u[24] =
+            pass.writeHash;
+        event.u[25] =
+            pass.totalReadResourceCount;
+        event.u[26] =
+            pass.totalWriteResourceCount;
+        event.u[27] =
+            pass.retainedReadResourceCount;
+        event.u[28] =
+            pass.retainedWriteResourceCount;
+        event.u[29] =
+            pass.readOverflow ? 1ull : 0ull;
+        event.u[30] =
+            pass.writeOverflow ? 1ull : 0ull;
+
+        for (std::size_t i = 0;
+             i < pass.readResources.size();
+             ++i)
+        {
+            event.u[31 + i] =
+                pass.readResources[i];
+        }
+
+        for (std::size_t i = 0;
+             i < pass.writeResources.size();
+             ++i)
+        {
+            event.u[55 + i] =
+                pass.writeResources[i];
+        }
+
+        for (std::size_t i = 0;
+             i < pass.explicitReads.size();
+             ++i)
+        {
+            event.u[67 + i] =
+                pass.explicitReads[i];
+        }
+
+        for (std::size_t i = 0;
+             i < pass.explicitWrites.size();
+             ++i)
+        {
+            event.u[69 + i] =
+                pass.explicitWrites[i];
+        }
+
+        event.u[71] =
+            pass.explicitReadCount;
+        event.u[72] =
+            pass.explicitWriteCount;
+        event.u[73] =
+            pass.sourceSubresource;
+        event.u[74] =
+            pass.destinationSubresource;
+        event.u[75] =
+            pass.explicitFormat;
+        event.u[76] =
+            pass.explicitFlags;
+        event.u[77] =
+            pass.constantBufferHash;
+        event.u[78] =
+            pass.samplerHash;
+        event.u[79] =
+            pass.blendHash;
+        event.u[80] =
+            pass.depthHash;
+        event.u[81] =
+            pass.rasterHash;
+        event.u[82] =
+            pass.topology;
+        event.u[83] =
+            pass.viewportWidth;
+        event.u[84] =
+            pass.viewportHeight;
+
+        for (std::size_t i = 0;
+             i < pass.args.size();
+             ++i)
+        {
+            event.u[85 + i] =
+                pass.args[i];
+        }
+
+        Enqueue(event);
     }
 
     void OnResize(

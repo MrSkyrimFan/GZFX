@@ -2,6 +2,7 @@
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 #include "gzfx/diagnostics/semantic_probe.hpp"
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
+#include "gzfx/diagnostics/deferred_context_cartography.hpp"
 #include "gzfx/diagnostics/telemetry_listener.hpp"
 #include "gzfx/render/scene_effects.hpp"
 #include "gzfx/render/renderer_execution_service.hpp"
@@ -38,6 +39,7 @@ namespace gzfx::diagnostics
     namespace
     {
         constexpr std::size_t kContextVtableCount = 115;
+        constexpr std::size_t kDeviceCreateDeferredContext = 27;
         constexpr std::uint64_t kSummaryEvery = 120;
         constexpr std::uint64_t kMaxFrames = 7200;
 
@@ -98,6 +100,7 @@ namespace gzfx::diagnostics
         using PresentFn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT);
         using Present1Fn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain1*, UINT, UINT, const DXGI_PRESENT_PARAMETERS*);
         using ResizeBuffersFn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT, UINT, DXGI_FORMAT, UINT);
+        using CreateDeferredContextFn = HRESULT(STDMETHODCALLTYPE*)(ID3D11Device*, UINT, ID3D11DeviceContext**);
 
         using SetConstantBuffersFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11Buffer* const*);
         using SetShaderResourcesFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11ShaderResourceView* const*);
@@ -147,6 +150,7 @@ namespace gzfx::diagnostics
         PresentFn g_present = nullptr;
         Present1Fn g_present1 = nullptr;
         ResizeBuffersFn g_resizeBuffers = nullptr;
+        CreateDeferredContextFn g_createDeferredContext = nullptr;
 
         SetConstantBuffersFn g_vsSetCB = nullptr;
         SetConstantBuffersFn g_hsSetCB = nullptr;
@@ -2187,6 +2191,13 @@ namespace gzfx::diagnostics
             if (c == g_primaryContext &&
                 !gzfxOwned)
             {
+                deferred_context_cartography::
+                    ExecuteObservedCommandList(
+                        g_frame,
+                        g_drawOrdinalThisFrame.load(),
+                        commandList,
+                        restoreContextState != FALSE);
+
                 pipeline_cartography::ExecuteCommandList(
                     g_frame,
                     g_drawOrdinalThisFrame.load(),
@@ -2725,6 +2736,33 @@ namespace gzfx::diagnostics
             }
         }
 
+        HRESULT STDMETHODCALLTYPE HookCreateDeferredContext(
+            ID3D11Device* device,
+            UINT flags,
+            ID3D11DeviceContext** context)
+        {
+            if (g_createDeferredContext == nullptr)
+            {
+                return E_FAIL;
+            }
+
+            const HRESULT result =
+                g_createDeferredContext(
+                    device,
+                    flags,
+                    context);
+
+            if (SUCCEEDED(result) &&
+                context != nullptr &&
+                *context != nullptr)
+            {
+                deferred_context_cartography::
+                    AttachContext(*context);
+            }
+
+            return result;
+        }
+
         HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain* swap, UINT sync, UINT flags)
         {
             Safe([&]{ OnPresent(swap); });
@@ -2775,6 +2813,9 @@ namespace gzfx::diagnostics
                 gzfx::render::semantic_authority::
                     OnResize();
 
+                deferred_context_cartography::
+                    Reset();
+
                 telemetry_listener::OnResize(
                     g_frame,
                     width,
@@ -2795,6 +2836,7 @@ namespace gzfx::diagnostics
             void* present = nullptr;
             void* present1 = nullptr;
             void* resize = nullptr;
+            void* createDeferredContext = nullptr;
         };
 
         Targets ResolveTargets()
@@ -2865,6 +2907,17 @@ namespace gzfx::diagnostics
                 result.present = vtable[8];
                 result.resize = vtable[13];
 
+                if (device != nullptr)
+                {
+                    auto** deviceVtable =
+                        *reinterpret_cast<void***>(
+                            device);
+
+                    result.createDeferredContext =
+                        deviceVtable[
+                            kDeviceCreateDeferredContext];
+                }
+
                 IDXGISwapChain1* swap1 = nullptr;
                 if (SUCCEEDED(swap->QueryInterface(__uuidof(IDXGISwapChain1), reinterpret_cast<void**>(&swap1))) && swap1)
                 {
@@ -2902,7 +2955,10 @@ namespace gzfx::diagnostics
             std::ostringstream acquisition;
             acquisition << "present_target=" << Ptr(targets.present) << "\n"
                         << "present1_target=" << Ptr(targets.present1) << "\n"
-                        << "resize_target=" << Ptr(targets.resize) << "\n";
+                        << "resize_target=" << Ptr(targets.resize) << "\n"
+                        << "create_deferred_context_target="
+                        << Ptr(targets.createDeferredContext)
+                        << "\n";
 
             if (!targets.present)
             {
@@ -2922,6 +2978,7 @@ namespace gzfx::diagnostics
             void* originalPresent = nullptr;
             void* originalPresent1 = nullptr;
             void* originalResize = nullptr;
+            void* originalCreateDeferredContext = nullptr;
 
             bool ok = HookOne(targets.present, Address(&HookPresent), &originalPresent);
             g_present = reinterpret_cast<PresentFn>(originalPresent);
@@ -2936,6 +2993,21 @@ namespace gzfx::diagnostics
             {
                 ok = HookOne(targets.resize, Address(&HookResizeBuffers), &originalResize) && ok;
                 g_resizeBuffers = reinterpret_cast<ResizeBuffersFn>(originalResize);
+            }
+
+            if (targets.createDeferredContext)
+            {
+                ok =
+                    HookOne(
+                        targets.createDeferredContext,
+                        Address(&HookCreateDeferredContext),
+                        &originalCreateDeferredContext) &&
+                    ok;
+
+                g_createDeferredContext =
+                    reinterpret_cast<
+                        CreateDeferredContextFn>(
+                            originalCreateDeferredContext);
             }
 
             if (!ok || MH_ApplyQueued() != MH_OK)

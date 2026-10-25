@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.24-renderer-telemetry-listener";
+        "0.0.25-late-stack-cartography-closure";
 }
 
 extern "C" __declspec(dllexport)

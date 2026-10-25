@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.24
+    VERSION 0.0.25
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -64,6 +64,7 @@ add_library(GZFX SHARED
     src/ui/settings_menu.cpp
     src/version.cpp
     src/diagnostics/d3d11_lifecycle.cpp
+    src/diagnostics/deferred_context_cartography.cpp
     src/diagnostics/pipeline_cartography.cpp
     src/diagnostics/renderer_forensics.cpp
     src/diagnostics/resource_intelligence.cpp
@@ -401,4 +402,18 @@ set_tests_properties(
     telemetry_listener_overflow
     PROPERTIES
         ENVIRONMENT "GZFX_TEST_TELEMETRY_ACTIVE=1;GZFX_TEST_TELEMETRY_RING_CAPACITY=64;GZFX_TEST_TELEMETRY_FORCE_OVERFLOW=1;GZFX_TEST_TELEMETRY_EXPECT_OVERFLOW=1"
+)
+
+add_test(
+    NAME late_stack_cartography
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/late-stack-cartography-output"
+)
+
+set_tests_properties(
+    late_stack_cartography
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1"
 )

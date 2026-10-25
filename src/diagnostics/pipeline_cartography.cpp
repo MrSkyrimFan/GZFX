@@ -535,6 +535,18 @@ namespace gzfx::diagnostics::pipeline_cartography
             return out;
         }
 
+        struct ExplicitTelemetryAccess
+        {
+            std::array<std::uintptr_t, 2> reads{};
+            std::array<std::uintptr_t, 2> writes{};
+            std::uint32_t readCount = 0;
+            std::uint32_t writeCount = 0;
+            std::uint32_t sourceSubresource = 0;
+            std::uint32_t destinationSubresource = 0;
+            std::uint32_t format = 0;
+            std::uint32_t flags = 0;
+        };
+
         PassTelemetry BuildPassTelemetryLocked(
             const std::uint64_t frame,
             const std::uint64_t ordinal,
@@ -542,7 +554,9 @@ namespace gzfx::diagnostics::pipeline_cartography
             const DrawKind drawKind,
             const std::array<
                 std::uint64_t,
-                4>& args)
+                4>& args,
+            const ExplicitTelemetryAccess& explicitAccess,
+            const bool suppressBoundAccess)
         {
             PassTelemetry out{};
             out.frame = frame;
@@ -550,6 +564,19 @@ namespace gzfx::diagnostics::pipeline_cartography
             out.kind = kind;
             out.drawKind = drawKind;
             out.args = args;
+            out.explicitReads = explicitAccess.reads;
+            out.explicitWrites = explicitAccess.writes;
+            out.explicitReadCount = explicitAccess.readCount;
+            out.explicitWriteCount = explicitAccess.writeCount;
+            out.sourceSubresource = explicitAccess.sourceSubresource;
+            out.destinationSubresource = explicitAccess.destinationSubresource;
+            out.explicitFormat = explicitAccess.format;
+            out.explicitFlags = explicitAccess.flags;
+
+            std::array<std::uintptr_t, kSrvSlots * kStageCount> uniqueReads{};
+            std::uint32_t uniqueReadCount = 0;
+            std::array<std::uintptr_t, kRtvSlots + (kUavSlots * 2) + 1> uniqueWrites{};
+            std::uint32_t uniqueWriteCount = 0;
 
             for (std::size_t i = 0;
                  i < out.shaderHashes.size();
@@ -613,10 +640,10 @@ namespace gzfx::diagnostics::pipeline_cartography
                     bool alreadyListed = false;
 
                     for (std::uint32_t i = 0;
-                         i < out.readResourceCount;
+                         i < uniqueReadCount;
                          ++i)
                     {
-                        if (out.readResources[i] ==
+                        if (uniqueReads[i] ==
                             binding.resource)
                         {
                             alreadyListed = true;
@@ -624,13 +651,23 @@ namespace gzfx::diagnostics::pipeline_cartography
                         }
                     }
 
-                    if (!alreadyListed &&
-                        out.readResourceCount <
-                            out.readResources.size())
+                    if (!alreadyListed)
                     {
-                        out.readResources[
-                            out.readResourceCount++] =
-                            binding.resource;
+                        if (uniqueReadCount <
+                            uniqueReads.size())
+                        {
+                            uniqueReads[
+                                uniqueReadCount++] =
+                                binding.resource;
+                        }
+
+                        if (out.retainedReadResourceCount <
+                            out.readResources.size())
+                        {
+                            out.readResources[
+                                out.retainedReadResourceCount++] =
+                                binding.resource;
+                        }
                     }
                 }
 
@@ -698,21 +735,29 @@ namespace gzfx::diagnostics::pipeline_cartography
                     }
 
                     for (std::uint32_t i = 0;
-                         i < out.writeResourceCount;
+                         i < uniqueWriteCount;
                          ++i)
                     {
-                        if (out.writeResources[i] ==
+                        if (uniqueWrites[i] ==
                             identity)
                         {
                             return;
                         }
                     }
 
-                    if (out.writeResourceCount <
+                    if (uniqueWriteCount <
+                        uniqueWrites.size())
+                    {
+                        uniqueWrites[
+                            uniqueWriteCount++] =
+                            identity;
+                    }
+
+                    if (out.retainedWriteResourceCount <
                         out.writeResources.size())
                     {
                         out.writeResources[
-                            out.writeResourceCount++] =
+                            out.retainedWriteResourceCount++] =
                             identity;
                     }
                 };
@@ -790,6 +835,34 @@ namespace gzfx::diagnostics::pipeline_cartography
                 HashMix(
                     writeHash,
                     hash);
+
+                addWriteResource(
+                    binding.resource);
+            }
+
+            out.totalReadResourceCount =
+                uniqueReadCount;
+            out.totalWriteResourceCount =
+                uniqueWriteCount;
+            out.readOverflow =
+                out.totalReadResourceCount >
+                out.retainedReadResourceCount;
+            out.writeOverflow =
+                out.totalWriteResourceCount >
+                out.retainedWriteResourceCount;
+
+            if (suppressBoundAccess)
+            {
+                out.readResources.fill(0);
+                out.writeResources.fill(0);
+                out.totalReadResourceCount = 0;
+                out.totalWriteResourceCount = 0;
+                out.retainedReadResourceCount = 0;
+                out.retainedWriteResourceCount = 0;
+                out.readOverflow = false;
+                out.writeOverflow = false;
+                readHash = 0;
+                writeHash = 0;
             }
 
             out.omUavHash =
@@ -830,7 +903,9 @@ namespace gzfx::diagnostics::pipeline_cartography
             const DrawKind drawKind = DrawKind::Draw,
             const std::array<
                 std::uint64_t,
-                4> args = {}) noexcept
+                4> args = {},
+            const ExplicitTelemetryAccess& explicitAccess = {},
+            const bool suppressBoundAccess = false) noexcept
         {
             try
             {
@@ -854,7 +929,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                             ordinal,
                             kind,
                             drawKind,
-                            args);
+                            args,
+                            explicitAccess,
+                            suppressBoundAccess);
 
                     sink =
                         g_passTelemetrySink;
@@ -893,6 +970,29 @@ namespace gzfx::diagnostics::pipeline_cartography
 
             identity->Release();
             return id;
+        }
+
+        std::uintptr_t TelemetryViewResourceId(
+            ID3D11View* const view) noexcept
+        {
+            if (view == nullptr)
+            {
+                return 0;
+            }
+
+            ID3D11Resource* resource = nullptr;
+            view->GetResource(&resource);
+
+            if (resource == nullptr)
+            {
+                return 0;
+            }
+
+            const auto identity =
+                ObserveResource(resource);
+
+            resource->Release();
+            return identity;
         }
 
         std::string Utf8(const std::wstring& value)
@@ -4859,6 +4959,20 @@ namespace gzfx::diagnostics::pipeline_cartography
         }
     }
 
+    std::uintptr_t ObserveResource(
+        ID3D11Resource* const resource) noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+            return RegisterResourceLocked(resource);
+        }
+        catch (...)
+        {
+            return 0;
+        }
+    }
+
     void SetTelemetrySinks(
         const PassTelemetrySink passSink,
         const ResourceTelemetrySink resourceSink,
@@ -6137,10 +6251,24 @@ namespace gzfx::diagnostics::pipeline_cartography
         ID3D11Resource* source) noexcept
     {
 
+        ExplicitTelemetryAccess explicitAccess{};
+        explicitAccess.reads[0] =
+            ObserveResource(source);
+        explicitAccess.writes[0] =
+            ObserveResource(destination);
+        explicitAccess.readCount =
+            explicitAccess.reads[0] != 0 ? 1u : 0u;
+        explicitAccess.writeCount =
+            explicitAccess.writes[0] != 0 ? 1u : 0u;
+
         EmitPassTelemetry(
             frame,
             drawOrdinal,
-            TelemetryPassKind::CopyResource);
+            TelemetryPassKind::CopyResource,
+            DrawKind::Draw,
+            {},
+            explicitAccess,
+            true);
         try
         {
             std::scoped_lock lock(
@@ -6191,12 +6319,28 @@ namespace gzfx::diagnostics::pipeline_cartography
         const D3D11_BOX* sourceBox) noexcept
     {
 
+        ExplicitTelemetryAccess explicitAccess{};
+        explicitAccess.reads[0] =
+            ObserveResource(source);
+        explicitAccess.writes[0] =
+            ObserveResource(destination);
+        explicitAccess.readCount =
+            explicitAccess.reads[0] != 0 ? 1u : 0u;
+        explicitAccess.writeCount =
+            explicitAccess.writes[0] != 0 ? 1u : 0u;
+        explicitAccess.sourceSubresource =
+            sourceSubresource;
+        explicitAccess.destinationSubresource =
+            destinationSubresource;
+
         EmitPassTelemetry(
             frame,
             drawOrdinal,
             TelemetryPassKind::CopySubresource,
             DrawKind::Draw,
-            {destinationSubresource, sourceSubresource, destinationX, destinationY});
+            {destinationSubresource, sourceSubresource, destinationX, destinationY},
+            explicitAccess,
+            true);
         try
         {
             std::scoped_lock lock(
@@ -6263,12 +6407,30 @@ namespace gzfx::diagnostics::pipeline_cartography
         const DXGI_FORMAT format) noexcept
     {
 
+        ExplicitTelemetryAccess explicitAccess{};
+        explicitAccess.reads[0] =
+            ObserveResource(source);
+        explicitAccess.writes[0] =
+            ObserveResource(destination);
+        explicitAccess.readCount =
+            explicitAccess.reads[0] != 0 ? 1u : 0u;
+        explicitAccess.writeCount =
+            explicitAccess.writes[0] != 0 ? 1u : 0u;
+        explicitAccess.sourceSubresource =
+            sourceSubresource;
+        explicitAccess.destinationSubresource =
+            destinationSubresource;
+        explicitAccess.format =
+            static_cast<std::uint32_t>(format);
+
         EmitPassTelemetry(
             frame,
             drawOrdinal,
             TelemetryPassKind::Resolve,
             DrawKind::Draw,
-            {destinationSubresource, sourceSubresource, static_cast<std::uint64_t>(format), 0});
+            {destinationSubresource, sourceSubresource, static_cast<std::uint64_t>(format), 0},
+            explicitAccess,
+            true);
         try
         {
             std::scoped_lock lock(
@@ -6325,10 +6487,20 @@ namespace gzfx::diagnostics::pipeline_cartography
         const FLOAT color[4]) noexcept
     {
 
+        ExplicitTelemetryAccess explicitAccess{};
+        explicitAccess.writes[0] =
+            TelemetryViewResourceId(view);
+        explicitAccess.writeCount =
+            explicitAccess.writes[0] != 0 ? 1u : 0u;
+
         EmitPassTelemetry(
             frame,
             drawOrdinal,
-            TelemetryPassKind::ClearRtv);
+            TelemetryPassKind::ClearRtv,
+            DrawKind::Draw,
+            {},
+            explicitAccess,
+            true);
         try
         {
             std::scoped_lock lock(
@@ -6395,12 +6567,22 @@ namespace gzfx::diagnostics::pipeline_cartography
         const UINT8 stencil) noexcept
     {
 
+        ExplicitTelemetryAccess explicitAccess{};
+        explicitAccess.writes[0] =
+            TelemetryViewResourceId(view);
+        explicitAccess.writeCount =
+            explicitAccess.writes[0] != 0 ? 1u : 0u;
+        explicitAccess.flags =
+            flags;
+
         EmitPassTelemetry(
             frame,
             drawOrdinal,
             TelemetryPassKind::ClearDsv,
             DrawKind::Draw,
-            {flags, stencil, 0, 0});
+            {flags, stencil, 0, 0},
+            explicitAccess,
+            true);
         try
         {
             std::scoped_lock lock(
@@ -6450,10 +6632,20 @@ namespace gzfx::diagnostics::pipeline_cartography
         const UINT values[4]) noexcept
     {
 
+        ExplicitTelemetryAccess explicitAccess{};
+        explicitAccess.writes[0] =
+            TelemetryViewResourceId(view);
+        explicitAccess.writeCount =
+            explicitAccess.writes[0] != 0 ? 1u : 0u;
+
         EmitPassTelemetry(
             frame,
             drawOrdinal,
-            TelemetryPassKind::ClearUavUint);
+            TelemetryPassKind::ClearUavUint,
+            DrawKind::Draw,
+            {},
+            explicitAccess,
+            true);
         try
         {
             std::scoped_lock lock(
@@ -6498,10 +6690,20 @@ namespace gzfx::diagnostics::pipeline_cartography
         const FLOAT values[4]) noexcept
     {
 
+        ExplicitTelemetryAccess explicitAccess{};
+        explicitAccess.writes[0] =
+            TelemetryViewResourceId(view);
+        explicitAccess.writeCount =
+            explicitAccess.writes[0] != 0 ? 1u : 0u;
+
         EmitPassTelemetry(
             frame,
             drawOrdinal,
-            TelemetryPassKind::ClearUavFloat);
+            TelemetryPassKind::ClearUavFloat,
+            DrawKind::Draw,
+            {},
+            explicitAccess,
+            true);
         try
         {
             std::scoped_lock lock(
@@ -6556,10 +6758,24 @@ namespace gzfx::diagnostics::pipeline_cartography
         ID3D11ShaderResourceView* view) noexcept
     {
 
+        ExplicitTelemetryAccess explicitAccess{};
+        explicitAccess.reads[0] =
+            TelemetryViewResourceId(view);
+        explicitAccess.writes[0] =
+            explicitAccess.reads[0];
+        explicitAccess.readCount =
+            explicitAccess.reads[0] != 0 ? 1u : 0u;
+        explicitAccess.writeCount =
+            explicitAccess.writes[0] != 0 ? 1u : 0u;
+
         EmitPassTelemetry(
             frame,
             drawOrdinal,
-            TelemetryPassKind::GenerateMips);
+            TelemetryPassKind::GenerateMips,
+            DrawKind::Draw,
+            {},
+            explicitAccess,
+            true);
         try
         {
             std::scoped_lock lock(
@@ -6617,7 +6833,9 @@ namespace gzfx::diagnostics::pipeline_cartography
                 restoreContextState ? 1ull : 0ull,
                 0,
                 0
-            });
+            },
+            {},
+            true);
         try
         {
             std::scoped_lock lock(

@@ -58,10 +58,26 @@ namespace gzfx::diagnostics::pipeline_cartography
         std::uint64_t csUavHash = 0;
         std::uint64_t readHash = 0;
         std::uint64_t writeHash = 0;
-        std::array<std::uintptr_t, 8> readResources{};
-        std::array<std::uintptr_t, 8> writeResources{};
-        std::uint32_t readResourceCount = 0;
-        std::uint32_t writeResourceCount = 0;
+
+        std::array<std::uintptr_t, 24> readResources{};
+        std::array<std::uintptr_t, 12> writeResources{};
+
+        std::uint32_t totalReadResourceCount = 0;
+        std::uint32_t totalWriteResourceCount = 0;
+        std::uint32_t retainedReadResourceCount = 0;
+        std::uint32_t retainedWriteResourceCount = 0;
+        bool readOverflow = false;
+        bool writeOverflow = false;
+
+        std::array<std::uintptr_t, 2> explicitReads{};
+        std::array<std::uintptr_t, 2> explicitWrites{};
+        std::uint32_t explicitReadCount = 0;
+        std::uint32_t explicitWriteCount = 0;
+        std::uint32_t sourceSubresource = 0;
+        std::uint32_t destinationSubresource = 0;
+        std::uint32_t explicitFormat = 0;
+        std::uint32_t explicitFlags = 0;
+
         std::uint64_t constantBufferHash = 0;
         std::uint64_t samplerHash = 0;
 
@@ -116,6 +132,9 @@ namespace gzfx::diagnostics::pipeline_cartography
         void* user) noexcept;
 
     void ClearTelemetrySinks() noexcept;
+
+    std::uintptr_t ObserveResource(
+        ID3D11Resource* resource) noexcept;
 
     bool AttachDevice(ID3D11Device* device) noexcept;
 
