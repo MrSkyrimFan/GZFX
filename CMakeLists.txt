@@ -158,6 +158,46 @@ add_dependencies(
 )
 gzfx_apply_common(GZFXD3D11FrontDoorHarness)
 
+add_executable(GZFXD3D11PrimaryQualificationHarness
+    tests/d3d11_primary_qualification_harness.cpp
+)
+target_link_libraries(
+    GZFXD3D11PrimaryQualificationHarness
+    PRIVATE
+        d3d11
+)
+add_dependencies(
+    GZFXD3D11PrimaryQualificationHarness
+    GZFXD3D11Bootstrap
+)
+gzfx_apply_common(GZFXD3D11PrimaryQualificationHarness)
+
+add_executable(GZFXNaturalExitChild
+    tests/natural_exit_child.cpp
+)
+target_link_libraries(
+    GZFXNaturalExitChild
+    PRIVATE
+        d3d11
+        dxgi
+        user32
+)
+add_dependencies(
+    GZFXNaturalExitChild
+    GZFX
+    GZFXD3D11Bootstrap
+)
+gzfx_apply_common(GZFXNaturalExitChild)
+
+add_executable(GZFXNaturalExitHarness
+    tests/natural_exit_harness.cpp
+)
+add_dependencies(
+    GZFXNaturalExitHarness
+    GZFXNaturalExitChild
+)
+gzfx_apply_common(GZFXNaturalExitHarness)
+
 add_executable(GZFXEngineEpochHarness
     tests/engine_epoch_harness.cpp
 )
@@ -300,6 +340,33 @@ set_tests_properties(
     d3d11_frontdoor_bootstrap
     PROPERTIES
         TIMEOUT 30
+)
+
+add_test(
+    NAME d3d11_primary_qualification
+    COMMAND
+        "$<TARGET_FILE:GZFXD3D11PrimaryQualificationHarness>"
+        "${CMAKE_BINARY_DIR}/primary-qualification-output"
+)
+
+set_tests_properties(
+    d3d11_primary_qualification
+    PROPERTIES
+        TIMEOUT 30
+)
+
+add_test(
+    NAME natural_process_exit_completion
+    COMMAND
+        "$<TARGET_FILE:GZFXNaturalExitHarness>"
+        "$<TARGET_FILE:GZFXNaturalExitChild>"
+        "${CMAKE_BINARY_DIR}/natural-exit-output"
+)
+
+set_tests_properties(
+    natural_process_exit_completion
+    PROPERTIES
+        TIMEOUT 45
 )
 
 add_test(
