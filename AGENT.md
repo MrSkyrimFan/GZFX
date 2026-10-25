@@ -232,3 +232,15 @@ GZFXWorkFolder/old/
 and continue without asking the user to reconstruct history.
 
 That is the permanent GZFX workflow.
+
+
+## 13. Human field-test ergonomics — permanent rule
+
+The user is one human with two hands. Never design a required test around simultaneous "octopus controls" such as movement + strafe + camera turn + Shift + Numpad5.
+
+Prefer:
+- arm-then-act capture windows;
+- short buffered before/after capture windows;
+- automatic classification of stationary/slow/fast motion.
+
+A field test must remain valid when the user performs movement naturally and presses the capture control immediately before or after the movement. Build diagnostics to accommodate the operator, not the reverse.
