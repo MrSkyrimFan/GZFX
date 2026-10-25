@@ -1,6 +1,7 @@
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 #include "gzfx/diagnostics/semantic_probe.hpp"
+#include "gzfx/diagnostics/startup_trace.hpp"
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/diagnostics/deferred_context_cartography.hpp"
 #include "gzfx/diagnostics/telemetry_listener.hpp"
@@ -308,6 +309,9 @@ namespace gzfx::diagnostics
         std::atomic<std::uint64_t> g_shaderCreationsObserved{0};
         std::atomic<std::uint64_t> g_resourceCreationsObserved{0};
         std::atomic<std::uint64_t> g_presentEpochs{0};
+        std::atomic<bool> g_firstShaderCreationLogged{false};
+        std::atomic<bool> g_firstResourceCreationLogged{false};
+        std::atomic<bool> g_firstPresentLogged{false};
         bool g_shaderCreationHooksArmed = false;
         bool g_resourceCreationHooksArmed = false;
 
@@ -2921,6 +2925,27 @@ namespace gzfx::diagnostics
                 g_resourceCreationsObserved.fetch_add(
                     1,
                     std::memory_order_relaxed);
+
+                if (!g_firstResourceCreationLogged.exchange(
+                        true,
+                        std::memory_order_acq_rel))
+                {
+                    startup_trace::Record(
+                        "first_resource_creation_observed",
+                        []()
+                        {
+                            LARGE_INTEGER value{};
+                            QueryPerformanceCounter(&value);
+                            return static_cast<std::uint64_t>(
+                                value.QuadPart);
+                        }(),
+                        GetCurrentThreadId(),
+                        result,
+                        reinterpret_cast<std::uintptr_t>(
+                            *resource),
+                        reinterpret_cast<std::uintptr_t>(
+                            device));
+                }
             }
 
             return result;
@@ -3029,6 +3054,27 @@ namespace gzfx::diagnostics
                 g_shaderCreationsObserved.fetch_add(
                     1,
                     std::memory_order_relaxed);
+
+                if (!g_firstShaderCreationLogged.exchange(
+                        true,
+                        std::memory_order_acq_rel))
+                {
+                    startup_trace::Record(
+                        "first_shader_creation_observed",
+                        []()
+                        {
+                            LARGE_INTEGER value{};
+                            QueryPerformanceCounter(&value);
+                            return static_cast<std::uint64_t>(
+                                value.QuadPart);
+                        }(),
+                        GetCurrentThreadId(),
+                        result,
+                        reinterpret_cast<std::uintptr_t>(
+                            *shader),
+                        reinterpret_cast<std::uintptr_t>(
+                            device));
+                }
             }
 
             return result;
