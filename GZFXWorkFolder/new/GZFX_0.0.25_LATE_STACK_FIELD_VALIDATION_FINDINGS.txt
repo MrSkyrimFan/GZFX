@@ -1,0 +1,948 @@
+GZFX 0.0.25 LATE-STACK FIELD VALIDATION FINDINGS
+DATA Pass — Real Skyrim Session 1
+Review date: October 25, 2026
+Status: DATA COMPLETE / 0.0.25 FIELD VALIDATION INSUFFICIENT TO CLOSE CARTOGRAPHY
+Next phase: TARGETED DEEP RESEARCH REQUIRED
+
+======================================================================
+1. EXECUTIVE VERDICT
+======================================================================
+
+The 0.0.25 field session is useful and materially advances the diagnosis, but
+it does NOT validate the four new late-stage promotions and does NOT yet expose
+the dominant normal deferred command-list stream in the written detailed files.
+
+The session proves two distinct implementation assumptions were wrong:
+
+A. The HDR-reduction detector is too eager and stateful.
+   It latches onto an earlier valid-looking MAIN_HDR -> RGBA16F low-resolution
+   candidate and has no restart/backtracking path when that candidate does not
+   develop into the real reduction chain.
+
+B. Deferred-list telemetry is incorrectly coupled to the late-detail gate.
+   The dominant non-GZFX command list executes after the current UiPresent
+   stage timestamp. The detail gate has already switched off, so the recorder
+   successfully recognizes the list internally but the telemetry transport
+   intentionally discards its DeferredList/DeferredRun events.
+
+The underlying renderer evidence did NOT disappear.
+
+The known real late chain is still present throughout all active scene frames:
+
+    MAIN_HDR
+    ->
+    640x360 RGBA16F
+    ->
+    160x90 RGBA16F
+    ->
+    40x23 RGBA16F
+    ->
+    10x6 RGBA16F
+    ->
+    3x2 RGBA16F
+    ->
+    2x2 RGBA16F
+    ->
+    640x360 reconstruction/processing
+    ->
+    full-resolution RGBA8 current image
+    ->
+    full-resolution temporal pass reading current/history + MOTION + DEPTH
+    and writing two full-resolution RGBA8 outputs.
+
+Therefore the old late-stack discovery remains structurally real. The failed
+0.0.25 promotion is a detector/timeline problem, not evidence that the prior
+HDR/TAA candidate family was imaginary.
+
+Cartography remains OPEN.
+
+Do NOT begin graphics-quality tuning or a new ownership feature yet.
+
+======================================================================
+2. SOURCE EVIDENCE
+======================================================================
+
+Uploaded archive:
+
+    GZFXefeijfiefjjf1111111111.zip
+
+Compressed bytes:
+
+    54,025,516
+
+SHA256:
+
+    7072d8ecaf89d881c7552fe7a03774f2be9fbe5069609fc81bc8a8d92c2e5d57
+
+Archive entries:
+
+    118
+
+Total uncompressed archive bytes:
+
+    627,373,344
+
+Telemetry session:
+
+    session_20261025_140006_144216
+
+Runtime:
+
+    0.0.25-late-stack-cartography-closure
+
+Telemetry policy:
+
+    continuous_async_structured_text
+
+Detail gate:
+
+    late_only
+
+Session frame range:
+
+    1..9290
+
+Frame-stream duration:
+
+    283.1528537 sec
+    ~4 min 43.15 sec
+
+This is a substantially smaller evidence package than 0.0.24:
+
+0.0.24:
+    ZIP ~417.20 MB
+    listener text ~7.154 GB
+
+0.0.25:
+    ZIP ~54.03 MB
+    listener bytes_written 568,998,817
+
+The late-only volume-reduction goal therefore succeeded materially.
+
+======================================================================
+3. LISTENER HEALTH
+======================================================================
+
+listener_status snapshot:
+
+    initialized=true
+    writer_alive=true
+    complete=false
+
+    enqueued=1,227,887
+    written=1,227,887
+    dropped=0
+    queue_depth=0
+    queue_high_water=486
+    ring_capacity=65,536
+
+    bytes_written=568,998,817
+    pipeline_segment=9
+    detailed_pipeline_rows=971,483
+
+    deferred_contexts_attached=7
+    deferred_lists_finished=22,329
+    deferred_lists_executed=6,420
+    deferred_opaque_executions=0
+    deferred_recorded_runs=81,719
+    deferred_record_overflows=0
+    deferred_registry_evictions=0
+
+    last_error=
+    status=healthy
+
+Transport verdict:
+
+    PASS THROUGH CAPTURED SNAPSHOT
+
+No events were dropped and the queue was empty at the captured status.
+
+======================================================================
+4. CLEAN-SHUTDOWN CAVEAT
+======================================================================
+
+The archive does NOT contain telemetry_session_complete.txt.
+
+listener_status reports:
+
+    writer_alive=true
+    complete=false
+
+As with 0.0.24, do not assign operator fault from this alone.
+
+What is proven at the captured snapshot:
+
+    enqueued == written
+    queue_depth == 0
+    dropped == 0
+    last_error is empty
+
+Therefore the captured evidence is usable through its final snapshot.
+
+Clean shutdown remains unproven for this upload.
+
+A later build should make shutdown/completion state easier to validate, but the
+absence of a completion marker does not invalidate the current DATA findings.
+
+======================================================================
+5. SCENE / MODE COVERAGE
+======================================================================
+
+Frames by environment:
+
+    unknown/transition: 911
+    exterior:           4,834
+    interior:           3,545
+
+Active scene frames:
+
+    8,379
+
+Frames by development mode:
+
+    Mode 0: 4,576
+    Mode 1: 2,643
+    Mode 2: 1,940
+    Mode 3:    85
+    Mode 4:    46
+
+The requested Modes 0 / 1 / 2 are all strongly represented.
+
+Active environment/mode coverage includes:
+
+Exterior:
+    Mode 0: 2,155
+    Mode 1: 1,430
+    Mode 2: 1,201
+
+Interior:
+    Mode 0: 2,328
+    Mode 1:   395
+    Mode 2:   739
+
+The field run is sufficient for architectural comparison across the primary
+requested modes and both major environment classes.
+
+======================================================================
+6. LOCKED FOUNDATION REGRESSION CHECK
+======================================================================
+
+The previously locked foundation remains coherent.
+
+Stage counts:
+
+    after_opaque_world_mrt                 8,379
+    after_cameraz                         8,379
+    after_stock_ao                        8,379
+    before_ambient_screen_space_composite 8,379
+    at_ambient_screen_space_composite     8,379
+    after_ambient_screen_space_composite  8,379
+
+    after_depth_prepass                    8,378
+
+Exterior-only:
+
+    before_volumetric_apply               4,834
+    after_volumetric_apply                4,834
+    publish_pre_water_depth               4,834
+
+ui_present:
+
+    9,290
+
+No evidence here requires reopening Waves 1-3.
+
+======================================================================
+7. 0.0.25 PROMOTED LATE STAGES — FIELD RESULT
+======================================================================
+
+Expected new boundaries:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+Observed:
+
+    HDRReduction       0
+    BeforeTonemap      0
+    BeforeGlobalTAA    0
+    AfterGlobalTAA     0
+
+Still intentionally unpromoted:
+
+    WaterDomain        0
+    PostTonemapPreUi   0
+    AfterShadowProduction 0
+
+Field-validation verdict:
+
+    THE FOUR NEW 0.0.25 PROMOTIONS DID NOT VALIDATE.
+
+Do not call them locked real-Skyrim stage contracts yet.
+
+======================================================================
+8. IMPORTANT: THE REAL HDR/TAA STRUCTURE IS STILL PRESENT
+======================================================================
+
+The detector failure is NOT a disappearance of the underlying renderer chain.
+
+Detailed late telemetry still contains, on the active scene population, the
+same characteristic RGBA16F reduction / adaptation sequence discovered in
+0.0.24.
+
+Representative real chain:
+
+    2560x1440 R16G16B16A16_FLOAT MAIN_HDR
+    ->
+    640x360  R16G16B16A16_FLOAT
+    ->
+    160x90   R16G16B16A16_FLOAT
+    ->
+    40x23    R16G16B16A16_FLOAT
+    ->
+    10x6     R16G16B16A16_FLOAT
+    ->
+    3x2      R16G16B16A16_FLOAT
+    ->
+    2x2      R16G16B16A16_FLOAT
+
+The exact 40x23, 10x6, 3x2 and 2x2 output shapes each occur on all 8,379 active
+scene frames.
+
+The chain is followed by the same recognizable full-resolution RGBA8 temporal
+lane.
+
+Representative frame 820:
+
+    ordinal 3943:
+        write 640x360 RGBA16F
+
+    3944:
+        read prior 640x360
+        write 160x90 RGBA16F
+
+    3945:
+        read 160x90
+        write 40x23 RGBA16F
+
+    3946:
+        read 40x23
+        write 10x6 RGBA16F
+
+    3947:
+        read 10x6
+        write 3x2 RGBA16F
+
+    3948:
+        read 3x2
+        write 2x2 RGBA16F
+
+    3949-3950:
+        downstream 640x360 RGBA16F processing
+
+    3951:
+        reads MAIN_HDR plus the reduction/adaptation descendants
+        writes 2560x1440 R8G8B8A8_UNORM current image
+
+    3952:
+        reads:
+            full-resolution RGBA8 current
+            full-resolution RGBA8 history
+            MOTION
+            MAIN_DEPTH_CURRENT
+            additional mask/context inputs
+
+        writes exactly:
+            two full-resolution R8G8B8A8_UNORM outputs
+
+This is the same architecture that caused the original TAA hypothesis.
+
+DATA verdict:
+
+    HDR/ADAPTATION STRUCTURE = STILL STRONG
+    FULL-RES TEMPORAL/TAA STRUCTURE = STILL STRONG
+    0.0.25 DETECTOR = FAILED TO RECOGNIZE IT
+
+======================================================================
+9. ROOT CAUSE #1 — HDR DETECTOR POISONING
+======================================================================
+
+Current source:
+
+    src/render/semantic_authority.cpp
+
+0.0.25 ObserveHdrReductionLocked() uses a single mutable chain state:
+
+    hdrReductionStep
+    hdrReductionLastIdentity
+    hdrReductionLastWidth
+    hdrReductionLastHeight
+
+When step == 0, the first qualifying post-ambient pass that:
+
+    reads MAIN_HDR
+    writes RGBA16F
+    is <= half-resolution
+
+becomes the chain root.
+
+Every later step must then:
+
+    read hdrReductionLastIdentity
+    AND
+    strictly descend in area.
+
+There is no:
+
+    candidate set
+    timeout
+    restart
+    backtracking
+    replacement root
+    completed-graph scoring.
+
+Real Skyrim contains earlier valid-looking MAIN_HDR-consuming RGBA16F work
+before the actual terminal reduction chain.
+
+In ordinary active frames, an earlier 640x360 RGBA16F output qualifies as the
+first root.
+
+On representative frame 819, the earlier candidate is even more obvious:
+one compute pass writes two RGBA16F outputs:
+
+    160x90
+    640x360
+
+while reading MAIN_HDR.
+
+Once the detector locks to one of these earlier candidates, the later true
+640x360 -> 160x90 -> ... -> 2x2 chain cannot satisfy the strict
+"consume my previous output and shrink from it" requirement.
+
+The detector never recovers.
+
+Therefore:
+
+    hdrReductionComplete remains false
+    ->
+    BeforeTonemap is never eligible
+    ->
+    BeforeGlobalTAA is never eligible
+    ->
+    AfterGlobalTAA is never eligible.
+
+This single failure naturally explains all four zero-count promoted stages.
+
+DATA classification:
+
+    STRONG ROOT-CAUSE FINDING
+
+Required design correction should be researched before blueprinting. A robust
+solution should not trust the first plausible reduction candidate.
+
+======================================================================
+10. DEFERRED CONTEXT INSTRUMENTATION — CORE HOOK WORKED
+======================================================================
+
+The 0.0.25 deferred-context architecture itself did substantially work.
+
+Observed:
+
+    contexts attached: 7
+    lists finished: 22,329
+    lists executed: 6,420
+    opaque executions: 0
+    recorded runs: 81,719
+    record overflows: 0
+    registry evictions: 0
+
+The key point:
+
+    deferred_opaque_executions = 0
+
+All 6,420 non-GZFX ExecuteCommandList events matched a sealed list record.
+
+Therefore CreateDeferredContext attachment, FinishCommandList sealing,
+generation identity, and ExecuteCommandList record lookup are functioning in
+real Skyrim.
+
+This is important.
+
+The missing normal-list CSV data is NOT evidence that the deferred recorder
+failed to see or recognize those lists.
+
+======================================================================
+11. WRITTEN DEFERRED FILES ARE NOT REPRESENTATIVE
+======================================================================
+
+deferred_lists.csv contains only:
+
+    45 execution rows
+
+Breakdown:
+
+    frame 852: 42
+    frame 900:  3
+
+deferred_runs_0001.csv contains:
+
+    48 run rows
+
+Frame 852:
+
+    42 lists
+    one retained run each
+
+Frame 900:
+
+    3 lists
+    two retained runs each
+
+The dominant ordinary non-GZFX command list does NOT appear in the deferred
+CSV.
+
+Ownership telemetry shows:
+
+    non-GZFX / currently labeled "skyrim": 6,420 executions
+
+Dominant raw pointer:
+
+    0x229CC2F36D0
+
+Occurrences:
+
+    6,375
+
+Normal per-frame pattern:
+
+    6,374 frames contain exactly one non-GZFX list.
+
+Burst frames:
+
+    frame 852: 42
+    frame 900:  4 total non-GZFX lists
+
+The written deferred files therefore describe exceptional burst work, not the
+dominant normal list.
+
+======================================================================
+12. ROOT CAUSE #2 — DEFERRED TELEMETRY GATE CLOSES TOO EARLY
+======================================================================
+
+Current telemetry_listener behavior:
+
+OnDeferredList() and OnDeferredRun() return immediately when:
+
+    full_pipeline_detail == false
+    AND
+    detailActive == false.
+
+detailActive becomes true at:
+
+    AfterAmbientScreenSpaceComposite
+
+and becomes false at:
+
+    UiPresent.
+
+The dominant non-GZFX list executes AFTER the current UiPresent stage event.
+
+For the dominant pointer:
+
+    executions with matched UiPresent: 6,375
+    executions after current-frame UiPresent: 6,375 / 6,375
+
+QPC frequency:
+
+    10,000,000 ticks/sec
+
+QPC delay after current UiPresent:
+
+    minimum: 676 ticks
+    median:  922 ticks
+    maximum: 2,591,777 ticks
+
+Median delay:
+
+    ~92.2 microseconds after the UiPresent telemetry event.
+
+Therefore the detailed gate is off by the time the normal command list reaches:
+
+    telemetry_listener::OnDeferredList()
+    telemetry_listener::OnDeferredRun()
+
+The deferred recorder recognizes it internally, increments listsExecuted, and
+has zero opaque fallback, but the writer-side API intentionally returns
+without enqueuing the list/run rows.
+
+This is the direct reason the dominant deferred stream is absent from the CSV.
+
+DATA classification:
+
+    PROVEN GATING DEFECT / TIMELINE DESIGN DEFECT
+
+======================================================================
+13. IMPORTANT TIMELINE CORRECTION
+======================================================================
+
+The prior 0.0.24 interpretation called these events "Skyrim late deferred
+command lists."
+
+That wording is now too strong.
+
+Current ownership code classifies a command list as:
+
+    GZFX owned
+
+only when:
+
+    renderer_execution_service::QueryOwnedCommandList(...)
+
+recognizes it.
+
+Everything else is emitted with owner label:
+
+    "skyrim"
+
+Therefore "skyrim" currently means:
+
+    NON-GZFX-REGISTERED / UNKNOWN PROVENANCE
+
+not:
+
+    PROVEN VANILLA SKYRIM OWNER.
+
+The dominant list also executes after the current UiPresent stage timestamp
+under the same frame label.
+
+Current renderer_forensics HookPresent sequence is:
+
+    hook receives Present
+    ->
+    GZFX OnPresent callbacks
+    ->
+    semantic/resource/effect/telemetry work
+    ->
+    frame counter reset/increment
+    ->
+    original DXGI Present
+
+The current UiPresent semantic event is therefore not sufficient by itself to
+mean:
+
+    "all renderer work for this frame is complete and DXGI Present is now the
+    next API action."
+
+The dominant list could be:
+
+    late engine work
+    work performed during a GZFX Present callback but not registered with the
+    ownership service
+    another in-process graphics subsystem
+    work whose logical frame differs from the current integer frame label.
+
+The field evidence proves execution order.
+
+It does NOT yet prove logical ownership.
+
+Required correction:
+
+    rename or reinterpret the "skyrim" owner category as non-GZFX/unknown
+    until provenance is captured.
+
+Required research:
+
+    establish a true frame/present timeline and command-list provenance model.
+
+======================================================================
+14. MODULE ENVIRONMENT
+======================================================================
+
+loaded_modules.txt includes:
+
+    SkyrimSE.exe
+    DINPUT8.dll
+    GZFX.dll
+    system D3D11 / DXGI
+    Steam / NVIDIA / normal runtime modules
+
+The loaded-module inventory does NOT show recognizable active modules for:
+
+    ReShade
+    ENB
+    SKSE
+    Community Shaders
+
+Therefore this specific session is not obviously contaminated by those graphics
+frameworks.
+
+This makes the dominant non-GZFX command list more likely to originate from
+Skyrim/engine/runtime behavior or an unregistered GZFX path, but provenance is
+still not proven and must be measured rather than guessed.
+
+======================================================================
+15. EXPLICIT OPERATION LINEAGE — FIELD RESULT
+======================================================================
+
+The 0.0.25 explicit operand repair is working.
+
+Detailed late rows:
+
+    total pipeline rows: 971,483
+
+Observed compact kind counts include:
+
+    Draw:               896,004
+    Dispatch:            34,805
+    CopyResource:        13,261
+    ClearRTV:            14,904
+    ClearDSV:            12,464
+    ExecuteCommandList:      45
+
+CopyResource rows now contain real source/destination operands.
+
+Two dominant true copy edges are visible:
+
+    MAIN_HDR
+    2560x1440 R16G16B16A16_FLOAT
+    ->
+    matching full-resolution RGBA16F copy
+    8,379 times
+
+and exterior:
+
+    MAIN_DEPTH_CURRENT
+    ->
+    matching depth copy
+    4,834 times.
+
+This confirms the explicit-lineage payload is no longer simply stale bound
+state for those operations.
+
+No read/write overflow rows were observed in the detailed late stream:
+
+    read_overflow = 0
+    write_overflow = 0
+
+The 24-read / 12-write retained capacity was sufficient for this field session.
+
+======================================================================
+16. FINAL FULL-RESOLUTION SINK
+======================================================================
+
+The stable late 2560x1440 R8G8B8A8_UNORM sink remains visible.
+
+Current-session representative identity:
+
+    0x227058DA850
+
+Resource characteristics:
+
+    2560x1440
+    R8G8B8A8_UNORM
+    bind_flags=40
+    default usage
+
+Detailed late telemetry:
+
+    very high write population
+    zero retained SRV reads.
+
+The reconstructed post-temporal chain directly writes this target repeatedly.
+
+The current detailed CopyResource rows do NOT reveal a later full-resolution
+RGBA8 CopyResource edge from this sink to another presentation surface.
+
+Therefore explicit copy-lineage repair was successful, but it does NOT by
+itself resolve the final presentation ownership question.
+
+Possible explanations include:
+
+    the sink is itself a presentation/backbuffer-like target;
+    final presentation does not use CopyResource;
+    final work occurs outside the current detail window;
+    relevant final work is inside the dominant deferred stream currently
+    discarded by the detail gate.
+
+Do not assign a final semantic name yet.
+
+======================================================================
+17. TELEMETRY VOLUME GOAL — PASS
+======================================================================
+
+0.0.25 substantially reduced the evidence volume while preserving the useful
+late immediate-context chain.
+
+Approximate comparison:
+
+    0.0.24 listener text: ~7.154 GB
+    0.0.25 listener text: ~0.569 GB
+
+Reduction:
+
+    ~12.6x less written telemetry
+
+Compressed upload:
+
+    0.0.24: ~417 MB
+    0.0.25: ~54 MB
+
+Reduction:
+
+    ~7.7x smaller archive
+
+This part of the architecture should be preserved.
+
+The correction should selectively restore the missing deferred/timeline
+evidence rather than returning to full early-pipeline firehose logging.
+
+======================================================================
+18. WHAT THIS DATA INVALIDATES
+======================================================================
+
+Invalidated or weakened assumptions:
+
+1. "First plausible post-ambient MAIN_HDR RGBA16F downsample is the HDR
+   reduction chain root."
+   FALSE.
+
+2. "A single irreversible detector state is sufficient for late reduction
+   recognition."
+   FALSE.
+
+3. "UiPresent is a safe cutoff for all important late command-list telemetry."
+   FALSE.
+
+4. "owner=skyrim means proven vanilla Skyrim ownership."
+   FALSE. It currently means unregistered/non-GZFX.
+
+5. "All non-GZFX command lists observed under the current frame label occur
+   before the effective present boundary."
+   FALSE.
+
+6. "Explicit CopyResource lineage alone will necessarily expose the final LDR
+   presentation transfer."
+   NOT PROVEN.
+
+======================================================================
+19. WHAT THIS DATA PRESERVES / STRENGTHENS
+======================================================================
+
+Still supported:
+
+1. Waves 1-3 stage/semantic foundation remains coherent.
+
+2. The global HDR reduction/adaptation candidate chain is real and repeats on
+   the active scene population.
+
+3. The full-resolution temporal/TAA-family signature is real and immediately
+   follows the reduction/tonemap candidate lane.
+
+4. Deferred contexts are genuinely used and can be hooked/recorded in the real
+   process.
+
+5. FinishCommandList -> ExecuteCommandList identity/generation correlation is
+   working strongly enough to find all 6,420 observed non-GZFX executions with
+   zero opaque fallback.
+
+6. Explicit operation operands are materially better than 0.0.24 bound-state
+   approximations.
+
+7. Late-only telemetry dramatically reduces evidence size.
+
+======================================================================
+20. DATA-DRIVEN NEXT RESEARCH QUESTIONS
+======================================================================
+
+The research phase must now be deeper than another small detector tweak.
+
+Required topics:
+
+A. Skyrim renderer / frame pipeline
+   - What engine-level functions define real end-of-world, post-processing,
+     UI and DXGI-present boundaries?
+   - Can stable SkyrimSE.exe call sites provide semantic anchors stronger than
+     API-shape heuristics?
+
+B. Present timeline
+   - What work can legally occur in our current Present hook before the
+     original DXGI Present?
+   - Which GZFX callbacks execute command lists during that window?
+   - Where should a true BeforeDxgiPresent / AfterDxgiPresent boundary live?
+
+C. Command-list provenance
+   - How should CreateDeferredContext, FinishCommandList and ExecuteCommandList
+     record caller module / return-address / thread identity?
+   - Can we prove which lists originate in SkyrimSE.exe versus GZFX.dll or
+     another module without expensive per-draw stack walking?
+
+D. ReShade architecture
+   - How does current ReShade wrap D3D11 devices, contexts, command lists and
+     swap chains?
+   - How does it define present/command-list lifecycle events?
+   - Which architectural ideas are reusable without copying code?
+
+E. ENB
+   - What public evidence exists for the Skyrim SE ENB proxy/interception
+     model and render integration?
+   - ENB internals are closed source; do not invent them.
+
+F. Community Shaders / CommonLibSSE
+   - Which public engine-level Skyrim graphics hooks and named render targets /
+     passes have already been reverse engineered?
+   - Can those findings guide a SKSE-free signature-scanned engine-anchor
+     layer in GZFX?
+
+G. Better detector architecture
+   - multi-candidate / restartable graph recognition
+   - independent landmark detectors instead of one failed gate suppressing all
+     downstream stages
+   - per-predicate diagnostic counters
+   - structural family graph and per-frame DAG scoring.
+
+H. Better telemetry architecture
+   - keep global lightweight evidence
+   - always emit compact deferred-list metadata regardless of late-detail gate
+   - selectively emit deferred run bodies or structural family IDs
+   - do not return to 0.0.24 full-frame CSV volume.
+
+======================================================================
+21. DATA PHASE FINAL VERDICT
+======================================================================
+
+0.0.25 is not a failed engineering wave.
+
+It successfully proved:
+
+    deferred contexts can be attached and correlated;
+    explicit operands can be captured;
+    telemetry volume can be reduced safely.
+
+But its field-validation assumptions were incomplete.
+
+The next correct move is:
+
+    DEEP RESEARCH
+    ->
+    one coherent corrected renderer-timeline / late-stage architecture
+    ->
+    BLUEPRINT
+    ->
+    implementation.
+
+Do NOT patch only the obvious if-statement and call cartography closed.
+
+The research should specifically use public D3D11 documentation and study
+ReShade, Community Shaders/CommonLibSSE and publicly documented ENB integration
+patterns to decide whether GZFX should remain pure API-observation at the late
+stack or adopt a hybrid:
+
+    engine semantic anchors
+    +
+    D3D11 resource/pass telemetry
+    +
+    explicit present/deferred provenance.
+
+END DATA FINDINGS
