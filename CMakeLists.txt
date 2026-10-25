@@ -491,3 +491,17 @@ set_tests_properties(
     PROPERTIES
         ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_TAA_WITHOUT_HDR_ACTIVE=1"
 )
+
+add_test(
+    NAME hdr_descendant_reduction_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/hdr-descendant-reduction-output"
+)
+
+set_tests_properties(
+    hdr_descendant_reduction_contract
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_DESCENDANT_ACTIVE=1"
+)
