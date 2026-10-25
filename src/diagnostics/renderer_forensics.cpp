@@ -3809,6 +3809,8 @@ namespace gzfx::diagnostics
 
             if (!ok || MH_ApplyQueued() != MH_OK)
             {
+                g_shaderCreationHooksArmed = false;
+                g_resourceCreationHooksArmed = false;
                 acquisition << "status=hook_install_failed\n";
                 Write(L"renderer_acquisition.txt", acquisition.str());
                 return;
