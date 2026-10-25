@@ -48,8 +48,13 @@ namespace gzfx::render::wave3
             DeviceGenerationChanged,
             SurfaceGenerationChanged,
             ResourceDimensionsChanged,
-            SemanticGenerationChanged,
+            SemanticContractChanged,
             CameraGenerationChanged,
+            CameraCutTranslation,
+            CameraCutRotation,
+            CameraMatrixDiscontinuity,
+            CameraProjectionDiscontinuity,
+            DynamicResolutionInvalid,
             EnvironmentTransition,
             RuntimeRebuild,
             MissingRequiredInput,
@@ -170,9 +175,9 @@ namespace gzfx::render::wave3
             std::uint64_t surfaceGeneration = 0;
             UINT width = 0;
             UINT height = 0;
-            std::uint64_t depthGeneration = 0;
-            std::uint64_t motionGeneration = 0;
-            std::uint64_t normalGeneration = 0;
+            std::uint64_t depthContractToken = 0;
+            std::uint64_t motionContractToken = 0;
+            std::uint64_t normalContractToken = 0;
             std::uint64_t cameraGeneration = 0;
             semantic_authority::EnvironmentClass environment =
                 semantic_authority::EnvironmentClass::UnknownTransition;
@@ -266,10 +271,20 @@ namespace gzfx::render::wave3
                 return "surface_generation_changed";
             case ResetReason::ResourceDimensionsChanged:
                 return "resource_dimensions_changed";
-            case ResetReason::SemanticGenerationChanged:
-                return "semantic_generation_changed";
+            case ResetReason::SemanticContractChanged:
+                return "semantic_contract_changed";
             case ResetReason::CameraGenerationChanged:
                 return "camera_generation_changed";
+            case ResetReason::CameraCutTranslation:
+                return "camera_cut_translation";
+            case ResetReason::CameraCutRotation:
+                return "camera_cut_rotation";
+            case ResetReason::CameraMatrixDiscontinuity:
+                return "camera_matrix_discontinuity";
+            case ResetReason::CameraProjectionDiscontinuity:
+                return "camera_projection_discontinuity";
+            case ResetReason::DynamicResolutionInvalid:
+                return "dynamic_resolution_invalid";
             case ResetReason::EnvironmentTransition:
                 return "environment_transition";
             case ResetReason::RuntimeRebuild:
@@ -2284,14 +2299,14 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 return ResetReason::ResourceDimensionsChanged;
             }
 
-            if (inputs.mainDepth.semanticGeneration !=
-                    g_history.depthGeneration ||
-                inputs.motion.semanticGeneration !=
-                    g_history.motionGeneration ||
-                inputs.nativeNormal.semanticGeneration !=
-                    g_history.normalGeneration)
+            if (inputs.mainDepth.contractToken !=
+                    g_history.depthContractToken ||
+                inputs.motion.contractToken !=
+                    g_history.motionContractToken ||
+                inputs.nativeNormal.contractToken !=
+                    g_history.normalContractToken)
             {
-                return ResetReason::SemanticGenerationChanged;
+                return ResetReason::SemanticContractChanged;
             }
 
             if (inputs.cameraGeneration !=
@@ -2332,12 +2347,12 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 lease.surfaceGeneration;
             g_history.width = inputs.width;
             g_history.height = inputs.height;
-            g_history.depthGeneration =
-                inputs.mainDepth.semanticGeneration;
-            g_history.motionGeneration =
-                inputs.motion.semanticGeneration;
-            g_history.normalGeneration =
-                inputs.nativeNormal.semanticGeneration;
+            g_history.depthContractToken =
+                inputs.mainDepth.contractToken;
+            g_history.motionContractToken =
+                inputs.motion.contractToken;
+            g_history.normalContractToken =
+                inputs.nativeNormal.contractToken;
             g_history.cameraGeneration =
                 inputs.cameraGeneration;
             g_history.environment =
@@ -2423,18 +2438,24 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                         inputs->mainDepth.texture)
                     << " generation="
                     << inputs->mainDepth.semanticGeneration
+                    << " contract="
+                    << inputs->mainDepth.contractToken
                     << "\n"
                     << "motion="
                     << PointerText(
                         inputs->motion.texture)
                     << " generation="
                     << inputs->motion.semanticGeneration
+                    << " contract="
+                    << inputs->motion.contractToken
                     << "\n"
                     << "native_normal="
                     << PointerText(
                         inputs->nativeNormal.texture)
                     << " generation="
                     << inputs->nativeNormal.semanticGeneration
+                    << " contract="
+                    << inputs->nativeNormal.contractToken
                     << "\n"
                     << "camera="
                     << PointerText(
