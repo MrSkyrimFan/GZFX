@@ -3748,6 +3748,11 @@ namespace gzfx::diagnostics
         }
     }
 
+    std::uint64_t CurrentRendererFrame() noexcept
+    {
+        return g_frame;
+    }
+
     RendererForensicsStatus GetRendererForensicsStatus() noexcept
     {
         RendererForensicsStatus status{};
