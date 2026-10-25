@@ -16,6 +16,9 @@ namespace gzfx::render::execution
         Wave3Diagnostics,
         Wave4AmbientVisibility,
         Wave4AmbientInjection,
+        VisiblePass,
+        ResourceDiagnostic,
+        SemanticDiagnostic,
         Count
     };
 
