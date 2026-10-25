@@ -9,6 +9,9 @@ on:
       - main
     paths-ignore:
       - "LANCE YOUR FILE IS HERE/**"
+      - "GZFXWorkFolder/**"
+      - "README.md"
+      - "AGENT.md"
 
 permissions:
   contents: write
