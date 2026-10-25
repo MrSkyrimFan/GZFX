@@ -1,0 +1,663 @@
+GZFX 0.0.27 UNIVERSAL RENDERER FRONT-DOOR + LATE-STACK CONTRACT BLUEPRINT
+Blueprint date: October 25, 2026
+Status: APPROVED FOR IMPLEMENTATION BY OWNER DIRECTIVE
+Target runtime string:
+    0.0.27-universal-frontdoor-late-contracts
+
+CONTROLLING AUTHORITY:
+    GZFXWorkFolder/new/GZFX_0.0.26_RENDERER_IDENTITY_ENGINE_EPOCH_FIELD_FINDINGS.txt
+    GZFXWorkFolder/new/GZFX_RESEARCH_PASS_10_ENB_RESHADE_FRONT_DOOR_AND_1.7.104_RENDERER_STRATEGY.txt
+
+======================================================================
+1. PRODUCT INTENT
+======================================================================
+
+0.0.27 is NOT an ENB/ReShade compatibility wave.
+
+ENB and ReShade were architecture references only.
+
+GZFX remains:
+
+    standalone;
+    SKSE-free;
+    Address-Library-free at runtime;
+    independently implemented;
+    intended to replace the graphics role of ENB + ReShade.
+
+Runtime coexistence with ENB/ReShade is NOT an acceptance target for this wave.
+
+The compatibility target IS:
+
+    one GZFX renderer core across popular Skyrim SE/AE runtimes,
+    including downgraded modding runtimes such as 1.5.97 and current 1.7.x.
+
+The universal contract is:
+
+    runtime-independent D3D11/DXGI renderer ownership first;
+    optional version-specific Skyrim engine anchors second.
+
+Unknown/new Skyrim runtimes must still receive the universal renderer core.
+They must not be rejected merely because an engine-hook profile is absent.
+
+======================================================================
+2. FIELD EVIDENCE DRIVING THIS WAVE
+======================================================================
+
+The 0.0.26 real-Skyrim field session proved:
+
+    live runtime = SkyrimSE.exe 1.7.104.0
+
+    creation-time shader hooks = armed
+    creation-time resource hooks = armed
+
+    shader creations = 16,126
+    resource creations = 23,230
+
+    active scene frames = 9,103
+
+    BeforeGlobalTAA = 9,103
+    AfterGlobalTAA  = 9,103
+
+    command-list ownership:
+        total = 26,370
+        GZFX = 26,370
+        external = 0
+
+    present epochs = 10,037
+    dropped telemetry = 0
+
+The field run also proved:
+
+    the HDR chain exists in interiors and exteriors;
+    most interior HDRReduction misses are root-eligibility logic;
+    BeforeTonemap fails because 3x2 is committed before the actual 2x2 terminal;
+    the 1.6.1170 engine profile correctly failed closed on 1.7.104;
+    several core long-lived resources still appear unknown/preexisting.
+
+Source review then proved:
+
+    dinput8.dll is loaded early,
+    but GZFX.dll is lazy-loaded only from Prepare() when Skyrim invokes an
+    exported DirectInput function.
+
+Therefore GZFX is not guaranteed to arm graphics creation observers before
+Skyrim creates its first renderer resources.
+
+======================================================================
+3. ARCHITECTURE DECISION — UNIVERSAL D3D CORE
+======================================================================
+
+GZFX must not "target Skyrim version X."
+
+It must target:
+
+    the Skyrim renderer architecture through D3D11/DXGI
+
+and map optional executable-specific engine semantics onto that core.
+
+Universal runtime-independent layers:
+
+    D3D11 device/resource/shader creation identity
+    immediate/deferred context observation
+    command-list ownership
+    resource graph
+    semantic authority
+    stable shader identity
+    stage scheduler
+    DXGI Present lifecycle
+    GZFX rendering features
+
+Version-specific optional layer:
+
+    Skyrim engine epoch anchors
+
+If a runtime profile is unavailable:
+
+    universal D3D core remains fully active;
+    engine hooks remain disabled;
+    telemetry states "engine profile unavailable";
+    no product boot failure occurs.
+
+======================================================================
+4. LANE A — SAFE D3D11 GRAPHICS-FRONT-DOOR BOOTSTRAP
+======================================================================
+
+Add a second tiny root bootstrap:
+
+    d3d11.dll
+
+alongside the existing:
+
+    dinput8.dll
+
+dinput8.dll remains the input bridge.
+
+d3d11.dll becomes a GRAPHICS BOOTSTRAP ONLY.
+
+It must not contain renderer logic.
+
+It must:
+
+    load the real system d3d11.dll by absolute System32 path;
+    forward the required D3D11 exports faithfully;
+    perform no heavy work from DllMain;
+    initialize GZFX only from an actual exported D3D11 API call;
+    initialize after the real primary device creation succeeds but before the
+    returned device/context/swapchain are returned to Skyrim;
+    explicitly attach those returned objects to GZFX;
+    preserve original HRESULT and returned objects.
+
+Primary exported functions:
+
+    D3D11CreateDevice
+    D3D11CreateDeviceAndSwapChain
+
+Core forwarding exports required by standard D3D11 proxy behavior:
+
+    D3D11CoreCreateDevice
+    D3D11CoreCreateLayeredDevice
+    D3D11CoreGetLayeredDeviceSize
+    D3D11CoreRegisterLayers
+
+No ENB/ReShade chain support is required for 0.0.27 acceptance.
+
+If another local d3d11.dll is already required by a user, that is outside this
+wave's supported field configuration.
+
+The package is intended to run GZFX standalone.
+
+======================================================================
+5. D3D11 BOOTSTRAP REENTRANCY / ORDERING
+======================================================================
+
+The bootstrap must avoid recursive initialization.
+
+Required flow for first application D3D11CreateDevice[AndSwapChain]:
+
+    d3d11 proxy export entered
+    ->
+    ensure real system d3d11.dll loaded
+    ->
+    call REAL system D3D11 creation
+    ->
+    receive successful device/context/swapchain
+    ->
+    initialize GZFX.dll exactly once
+    ->
+    explicit primary-object attach
+    ->
+    return original objects to Skyrim.
+
+During GZFX initialization, renderer_forensics may create a temporary WARP
+device to resolve method addresses.
+
+If that call re-enters the proxy while GZFX initialization is already active:
+
+    forward directly to real D3D11;
+    do NOT recursively initialize GZFX;
+    do NOT attach that temporary WARP device as primary.
+
+Use an explicit thread-local or atomic initialization guard.
+
+======================================================================
+6. LANE B — EXPLICIT PRIMARY D3D OBJECT ATTACH API
+======================================================================
+
+Add an exported GZFX entry point callable by the graphics bootstrap.
+
+Conceptual API:
+
+    GZFX_AttachPrimaryD3D11(
+        IDXGISwapChain* swap,
+        ID3D11Device* device,
+        ID3D11DeviceContext* immediate)
+
+The implementation must:
+
+    validate device + immediate;
+    attach renderer_execution_service primary objects;
+    arm/attach immediate-context renderer-forensics observation if not already
+    attached;
+    attach any required pipeline-cartography device state;
+    accept null swapchain for D3D11CreateDevice;
+    later allow first real process-window Present to bind/upgrade the swapchain.
+
+The API must be idempotent for the same primary device.
+
+It must not treat temporary WARP/bootstrap devices as primary.
+
+======================================================================
+7. LANE C — STARTUP TIMING TELEMETRY
+======================================================================
+
+Add compact startup evidence proving whether graphics-front-door ownership
+actually occurs before Skyrim resource birth.
+
+New file:
+
+    renderer_startup.csv
+
+Suggested events:
+
+    d3d11_proxy_process_attach
+    first_d3d11_export_enter
+    real_device_creation_complete
+    gzfx_load_begin
+    gzfx_initialize_complete
+    primary_attach_complete
+    first_shader_creation_observed
+    first_resource_creation_observed
+    first_present
+
+Fields:
+
+    sequence
+    qpc
+    thread
+    event
+    result
+    pointer_a
+    pointer_b
+
+Do not depend on high-volume telemetry initialization for the earliest events.
+
+A small bootstrap text/CSV file in the normal diagnostics root is acceptable
+after GZFX paths become available.
+
+Field acceptance:
+
+    primary attach must occur before Skyrim's long-lived semantic resources are
+    first observed/used.
+
+======================================================================
+8. LANE D — UNIVERSAL RUNTIME CLASSIFICATION
+======================================================================
+
+Refactor engine profile state so "unsupported runtime" does NOT mean GZFX is
+unsupported.
+
+Track separately:
+
+    renderer_core_supported = true
+    engine_epoch_profile_available = true/false
+    detected_runtime_version
+
+Recognize at least:
+
+    1.5.97.0
+    1.6.1170.0
+    1.7.104.0
+
+as known Skyrim runtime families for diagnostics.
+
+Only install engine hooks when a profile has a validated byte/signature
+contract.
+
+Existing validated engine-hook profile:
+
+    1.6.1170.0
+
+1.5.97 and 1.7.104 must be recognized as valid GZFX runtimes even if the engine
+epoch hooks remain unavailable in this build.
+
+Do NOT fabricate unverified function addresses.
+
+This is the universal-compatibility rule:
+
+    missing optional engine anchor != unsupported GZFX runtime.
+
+======================================================================
+9. LANE E — GLOBAL TAA PROMOTION
+======================================================================
+
+Promote the global TAA boundary from candidate to field-locked semantic
+contract.
+
+Evidence:
+
+    9,103 / 9,103 active scene frames
+    exterior 5,969 / 5,969
+    interior 3,134 / 3,134
+
+Stable field PS:
+
+    0xE8D58B595587B316
+
+But the shader hash is corroboration, NOT sole truth.
+
+Global TAA structural contract:
+
+    active late scene frame;
+    reads MAIN_DEPTH_CURRENT;
+    reads MOTION;
+    reads at least two full-resolution current/history RGBA8 color resources;
+    writes exactly two full-resolution RGBA8 temporal outputs;
+    occurs once in the stable late image-space spine.
+
+Stage contract:
+
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+must remain detectable without engine hooks.
+
+Unknown future shader hash must not automatically break TAA detection if the
+structural contract still holds.
+
+======================================================================
+10. LANE F — HDR ROOT REPAIR
+======================================================================
+
+Current root logic requires the first reduction pass to read canonical MAIN_HDR.
+
+This fails most interiors because interior rendering contains:
+
+    MAIN_HDR
+    ->
+    same-frame full-resolution RGBA16F descendant
+    ->
+    640x360 reduction chain.
+
+Add a bounded HDR ancestry concept.
+
+Eligible reduction root may read:
+
+A. canonical MAIN_HDR directly;
+
+OR
+
+B. a verified same-frame full-resolution RGBA16F descendant of MAIN_HDR.
+
+Descendant proof must be structural and bounded:
+
+    full-resolution;
+    RGBA16F;
+    produced after late-stage eligibility;
+    consumes canonical MAIN_HDR or a previously verified full-res HDR descendant;
+    same frame;
+    short bounded ancestry depth.
+
+Do not allow arbitrary graph reachability.
+
+======================================================================
+11. LANE G — HDR TRUE TERMINAL / BEFORETONEMAP REPAIR
+======================================================================
+
+Current bug:
+
+    3x2 satisfies <=4x4
+    ->
+    detector commits complete
+    ->
+    actual 2x2 successor is ignored
+    ->
+    BeforeTonemap looks for the wrong identity.
+
+Observed stable chain:
+
+    40x23
+    -> 10x6
+    -> 3x2
+    -> 2x2
+
+The detector must not commit terminal state on the first <=4x4 resource.
+
+Recommended bounded rule:
+
+    continue a coherent descending RGBA16F dependency chain while a successor
+    exists in the same late image-space region;
+
+    prefer 2x2 or smaller as final terminal where the chain reaches it;
+
+    if 3x2 is followed by a coherent 2x2 successor, terminal becomes 2x2.
+
+For this field family the true terminal should become:
+
+    2x2
+
+Then BeforeTonemap/full-res transition should be eligible when a later pass:
+
+    reads the final tiny HDR/adaptation terminal;
+    writes full-resolution R8G8B8A8_UNORM;
+    lies immediately upstream of the locked global TAA family.
+
+Stable field corroboration:
+
+    pre-TAA full-res PS:
+        0x99D22A3D198A3B69
+
+Again, hash is corroboration only.
+
+======================================================================
+12. LANE H — ENGINE EPOCHS REMAIN OPTIONAL
+======================================================================
+
+Keep the existing 1.6.1170 profile and fail-closed validation.
+
+Do NOT block 0.0.27 on unverified 1.7.104 function RVAs.
+
+For 1.7.104:
+
+    detect runtime;
+    report known runtime family;
+    report engine_epoch_profile_available=false;
+    continue full universal D3D operation.
+
+This is deliberate.
+
+Public evidence confirms Community Shaders supports 1.7.99+ and retains
+post-processing / pre-UI semantic concepts, but GZFX will not hook them until
+its own validated 1.7.104 signature/RVA evidence exists.
+
+A later profile-only release may add engine anchors without changing renderer
+architecture.
+
+======================================================================
+13. LANE I — SESSION COMPLETION DIAGNOSTICS
+======================================================================
+
+The missing telemetry_session_complete marker repeated in 0.0.25 and 0.0.26.
+
+Do not perform risky shutdown work from DllMain.
+
+Add compact synchronous shutdown intent evidence inside telemetry_listener
+Shutdown():
+
+    session_close_state.txt
+
+At shutdown entry:
+    state=shutdown_requested
+    qpc=...
+    enqueued=...
+    written=...
+    queue_depth=...
+
+After writer join/flush:
+    state=complete
+    qpc=...
+    enqueued=...
+    written=...
+    dropped=0/...
+
+Keep telemetry_session_complete.txt.
+
+This distinguishes:
+
+    Shutdown() never called
+
+from:
+
+    Shutdown() called but drain/flush failed.
+
+No file I/O from bootstrap DllMain is authorized.
+
+======================================================================
+14. TEST PLAN
+======================================================================
+
+All existing 23 tests remain.
+
+Add/expand tests for:
+
+A. D3D11 proxy forwarding
+
+    local d3d11 bootstrap can create a WARP device through real System32 D3D11;
+    exact HRESULT/device/context are returned;
+    no recursion/deadlock.
+
+B. bootstrap initialization order
+
+    proxy first device call loads/initializes GZFX once;
+    temporary nested D3D calls during GZFX init forward without recursive init;
+    primary attach occurs exactly once for the application device.
+
+C. explicit primary attach
+
+    primary device/context can be attached before Present;
+    later Present reuses/upgrades same identity;
+    temporary WARP device is not selected.
+
+D. runtime classification
+
+    1.5.97 known core runtime, engine profile optional;
+    1.6.1170 known + validated engine profile;
+    1.7.104 known core runtime, engine profile optional;
+    unknown future runtime still keeps renderer core active.
+
+E. TAA locked contract
+
+    TAA works without HDR;
+    structural match produces before/after stages;
+    wrong resource structure does not.
+
+F. interior HDR ancestry
+
+    MAIN_HDR -> full-res HDR descendant -> reduction root completes.
+
+G. true HDR terminal
+
+    3x2 followed by 2x2 selects 2x2;
+    BeforeTonemap fires from true terminal.
+
+H. shutdown-state file
+
+    shutdown_requested written before drain;
+    complete written after successful join.
+
+Target:
+    existing 23 + new tests all green on Windows x64.
+
+======================================================================
+15. PACKAGING
+======================================================================
+
+Root-ready package becomes:
+
+    dinput8.dll
+    d3d11.dll
+    GZFX.dll
+
+The package script must require all three.
+
+The CI package-content assertion must show exactly those root runtime DLLs.
+
+No ENB files.
+No ReShade files.
+No SKSE files.
+No Address Library files.
+
+======================================================================
+16. FIELD ACCEPTANCE
+======================================================================
+
+Next real-Skyrim run should prove:
+
+1. runtime detected as 1.7.104.0;
+2. renderer core supported=true;
+3. engine profile may remain unavailable by design;
+4. graphics-front-door bootstrap initializes before core renderer resource birth;
+5. MAIN_HDR / MAIN_DEPTH / MOTION / NORMAL-family resource provenance improves
+   from unknown/preexisting toward SkyrimSE.exe creation evidence;
+6. shader creation identity remains stable;
+7. command-list ownership remains coherent;
+8. BeforeGlobalTAA/AfterGlobalTAA remain 1:1 active-frame stages;
+9. HDRReduction reaches both exterior and interior active frames;
+10. true terminal is 2x2;
+11. BeforeTonemap now fires coherently;
+12. physical Present timeline remains coherent;
+13. session_close_state proves shutdown path;
+14. no telemetry drops;
+15. no regression in Waves 1-4.
+
+======================================================================
+17. UNIVERSAL RUNTIME POLICY
+======================================================================
+
+GZFX product support is defined by two levels.
+
+LEVEL 1 — UNIVERSAL RENDERER CORE
+
+Expected to operate across supported Skyrim SE/AE builds because it depends on
+Microsoft D3D11/DXGI contracts rather than Skyrim executable offsets.
+
+Includes:
+    renderer bootstrap
+    resource/shader identity
+    semantic resource graph
+    TAA/HDR structural contracts
+    GZFX graphics features
+    Present lifecycle
+
+LEVEL 2 — OPTIONAL ENGINE SEMANTIC PROFILE
+
+Adds verified executable-specific landmarks where safely known.
+
+May vary by:
+    1.5.97
+    1.6.x
+    1.7.x
+
+Absence of Level 2 must not disable Level 1.
+
+This is the basis for Nolvus/downgrade/current-runtime compatibility.
+
+======================================================================
+18. NON-GOALS / PROHIBITIONS
+======================================================================
+
+Do NOT:
+
+    make ENB runtime compatibility an acceptance requirement;
+    make ReShade runtime compatibility an acceptance requirement;
+    chain or embed ENB/ReShade code;
+    copy ENB proprietary implementation;
+    copy GPL Community Shaders implementation;
+    add SKSE;
+    add Address Library runtime dependency;
+    perform heavy initialization in DllMain;
+    use unverified 1.7.104 engine addresses;
+    hardcode field shader hashes as sole semantic truth;
+    restart broad renderer cartography;
+    reopen Waves 1-3;
+    start a new graphics feature.
+
+======================================================================
+19. IMPLEMENTATION AUTHORITY
+======================================================================
+
+Owner explicitly authorized continuing through the full pipeline phase.
+
+This blueprint authorizes:
+
+    implementation;
+    CI repair;
+    PR;
+    merge;
+    merged-main verification;
+    package refresh;
+    archive/closure;
+    exact next in-game instructions
+
+without another checkpoint.
+
+END 0.0.27 BLUEPRINT
