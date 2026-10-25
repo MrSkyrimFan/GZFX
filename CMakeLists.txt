@@ -431,3 +431,17 @@ set_tests_properties(
     PROPERTIES
         ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1"
 )
+
+add_test(
+    NAME deferred_telemetry_outside_detail_gate
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/deferred-outside-detail-output"
+)
+
+set_tests_properties(
+    deferred_telemetry_outside_detail_gate
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_DEFERRED_OUTSIDE_DETAIL_ACTIVE=1"
+)
