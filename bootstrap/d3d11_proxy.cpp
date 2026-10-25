@@ -1,6 +1,5 @@
 #include <Windows.h>
 #include <d3d11.h>
-#include <d3d11on12.h>
 #include <dxgi.h>
 #include <MinHook.h>
 #include <intrin.h>
@@ -95,8 +94,6 @@ namespace
     std::atomic<std::uint32_t> g_pendingCount{0};
     std::atomic<bool> g_firstExportLogged{false};
     std::atomic<bool> g_exitShutdownStarted{false};
-
-    bool g_exitHookInstalled = false;
 
     thread_local bool g_insideGzfxInitialization = false;
 
@@ -683,8 +680,6 @@ namespace
             g_exitProcess = nullptr;
             return;
         }
-
-        g_exitHookInstalled = true;
 
         EmitEvent(
             "exit_process_hook_armed");
