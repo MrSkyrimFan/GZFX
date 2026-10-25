@@ -3199,8 +3199,65 @@ namespace gzfx::diagnostics
 
         HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain* swap, UINT sync, UINT flags)
         {
+            const std::uint64_t frame =
+                g_frame;
+
+            const std::uint64_t epoch =
+                g_presentEpochs.fetch_add(
+                    1,
+                    std::memory_order_relaxed) + 1;
+
+            telemetry_listener::OnPresentTimeline(
+                frame,
+                epoch,
+                telemetry_listener::PresentPhase::HookEnter,
+                GetCurrentThreadId(),
+                sync,
+                flags,
+                S_OK);
+
+            telemetry_listener::OnPresentTimeline(
+                frame,
+                epoch,
+                telemetry_listener::PresentPhase::CallbacksBegin,
+                GetCurrentThreadId(),
+                sync,
+                flags,
+                S_OK);
+
             Safe([&]{ OnPresent(swap); });
-            return g_present(swap, sync, flags);
+
+            telemetry_listener::OnPresentTimeline(
+                frame,
+                epoch,
+                telemetry_listener::PresentPhase::CallbacksEnd,
+                GetCurrentThreadId(),
+                sync,
+                flags,
+                S_OK);
+
+            telemetry_listener::OnPresentTimeline(
+                frame,
+                epoch,
+                telemetry_listener::PresentPhase::BeforeOriginalPresent,
+                GetCurrentThreadId(),
+                sync,
+                flags,
+                S_OK);
+
+            const HRESULT result =
+                g_present(swap, sync, flags);
+
+            telemetry_listener::OnPresentTimeline(
+                frame,
+                epoch,
+                telemetry_listener::PresentPhase::AfterOriginalPresent,
+                GetCurrentThreadId(),
+                sync,
+                flags,
+                result);
+
+            return result;
         }
 
         HRESULT STDMETHODCALLTYPE HookPresent1(
@@ -3209,8 +3266,69 @@ namespace gzfx::diagnostics
             UINT flags,
             const DXGI_PRESENT_PARAMETERS* params)
         {
+            const std::uint64_t frame =
+                g_frame;
+
+            const std::uint64_t epoch =
+                g_presentEpochs.fetch_add(
+                    1,
+                    std::memory_order_relaxed) + 1;
+
+            telemetry_listener::OnPresentTimeline(
+                frame,
+                epoch,
+                telemetry_listener::PresentPhase::HookEnter,
+                GetCurrentThreadId(),
+                sync,
+                flags,
+                S_OK);
+
+            telemetry_listener::OnPresentTimeline(
+                frame,
+                epoch,
+                telemetry_listener::PresentPhase::CallbacksBegin,
+                GetCurrentThreadId(),
+                sync,
+                flags,
+                S_OK);
+
             Safe([&]{ OnPresent(swap); });
-            return g_present1(swap, sync, flags, params);
+
+            telemetry_listener::OnPresentTimeline(
+                frame,
+                epoch,
+                telemetry_listener::PresentPhase::CallbacksEnd,
+                GetCurrentThreadId(),
+                sync,
+                flags,
+                S_OK);
+
+            telemetry_listener::OnPresentTimeline(
+                frame,
+                epoch,
+                telemetry_listener::PresentPhase::BeforeOriginalPresent,
+                GetCurrentThreadId(),
+                sync,
+                flags,
+                S_OK);
+
+            const HRESULT result =
+                g_present1(
+                    swap,
+                    sync,
+                    flags,
+                    params);
+
+            telemetry_listener::OnPresentTimeline(
+                frame,
+                epoch,
+                telemetry_listener::PresentPhase::AfterOriginalPresent,
+                GetCurrentThreadId(),
+                sync,
+                flags,
+                result);
+
+            return result;
         }
 
         HRESULT STDMETHODCALLTYPE HookResizeBuffers(
