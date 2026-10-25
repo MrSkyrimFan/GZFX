@@ -556,7 +556,10 @@ namespace gzfx::diagnostics::pipeline_cartography
                  ++i)
             {
                 out.shaderHashes[i] =
-                    g_state.shaders[i].hash;
+                    g_state.shaders[i].hash != 0
+                        ? g_state.shaders[i].hash
+                        : static_cast<std::uint64_t>(
+                            g_state.shaders[i].id);
             }
 
             for (std::size_t i = 0;
