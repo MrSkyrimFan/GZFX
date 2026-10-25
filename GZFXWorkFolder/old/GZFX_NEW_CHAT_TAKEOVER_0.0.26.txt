@@ -1,0 +1,381 @@
+GZFX NEW CHAT TAKEOVER — 0.0.26
+Date: October 25, 2026
+Status: CONTROLLING CONTINUITY RECORD
+
+READ THIS FILE AND THE 0.0.26 TECHNICAL APPENDIX BEFORE DOING ANY GZFX WORK.
+
+======================================================================
+1. EXACT CURRENT STATE
+======================================================================
+
+GZFX is a standalone, SKSE-free Direct3D 11 graphics framework for Skyrim
+SE/AE.
+
+Pipeline:
+
+    SkyrimSE.exe
+      -> dinput8.dll
+      -> GZFX.dll
+      -> D3D11 / DXGI
+      -> HLSL / GPU
+
+Foundation:
+
+    0.0.20-foundation-epochs-stage-correctness
+
+Wave 1:
+    CLOSED
+
+Wave 2:
+    CLOSED
+
+Wave 3:
+    CLOSED
+
+Broad foundation renderer cartography:
+    COMPLETE
+
+Wave 4:
+    renderer-stack ownership architecture PROVEN
+    final artistic quality intentionally deferred.
+
+Current runtime:
+
+    0.0.26-renderer-identity-engine-epochs
+
+Current phase:
+
+    TEST / RENDERER-IDENTITY + ENGINE-EPOCH FIELD VALIDATION
+
+Next graphics wave:
+
+    NOT SELECTED.
+
+Do not start another graphics feature until the 0.0.26 real-Skyrim DATA pass
+is analyzed.
+
+======================================================================
+2. PRODUCT AUTHORITY
+======================================================================
+
+PR:
+
+    #29
+
+Final PR head:
+
+    45df598cd876a66e6ffcf17df4b36ea71f2e7e04
+
+Final PR CI:
+
+    run 40234990469
+    23/23 PASS
+
+Source merge:
+
+    3e704a708f3b5e09ae3700d06aaa6162d8c26548
+
+Merged-main CI:
+
+    run 40235175495
+    23/23 PASS
+
+Package refresh:
+
+    3dd09754829c4763de293d79d70a61419e45d2b3
+
+Package:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Package blob:
+
+    6620ccff039ad6406b2e566f616df2ad4916cbb3
+
+Package bytes:
+
+    373,172
+
+Package refresh diff:
+
+    ZIP ONLY.
+
+Any later commit containing this takeover/archive/AGENT updates is
+documentation-only. Do not mistake that newer docs SHA for newer renderer
+source.
+
+======================================================================
+3. WHY 0.0.26 EXISTS
+======================================================================
+
+0.0.25 real-Skyrim telemetry proved that the late renderer structure had not
+disappeared.
+
+The known HDR/TAA spine remained visible on all active scene frames.
+
+The failures were architecture/identity problems:
+
+    - HDR detector latched onto the wrong early MAIN_HDR downsample and could
+      not recover;
+
+    - TAA detection depended on the failed HDR/tonemap path;
+
+    - the old UiPresent semantic marker was not the real DXGI Present;
+
+    - deferred detailed evidence was gated off at UiPresent;
+
+    - command lists that merely lacked a GZFX tag were mislabeled "Skyrim";
+
+    - the dominant supposed "Skyrim" list was almost certainly GZFX visible
+      pass work;
+
+    - shaderHashes sometimes contained stable content hashes and sometimes
+      runtime COM pointers.
+
+Research of ENB's shipped SDK/FX, 3Dmigoto, Nukem9, Community Shaders,
+ReShade, PureDark Skyrim Upscaler and Microsoft D3D11 established the next
+architecture:
+
+    stable creation-time identity
+    + Skyrim engine epochs
+    + D3D resource/pass graph
+    + explicit ownership
+    + physical Present timeline.
+
+======================================================================
+4. WHAT 0.0.26 IMPLEMENTS
+======================================================================
+
+A. Creation-time identity
+
+GZFX observes D3D11 creation of:
+
+    buffers
+    1D/2D/3D textures
+    VS/GS/GS-SO/PS/HS/DS/CS shaders
+    deferred contexts.
+
+It does not mutate descriptors or bytecode.
+
+It records creator module, birth and exact shader bytecode identity.
+
+B. Shader identity correction
+
+Stable content hash and process-local object identity are now separate.
+
+Never treat a shader COM pointer as a stable hash.
+
+C. Command-list ownership
+
+Known GZFX producers are explicitly tagged:
+
+    Wave3
+    Wave4
+    visible pass
+    resource diagnostics
+    semantic diagnostics.
+
+Untagged work is called:
+
+    external
+
+not:
+
+    Skyrim.
+
+D. Deferred telemetry
+
+DeferredList / DeferredRun evidence is retained even when the immediate
+late-detail gate is off.
+
+E. Physical Present timeline
+
+New:
+
+    present_timeline.csv
+
+with:
+
+    hook_enter
+    callbacks_begin
+    callbacks_end
+    before_original_present
+    after_original_present.
+
+Only primary/process-window swap chain creates physical present epochs.
+
+F. Skyrim engine epochs
+
+New fail-closed module supports only verified:
+
+    Steam AE 1.6.1170.0
+
+Initial observational anchors:
+
+    post_processing
+    pre_ui
+
+No SKSE.
+No Address Library.
+
+Unsupported runtime:
+
+    no engine hook;
+    D3D telemetry continues.
+
+G. HDR/TAA repair
+
+HDR can abandon a poisoned reduction candidate and restart from a later valid
+MAIN_HDR descendant.
+
+Global TAA structural recognition no longer depends on HDR or tonemap
+completion.
+
+======================================================================
+5. TEST PROOF
+======================================================================
+
+Final automated suite:
+
+    23 tests.
+
+New high-value tests include:
+
+    engine_epoch_signatures
+    deferred_telemetry_outside_detail_gate
+    global_taa_without_hdr_completion
+
+late_stack_cartography now deliberately feeds:
+
+    false early HDR root
+    -> real HDR chain
+
+and requires recovery.
+
+All 23 pass on final PR head and merged main.
+
+Preserve the initial red CI history:
+
+    run 40234143158
+
+which caught a real compile defect in the new diagnostic ownership path.
+
+======================================================================
+6. STILL UNPROVEN / UNPROMOTED
+======================================================================
+
+Do NOT claim yet:
+
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+Do not start:
+
+    final Ambient Visibility tuning
+    indirect radiance
+    TAA replacement
+    tonemap replacement
+    water replacement
+    release-performance optimization.
+
+0.0.26 remains a forensic field build.
+
+======================================================================
+7. EXACT NEXT USER TEST
+======================================================================
+
+Install newest:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Natural 2-3 minute Skyrim session.
+
+Include roughly:
+
+    exterior day 20-30 sec
+    interior 20-30 sec
+    exterior night 20-30 sec
+    water/reflections 20-30 sec
+    fire/particles/transparency 20-30 sec if convenient.
+
+Represent:
+
+    Mode 0
+    Mode 1
+    Mode 2.
+
+No exact equal timing.
+
+Do NOT press Shift+Numpad5.
+
+Quit normally.
+
+Wait until SkyrimSE.exe is fully gone.
+
+Zip ONLY newest:
+
+    Documents\My Games\Skyrim Special Edition\GZFX\Telemetry\session_*
+
+Upload that ZIP.
+
+Do not ask for the old 0.0.24 or 0.0.25 telemetry again.
+
+======================================================================
+8. EXACT NEXT DATA ORDER
+======================================================================
+
+On the 0.0.26 upload, inspect first:
+
+    listener_status.txt
+    manifest.txt
+    seconds.csv
+    transitions.csv
+    stages.csv
+    present_timeline.csv
+    engine_events.csv
+
+Then:
+
+    pipeline_runs_*.csv
+    deferred_lists.csv
+    deferred_runs_*.csv
+    resource/semantic evidence.
+
+Primary questions:
+
+    Did creation hooks arm?
+    What live Skyrim version/profile was detected?
+    Did engine anchors arm/fire if 1.6.1170?
+    Are present epochs ordered?
+    Did external command lists collapse as predicted?
+    Are stable shader hashes present?
+    Did HDRReduction recover?
+    Did global TAA fire?
+    Can engine epochs + stable identity prove tonemap/pre-UI/water boundaries?
+    Is cartography finally closed enough to resume graphics ownership?
+
+DATA first.
+
+Do not jump directly to another implementation.
+
+======================================================================
+9. WORKFLOW
+======================================================================
+
+Permanent workflow remains:
+
+    DATA
+    -> RESEARCH
+    -> BLUEPRINT
+    -> IMPLEMENT
+    -> CI / PR / MERGE / PACKAGE
+    -> ARCHIVE
+    -> FIELD TEST
+    -> repeat.
+
+Full durable work belongs in repo.
+
+Chat stays concise.
+
+END TAKEOVER

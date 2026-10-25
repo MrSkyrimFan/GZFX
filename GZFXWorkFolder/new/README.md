@@ -1,9 +1,17 @@
 # Current cycle workspace
 
-The Wave 3 pre-implementation findings, research, and blueprint have been
-implemented and archived into `../old/`.
+The 0.0.25 field-validation / 0.0.26 renderer-identity engineering cycle is
+complete, merged, packaged, and archived into `../old/`.
 
 This directory is intentionally clear of cycle TXT authority.
+
+Current runtime:
+
+`0.0.26-renderer-identity-engine-epochs`
+
+Current phase:
+
+`TEST / RENDERER-IDENTITY + ENGINE-EPOCH FIELD VALIDATION`
 
 The next real-Skyrim field review starts the next cycle here:
 
@@ -11,4 +19,5 @@ The next real-Skyrim field review starts the next cycle here:
 2. research TXT
 3. blueprint TXT
 
-Read the root `AGENT.md` before beginning.
+Read the root `AGENT.md` and the controlling 0.0.26 takeover records in
+`../old/` before beginning.

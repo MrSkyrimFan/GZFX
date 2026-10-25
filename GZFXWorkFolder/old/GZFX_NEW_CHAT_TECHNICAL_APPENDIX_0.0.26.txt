@@ -1,0 +1,497 @@
+GZFX 0.0.26 NEW CHAT TECHNICAL APPENDIX
+Date: October 25, 2026
+Companion to:
+    GZFX_NEW_CHAT_TAKEOVER_0.0.26.txt
+
+======================================================================
+1. 0.0.25 FIELD SOURCE OF TRUTH
+======================================================================
+
+Session:
+
+    session_20261025_140006_144216
+
+Runtime:
+
+    0.0.25-late-stack-cartography-closure
+
+Frames:
+
+    1..9290
+
+Active scene frames:
+
+    8,379
+
+Environment:
+
+    exterior 4,834
+    interior 3,545
+    transition/unknown 911
+
+0.0.25 new stage result:
+
+    HDRReduction       0
+    BeforeTonemap      0
+    BeforeGlobalTAA    0
+    AfterGlobalTAA     0
+
+But real structure remained present:
+
+    MAIN_HDR
+    -> 640x360 RGBA16F
+    -> 160x90
+    -> 40x23
+    -> 10x6
+    -> 3x2
+    -> 2x2
+    -> downstream/adaptation
+    -> full-res RGBA8 current
+    -> temporal current/history + MOTION + MAIN_DEPTH_CURRENT
+    -> two full-res RGBA8 outputs.
+
+Deferred field counters:
+
+    contexts attached 7
+    lists finished 22,329
+    untagged executed 6,420
+    opaque executions 0
+    recorded runs 81,719
+    overflow 0
+    registry evictions 0.
+
+Ownership arithmetic:
+
+    GZFX-tagged 15,909
+    untagged 6,420
+    total 22,329
+    exactly equals lists finished.
+
+Untagged population:
+
+    6,376 unique frames
+    6,374 frames with exactly one
+    one frame with four
+    one frame with forty-two.
+
+Dominant raw list:
+
+    0x229CC2F36D0
+    6,375 executions.
+
+Current source audit proved visible_pass recorded and directly executed one
+command list after semantic UiPresent without renderer_execution_service
+ownership tagging.
+
+High-confidence correction:
+
+    dominant "Skyrim" list was GZFX misclassification.
+
+======================================================================
+2. RESEARCH CONCLUSION
+======================================================================
+
+Research Pass 7:
+    engine semantics + D3D evidence + ownership + true Present timeline.
+
+Research Pass 8:
+    ENB/3Dmigoto/Nukem9 research showed stable creation-time identity is the
+    missing connective tissue.
+
+Research Pass 9:
+    engine hooks must be version-profiled and fail closed.
+
+Do not resurrect anonymous shader-pointer cartography as the primary strategy.
+
+======================================================================
+3. D3D CREATION IDENTITY IMPLEMENTATION
+======================================================================
+
+Files:
+
+    include/gzfx/diagnostics/pipeline_cartography.hpp
+    src/diagnostics/pipeline_cartography.cpp
+    include/gzfx/diagnostics/renderer_forensics.hpp
+    src/diagnostics/renderer_forensics.cpp
+
+renderer_forensics uses a temporary WARP device to resolve real D3D11 method
+targets and MinHook them before Skyrim creates its primary renderer.
+
+Observed device methods:
+
+    CreateBuffer          index 3
+    CreateTexture1D       index 4
+    CreateTexture2D       index 5
+    CreateTexture3D       index 6
+
+    CreateVertexShader    index 12
+    CreateGeometryShader  index 13
+    CreateGeometryShaderWithStreamOutput index 14
+    CreatePixelShader     index 15
+    CreateHullShader      index 16
+    CreateDomainShader    index 17
+    CreateComputeShader   index 18
+
+    CreateDeferredContext index 27
+
+Creation hooks:
+
+    call original;
+    if success, register evidence;
+    return original result.
+
+They do not mutate app behavior.
+
+Creator module comes from:
+
+    _ReturnAddress()
+    -> GetModuleHandleExW(FROM_ADDRESS)
+    -> module filename.
+
+Important repair made during implementation:
+
+    caller module must be sampled in the actual hook body before entering
+    helper templates, otherwise the helper's return address incorrectly points
+    back into GZFX.dll.
+
+======================================================================
+4. PASS TELEMETRY IDENTITY
+======================================================================
+
+PassTelemetry now has:
+
+    std::array<uint64_t,6> shaderHashes
+    std::array<uintptr_t,6> shaderObjectIds
+    uint32_t shaderHashKnownMask
+
+Rule:
+
+    shaderHashes = content hash only.
+    zero = unknown.
+
+Never substitute pointer/object identity into shaderHashes.
+
+Immediate run signature:
+
+    stable hash if known
+    else object ID for compression only.
+
+Deferred recorder:
+
+    stores object ID while recording;
+    resolves StableShaderHash(object ID) when building PassTelemetry.
+
+CSV schema explicitly distinguishes both.
+
+======================================================================
+5. COMMAND LIST OWNERSHIP
+======================================================================
+
+renderer_execution_service OwnedPass now includes:
+
+    Wave3DepthHierarchy
+    Wave3TemporalGeometry
+    Wave3Diagnostics
+    Wave4AmbientVisibility
+    Wave4AmbientInjection
+    VisiblePass
+    ResourceDiagnostic
+    SemanticDiagnostic.
+
+Known direct GZFX execution paths now:
+
+    TagCommandList
+    -> ExecuteCommandList
+    -> RetireCommandList.
+
+The field label for non-GZFX-tagged work is:
+
+    external
+
+not Skyrim.
+
+If future field evidence shows external command lists after all known GZFX
+paths are tagged, identify provenance before naming them Skyrim.
+
+======================================================================
+6. DEFERRED TELEMETRY
+======================================================================
+
+Files:
+
+    deferred_lists.csv
+    deferred_runs_*.csv.
+
+0.0.26 removes the g_detailActive suppression from OnDeferredList and
+OnDeferredRun.
+
+The immediate pipeline still uses late-only detail.
+
+Dedicated test executes deferred evidence while the late-detail gate is off.
+
+PASS.
+
+======================================================================
+7. PRESENT TIMELINE
+======================================================================
+
+File:
+
+    present_timeline.csv
+
+Primary swap-chain-only phases:
+
+    hook_enter
+    callbacks_begin
+    callbacks_end
+    before_original_present
+    after_original_present.
+
+The frame captured at hook entry is retained through the epoch even though
+OnPresent increments the renderer frame internally.
+
+present_epoch increments once per primary Present / Present1 invocation.
+
+Secondary/non-process swap chains do not generate primary present epochs.
+
+======================================================================
+8. ENGINE EPOCH MODULE
+======================================================================
+
+Files:
+
+    include/gzfx/diagnostics/engine_epochs.hpp
+    src/diagnostics/engine_epochs.cpp
+
+Runtime version is obtained from the live executable file version.
+
+Encoded runtime profile:
+
+    major << 48
+    minor << 32
+    patch << 16
+    build.
+
+Initial supported exact profile:
+
+    1.6.1170.0
+
+Encoded:
+
+    0x0001000604920000
+
+Unsupported profile:
+
+    no engine MinHook;
+    status reports unsupported;
+    D3D systems continue.
+
+POST_PROCESSING signature:
+
+    00 48 8B 0D 29 BD E5 01
+    E8 04 32 FB FF
+    48 8B 05 65 DF EB 01
+    48 8B 88 28
+
+CALL at +8.
+
+Expected target RVA:
+
+    0x1481B80.
+
+PRE_UI signature:
+
+    D2 48 8D 0D 46 37 2E 02
+    E8 D1 F7 E9 FF
+    48 8B 05 42 C1 64 02
+    48 8B 48 10
+
+CALL at +8.
+
+Expected target RVA:
+
+    0xE44850.
+
+Resolver rules:
+
+    scan .text
+    exact unique match
+    E8 required
+    decode rel32
+    target inside image
+    target executable
+    expected RVA required
+    reject obvious E9 / EB / FF25 entry redirection.
+
+Hooks are observational.
+
+Signatures came from independently researched public Skyrim renderer profiles
+and are validated by the dedicated test fixture.
+
+No Address Library is used at runtime.
+
+======================================================================
+9. HDR RESTART LOGIC
+======================================================================
+
+semantic_authority::ObserveHdrReductionLocked:
+
+If a current candidate cannot extend because the new pass:
+
+    does not consume previous output
+    OR
+    does not descend,
+
+then a pass that:
+
+    reads MAIN_HDR
+    writes qualifying RGBA16F
+    is <= half resolution
+
+may replace the current candidate as a fresh root.
+
+This specifically addresses the real 0.0.25 poisoning pattern.
+
+Harness proof deliberately emits a smaller false root before the real root.
+
+PASS.
+
+======================================================================
+10. TAA INDEPENDENCE
+======================================================================
+
+DetectLatePreExecutionLocked no longer requires:
+
+    tonemapEntrySignaled.
+
+Global temporal recognition checks directly:
+
+    MOTION semantic exists/read
+    MAIN_DEPTH_CURRENT exists/read
+    >=2 full-resolution RGBA8 reads
+    exactly 2 full-resolution RGBA8 writes.
+
+Dedicated test skips HDR chain completion and still requires:
+
+    BeforeGlobalTAA
+    AfterGlobalTAA.
+
+PASS.
+
+======================================================================
+11. TELEMETRY STATUS
+======================================================================
+
+New listener status:
+
+    stable_shader_creation_hooks_armed
+    resource_creation_hooks_armed
+    shader_creations_observed
+    resource_creations_observed
+    present_epochs
+    engine_profile
+    engine_runtime_supported
+    engine_post_processing_anchor
+    engine_pre_ui_anchor
+    engine_post_processing_events
+    engine_pre_ui_events.
+
+New manifest policy lines:
+
+    renderer_identity_policy=creation_time_exact_hash
+    engine_anchor_policy=versioned_fail_closed.
+
+======================================================================
+12. AUTOMATED TEST HISTORY
+======================================================================
+
+Initial red:
+
+    run 40234143158
+    C2065 frame undeclared in resource_intelligence diagnostic ownership tag.
+
+Final PR:
+
+    run 40234990469
+    23/23 PASS
+    16.34 sec.
+
+Merged main:
+
+    run 40235175495
+    23/23 PASS
+    26.82 sec.
+
+Final package:
+
+    source merge 3e704a708f3b5e09ae3700d06aaa6162d8c26548
+    package refresh 3dd09754829c4763de293d79d70a61419e45d2b3
+
+Package blob:
+
+    6620ccff039ad6406b2e566f616df2ad4916cbb3
+
+Package bytes:
+
+    373,172
+
+Refresh commit changed only ZIP.
+
+======================================================================
+13. NEXT FIELD DATA EXPECTATION
+======================================================================
+
+The important comparison is not visual quality.
+
+Inspect architecture evidence.
+
+Ideal 0.0.26 field outcome:
+
+    stable_shader_creation_hooks_armed=true
+    resource_creation_hooks_armed=true
+    nonzero creation counts
+
+    engine_profile=1.6.1170 encoding
+    engine anchors armed
+    post_processing / pre_ui events firing
+
+    present epochs ordered
+
+    old dominant external list now owner=gzfx / visible_pass
+
+    deferred lists/runs complete outside detail window
+
+    stable shader hashes identify real late families
+
+    HDRReduction fires
+    global TAA fires
+
+    engine epochs bound tonemap/pre-UI interval.
+
+If engine runtime differs:
+
+    do not call it a failure;
+    record exact profile;
+    engine hooks correctly fail closed;
+    use universal D3D identity evidence and research a verified profile only if
+    still required.
+
+======================================================================
+14. NEXT DECISION
+======================================================================
+
+After 0.0.26 DATA:
+
+If renderer boundaries are sufficiently proven:
+
+    close late cartography
+    perform post-cartography assessment
+    select next graphics ownership wave.
+
+If one boundary remains ambiguous:
+
+    research that one blocker only.
+
+Do not restart broad renderer archaeology.
+
+END TECHNICAL APPENDIX

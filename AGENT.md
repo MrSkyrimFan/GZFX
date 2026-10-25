@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.25.txt` and `GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.25.txt` in full. They preserve the exact 0.0.25 late-stack field-validation handoff and are controlling continuity records alongside this file.
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.26.txt` and `GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.26.txt` in full. They preserve the exact 0.0.26 renderer-identity / engine-epoch field-validation handoff and are the controlling continuity records alongside this file.
 
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
@@ -181,14 +181,14 @@ Never make hue discrimination necessary for acceptance.
 
 ## 10. GZFX current locked foundation
 
-Current state after the 0.0.25 late-stack cartography implementation:
+Current state after the 0.0.26 renderer-identity / engine-epoch implementation:
 
 ```text
 foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.25-late-stack-cartography-closure
+0.0.26-renderer-identity-engine-epochs
 
 Wave 1:
 CLOSED
@@ -207,18 +207,22 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-TEST / LATE-STACK FIELD VALIDATION
+TEST / RENDERER-IDENTITY + ENGINE-EPOCH FIELD VALIDATION
 
-primary renderer-discovery authority:
-Continuous Renderer Telemetry Listener
+stable renderer identity:
+creation-time shader hashes + resource birth provenance
 
-detailed pipeline telemetry:
-late-stack only by default
+physical DXGI timeline:
+explicit primary-swapchain present epochs
 
-Skyrim deferred command-list internals:
-instrumented at record time and joined to real ExecuteCommandList frames
+Skyrim engine epochs:
+verified/fail-closed Steam AE 1.6.1170 profile
+post_processing + pre_ui observers
 
-field-supported stage candidates under real-game validation:
+deferred command-list evidence:
+retained regardless of immediate late-detail gate
+
+field-validation stage candidates:
 HDRReduction
 BeforeTonemap
 BeforeGlobalTAA
@@ -229,21 +233,16 @@ AfterShadowProduction
 WaterDomain
 PostTonemapPreUi
 
-manual Shift+Numpad5 capture:
-optional secondary visual evidence
-
 next graphics wave:
 NOT YET SELECTED
-wait for 0.0.25 field DATA
+wait for 0.0.26 field DATA
 ```
 
-0.0.24 continuous telemetry was triple-reviewed. It proved that the remaining renderer uncertainty is concentrated in the late stack and exposed three instrumentation gaps: deferred command-list internals, stale/implicit explicit-operation lineage, and silent concrete-resource truncation.
+0.0.25 field DATA proved that the real HDR/TAA resource spine remained present but the detector/timeline/identity model was insufficient. The dominant supposedly-"Skyrim" deferred list was strongly traced to GZFX's own untagged visible pass, the old UiPresent marker was not the physical DXGI Present boundary, and shader telemetry mixed content hashes with process-local object identities.
 
-0.0.25 addresses those gaps. Deferred D3D11 contexts are instrumented while commands are recorded; FinishCommandList seals generation-tagged run streams; primary ExecuteCommandList joins those streams to the real gameplay frame. Copy/resolve/clear/mip operations carry true explicit operands. Concrete resource lists now report total, retained and overflow state rather than pretending a bounded list is complete.
+0.0.26 fixes those architectural errors. Stable shader hashes and object identities are separate. Resource/shader creation provenance is observed at D3D11 creation time. Known GZFX command-list producers are explicitly owned. Deferred evidence survives outside the immediate detail window. The physical Present timeline is explicit. A versioned fail-closed Skyrim engine-epoch resolver observes post-processing and pre-UI on verified Steam AE 1.6.1170 without SKSE or Address Library. HDR reduction can restart from a poisoned early candidate and global TAA is structurally independent from HDR completion.
 
-Normal forensic sessions keep global frame/stage/semantic/resource/ownership/timing evidence but write detailed pass telemetry only after AfterAmbientScreenSpaceComposite through UiPresent. This is intended to make the next field ZIP materially smaller while increasing useful late-stack precision.
-
-The current priority remains full renderer ownership, not unfinished-effect aesthetics or forensic-build FPS. Do not start another graphics-quality wave until the 0.0.25 field session validates the promoted HDR/TAA boundaries and reveals the actual post-TAA deferred/resource chain. Do not invent WaterDomain or PostTonemapPreUi from names alone.
+The current priority remains renderer ownership, not unfinished-effect aesthetics or forensic-build FPS. Do not start another graphics-quality wave until the 0.0.26 field session validates stable identity, ownership, Present epochs, engine epochs, and the repaired HDR/TAA boundaries. Do not invent WaterDomain or PostTonemapPreUi from names alone.
 
 ## 11. Repository lifecycle proof
 
