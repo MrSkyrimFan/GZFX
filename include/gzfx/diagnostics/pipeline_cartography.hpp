@@ -2,6 +2,7 @@
 
 #include <d3d11.h>
 
+#include <array>
 #include <cstdint>
 #include <string>
 
@@ -26,6 +27,91 @@ namespace gzfx::diagnostics::pipeline_cartography
         DrawInstancedIndirect,
         DrawIndexedInstancedIndirect
     };
+
+    enum class TelemetryPassKind : std::uint32_t
+    {
+        Draw = 0,
+        Dispatch,
+        CopyResource,
+        CopySubresource,
+        Resolve,
+        ClearRtv,
+        ClearDsv,
+        ClearUavUint,
+        ClearUavFloat,
+        GenerateMips,
+        ExecuteCommandList
+    };
+
+    struct PassTelemetry
+    {
+        std::uint64_t frame = 0;
+        std::uint64_t ordinal = 0;
+        TelemetryPassKind kind = TelemetryPassKind::Draw;
+        DrawKind drawKind = DrawKind::Draw;
+
+        std::array<std::uint64_t, 6> shaderHashes{};
+        std::array<std::uintptr_t, 4> rtvs{};
+        std::uintptr_t dsv = 0;
+
+        std::uint64_t omUavHash = 0;
+        std::uint64_t csUavHash = 0;
+        std::uint64_t readHash = 0;
+        std::uint64_t writeHash = 0;
+        std::uint64_t constantBufferHash = 0;
+        std::uint64_t samplerHash = 0;
+
+        std::uint64_t blendHash = 0;
+        std::uint64_t depthHash = 0;
+        std::uint64_t rasterHash = 0;
+
+        std::uint32_t topology = 0;
+        std::uint32_t viewportWidth = 0;
+        std::uint32_t viewportHeight = 0;
+
+        std::array<std::uint64_t, 4> args{};
+    };
+
+    struct ResourceTelemetry
+    {
+        std::uintptr_t identity = 0;
+        std::uint64_t birth = 0;
+        std::uint32_t type = 0;
+
+        std::uint32_t width = 0;
+        std::uint32_t height = 0;
+        std::uint32_t depth = 0;
+        std::uint32_t mipLevels = 0;
+        std::uint32_t arraySize = 0;
+        std::uint32_t format = 0;
+        std::uint32_t bindFlags = 0;
+        std::uint32_t miscFlags = 0;
+        std::uint32_t sampleCount = 0;
+        std::uint32_t usage = 0;
+        std::uint32_t cpuAccessFlags = 0;
+        std::uint32_t structureStride = 0;
+        std::uint32_t bufferBytes = 0;
+
+        std::uint64_t ownerHash = 0;
+        std::uint64_t debugNameHash = 0;
+    };
+
+    using PassTelemetrySink =
+        void(*)(
+            const PassTelemetry& telemetry,
+            void* user) noexcept;
+
+    using ResourceTelemetrySink =
+        void(*)(
+            const ResourceTelemetry& telemetry,
+            void* user) noexcept;
+
+    void SetTelemetrySinks(
+        PassTelemetrySink passSink,
+        ResourceTelemetrySink resourceSink,
+        void* user) noexcept;
+
+    void ClearTelemetrySinks() noexcept;
 
     bool AttachDevice(ID3D11Device* device) noexcept;
 
