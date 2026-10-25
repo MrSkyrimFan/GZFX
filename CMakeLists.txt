@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.22
+    VERSION 0.0.23
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -74,6 +74,7 @@ add_library(GZFX SHARED
     src/render/renderer_execution_service.cpp
     src/render/native_input_broker.cpp
     src/render/wave3_pipeline.cpp
+    src/render/ambient_visibility_v2.cpp
     src/render/ambient_visibility_stack.cpp
     src/render/scene_effects.cpp
     src/render/visible_pass.cpp
