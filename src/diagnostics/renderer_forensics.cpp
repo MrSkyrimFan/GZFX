@@ -14,6 +14,7 @@
 
 #include <Windows.h>
 #include <TlHelp32.h>
+#include <intrin.h>
 #include <d3d11.h>
 #include <dxgi.h>
 #include <dxgi1_2.h>
@@ -39,6 +40,17 @@ namespace gzfx::diagnostics
     namespace
     {
         constexpr std::size_t kContextVtableCount = 115;
+        constexpr std::size_t kDeviceCreateBuffer = 3;
+        constexpr std::size_t kDeviceCreateTexture1D = 4;
+        constexpr std::size_t kDeviceCreateTexture2D = 5;
+        constexpr std::size_t kDeviceCreateTexture3D = 6;
+        constexpr std::size_t kDeviceCreateVertexShader = 12;
+        constexpr std::size_t kDeviceCreateGeometryShader = 13;
+        constexpr std::size_t kDeviceCreateGeometryShaderWithStreamOutput = 14;
+        constexpr std::size_t kDeviceCreatePixelShader = 15;
+        constexpr std::size_t kDeviceCreateHullShader = 16;
+        constexpr std::size_t kDeviceCreateDomainShader = 17;
+        constexpr std::size_t kDeviceCreateComputeShader = 18;
         constexpr std::size_t kDeviceCreateDeferredContext = 27;
         constexpr std::uint64_t kSummaryEvery = 120;
         constexpr std::uint64_t kMaxFrames = 7200;
@@ -100,6 +112,42 @@ namespace gzfx::diagnostics
         using PresentFn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT);
         using Present1Fn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain1*, UINT, UINT, const DXGI_PRESENT_PARAMETERS*);
         using ResizeBuffersFn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT, UINT, DXGI_FORMAT, UINT);
+
+        using CreateBufferFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const D3D11_BUFFER_DESC*,
+            const D3D11_SUBRESOURCE_DATA*, ID3D11Buffer**);
+        using CreateTexture1DFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const D3D11_TEXTURE1D_DESC*,
+            const D3D11_SUBRESOURCE_DATA*, ID3D11Texture1D**);
+        using CreateTexture2DFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const D3D11_TEXTURE2D_DESC*,
+            const D3D11_SUBRESOURCE_DATA*, ID3D11Texture2D**);
+        using CreateTexture3DFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const D3D11_TEXTURE3D_DESC*,
+            const D3D11_SUBRESOURCE_DATA*, ID3D11Texture3D**);
+        using CreateVertexShaderFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const void*, SIZE_T,
+            ID3D11ClassLinkage*, ID3D11VertexShader**);
+        using CreateGeometryShaderFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const void*, SIZE_T,
+            ID3D11ClassLinkage*, ID3D11GeometryShader**);
+        using CreateGeometryShaderWithStreamOutputFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const void*, SIZE_T,
+            const D3D11_SO_DECLARATION_ENTRY*, UINT,
+            const UINT*, UINT, UINT,
+            ID3D11ClassLinkage*, ID3D11GeometryShader**);
+        using CreatePixelShaderFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const void*, SIZE_T,
+            ID3D11ClassLinkage*, ID3D11PixelShader**);
+        using CreateHullShaderFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const void*, SIZE_T,
+            ID3D11ClassLinkage*, ID3D11HullShader**);
+        using CreateDomainShaderFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const void*, SIZE_T,
+            ID3D11ClassLinkage*, ID3D11DomainShader**);
+        using CreateComputeShaderFn = HRESULT(STDMETHODCALLTYPE*)(
+            ID3D11Device*, const void*, SIZE_T,
+            ID3D11ClassLinkage*, ID3D11ComputeShader**);
         using CreateDeferredContextFn = HRESULT(STDMETHODCALLTYPE*)(ID3D11Device*, UINT, ID3D11DeviceContext**);
 
         using SetConstantBuffersFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, ID3D11Buffer* const*);
@@ -150,6 +198,17 @@ namespace gzfx::diagnostics
         PresentFn g_present = nullptr;
         Present1Fn g_present1 = nullptr;
         ResizeBuffersFn g_resizeBuffers = nullptr;
+        CreateBufferFn g_createBuffer = nullptr;
+        CreateTexture1DFn g_createTexture1D = nullptr;
+        CreateTexture2DFn g_createTexture2D = nullptr;
+        CreateTexture3DFn g_createTexture3D = nullptr;
+        CreateVertexShaderFn g_createVertexShader = nullptr;
+        CreateGeometryShaderFn g_createGeometryShader = nullptr;
+        CreateGeometryShaderWithStreamOutputFn g_createGeometryShaderWithStreamOutput = nullptr;
+        CreatePixelShaderFn g_createPixelShader = nullptr;
+        CreateHullShaderFn g_createHullShader = nullptr;
+        CreateDomainShaderFn g_createDomainShader = nullptr;
+        CreateComputeShaderFn g_createComputeShader = nullptr;
         CreateDeferredContextFn g_createDeferredContext = nullptr;
 
         SetConstantBuffersFn g_vsSetCB = nullptr;
@@ -246,6 +305,11 @@ namespace gzfx::diagnostics
         std::atomic<std::uint64_t> g_vsCBBinds{0};
         std::atomic<std::uint64_t> g_psCBBinds{0};
         std::atomic<std::uint64_t> g_csCBBinds{0};
+        std::atomic<std::uint64_t> g_shaderCreationsObserved{0};
+        std::atomic<std::uint64_t> g_resourceCreationsObserved{0};
+        std::atomic<std::uint64_t> g_presentEpochs{0};
+        bool g_shaderCreationHooksArmed = false;
+        bool g_resourceCreationHooksArmed = false;
 
         struct TextureStats
         {
@@ -287,6 +351,70 @@ namespace gzfx::diagnostics
             out << "0x" << std::hex << std::uppercase
                 << reinterpret_cast<std::uintptr_t>(p);
             return out.str();
+        }
+
+        std::string CallerModuleName(void* address)
+        {
+            if (address == nullptr)
+            {
+                return "unknown";
+            }
+
+            HMODULE module = nullptr;
+            if (!GetModuleHandleExW(
+                    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                    reinterpret_cast<LPCWSTR>(address),
+                    &module) ||
+                module == nullptr)
+            {
+                return "unknown";
+            }
+
+            wchar_t path[MAX_PATH]{};
+            const DWORD length =
+                GetModuleFileNameW(
+                    module,
+                    path,
+                    static_cast<DWORD>(std::size(path)));
+
+            if (length == 0)
+            {
+                return "unknown";
+            }
+
+            const fs::path modulePath(
+                std::wstring(path, path + length));
+
+            const std::wstring name =
+                modulePath.filename().wstring();
+
+            const int bytes =
+                WideCharToMultiByte(
+                    CP_UTF8, 0,
+                    name.c_str(),
+                    static_cast<int>(name.size()),
+                    nullptr, 0, nullptr, nullptr);
+
+            if (bytes <= 0)
+            {
+                return "unknown";
+            }
+
+            std::string result(
+                static_cast<std::size_t>(bytes),
+                '\0');
+
+            WideCharToMultiByte(
+                CP_UTF8, 0,
+                name.c_str(),
+                static_cast<int>(name.size()),
+                result.data(),
+                bytes,
+                nullptr,
+                nullptr);
+
+            return result;
         }
 
         void Write(const wchar_t* name, const std::string& text, bool append = false)
@@ -2180,7 +2308,7 @@ namespace gzfx::diagnostics
                 else
                 {
                     telemetry_listener::
-                        OnSkyrimCommandList(
+                        OnExternalCommandList(
                             g_frame,
                             g_drawOrdinalThisFrame.load(),
                             commandList,
@@ -2736,6 +2864,306 @@ namespace gzfx::diagnostics
             }
         }
 
+        template <class ResourceT, class Fn, class DescT>
+        HRESULT HookCreateResourceCommon(
+            Fn original,
+            ID3D11Device* device,
+            const DescT* description,
+            const D3D11_SUBRESOURCE_DATA* data,
+            ResourceT** resource)
+        {
+            if (original == nullptr)
+            {
+                return E_FAIL;
+            }
+
+            const std::string owner =
+                CallerModuleName(_ReturnAddress());
+
+            const HRESULT result =
+                original(
+                    device,
+                    description,
+                    data,
+                    resource);
+
+            if (SUCCEEDED(result) &&
+                resource != nullptr &&
+                *resource != nullptr)
+            {
+                pipeline_cartography::ObserveCreatedResource(
+                    *resource,
+                    owner.c_str());
+
+                g_resourceCreationsObserved.fetch_add(
+                    1,
+                    std::memory_order_relaxed);
+            }
+
+            return result;
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateBuffer(
+            ID3D11Device* device,
+            const D3D11_BUFFER_DESC* description,
+            const D3D11_SUBRESOURCE_DATA* data,
+            ID3D11Buffer** buffer)
+        {
+            return HookCreateResourceCommon<
+                ID3D11Buffer>(
+                    g_createBuffer,
+                    device,
+                    description,
+                    data,
+                    buffer);
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateTexture1D(
+            ID3D11Device* device,
+            const D3D11_TEXTURE1D_DESC* description,
+            const D3D11_SUBRESOURCE_DATA* data,
+            ID3D11Texture1D** texture)
+        {
+            return HookCreateResourceCommon<
+                ID3D11Texture1D>(
+                    g_createTexture1D,
+                    device,
+                    description,
+                    data,
+                    texture);
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateTexture2D(
+            ID3D11Device* device,
+            const D3D11_TEXTURE2D_DESC* description,
+            const D3D11_SUBRESOURCE_DATA* data,
+            ID3D11Texture2D** texture)
+        {
+            return HookCreateResourceCommon<
+                ID3D11Texture2D>(
+                    g_createTexture2D,
+                    device,
+                    description,
+                    data,
+                    texture);
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateTexture3D(
+            ID3D11Device* device,
+            const D3D11_TEXTURE3D_DESC* description,
+            const D3D11_SUBRESOURCE_DATA* data,
+            ID3D11Texture3D** texture)
+        {
+            return HookCreateResourceCommon<
+                ID3D11Texture3D>(
+                    g_createTexture3D,
+                    device,
+                    description,
+                    data,
+                    texture);
+        }
+
+        template <class ShaderT, class Fn>
+        HRESULT HookCreateShaderCommon(
+            Fn original,
+            const pipeline_cartography::ShaderStage stage,
+            ID3D11Device* device,
+            const void* bytecode,
+            const SIZE_T bytecodeBytes,
+            ID3D11ClassLinkage* linkage,
+            ShaderT** shader)
+        {
+            if (original == nullptr)
+            {
+                return E_FAIL;
+            }
+
+            const std::string owner =
+                CallerModuleName(_ReturnAddress());
+
+            const HRESULT result =
+                original(
+                    device,
+                    bytecode,
+                    bytecodeBytes,
+                    linkage,
+                    shader);
+
+            if (SUCCEEDED(result) &&
+                shader != nullptr &&
+                *shader != nullptr)
+            {
+                pipeline_cartography::ObserveCreatedShader(
+                    stage,
+                    *shader,
+                    bytecode,
+                    static_cast<std::size_t>(
+                        bytecodeBytes),
+                    owner.c_str());
+
+                g_shaderCreationsObserved.fetch_add(
+                    1,
+                    std::memory_order_relaxed);
+            }
+
+            return result;
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateVertexShader(
+            ID3D11Device* device,
+            const void* bytecode,
+            SIZE_T bytecodeBytes,
+            ID3D11ClassLinkage* linkage,
+            ID3D11VertexShader** shader)
+        {
+            return HookCreateShaderCommon(
+                g_createVertexShader,
+                pipeline_cartography::ShaderStage::Vertex,
+                device,
+                bytecode,
+                bytecodeBytes,
+                linkage,
+                shader);
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateGeometryShader(
+            ID3D11Device* device,
+            const void* bytecode,
+            SIZE_T bytecodeBytes,
+            ID3D11ClassLinkage* linkage,
+            ID3D11GeometryShader** shader)
+        {
+            return HookCreateShaderCommon(
+                g_createGeometryShader,
+                pipeline_cartography::ShaderStage::Geometry,
+                device,
+                bytecode,
+                bytecodeBytes,
+                linkage,
+                shader);
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateGeometryShaderWithStreamOutput(
+            ID3D11Device* device,
+            const void* bytecode,
+            SIZE_T bytecodeBytes,
+            const D3D11_SO_DECLARATION_ENTRY* declaration,
+            UINT declarationCount,
+            const UINT* bufferStrides,
+            UINT strideCount,
+            UINT rasterizedStream,
+            ID3D11ClassLinkage* linkage,
+            ID3D11GeometryShader** shader)
+        {
+            if (g_createGeometryShaderWithStreamOutput == nullptr)
+            {
+                return E_FAIL;
+            }
+
+            const std::string owner =
+                CallerModuleName(_ReturnAddress());
+
+            const HRESULT result =
+                g_createGeometryShaderWithStreamOutput(
+                    device,
+                    bytecode,
+                    bytecodeBytes,
+                    declaration,
+                    declarationCount,
+                    bufferStrides,
+                    strideCount,
+                    rasterizedStream,
+                    linkage,
+                    shader);
+
+            if (SUCCEEDED(result) &&
+                shader != nullptr &&
+                *shader != nullptr)
+            {
+                pipeline_cartography::ObserveCreatedShader(
+                    pipeline_cartography::ShaderStage::Geometry,
+                    *shader,
+                    bytecode,
+                    static_cast<std::size_t>(
+                        bytecodeBytes),
+                    owner.c_str());
+
+                g_shaderCreationsObserved.fetch_add(
+                    1,
+                    std::memory_order_relaxed);
+            }
+
+            return result;
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreatePixelShader(
+            ID3D11Device* device,
+            const void* bytecode,
+            SIZE_T bytecodeBytes,
+            ID3D11ClassLinkage* linkage,
+            ID3D11PixelShader** shader)
+        {
+            return HookCreateShaderCommon(
+                g_createPixelShader,
+                pipeline_cartography::ShaderStage::Pixel,
+                device,
+                bytecode,
+                bytecodeBytes,
+                linkage,
+                shader);
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateHullShader(
+            ID3D11Device* device,
+            const void* bytecode,
+            SIZE_T bytecodeBytes,
+            ID3D11ClassLinkage* linkage,
+            ID3D11HullShader** shader)
+        {
+            return HookCreateShaderCommon(
+                g_createHullShader,
+                pipeline_cartography::ShaderStage::Hull,
+                device,
+                bytecode,
+                bytecodeBytes,
+                linkage,
+                shader);
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateDomainShader(
+            ID3D11Device* device,
+            const void* bytecode,
+            SIZE_T bytecodeBytes,
+            ID3D11ClassLinkage* linkage,
+            ID3D11DomainShader** shader)
+        {
+            return HookCreateShaderCommon(
+                g_createDomainShader,
+                pipeline_cartography::ShaderStage::Domain,
+                device,
+                bytecode,
+                bytecodeBytes,
+                linkage,
+                shader);
+        }
+
+        HRESULT STDMETHODCALLTYPE HookCreateComputeShader(
+            ID3D11Device* device,
+            const void* bytecode,
+            SIZE_T bytecodeBytes,
+            ID3D11ClassLinkage* linkage,
+            ID3D11ComputeShader** shader)
+        {
+            return HookCreateShaderCommon(
+                g_createComputeShader,
+                pipeline_cartography::ShaderStage::Compute,
+                device,
+                bytecode,
+                bytecodeBytes,
+                linkage,
+                shader);
+        }
+
         HRESULT STDMETHODCALLTYPE HookCreateDeferredContext(
             ID3D11Device* device,
             UINT flags,
@@ -2836,6 +3264,17 @@ namespace gzfx::diagnostics
             void* present = nullptr;
             void* present1 = nullptr;
             void* resize = nullptr;
+            void* createBuffer = nullptr;
+            void* createTexture1D = nullptr;
+            void* createTexture2D = nullptr;
+            void* createTexture3D = nullptr;
+            void* createVertexShader = nullptr;
+            void* createGeometryShader = nullptr;
+            void* createGeometryShaderWithStreamOutput = nullptr;
+            void* createPixelShader = nullptr;
+            void* createHullShader = nullptr;
+            void* createDomainShader = nullptr;
+            void* createComputeShader = nullptr;
             void* createDeferredContext = nullptr;
         };
 
@@ -2913,9 +3352,30 @@ namespace gzfx::diagnostics
                         *reinterpret_cast<void***>(
                             device);
 
+                    result.createBuffer =
+                        deviceVtable[kDeviceCreateBuffer];
+                    result.createTexture1D =
+                        deviceVtable[kDeviceCreateTexture1D];
+                    result.createTexture2D =
+                        deviceVtable[kDeviceCreateTexture2D];
+                    result.createTexture3D =
+                        deviceVtable[kDeviceCreateTexture3D];
+                    result.createVertexShader =
+                        deviceVtable[kDeviceCreateVertexShader];
+                    result.createGeometryShader =
+                        deviceVtable[kDeviceCreateGeometryShader];
+                    result.createGeometryShaderWithStreamOutput =
+                        deviceVtable[kDeviceCreateGeometryShaderWithStreamOutput];
+                    result.createPixelShader =
+                        deviceVtable[kDeviceCreatePixelShader];
+                    result.createHullShader =
+                        deviceVtable[kDeviceCreateHullShader];
+                    result.createDomainShader =
+                        deviceVtable[kDeviceCreateDomainShader];
+                    result.createComputeShader =
+                        deviceVtable[kDeviceCreateComputeShader];
                     result.createDeferredContext =
-                        deviceVtable[
-                            kDeviceCreateDeferredContext];
+                        deviceVtable[kDeviceCreateDeferredContext];
                 }
 
                 IDXGISwapChain1* swap1 = nullptr;
@@ -2956,6 +3416,17 @@ namespace gzfx::diagnostics
             acquisition << "present_target=" << Ptr(targets.present) << "\n"
                         << "present1_target=" << Ptr(targets.present1) << "\n"
                         << "resize_target=" << Ptr(targets.resize) << "\n"
+                        << "create_buffer_target=" << Ptr(targets.createBuffer) << "\n"
+                        << "create_texture1d_target=" << Ptr(targets.createTexture1D) << "\n"
+                        << "create_texture2d_target=" << Ptr(targets.createTexture2D) << "\n"
+                        << "create_texture3d_target=" << Ptr(targets.createTexture3D) << "\n"
+                        << "create_vs_target=" << Ptr(targets.createVertexShader) << "\n"
+                        << "create_gs_target=" << Ptr(targets.createGeometryShader) << "\n"
+                        << "create_gs_so_target=" << Ptr(targets.createGeometryShaderWithStreamOutput) << "\n"
+                        << "create_ps_target=" << Ptr(targets.createPixelShader) << "\n"
+                        << "create_hs_target=" << Ptr(targets.createHullShader) << "\n"
+                        << "create_ds_target=" << Ptr(targets.createDomainShader) << "\n"
+                        << "create_cs_target=" << Ptr(targets.createComputeShader) << "\n"
                         << "create_deferred_context_target="
                         << Ptr(targets.createDeferredContext)
                         << "\n";
@@ -2978,6 +3449,17 @@ namespace gzfx::diagnostics
             void* originalPresent = nullptr;
             void* originalPresent1 = nullptr;
             void* originalResize = nullptr;
+            void* originalCreateBuffer = nullptr;
+            void* originalCreateTexture1D = nullptr;
+            void* originalCreateTexture2D = nullptr;
+            void* originalCreateTexture3D = nullptr;
+            void* originalCreateVertexShader = nullptr;
+            void* originalCreateGeometryShader = nullptr;
+            void* originalCreateGeometryShaderWithStreamOutput = nullptr;
+            void* originalCreatePixelShader = nullptr;
+            void* originalCreateHullShader = nullptr;
+            void* originalCreateDomainShader = nullptr;
+            void* originalCreateComputeShader = nullptr;
             void* originalCreateDeferredContext = nullptr;
 
             bool ok = HookOne(targets.present, Address(&HookPresent), &originalPresent);
@@ -2993,6 +3475,112 @@ namespace gzfx::diagnostics
             {
                 ok = HookOne(targets.resize, Address(&HookResizeBuffers), &originalResize) && ok;
                 g_resizeBuffers = reinterpret_cast<ResizeBuffersFn>(originalResize);
+            }
+
+            const bool resourceTargets =
+                targets.createBuffer != nullptr &&
+                targets.createTexture1D != nullptr &&
+                targets.createTexture2D != nullptr &&
+                targets.createTexture3D != nullptr;
+
+            if (resourceTargets)
+            {
+                ok = HookOne(
+                        targets.createBuffer,
+                        Address(&HookCreateBuffer),
+                        &originalCreateBuffer) && ok;
+                ok = HookOne(
+                        targets.createTexture1D,
+                        Address(&HookCreateTexture1D),
+                        &originalCreateTexture1D) && ok;
+                ok = HookOne(
+                        targets.createTexture2D,
+                        Address(&HookCreateTexture2D),
+                        &originalCreateTexture2D) && ok;
+                ok = HookOne(
+                        targets.createTexture3D,
+                        Address(&HookCreateTexture3D),
+                        &originalCreateTexture3D) && ok;
+
+                g_createBuffer =
+                    reinterpret_cast<CreateBufferFn>(
+                        originalCreateBuffer);
+                g_createTexture1D =
+                    reinterpret_cast<CreateTexture1DFn>(
+                        originalCreateTexture1D);
+                g_createTexture2D =
+                    reinterpret_cast<CreateTexture2DFn>(
+                        originalCreateTexture2D);
+                g_createTexture3D =
+                    reinterpret_cast<CreateTexture3DFn>(
+                        originalCreateTexture3D);
+
+                g_resourceCreationHooksArmed = true;
+            }
+
+            const bool shaderTargets =
+                targets.createVertexShader != nullptr &&
+                targets.createGeometryShader != nullptr &&
+                targets.createGeometryShaderWithStreamOutput != nullptr &&
+                targets.createPixelShader != nullptr &&
+                targets.createHullShader != nullptr &&
+                targets.createDomainShader != nullptr &&
+                targets.createComputeShader != nullptr;
+
+            if (shaderTargets)
+            {
+                ok = HookOne(
+                        targets.createVertexShader,
+                        Address(&HookCreateVertexShader),
+                        &originalCreateVertexShader) && ok;
+                ok = HookOne(
+                        targets.createGeometryShader,
+                        Address(&HookCreateGeometryShader),
+                        &originalCreateGeometryShader) && ok;
+                ok = HookOne(
+                        targets.createGeometryShaderWithStreamOutput,
+                        Address(&HookCreateGeometryShaderWithStreamOutput),
+                        &originalCreateGeometryShaderWithStreamOutput) && ok;
+                ok = HookOne(
+                        targets.createPixelShader,
+                        Address(&HookCreatePixelShader),
+                        &originalCreatePixelShader) && ok;
+                ok = HookOne(
+                        targets.createHullShader,
+                        Address(&HookCreateHullShader),
+                        &originalCreateHullShader) && ok;
+                ok = HookOne(
+                        targets.createDomainShader,
+                        Address(&HookCreateDomainShader),
+                        &originalCreateDomainShader) && ok;
+                ok = HookOne(
+                        targets.createComputeShader,
+                        Address(&HookCreateComputeShader),
+                        &originalCreateComputeShader) && ok;
+
+                g_createVertexShader =
+                    reinterpret_cast<CreateVertexShaderFn>(
+                        originalCreateVertexShader);
+                g_createGeometryShader =
+                    reinterpret_cast<CreateGeometryShaderFn>(
+                        originalCreateGeometryShader);
+                g_createGeometryShaderWithStreamOutput =
+                    reinterpret_cast<CreateGeometryShaderWithStreamOutputFn>(
+                        originalCreateGeometryShaderWithStreamOutput);
+                g_createPixelShader =
+                    reinterpret_cast<CreatePixelShaderFn>(
+                        originalCreatePixelShader);
+                g_createHullShader =
+                    reinterpret_cast<CreateHullShaderFn>(
+                        originalCreateHullShader);
+                g_createDomainShader =
+                    reinterpret_cast<CreateDomainShaderFn>(
+                        originalCreateDomainShader);
+                g_createComputeShader =
+                    reinterpret_cast<CreateComputeShaderFn>(
+                        originalCreateComputeShader);
+
+                g_shaderCreationHooksArmed = true;
             }
 
             if (targets.createDeferredContext)
@@ -3034,5 +3622,24 @@ namespace gzfx::diagnostics
         {
             return false;
         }
+    }
+
+    RendererForensicsStatus GetRendererForensicsStatus() noexcept
+    {
+        RendererForensicsStatus status{};
+        status.shaderCreationHooksArmed =
+            g_shaderCreationHooksArmed;
+        status.resourceCreationHooksArmed =
+            g_resourceCreationHooksArmed;
+        status.shaderCreationsObserved =
+            g_shaderCreationsObserved.load(
+                std::memory_order_relaxed);
+        status.resourceCreationsObserved =
+            g_resourceCreationsObserved.load(
+                std::memory_order_relaxed);
+        status.presentEpochs =
+            g_presentEpochs.load(
+                std::memory_order_relaxed);
+        return status;
     }
 }
