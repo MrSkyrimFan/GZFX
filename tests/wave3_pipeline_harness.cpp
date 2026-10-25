@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -72,6 +73,86 @@ namespace
                 end == std::string::npos
                     ? std::string::npos
                     : end - start));
+    }
+
+    std::vector<std::string> SplitCsv(
+        const std::string& line)
+    {
+        std::vector<std::string> values;
+        std::size_t start = 0;
+
+        for (;;)
+        {
+            const auto comma =
+                line.find(',', start);
+
+            if (comma == std::string::npos)
+            {
+                values.push_back(
+                    line.substr(start));
+                break;
+            }
+
+            values.push_back(
+                line.substr(
+                    start,
+                    comma - start));
+
+            start = comma + 1;
+        }
+
+        return values;
+    }
+
+    std::size_t CsvColumn(
+        const std::vector<std::string>& header,
+        const std::string& name)
+    {
+        for (std::size_t i = 0;
+             i < header.size();
+             ++i)
+        {
+            if (header[i] == name)
+            {
+                return i;
+            }
+        }
+
+        return
+            std::numeric_limits<
+                std::size_t>::max();
+    }
+
+    std::uint64_t CanonicalIdentity(
+        IUnknown* value)
+    {
+        if (value == nullptr)
+        {
+            return 0;
+        }
+
+        IUnknown* identity = nullptr;
+
+        if (FAILED(
+                value->QueryInterface(
+                    __uuidof(IUnknown),
+                    reinterpret_cast<void**>(
+                        &identity))) ||
+            identity == nullptr)
+        {
+            return
+                reinterpret_cast<
+                    std::uint64_t>(
+                        value);
+        }
+
+        const auto result =
+            reinterpret_cast<
+                std::uint64_t>(
+                    identity);
+
+        identity->Release();
+        return result;
     }
 
     void SetIdentity(float* matrix)
