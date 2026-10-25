@@ -903,7 +903,7 @@ void RawGtaoCS(
                     1.0);
 
             float2 uv0 =
-                curren)GZFX" +
+                curren)GZFX") +
                 R"GZFX(tUv +
                 logicalOffset;
 
