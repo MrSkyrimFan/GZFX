@@ -2,6 +2,7 @@
 
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/diagnostics/deferred_context_cartography.hpp"
+#include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/render/ambient_visibility_v2.hpp"
 #include "gzfx/render/runtime_state.hpp"
@@ -45,7 +46,9 @@ namespace gzfx::diagnostics::telemetry_listener
             Ownership,
             Timing,
             DeferredList,
-            DeferredRun
+            DeferredRun,
+            PresentTimeline,
+            EngineEvent
         };
 
         enum class TransitionKind : std::uint32_t
@@ -285,6 +288,8 @@ namespace gzfx::diagnostics::telemetry_listener
             std::ofstream deferredLists;
             std::ofstream pipeline;
             std::ofstream deferredRuns;
+            std::ofstream presentTimeline;
+            std::ofstream engineEvents;
             std::uint32_t pipelineSegment = 0;
             std::uint64_t pipelineBytes = 0;
             std::uint32_t deferredRunSegment = 0;
@@ -1218,6 +1223,42 @@ namespace gzfx::diagnostics::telemetry_listener
             }
         }
 
+        const char* PresentPhaseName(
+            const PresentPhase phase)
+        {
+            switch (phase)
+            {
+            case PresentPhase::HookEnter: return "hook_enter";
+            case PresentPhase::CallbacksBegin: return "callbacks_begin";
+            case PresentPhase::CallbacksEnd: return "callbacks_end";
+            case PresentPhase::BeforeOriginalPresent: return "before_original_present";
+            case PresentPhase::AfterOriginalPresent: return "after_original_present";
+            }
+            return "unknown";
+        }
+
+        const char* EngineAnchorName(
+            const EngineAnchor anchor)
+        {
+            switch (anchor)
+            {
+            case EngineAnchor::PostProcessing: return "post_processing";
+            case EngineAnchor::PreUi: return "pre_ui";
+            }
+            return "unknown";
+        }
+
+        const char* EnginePhaseName(
+            const EnginePhase phase)
+        {
+            switch (phase)
+            {
+            case EnginePhase::Enter: return "enter";
+            case EnginePhase::Exit: return "exit";
+            }
+            return "unknown";
+        }
+
         const char* EventOwnerName(
             const std::uint64_t value)
         {
@@ -1396,7 +1437,17 @@ namespace gzfx::diagnostics::telemetry_listener
                 OpenPipelineSegment(
                     files) &&
                 OpenDeferredRunSegment(
-                    files);
+                    files) &&
+                OpenText(
+                    files.presentTimeline,
+                    g_sessionRoot /
+                        L"present_timeline.csv",
+                    "sequence,qpc,frame,present_epoch,phase,thread,sync_interval,flags,hresult\n") &&
+                OpenText(
+                    files.engineEvents,
+                    g_sessionRoot /
+                        L"engine_events.csv",
+                    "sequence,qpc,frame,thread,anchor,phase,runtime_profile,target_rva\n");
         }
 
         void WriteStatusFile(
@@ -1474,6 +1525,26 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "\n"
                 << "detailed_pipeline_rows="
                 << g_detailedPipelineRows.load()
+                << "\n";
+
+            const auto rendererStatus =
+                GetRendererForensicsStatus();
+
+            out
+                << "stable_shader_creation_hooks_armed="
+                << (rendererStatus.shaderCreationHooksArmed ? "true" : "false")
+                << "\n"
+                << "resource_creation_hooks_armed="
+                << (rendererStatus.resourceCreationHooksArmed ? "true" : "false")
+                << "\n"
+                << "shader_creations_observed="
+                << rendererStatus.shaderCreationsObserved
+                << "\n"
+                << "resource_creations_observed="
+                << rendererStatus.resourceCreationsObserved
+                << "\n"
+                << "present_epochs="
+                << rendererStatus.presentEpochs
                 << "\n";
 
             const auto deferred =
@@ -1556,7 +1627,9 @@ namespace gzfx::diagnostics::telemetry_listener
                     ? "full_pipeline"
                     : "late_only")
                 << "\n"
-                << "performance_note=forensic_build_not_release_fps_evidence\n";
+                << "performance_note=forensic_build_not_release_fps_evidence\n"
+                << "renderer_identity_policy=creation_time_exact_hash\n"
+                << "engine_anchor_policy=versioned_fail_closed\n";
         }
 
         void WriteEvent(
@@ -1934,6 +2007,44 @@ namespace gzfx::diagnostics::telemetry_listener
                     text.size());
                 break;
             }
+
+            case EventType::PresentTimeline:
+                row
+                    << event.sequence << ","
+                    << event.qpc << ","
+                    << event.frame << ","
+                    << event.u[0] << ","
+                    << PresentPhaseName(
+                        static_cast<PresentPhase>(event.u[1])) << ","
+                    << event.u[2] << ","
+                    << event.u[3] << ","
+                    << event.u[4] << ","
+                    << static_cast<std::int32_t>(event.u[5])
+                    << "\n";
+                files.presentTimeline
+                    << row.str();
+                g_bytesWritten.fetch_add(
+                    row.str().size());
+                break;
+
+            case EventType::EngineEvent:
+                row
+                    << event.sequence << ","
+                    << event.qpc << ","
+                    << event.frame << ","
+                    << event.u[0] << ","
+                    << EngineAnchorName(
+                        static_cast<EngineAnchor>(event.u[1])) << ","
+                    << EnginePhaseName(
+                        static_cast<EnginePhase>(event.u[2])) << ","
+                    << event.u[3] << ","
+                    << Hex(event.u[4])
+                    << "\n";
+                files.engineEvents
+                    << row.str();
+                g_bytesWritten.fetch_add(
+                    row.str().size());
+                break;
             }
 
             g_written.fetch_add(
@@ -2025,6 +2136,8 @@ namespace gzfx::diagnostics::telemetry_listener
             files.deferredLists.flush();
             files.pipeline.flush();
             files.deferredRuns.flush();
+            files.presentTimeline.flush();
+            files.engineEvents.flush();
         }
 
         void WriterMain()
@@ -3001,6 +3114,50 @@ namespace gzfx::diagnostics::telemetry_listener
         event.u[95] =
             pass.shaderHashKnownMask;
 
+        Enqueue(event);
+    }
+
+    void OnPresentTimeline(
+        const std::uint64_t frame,
+        const std::uint64_t presentEpoch,
+        const PresentPhase phase,
+        const std::uint32_t threadId,
+        const std::uint32_t syncInterval,
+        const std::uint32_t flags,
+        const std::int32_t hresult) noexcept
+    {
+        Event event{};
+        event.type = EventType::PresentTimeline;
+        event.frame = frame;
+        event.u[0] = presentEpoch;
+        event.u[1] =
+            static_cast<std::uint64_t>(phase);
+        event.u[2] = threadId;
+        event.u[3] = syncInterval;
+        event.u[4] = flags;
+        event.u[5] =
+            static_cast<std::uint32_t>(hresult);
+        Enqueue(event);
+    }
+
+    void OnEngineEvent(
+        const std::uint64_t frame,
+        const EngineAnchor anchor,
+        const EnginePhase phase,
+        const std::uint32_t threadId,
+        const std::uint64_t runtimeProfile,
+        const std::uint64_t targetRva) noexcept
+    {
+        Event event{};
+        event.type = EventType::EngineEvent;
+        event.frame = frame;
+        event.u[0] = threadId;
+        event.u[1] =
+            static_cast<std::uint64_t>(anchor);
+        event.u[2] =
+            static_cast<std::uint64_t>(phase);
+        event.u[3] = runtimeProfile;
+        event.u[4] = targetRva;
         Enqueue(event);
     }
 
