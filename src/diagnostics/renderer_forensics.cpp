@@ -2768,6 +2768,65 @@ namespace gzfx::diagnostics
                     description.OutputWindow);
         }
 
+        bool AttachPrimaryLocked(
+            IDXGISwapChain* const swap,
+            ID3D11Device* const device,
+            ID3D11DeviceContext* const context)
+        {
+            if (device == nullptr ||
+                context == nullptr)
+            {
+                return false;
+            }
+
+            if (g_primaryDevice != nullptr &&
+                g_primaryDevice != device)
+            {
+                return false;
+            }
+
+            if (g_primaryContext != nullptr &&
+                g_primaryContext != context)
+            {
+                return false;
+            }
+
+            if (g_primaryDevice == nullptr)
+            {
+                g_primaryDevice = device;
+                g_primaryDevice->AddRef();
+            }
+
+            if (g_primaryContext == nullptr)
+            {
+                g_primaryContext = context;
+                g_primaryContext->AddRef();
+            }
+
+            if (swap != nullptr &&
+                g_primarySwap == nullptr)
+            {
+                g_primarySwap = swap;
+                g_primarySwap->AddRef();
+            }
+
+            const bool contextHooks =
+                InstallContextHooks(
+                    g_primaryContext);
+
+            const bool executionAttached =
+                gzfx::render::execution::AttachPrimary(
+                    g_primarySwap,
+                    g_primaryDevice,
+                    g_primaryContext);
+
+            WriteRendererSummary();
+
+            return
+                contextHooks &&
+                executionAttached;
+        }
+
         void AcquireSwapChain(IDXGISwapChain* swap)
         {
             if (!swap || g_primarySwap)
@@ -2782,31 +2841,28 @@ namespace gzfx::diagnostics
             }
 
             ID3D11Device* device = nullptr;
-            if (FAILED(swap->GetDevice(__uuidof(ID3D11Device), reinterpret_cast<void**>(&device))) || !device)
+            if (FAILED(swap->GetDevice(
+                    __uuidof(ID3D11Device),
+                    reinterpret_cast<void**>(&device))) ||
+                !device)
             {
                 return;
             }
 
             ID3D11DeviceContext* context = nullptr;
             device->GetImmediateContext(&context);
-            if (!context)
+
+            if (context != nullptr)
             {
-                device->Release();
-                return;
+                AttachPrimaryLocked(
+                    swap,
+                    device,
+                    context);
+
+                context->Release();
             }
 
-            g_primarySwap = swap;
-            g_primarySwap->AddRef();
-            g_primaryDevice = device;
-            g_primaryContext = context;
-            InstallContextHooks(context);
-
-            gzfx::render::execution::AttachPrimary(
-                g_primarySwap,
-                g_primaryDevice,
-                g_primaryContext);
-
-            WriteRendererSummary();
+            device->Release();
         }
 
         void OnPresent(IDXGISwapChain* swap)
