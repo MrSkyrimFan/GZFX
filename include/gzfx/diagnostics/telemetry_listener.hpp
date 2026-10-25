@@ -78,7 +78,7 @@ namespace gzfx::diagnostics::telemetry_listener
         ID3D11CommandList* commandList,
         bool restoreState) noexcept;
 
-    void OnSkyrimCommandList(
+    void OnExternalCommandList(
         std::uint64_t frame,
         std::uint64_t ordinal,
         ID3D11CommandList* commandList,
