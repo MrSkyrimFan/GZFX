@@ -177,14 +177,14 @@ Never make hue discrimination necessary for acceptance.
 
 ## 10. GZFX current locked foundation
 
-Current state after the 0.0.24 telemetry-listener implementation:
+Current state after the 0.0.25 late-stack cartography implementation:
 
 ```text
 foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.24-renderer-telemetry-listener
+0.0.25-late-stack-cartography-closure
 
 Wave 1:
 CLOSED
@@ -203,26 +203,43 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-TEST / FULL-STACK DISCOVERY
+TEST / LATE-STACK FIELD VALIDATION
 
 primary renderer-discovery authority:
 Continuous Renderer Telemetry Listener
+
+detailed pipeline telemetry:
+late-stack only by default
+
+Skyrim deferred command-list internals:
+instrumented at record time and joined to real ExecuteCommandList frames
+
+field-supported stage candidates under real-game validation:
+HDRReduction
+BeforeTonemap
+BeforeGlobalTAA
+AfterGlobalTAA
+
+still intentionally unpromoted:
+AfterShadowProduction
+WaterDomain
+PostTonemapPreUi
 
 manual Shift+Numpad5 capture:
 optional secondary visual evidence
 
 next graphics wave:
 NOT YET SELECTED
-wait for listener DATA
+wait for 0.0.25 field DATA
 ```
 
-The current priority is to discover and understand Skyrim's complete graphics pipeline and progressively own the full rendering stack. Do not grade unfinished effect presets as final product quality and do not treat forensic-build FPS as release performance.
+0.0.24 continuous telemetry was triple-reviewed. It proved that the remaining renderer uncertainty is concentrated in the late stack and exposed three instrumentation gaps: deferred command-list internals, stale/implicit explicit-operation lineage, and silent concrete-resource truncation.
 
-For renderer-discovery sessions, prefer one natural-play telemetry session over manual capture choreography. The user should be able to cycle modes, day/night, interiors/exteriors, water, weather, shadows, particles and transitions naturally, quit normally, then upload the newest `GZFX/Telemetry/session_*/` directory.
+0.0.25 addresses those gaps. Deferred D3D11 contexts are instrumented while commands are recorded; FinishCommandList seals generation-tagged run streams; primary ExecuteCommandList joins those streams to the real gameplay frame. Copy/resolve/clear/mip operations carry true explicit operands. Concrete resource lists now report total, retained and overflow state rather than pretending a bounded list is complete.
 
-The listener records frame timelines, Stage Scheduler events, Semantic Authority changes, resource metadata, compressed pass families, concrete read/write resource IDs, GZFX-vs-Skyrim command-list ownership, transitions, and Wave3/Wave4 health/timing. Manual capture remains available only when extra visual evidence materially helps.
+Normal forensic sessions keep global frame/stage/semantic/resource/ownership/timing evidence but write detailed pass telemetry only after AfterAmbientScreenSpaceComposite through UiPresent. This is intended to make the next field ZIP materially smaller while increasing useful late-stack precision.
 
-Do not start another graphics-quality wave until the 0.0.24 telemetry DATA pass maps what remains unknown and chooses the next architecture target from evidence.
+The current priority remains full renderer ownership, not unfinished-effect aesthetics or forensic-build FPS. Do not start another graphics-quality wave until the 0.0.25 field session validates the promoted HDR/TAA boundaries and reveals the actual post-TAA deferred/resource chain. Do not invent WaterDomain or PostTonemapPreUi from names alone.
 
 ## 11. Repository lifecycle proof
 
