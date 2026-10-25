@@ -82,7 +82,8 @@ namespace
             gzfx::diagnostics::telemetry_listener::
                 Initialize();
 
-        if (telemetryInitialized)
+        if (telemetryInitialized &&
+            !gzfx::paths::TestOverrideActive())
         {
             std::atexit(
                 []()
