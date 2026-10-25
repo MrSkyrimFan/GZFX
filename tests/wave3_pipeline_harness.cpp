@@ -330,15 +330,26 @@ int wmain(int argc, wchar_t** argv)
             static_cast<DWORD>(
                 std::size(lateStackValue))) > 0;
 
+    wchar_t deferredOutsideDetailValue[8]{};
+    const bool deferredOutsideDetailActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_DEFERRED_OUTSIDE_DETAIL_ACTIVE",
+            deferredOutsideDetailValue,
+            static_cast<DWORD>(
+                std::size(deferredOutsideDetailValue))) > 0;
+
     if (lateStackActive)
     {
         SetEnvironmentVariableW(
             L"GZFX_TEST_TELEMETRY_ACTIVE",
             L"1");
 
-        SetEnvironmentVariableW(
-            L"GZFX_TEST_TELEMETRY_FULL_PIPELINE",
-            L"1");
+        if (!deferredOutsideDetailActive)
+        {
+            SetEnvironmentVariableW(
+                L"GZFX_TEST_TELEMETRY_FULL_PIPELINE",
+                L"1");
+        }
     }
 
     wchar_t telemetryEnabledValue[8]{};
