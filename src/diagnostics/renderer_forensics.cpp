@@ -1,6 +1,7 @@
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 #include "gzfx/diagnostics/semantic_probe.hpp"
+#include "gzfx/diagnostics/startup_trace.hpp"
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
 #include "gzfx/diagnostics/deferred_context_cartography.hpp"
 #include "gzfx/diagnostics/telemetry_listener.hpp"
@@ -308,6 +309,9 @@ namespace gzfx::diagnostics
         std::atomic<std::uint64_t> g_shaderCreationsObserved{0};
         std::atomic<std::uint64_t> g_resourceCreationsObserved{0};
         std::atomic<std::uint64_t> g_presentEpochs{0};
+        std::atomic<bool> g_firstShaderCreationLogged{false};
+        std::atomic<bool> g_firstResourceCreationLogged{false};
+        std::atomic<bool> g_firstPresentLogged{false};
         bool g_shaderCreationHooksArmed = false;
         bool g_resourceCreationHooksArmed = false;
 
@@ -2764,6 +2768,65 @@ namespace gzfx::diagnostics
                     description.OutputWindow);
         }
 
+        bool AttachPrimaryLocked(
+            IDXGISwapChain* const swap,
+            ID3D11Device* const device,
+            ID3D11DeviceContext* const context)
+        {
+            if (device == nullptr ||
+                context == nullptr)
+            {
+                return false;
+            }
+
+            if (g_primaryDevice != nullptr &&
+                g_primaryDevice != device)
+            {
+                return false;
+            }
+
+            if (g_primaryContext != nullptr &&
+                g_primaryContext != context)
+            {
+                return false;
+            }
+
+            if (g_primaryDevice == nullptr)
+            {
+                g_primaryDevice = device;
+                g_primaryDevice->AddRef();
+            }
+
+            if (g_primaryContext == nullptr)
+            {
+                g_primaryContext = context;
+                g_primaryContext->AddRef();
+            }
+
+            if (swap != nullptr &&
+                g_primarySwap == nullptr)
+            {
+                g_primarySwap = swap;
+                g_primarySwap->AddRef();
+            }
+
+            const bool contextHooks =
+                InstallContextHooks(
+                    g_primaryContext);
+
+            const bool executionAttached =
+                gzfx::render::execution::AttachPrimary(
+                    g_primarySwap,
+                    g_primaryDevice,
+                    g_primaryContext);
+
+            WriteRendererSummary();
+
+            return
+                contextHooks &&
+                executionAttached;
+        }
+
         void AcquireSwapChain(IDXGISwapChain* swap)
         {
             if (!swap || g_primarySwap)
@@ -2778,31 +2841,28 @@ namespace gzfx::diagnostics
             }
 
             ID3D11Device* device = nullptr;
-            if (FAILED(swap->GetDevice(__uuidof(ID3D11Device), reinterpret_cast<void**>(&device))) || !device)
+            if (FAILED(swap->GetDevice(
+                    __uuidof(ID3D11Device),
+                    reinterpret_cast<void**>(&device))) ||
+                !device)
             {
                 return;
             }
 
             ID3D11DeviceContext* context = nullptr;
             device->GetImmediateContext(&context);
-            if (!context)
+
+            if (context != nullptr)
             {
-                device->Release();
-                return;
+                AttachPrimaryLocked(
+                    swap,
+                    device,
+                    context);
+
+                context->Release();
             }
 
-            g_primarySwap = swap;
-            g_primarySwap->AddRef();
-            g_primaryDevice = device;
-            g_primaryContext = context;
-            InstallContextHooks(context);
-
-            gzfx::render::execution::AttachPrimary(
-                g_primarySwap,
-                g_primaryDevice,
-                g_primaryContext);
-
-            WriteRendererSummary();
+            device->Release();
         }
 
         void OnPresent(IDXGISwapChain* swap)
@@ -2921,6 +2981,27 @@ namespace gzfx::diagnostics
                 g_resourceCreationsObserved.fetch_add(
                     1,
                     std::memory_order_relaxed);
+
+                if (!g_firstResourceCreationLogged.exchange(
+                        true,
+                        std::memory_order_acq_rel))
+                {
+                    startup_trace::Record(
+                        "first_resource_creation_observed",
+                        []()
+                        {
+                            LARGE_INTEGER value{};
+                            QueryPerformanceCounter(&value);
+                            return static_cast<std::uint64_t>(
+                                value.QuadPart);
+                        }(),
+                        GetCurrentThreadId(),
+                        result,
+                        reinterpret_cast<std::uintptr_t>(
+                            *resource),
+                        reinterpret_cast<std::uintptr_t>(
+                            device));
+                }
             }
 
             return result;
@@ -3029,6 +3110,27 @@ namespace gzfx::diagnostics
                 g_shaderCreationsObserved.fetch_add(
                     1,
                     std::memory_order_relaxed);
+
+                if (!g_firstShaderCreationLogged.exchange(
+                        true,
+                        std::memory_order_acq_rel))
+                {
+                    startup_trace::Record(
+                        "first_shader_creation_observed",
+                        []()
+                        {
+                            LARGE_INTEGER value{};
+                            QueryPerformanceCounter(&value);
+                            return static_cast<std::uint64_t>(
+                                value.QuadPart);
+                        }(),
+                        GetCurrentThreadId(),
+                        result,
+                        reinterpret_cast<std::uintptr_t>(
+                            *shader),
+                        reinterpret_cast<std::uintptr_t>(
+                            device));
+                }
             }
 
             return result;
@@ -3240,6 +3342,25 @@ namespace gzfx::diagnostics
 
             if (primary)
             {
+                if (!g_firstPresentLogged.exchange(
+                        true,
+                        std::memory_order_acq_rel))
+                {
+                    LARGE_INTEGER presentQpc{};
+                    QueryPerformanceCounter(
+                        &presentQpc);
+
+                    startup_trace::Record(
+                        "first_present",
+                        static_cast<std::uint64_t>(
+                            presentQpc.QuadPart),
+                        GetCurrentThreadId(),
+                        S_OK,
+                        reinterpret_cast<std::uintptr_t>(
+                            swap),
+                        0);
+                }
+
                 telemetry_listener::OnPresentTimeline(
                 frame,
                 epoch,
@@ -3263,6 +3384,25 @@ namespace gzfx::diagnostics
 
             if (primary)
             {
+                if (!g_firstPresentLogged.exchange(
+                        true,
+                        std::memory_order_acq_rel))
+                {
+                    LARGE_INTEGER presentQpc{};
+                    QueryPerformanceCounter(
+                        &presentQpc);
+
+                    startup_trace::Record(
+                        "first_present",
+                        static_cast<std::uint64_t>(
+                            presentQpc.QuadPart),
+                        GetCurrentThreadId(),
+                        S_OK,
+                        reinterpret_cast<std::uintptr_t>(
+                            swap),
+                        0);
+                }
+
                 telemetry_listener::OnPresentTimeline(
                     frame,
                     epoch,
@@ -3828,6 +3968,33 @@ namespace gzfx::diagnostics
         {
             std::call_once(g_once, Arm);
             return g_armed;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    bool AttachPrimaryRendererObjects(
+        IDXGISwapChain* const swapChain,
+        ID3D11Device* const device,
+        ID3D11DeviceContext* const immediate) noexcept
+    {
+        try
+        {
+            if (!g_armed ||
+                device == nullptr ||
+                immediate == nullptr)
+            {
+                return false;
+            }
+
+            std::scoped_lock lock(g_mutex);
+
+            return AttachPrimaryLocked(
+                swapChain,
+                device,
+                immediate);
         }
         catch (...)
         {

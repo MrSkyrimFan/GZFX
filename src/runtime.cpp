@@ -3,6 +3,7 @@
 #include "gzfx/diagnostics/d3d11_lifecycle.hpp"
 #include "gzfx/diagnostics/engine_epochs.hpp"
 #include "gzfx/diagnostics/renderer_forensics.hpp"
+#include "gzfx/diagnostics/startup_trace.hpp"
 #include "gzfx/diagnostics/telemetry_listener.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/version.hpp"
@@ -11,6 +12,7 @@
 
 #include <Windows.h>
 
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
@@ -28,6 +30,9 @@ namespace
 
     std::once_flag g_initializeOnce;
     bool g_initializeResult = false;
+
+    // 0 = not started, 1 = initializing, 2 = ready, 3 = failed.
+    std::atomic<std::uint32_t> g_initializationState{0};
 
     std::string CurrentTimestamp()
     {
@@ -149,17 +154,89 @@ extern "C" __declspec(dllexport) bool GZFX_Initialize() noexcept
 {
     try
     {
-        std::call_once(g_initializeOnce, InitializeRuntime);
+        const std::uint32_t current =
+            g_initializationState.load(
+                std::memory_order_acquire);
+
+        if (current == 2)
+        {
+            return true;
+        }
+
+        if (current == 3)
+        {
+            return false;
+        }
+
+        std::uint32_t expected = 0;
+        g_initializationState.compare_exchange_strong(
+            expected,
+            1,
+            std::memory_order_acq_rel);
+
+        std::call_once(
+            g_initializeOnce,
+            InitializeRuntime);
+
+        g_initializationState.store(
+            g_initializeResult ? 2u : 3u,
+            std::memory_order_release);
+
         return g_initializeResult;
     }
     catch (...)
     {
+        g_initializationState.store(
+            3,
+            std::memory_order_release);
+
         return false;
     }
+}
+
+extern "C" __declspec(dllexport)
+std::uint32_t GZFX_GetInitializationState() noexcept
+{
+    return
+        g_initializationState.load(
+            std::memory_order_acquire);
 }
 
 
 extern "C" __declspec(dllexport) void GZFX_Shutdown() noexcept
 {
     gzfx::diagnostics::telemetry_listener::Shutdown();
+}
+
+
+extern "C" __declspec(dllexport)
+bool GZFX_AttachPrimaryD3D11(
+    IDXGISwapChain* const swapChain,
+    ID3D11Device* const device,
+    ID3D11DeviceContext* const immediate) noexcept
+{
+    return
+        gzfx::diagnostics::
+            AttachPrimaryRendererObjects(
+                swapChain,
+                device,
+                immediate);
+}
+
+extern "C" __declspec(dllexport)
+void GZFX_RecordBootstrapEvent(
+    const char* const event,
+    const std::uint64_t qpc,
+    const std::uint32_t threadId,
+    const std::int32_t result,
+    const std::uintptr_t pointerA,
+    const std::uintptr_t pointerB) noexcept
+{
+    gzfx::diagnostics::startup_trace::Record(
+        event,
+        qpc,
+        threadId,
+        result,
+        pointerA,
+        pointerB);
 }

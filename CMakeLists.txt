@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.26
+    VERSION 0.0.27
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -70,6 +70,7 @@ add_library(GZFX SHARED
     src/diagnostics/renderer_forensics.cpp
     src/diagnostics/resource_intelligence.cpp
     src/diagnostics/semantic_probe.cpp
+    src/diagnostics/startup_trace.cpp
     src/diagnostics/telemetry_listener.cpp
     src/render/runtime_state.cpp
     src/render/semantic_authority.cpp
@@ -117,6 +118,13 @@ target_link_libraries(
 set_target_properties(GZFXBootstrap PROPERTIES OUTPUT_NAME "dinput8")
 gzfx_apply_common(GZFXBootstrap)
 
+add_library(GZFXD3D11Bootstrap SHARED
+    bootstrap/d3d11_proxy.cpp
+    bootstrap/d3d11.def
+)
+set_target_properties(GZFXD3D11Bootstrap PROPERTIES OUTPUT_NAME "d3d11")
+gzfx_apply_common(GZFXD3D11Bootstrap)
+
 add_executable(GZFXSmokeHost
     tests/smoke_host.cpp
 )
@@ -127,6 +135,23 @@ add_executable(GZFXD3D11ProbeHarness
 )
 target_link_libraries(GZFXD3D11ProbeHarness PRIVATE d3d11)
 gzfx_apply_common(GZFXD3D11ProbeHarness)
+
+add_executable(GZFXD3D11FrontDoorHarness
+    tests/d3d11_frontdoor_harness.cpp
+)
+target_link_libraries(
+    GZFXD3D11FrontDoorHarness
+    PRIVATE
+        d3d11
+        dxgi
+        user32
+)
+add_dependencies(
+    GZFXD3D11FrontDoorHarness
+    GZFX
+    GZFXD3D11Bootstrap
+)
+gzfx_apply_common(GZFXD3D11FrontDoorHarness)
 
 add_executable(GZFXEngineEpochHarness
     tests/engine_epoch_harness.cpp
@@ -257,6 +282,19 @@ add_test(
         "$<TARGET_FILE:GZFXD3D11ProbeHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/probe-test-output"
+)
+
+add_test(
+    NAME d3d11_frontdoor_bootstrap
+    COMMAND
+        "$<TARGET_FILE:GZFXD3D11FrontDoorHarness>"
+        "${CMAKE_BINARY_DIR}/frontdoor-test-output"
+)
+
+set_tests_properties(
+    d3d11_frontdoor_bootstrap
+    PROPERTIES
+        TIMEOUT 30
 )
 
 add_test(
@@ -458,4 +496,18 @@ set_tests_properties(
     global_taa_without_hdr_completion
     PROPERTIES
         ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_TAA_WITHOUT_HDR_ACTIVE=1"
+)
+
+add_test(
+    NAME hdr_descendant_reduction_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/hdr-descendant-reduction-output"
+)
+
+set_tests_properties(
+    hdr_descendant_reduction_contract
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_DESCENDANT_ACTIVE=1"
 )

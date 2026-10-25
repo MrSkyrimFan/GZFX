@@ -338,6 +338,14 @@ int wmain(int argc, wchar_t** argv)
             static_cast<DWORD>(
                 std::size(taaWithoutHdrValue))) > 0;
 
+    wchar_t hdrDescendantValue[8]{};
+    const bool hdrDescendantActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_DESCENDANT_ACTIVE",
+            hdrDescendantValue,
+            static_cast<DWORD>(
+                std::size(hdrDescendantValue))) > 0;
+
     wchar_t deferredOutsideDetailValue[8]{};
     const bool deferredOutsideDetailActive =
         GetEnvironmentVariableW(
@@ -449,6 +457,10 @@ int wmain(int argc, wchar_t** argv)
         true);
     Target rawIndirect = CreateTarget(device, width, height, DXGI_FORMAT_R11G11B10_FLOAT);
 
+    Target hdrDerived = CreateTarget(
+        device, width, height,
+        DXGI_FORMAT_R16G16B16A16_FLOAT);
+
     // A deliberately plausible but wrong early MAIN_HDR reduction root.
     // 0.0.25 latched onto this kind of pass and never recovered.
     Target hdrFalseRoot = CreateTarget(
@@ -496,6 +508,7 @@ int wmain(int argc, wchar_t** argv)
         !normalB.texture || !aux.texture ||
         !aoA.texture || !aoB.texture || !aoTemp.texture ||
         !aoFinal.texture || !rawIndirect.texture ||
+        !hdrDerived.texture ||
         !hdrFalseRoot.texture ||
         !hdrReduceA.texture || !hdrReduceB.texture ||
         !hdrReduceC.texture || !hdrReduceD.texture ||
@@ -832,10 +845,39 @@ int wmain(int argc, wchar_t** argv)
             {
                 if (!taaWithoutHdrActive)
                 {
+                    ID3D11ShaderResourceView* hdrReductionSource =
+                        hdr.srv;
+
+                    if (hdrDescendantActive)
+                    {
+                        // Interior-style path observed in 0.0.26:
+                        // MAIN_HDR -> full-resolution HDR descendant ->
+                        // reduction spine.
+                        context->OMSetRenderTargets(
+                            1,
+                            &hdrDerived.rtv,
+                            nullptr);
+
+                        context->PSSetShaderResources(
+                            0,
+                            1,
+                            &hdr.srv);
+
+                        context->Draw(3, 0);
+
+                        context->PSSetShaderResources(
+                            0,
+                            1,
+                            nullSrvs);
+
+                        hdrReductionSource =
+                            hdrDerived.srv;
+                    }
+
                     // Synthetic late image-space spine. First emit a false
-                    // MAIN_HDR downsample candidate that is smaller than the
-                    // real chain root. The detector must restart when the
-                    // later real root appears.
+                    // reduction-root candidate that is smaller than the real
+                    // chain root. The detector must restart when the later
+                    // real root appears.
                     context->OMSetRenderTargets(
                         1,
                         &hdrFalseRoot.rtv,
@@ -844,7 +886,7 @@ int wmain(int argc, wchar_t** argv)
                     context->PSSetShaderResources(
                         0,
                         1,
-                        &hdr.srv);
+                        &hdrReductionSource);
 
                     context->Draw(3, 0);
 
@@ -854,7 +896,7 @@ int wmain(int argc, wchar_t** argv)
                         nullSrvs);
 
                     ID3D11ShaderResourceView* reduceInput =
-                        hdr.srv;
+                        hdrReductionSource;
 
                     Target* reductions[4] =
                     {
@@ -1940,6 +1982,7 @@ int wmain(int argc, wchar_t** argv)
     Release(hdrReduceB);
     Release(hdrReduceA);
     Release(hdrFalseRoot);
+    Release(hdrDerived);
     Release(rawIndirect);
     Release(aoFinal);
     Release(aoTemp);
