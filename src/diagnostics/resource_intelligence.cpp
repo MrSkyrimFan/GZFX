@@ -686,7 +686,7 @@ namespace gzfx::diagnostics::resource_intelligence
                     gzfx::render::execution::TagCommandList(
                         commands,
                         gzfx::render::execution::OwnedPass::ResourceDiagnostic,
-                        frame);
+                        0);
 
                     immediate->ExecuteCommandList(commands, TRUE);
 
