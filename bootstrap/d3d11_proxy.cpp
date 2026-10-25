@@ -433,7 +433,13 @@ namespace
 
         EnsureGzfxLoaded();
 
-        if (g_gzfxAttachPrimary == nullptr ||
+        const std::uint32_t initializationState =
+            g_gzfxGetInitializationState != nullptr
+                ? g_gzfxGetInitializationState()
+                : 0;
+
+        if (initializationState != 2 ||
+            g_gzfxAttachPrimary == nullptr ||
             device == nullptr ||
             context == nullptr)
         {
