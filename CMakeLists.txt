@@ -198,6 +198,33 @@ add_dependencies(
 )
 gzfx_apply_common(GZFXNaturalExitHarness)
 
+add_executable(GZFXD3D11ExportContractHarness
+    tests/d3d11_export_contract_harness.cpp
+)
+add_dependencies(
+    GZFXD3D11ExportContractHarness
+    GZFXD3D11Bootstrap
+)
+gzfx_apply_common(GZFXD3D11ExportContractHarness)
+
+add_executable(GZFXStartupTraceHarness
+    tests/startup_trace_harness.cpp
+)
+add_dependencies(
+    GZFXStartupTraceHarness
+    GZFX
+)
+gzfx_apply_common(GZFXStartupTraceHarness)
+
+add_executable(GZFXRuntimeCatalogHarness
+    tests/runtime_catalog_harness.cpp
+)
+add_dependencies(
+    GZFXRuntimeCatalogHarness
+    GZFX
+)
+gzfx_apply_common(GZFXRuntimeCatalogHarness)
+
 add_executable(GZFXEngineEpochHarness
     tests/engine_epoch_harness.cpp
 )
@@ -367,6 +394,28 @@ set_tests_properties(
     natural_process_exit_completion
     PROPERTIES
         TIMEOUT 45
+)
+
+add_test(
+    NAME d3d11_public_export_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXD3D11ExportContractHarness>"
+        "$<TARGET_FILE:GZFXD3D11Bootstrap>"
+)
+
+add_test(
+    NAME startup_trace_process_scope
+    COMMAND
+        "$<TARGET_FILE:GZFXStartupTraceHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/startup-trace-output"
+)
+
+add_test(
+    NAME skyrim_runtime_catalog
+    COMMAND
+        "$<TARGET_FILE:GZFXRuntimeCatalogHarness>"
+        "$<TARGET_FILE:GZFX>"
 )
 
 add_test(
