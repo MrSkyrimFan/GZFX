@@ -14,7 +14,6 @@
 
 #include <atomic>
 #include <chrono>
-#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -90,18 +89,6 @@ namespace
         const bool telemetryInitialized =
             gzfx::diagnostics::telemetry_listener::
                 Initialize();
-
-        if (telemetryInitialized &&
-            !gzfx::paths::TestOverrideActive())
-        {
-            std::atexit(
-                []()
-                {
-                    gzfx::diagnostics::
-                        telemetry_listener::
-                        Shutdown();
-                });
-        }
 
         const fs::path logPath = runtimeRoot / L"GZFX.log";
         std::ofstream log(logPath, std::ios::out | std::ios::app);
