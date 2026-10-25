@@ -144,8 +144,19 @@ namespace gzfx::render
             switch (mode)
             {
             case 0: return "off";
-            case 1: return "split_ambient_visibility_v2";
-            case 2: return "full_ambient_visibility_v2";
+            case 1:
+                return gzfx::render::
+                    ambient_visibility_v2::
+                    OwnsDevelopmentMode(1)
+                    ? "split_ambient_visibility_v2"
+                    : "split_ambient_contact";
+
+            case 2:
+                return gzfx::render::
+                    ambient_visibility_v2::
+                    OwnsDevelopmentMode(2)
+                    ? "full_ambient_visibility_v2"
+                    : "full_ambient_contact";
             case 3: return "depth_view";
             case 4: return "pre_ui_scene_color";
             default: return "unknown";
