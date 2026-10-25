@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.27-universal-frontdoor-late-contracts";
+        "0.0.28-pre-field-lifecycle-hardening";
 }
 
 extern "C" __declspec(dllexport)
