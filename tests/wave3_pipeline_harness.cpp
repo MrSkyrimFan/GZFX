@@ -430,6 +430,12 @@ int wmain(int argc, wchar_t** argv)
         true);
     Target rawIndirect = CreateTarget(device, width, height, DXGI_FORMAT_R11G11B10_FLOAT);
 
+    // A deliberately plausible but wrong early MAIN_HDR reduction root.
+    // 0.0.25 latched onto this kind of pass and never recovered.
+    Target hdrFalseRoot = CreateTarget(
+        device, width / 8, height / 8,
+        DXGI_FORMAT_R16G16B16A16_FLOAT);
+
     Target hdrReduceA = CreateTarget(
         device, width / 4, height / 4,
         DXGI_FORMAT_R16G16B16A16_FLOAT);
@@ -471,6 +477,7 @@ int wmain(int argc, wchar_t** argv)
         !normalB.texture || !aux.texture ||
         !aoA.texture || !aoB.texture || !aoTemp.texture ||
         !aoFinal.texture || !rawIndirect.texture ||
+        !hdrFalseRoot.texture ||
         !hdrReduceA.texture || !hdrReduceB.texture ||
         !hdrReduceC.texture || !hdrReduceD.texture ||
         !tonemapCurrent.texture || !taaHistory.texture ||
@@ -804,8 +811,28 @@ int wmain(int argc, wchar_t** argv)
 
             if (lateStackActive)
             {
-                // Synthetic late image-space spine:
-                // HDR reduction -> tonemap entry -> global temporal pass.
+                // Synthetic late image-space spine. First emit a false
+                // MAIN_HDR downsample candidate that is smaller than the real
+                // chain root. The detector must restart when the later real
+                // root appears instead of carrying the poisoned candidate.
+                context->OMSetRenderTargets(
+                    1,
+                    &hdrFalseRoot.rtv,
+                    nullptr);
+
+                context->PSSetShaderResources(
+                    0,
+                    1,
+                    &hdr.srv);
+
+                context->Draw(3, 0);
+
+                context->PSSetShaderResources(
+                    0,
+                    1,
+                    nullSrvs);
+
+                // Real HDR reduction -> tonemap entry -> global temporal pass.
                 ID3D11ShaderResourceView* reduceInput =
                     hdr.srv;
 
@@ -1335,6 +1362,10 @@ int wmain(int argc, wchar_t** argv)
             existsNonEmpty(
                 session / L"seconds.csv") &&
             existsNonEmpty(
+                session / L"present_timeline.csv") &&
+            existsNonEmpty(
+                session / L"engine_events.csv") &&
+            existsNonEmpty(
                 session /
                     L"telemetry_session_complete.txt");
 
@@ -1364,6 +1395,16 @@ int wmain(int argc, wchar_t** argv)
             ReadAll(
                 session /
                 L"ownership.csv");
+
+        const std::string pipeline =
+            ReadAll(
+                session /
+                L"pipeline_runs_0001.csv");
+
+        const std::string presentTimeline =
+            ReadAll(
+                session /
+                L"present_timeline.csv");
 
         const std::uint64_t dropped =
             FindUnsignedOnLine(
@@ -1419,6 +1460,28 @@ int wmain(int argc, wchar_t** argv)
 
         const bool ownershipCoverage =
             ownership.find(",gzfx,") !=
+                std::string::npos &&
+            ownership.find(",skyrim,") ==
+                std::string::npos;
+
+        const bool shaderIdentitySchema =
+            pipeline.find("vs_hash") !=
+                std::string::npos &&
+            pipeline.find("vs_object") !=
+                std::string::npos &&
+            pipeline.find("shader_hash_known_mask") !=
+                std::string::npos;
+
+        const bool presentTimelineCoverage =
+            presentTimeline.find("hook_enter") !=
+                std::string::npos &&
+            presentTimeline.find("callbacks_begin") !=
+                std::string::npos &&
+            presentTimeline.find("callbacks_end") !=
+                std::string::npos &&
+            presentTimeline.find("before_original_present") !=
+                std::string::npos &&
+            presentTimeline.find("after_original_present") !=
                 std::string::npos;
 
         bool deferredCoverage =
