@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.23-ambient-visibility-v2";
+        "0.0.24-renderer-telemetry-listener";
 }
 
 extern "C" __declspec(dllexport)
