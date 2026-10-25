@@ -1399,6 +1399,15 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "version="
                 << gzfx::kVersion
                 << "\n"
+                << "pid="
+                << GetCurrentProcessId()
+                << "\n"
+                << "last_heartbeat_qpc="
+                << QpcNow()
+                << "\n"
+                << "last_heartbeat_local_time="
+                << Timestamp()
+                << "\n"
                 << "initialized="
                 << (g_initialized.load()
                     ? "true"
