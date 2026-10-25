@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.26
+    VERSION 0.0.27
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -70,6 +70,7 @@ add_library(GZFX SHARED
     src/diagnostics/renderer_forensics.cpp
     src/diagnostics/resource_intelligence.cpp
     src/diagnostics/semantic_probe.cpp
+    src/diagnostics/startup_trace.cpp
     src/diagnostics/telemetry_listener.cpp
     src/render/runtime_state.cpp
     src/render/semantic_authority.cpp
@@ -116,6 +117,13 @@ target_link_libraries(
 )
 set_target_properties(GZFXBootstrap PROPERTIES OUTPUT_NAME "dinput8")
 gzfx_apply_common(GZFXBootstrap)
+
+add_library(GZFXD3D11Bootstrap SHARED
+    bootstrap/d3d11_proxy.cpp
+    bootstrap/d3d11.def
+)
+set_target_properties(GZFXD3D11Bootstrap PROPERTIES OUTPUT_NAME "d3d11")
+gzfx_apply_common(GZFXD3D11Bootstrap)
 
 add_executable(GZFXSmokeHost
     tests/smoke_host.cpp
