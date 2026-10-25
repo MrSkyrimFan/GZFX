@@ -1,0 +1,533 @@
+GZFX 0.0.26 RENDERER IDENTITY + ENGINE EPOCH CLOSURE BLUEPRINT
+Blueprint date: October 25, 2026
+Status: APPROVED FOR IMPLEMENTATION BY OWNER DIRECTIVE
+Target runtime string:
+    0.0.26-renderer-identity-engine-epochs
+
+CONTROLLING AUTHORITY:
+    GZFXWorkFolder/new/GZFX_0.0.25_LATE_STACK_FIELD_VALIDATION_FINDINGS.txt
+    GZFXWorkFolder/new/GZFX_0.0.25_LATE_STACK_FIELD_VALIDATION_DATA_REVIEW_PASS_2.txt
+    GZFXWorkFolder/new/GZFX_RESEARCH_PASS_7_RENDER_TIMELINE_ENGINE_ANCHORS_AND_LATE_STACK_CLOSURE.txt
+    GZFXWorkFolder/new/GZFX_RESEARCH_PASS_8_ENB_3DMIGOTO_SKYRIM_SHADER_IDENTITY_ARCHITECTURE.txt
+    GZFXWorkFolder/new/GZFX_RESEARCH_PASS_9_RUNTIME_SAFE_ENGINE_EPOCHS_AND_FINAL_ADVERSARIAL_REVIEW.txt
+
+======================================================================
+1. OBJECTIVE
+======================================================================
+
+0.0.26 is a renderer-identity and timeline closure wave.
+
+It must convert the strongest scattered forensic capabilities already present
+in GZFX into one coherent authority layer.
+
+This wave does NOT add a new visual effect.
+
+It must make the next real-Skyrim field run capable of answering, with stable
+cross-run evidence:
+
+    WHAT Skyrim engine epoch is active;
+    WHICH stable shader programs are executing;
+    WHICH resources they read/write;
+    WHO owns every command list;
+    WHEN work occurs relative to the actual DXGI Present.
+
+Primary goal:
+
+    close or decisively narrow the remaining late renderer map without another
+    broad anonymous-D3D campaign.
+
+======================================================================
+2. NON-GOALS
+======================================================================
+
+Do NOT:
+
+    tune final Ambient Visibility;
+    start indirect radiance;
+    replace TAA;
+    replace tonemap;
+    implement water replacement;
+    optimize forensic FPS;
+    add SKSE or Address Library;
+    turn GZFX into a d3d11.dll proxy;
+    copy ENB/Community Shaders/CommonLib implementation;
+    hardcode runtime shader pointers;
+    call untagged command lists "Skyrim";
+    claim unsupported Skyrim runtime engine hooks.
+
+======================================================================
+3. LANE A — STABLE CREATION-TIME IDENTITY
+======================================================================
+
+Owner:
+    renderer_forensics + pipeline_cartography
+
+Extend renderer_forensics' existing WARP-resolved MinHook interception to:
+
+Resources:
+    ID3D11Device::CreateBuffer
+    CreateTexture1D
+    CreateTexture2D
+    CreateTexture3D
+
+Shaders:
+    CreateVertexShader
+    CreateGeometryShader
+    CreateGeometryShaderWithStreamOutput
+    CreatePixelShader
+    CreateHullShader
+    CreateDomainShader
+    CreateComputeShader
+
+Keep:
+    CreateDeferredContext
+
+Requirements:
+
+    call real/original method first;
+    never mutate input descriptors/bytecode;
+    never substitute returned objects;
+    on success publish creation evidence to pipeline_cartography;
+    record caller module using return-address provenance;
+    preserve all normal application behavior.
+
+Do NOT enable the old broad experimental pipeline_cartography device-vtable
+clone.
+
+Add narrow public pipeline_cartography APIs for creation observation.
+
+======================================================================
+4. LANE B — SEPARATE SHADER CONTENT ID FROM OBJECT ID
+======================================================================
+
+PassTelemetry must stop overloading shaderHashes.
+
+Add:
+
+    shaderHashes[6]
+        exact bytecode content hashes only
+        zero if unknown
+
+    shaderObjectIds[6]
+        canonical process-local shader object identities
+
+    shaderHashKnownMask
+        bit i = stable content hash known for stage i.
+
+Immediate-context pass builder:
+
+    populate both fields.
+
+Deferred-context pass builder:
+
+    populate object IDs from recorded state;
+    resolve stable hash through pipeline_cartography registry.
+
+Pass-run compression/signature:
+
+    use stable hash when known;
+    otherwise use object identity.
+
+Serialization:
+
+    pipeline_runs_*.csv
+    deferred_runs_*.csv
+
+must write both identity domains explicitly.
+
+Never substitute object ID into shader hash columns.
+
+======================================================================
+5. LANE C — COMPLETE GZFX COMMAND-LIST OWNERSHIP
+======================================================================
+
+All GZFX-created deferred command lists must execute through one ownership-aware
+gateway.
+
+Required direct-path repairs include at minimum:
+
+    visible_pass
+    resource_intelligence diagnostic renderer
+    semantic_probe diagnostic renderer
+
+Preferred:
+
+    renderer_execution_service::ExecuteOwned
+
+Add new OwnedPass values where needed, such as:
+
+    VisiblePass
+    ResourceDiagnostic
+    SemanticDiagnostic
+
+or equivalent explicit subsystem identities.
+
+Telemetry label change:
+
+    owner=gzfx
+    owner=external
+
+Retire semantic use of:
+
+    owner=skyrim
+
+unless SkyrimSE.exe provenance is explicitly proven.
+
+Seconds summary column:
+
+    external_command_lists
+
+instead of:
+
+    skyrim_command_lists.
+
+======================================================================
+6. LANE D — DEFERRED TELEMETRY MUST IGNORE IMMEDIATE DETAIL GATE
+======================================================================
+
+OnDeferredList and OnDeferredRun must enqueue evidence regardless of:
+
+    g_detailActive
+
+while telemetry is initialized.
+
+The late-only detail gate continues to control:
+
+    immediate-context pipeline_runs_* volume.
+
+Deferred evidence remains bounded by the existing deferred recorder:
+
+    max runs
+    overflow markers
+    registry limits.
+
+No new unbounded logging.
+
+======================================================================
+7. LANE E — REAL PRESENT TIMELINE
+======================================================================
+
+Add compact asynchronous present timeline evidence.
+
+Required phases:
+
+    hook_enter
+    callbacks_begin
+    callbacks_end
+    before_original_present
+    after_original_present
+
+Fields:
+
+    sequence
+    qpc
+    frame
+    present_epoch
+    phase
+    thread
+    sync_interval
+    flags
+    hresult
+
+present_epoch:
+
+    monotonic per primary Present/Present1 invocation.
+
+Renderer-forensics ordering:
+
+    hook_enter
+    ->
+    callbacks_begin
+    ->
+    existing OnPresent callbacks
+    ->
+    callbacks_end
+    ->
+    before_original_present
+    ->
+    original Present/Present1
+    ->
+    after_original_present.
+
+Existing semantic UiPresent remains for continuity but is no longer described
+as the physical DXGI presentation boundary.
+
+Output:
+
+    present_timeline.csv
+
+======================================================================
+8. LANE F — VERIFIED SKYRIM ENGINE EPOCH PROFILE
+======================================================================
+
+Implement a small standalone engine-epoch resolver inside GZFX.
+
+No SKSE.
+No Address Library runtime dependency.
+
+Runtime gate:
+
+    read live SkyrimSE.exe file/product version.
+
+Initial supported engine-hook runtime:
+
+    Steam Skyrim AE 1.6.1170.0
+
+Any other version:
+
+    do not install engine hooks;
+    log unsupported/unverified runtime;
+    continue D3D telemetry normally.
+
+For 1.6.1170:
+
+Scan executable .text for the verified exact signatures from Research Pass 9.
+
+POST_PROCESSING signature:
+    00 48 8B 0D 29 BD E5 01
+    E8 04 32 FB FF
+    48 8B 05 65 DF EB 01
+    48 8B 88 28
+
+CALL:
+    match + 8
+
+Expected target RVA:
+    0x1481B80
+
+PRE_UI signature:
+    D2 48 8D 0D 46 37 2E 02
+    E8 D1 F7 E9 FF
+    48 8B 05 42 C1 64 02
+    48 8B 48 10
+
+CALL:
+    match + 8
+
+Expected target RVA:
+    0xE44850
+
+Acceptance before hook:
+
+    exact version match;
+    unique signature match;
+    call opcode is E8;
+    decoded target lies in executable image;
+    decoded target RVA equals expected value;
+    target is executable;
+    target entry is not an unsupported existing redirection.
+
+Install MinHook only after all validation for that anchor passes.
+
+Each anchor is independent and fail-closed.
+
+======================================================================
+9. LANE G — ENGINE EPOCH TELEMETRY
+======================================================================
+
+Add compact asynchronous:
+
+    engine_events.csv
+
+Fields:
+
+    sequence
+    qpc
+    frame
+    thread
+    anchor
+    phase
+    runtime_profile
+    target_rva
+
+Initial anchors:
+
+    post_processing
+    pre_ui
+
+Phases:
+
+    enter
+    exit
+
+Hook thunks must:
+
+    emit enter;
+    call original;
+    emit exit.
+
+No graphics mutation.
+
+No rendering feature injection.
+
+======================================================================
+10. LANE H — HDR/TAA FALLBACK REPAIR
+======================================================================
+
+The structural late-stage detector remains an independent cross-check.
+
+HDR:
+
+    allow bounded candidate restart/replacement;
+    an early false MAIN_HDR downsample must not poison the frame;
+    prefer a completed descending dependency chain to <=4x4.
+
+TAA:
+
+    remove hard dependency on hdrReductionComplete;
+    allow independent structural recognition when:
+        MOTION present
+        MAIN_DEPTH_CURRENT present
+        current/history full-res color present
+        exactly two full-res temporal outputs.
+
+Ordering:
+
+    engine post-processing epoch, when available, is a strong eligibility
+    context but not required for unsupported runtimes.
+
+Stage promotion policy:
+
+    structural detection can emit candidate boundaries for field validation;
+    final lock still requires next real-Skyrim evidence.
+
+======================================================================
+11. TELEMETRY / STATUS
+======================================================================
+
+listener_status additions:
+
+    stable_shader_creation_hooks_armed
+    resource_creation_hooks_armed
+    shader_creations_observed
+    resource_creations_observed
+    engine_profile
+    engine_post_processing_anchor
+    engine_pre_ui_anchor
+    present_epochs
+
+manifest additions:
+
+    renderer_identity_policy=creation_time_exact_hash
+    engine_anchor_policy=versioned_fail_closed
+
+Keep existing:
+    queue/drop health
+    deferred health
+    late detail policy.
+
+======================================================================
+12. TEST PLAN
+======================================================================
+
+All existing tests remain.
+
+Expand late_stack_cartography and/or add targeted harness coverage for:
+
+A. exact shader identity:
+    known content hash != object ID;
+    unknown hash = 0;
+    object ID remains present;
+    hash-known mask correct.
+
+B. creation observation:
+    test shader/resource creation registers stable evidence.
+
+C. ownership:
+    simulated visible-pass command list is GZFX-owned.
+    no false external classification.
+
+D. deferred transport:
+    deferred list/run telemetry writes while immediate detail gate is inactive.
+
+E. runtime profile:
+    exact 1.6.1170 signature fixture resolves;
+    one-byte corruption fails;
+    ambiguous/multiple match fails;
+    unsupported version fails closed.
+
+F. present timeline:
+    phases monotonic and one epoch groups one present call.
+
+G. HDR restart:
+    false early downsample can be abandoned;
+    later real descending chain completes.
+
+H. independent TAA:
+    valid TAA structure can trigger even when HDR candidate did not complete.
+
+Target:
+    all previous tests + new tests green on Windows x64.
+
+======================================================================
+13. FIELD ACCEPTANCE
+======================================================================
+
+The next real-Skyrim test should prove:
+
+    creation hooks armed before Skyrim shader/resource creation;
+    late pipeline shader columns now contain stable hashes where observed;
+    object IDs are separately available;
+    recurring visible pass is labeled GZFX;
+    external command-list count collapses materially, ideally to zero in the
+    clean field environment;
+    deferred list/run files cover all observed deferred executions;
+    present timeline has correct phase order;
+    engine profile reports 1.6.1170 if that is the live runtime;
+    post_processing and pre_ui anchors fire consistently if profile matches;
+    HDR/TAA detectors no longer remain zero solely due early candidate poison;
+    engine epochs and D3D structure correlate enough to decide the remaining
+    stage contracts.
+
+If runtime is not 1.6.1170:
+
+    engine anchors may be unavailable by design;
+    stable D3D identity/ownership/present evidence is still valid;
+    field report must state the exact detected runtime so a future profile can
+    be added from evidence.
+
+======================================================================
+14. IMPLEMENTATION / REPO LIFECYCLE
+======================================================================
+
+Branch from current main.
+
+Implement as one coherent wave.
+
+CI.
+
+PR.
+
+Windows x64 CI.
+
+Repair only real failures.
+
+Merge.
+
+Merged-main CI.
+
+Verify:
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Package refresh commit must change only the ZIP.
+
+Write full engineering result to old/.
+
+Move this cycle's DATA/research/blueprint authority files from new/ to old/.
+
+Leave:
+    GZFXWorkFolder/new/README.md only.
+
+Update README/AGENT current frontier to 0.0.26 field validation.
+
+======================================================================
+15. IMPLEMENTATION AUTHORITY
+======================================================================
+
+Owner has explicitly authorized going straight through blueprint and
+implementation in one pass after the final DATA/research review.
+
+This blueprint therefore authorizes implementation of the complete coherent
+scope above without another owner checkpoint.
+
+END 0.0.26 BLUEPRINT
