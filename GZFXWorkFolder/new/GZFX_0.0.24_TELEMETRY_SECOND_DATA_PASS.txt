@@ -1,0 +1,594 @@
+GZFX 0.0.24 CONTINUOUS TELEMETRY — SECOND DATA PASS
+Independent contradiction / invariant / blind-spot review
+Review date: October 24, 2026
+Status: DATA ONLY — NO RESEARCH STARTED
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+This second pass deliberately re-read the 0.0.24 telemetry from a different
+question:
+
+    What in the first DATA report was too broad, incomplete, ambiguous,
+    or potentially wrong?
+
+The review focused on:
+
+- exact Stage Scheduler ordering;
+- exact location of Skyrim deferred command lists;
+- mode/environment transition behavior;
+- semantic generation/identity behavior;
+- listener lineage limits;
+- clean-vs-unclean session interpretation;
+- whether large frame stalls correlate with telemetry queue pressure.
+
+This pass does NOT replace the first DATA report wholesale.
+
+It adds controlling corrections/refinements.
+
+======================================================================
+2. DEFERRED COMMAND-LIST BLIND SPOT IS LATE-STACK LOCALIZED
+======================================================================
+
+First-pass wording was too broad when it described Skyrim deferred command
+lists as the major remaining renderer blind spot.
+
+The blind spot is real, but it is strongly LOCALIZED.
+
+Skyrim/unknown command-list events:
+
+    total = 9,487
+
+Normal active-scene placement:
+
+EXTERIOR:
+    7,107 command-list events occur AFTER:
+        PublishPreWaterDepth
+
+INTERIOR:
+    2,366 command-list events occur AFTER:
+        AfterAmbientScreenSpaceComposite
+
+TRANSITION / UI-only:
+    14 command-list events occur on UnknownTransition frames after UiPresent
+    is the only mapped stage.
+
+No normal active-scene Skyrim command list was observed:
+
+    before depth prepass;
+    in opaque MRT;
+    in CameraZ;
+    in stock AO;
+    in ambient composite;
+    before the exterior pre-water landmark.
+
+Therefore:
+
+    the known early/mid renderer map is NOT hidden behind deferred lists.
+
+The deferred-context problem is specifically a late-stack problem.
+
+This materially narrows the next instrumentation target.
+
+======================================================================
+3. COMMAND LISTS ARE EVEN LATER THAN THE GLOBAL TEMPORAL CANDIDATE
+======================================================================
+
+The third-pass resource reconstruction identified the stable full-resolution
+temporal candidate:
+
+    VS = 0x25ECC9EC9C0
+    PS = 0x25ECC9EBBB0
+
+Every one of the 9,487 Skyrim command-list EXECUTIONS occurs AFTER this
+temporal-family pass in its frame:
+
+    9,487 / 9,487
+
+The later full-resolution depth-aware/post candidate:
+
+    VS = 0x25ECC9DA270
+    PS = 0x25ECC9D8FB0
+
+is also before all normal active-scene command-list events:
+
+    9,473 / 9,473
+
+The remaining 14 command-list events are transition/UI-only frames where that
+normal active-scene post pass is absent.
+
+This is an important refinement:
+
+    deferred-context instrumentation is NOT required merely to locate the
+    global temporal/HDR candidate chain.
+
+It IS required to understand the late work that follows it.
+
+======================================================================
+4. COMMAND-LIST EXECUTION PATTERN
+======================================================================
+
+Skyrim command-list presence by frame:
+
+    9,441 frames:
+        exactly 1 command-list execution
+
+    1 frame (frame 636):
+        42 executions
+
+    1 frame (frame 900):
+        4 executions
+
+Dominant command-list pointer value:
+
+    0x25EA78F9D10
+    9,442 executions
+
+A second pointer:
+
+    0x25ECB2BAD10
+    42 executions
+    all on frame 636
+
+Three one-off pointers occur on frame 900.
+
+Important caution:
+
+    raw COM pointer reuse is NOT a persistent semantic identity contract.
+
+Future deferred-context instrumentation should assign:
+
+    creation generation
+    deferred-context identity
+    FinishCommandList generation
+    ExecuteCommandList generation
+
+instead of relying on pointer value alone.
+
+======================================================================
+5. FRAME 636 OUTLIER
+======================================================================
+
+Frame 636:
+
+    frame_ms = 1610.9
+    FPS      = 0.6208
+    Skyrim command lists = 42
+    listener queue depth = 19 / 65,536
+
+The immediately adjacent frames:
+
+frame 635:
+    43.5 ms
+
+frame 637:
+    26.4 ms
+
+This is a strong coincidence between:
+
+    a one-frame command-list burst
+
+and:
+
+    the worst single frame stall in the session.
+
+DATA cannot prove causality.
+
+However:
+
+    listener queue saturation was NOT occurring.
+
+The queue had only 19 records pending at the reported Present snapshot.
+
+Therefore the largest stall cannot reasonably be described as the telemetry
+ring becoming full or back-pressuring the renderer.
+
+Instrumentation CPU/I/O overhead may still contribute elsewhere.
+
+Production performance remains intentionally unresolved.
+
+======================================================================
+6. SECOND COMMAND-LIST BURST
+======================================================================
+
+Frame 900:
+
+    frame_ms = 62.3
+    Skyrim command lists = 4
+
+Frames 899 / 901:
+
+    ~40.0 ms
+    ~39.8 ms
+
+Again:
+
+    extra command-list activity coincides with an elevated frame.
+
+This remains correlation only.
+
+No performance gate is inferred from it.
+
+======================================================================
+7. STAGE SCHEDULER FOUNDATION DID NOT CONTRADICT ITSELF
+======================================================================
+
+A potentially alarming observation from the raw data was:
+
+    the exterior full-resolution R16_FLOAT ping-pong pass occurs at the same
+    ordinal as:
+
+        BeforeVolumetricApply
+        AfterVolumetricApply
+        PublishPreWaterDepth
+
+Source inspection resolves the ambiguity.
+
+Semantic Authority does NOT describe this boundary as a final MAIN_HDR
+volumetric composite.
+
+The detector explicitly identifies:
+
+    "volumetric temporal apply"
+
+using:
+
+- MAIN_DEPTH_CURRENT;
+- volumetric density;
+- R32_FLOAT repartition texture;
+- MOTION;
+- previous depth;
+- a full-resolution R16_FLOAT output.
+
+The After boundary reason is:
+
+    volumetric_temporal_apply_complete
+
+Then the same ordinal's MAIN_DEPTH copy promotes the previous-depth resource
+into:
+
+    PRE_WATER_DEPTH_CURRENT
+
+Therefore the new telemetry SUPPORTS the existing locked stage meaning.
+
+It does NOT justify reopening Wave 2 / Wave 3 stage correctness.
+
+The later exterior-only pass that writes MAIN_HDR is a SEPARATE unresolved
+landmark.
+
+======================================================================
+8. EXTERIOR R16_FLOAT OUTPUT IS A PERFECT HISTORY PING-PONG
+======================================================================
+
+Two full-resolution exterior-only R16_FLOAT resources:
+
+    0x25E68B943F0
+    0x25E68B94970
+
+form an exact per-frame alternating pair.
+
+Scope:
+
+    all 7,099 exterior active frames
+
+Draw writes:
+
+    exactly one member per exterior frame
+
+Sequence begins:
+
+frame 603:
+    writes 0x25E68B943F0
+
+frame 604:
+    writes 0x25E68B94970
+
+frame 605:
+    writes 0x25E68B943F0
+
+...
+
+Sequence ends with the same strict alternation.
+
+Consecutive-frame same-target violations:
+
+    0
+
+This is far stronger than the first-pass statement that
+0x25E68B94970 was simply an exterior-only R16_FLOAT resource.
+
+The pair is a verified temporal ping-pong family.
+
+DATA-safe semantic description:
+
+    EXTERIOR FULL-RES R16 TEMPORAL HISTORY PAIR
+
+The exact product semantic name is still withheld.
+
+Because the pair is produced by the already-detected volumetric temporal apply
+signature, it is a strong future semantic-promotion target related to that
+domain.
+
+======================================================================
+9. EXPLICIT COPY / RESOLVE / CLEAR LINEAGE — CORRECTION
+======================================================================
+
+The first DATA report said compact continuous telemetry did not preserve
+explicit copy/resolve/clear operands and therefore some operations appeared
+without producer information.
+
+That conclusion is directionally correct but the exact failure mode is more
+subtle.
+
+Observed compact rows for operations such as:
+
+    CopyResource
+    ClearRTV
+    ClearDSV
+    ExecuteCommandList
+
+often contain NONZERO read/write IDs.
+
+However these IDs are NOT the explicit operation operands.
+
+They are inherited from the currently tracked bound pipeline state because
+PassTelemetry is built from g_state before/around the explicit operation.
+
+Concrete evidence:
+
+frame 1914 ordinal 5527:
+    Draw row
+    followed by CopyResource row
+
+Both carry the same R16 output/read binding set.
+
+frame 9386 ordinal 3637:
+    same pattern.
+
+Therefore the correct statement is:
+
+    explicit-operation lineage is not absent;
+    it is contaminated by stale/current bound-state lineage and cannot be
+    trusted as the operation's true source/destination/view operands.
+
+This applies especially to:
+
+    CopyResource
+    CopySubresourceRegion
+    ResolveSubresource
+    ClearRTV
+    ClearDSV
+    ClearUAV
+    ExecuteCommandList
+
+Future telemetry must carry those operations' explicit operands directly.
+
+======================================================================
+10. CONCRETE READ LIST IS HEAVILY TRUNCATED
+======================================================================
+
+PassTelemetry stores only:
+
+    up to 8 unique concrete read resource identities
+
+and:
+
+    up to 8 unique concrete write identities.
+
+The full read/write hashes still describe the complete bound-state set, but
+the concrete identity list is bounded.
+
+Late-stack review:
+
+    701,886 compact rows
+
+read_count distribution:
+
+    3 reads:
+        913
+        0.13%
+
+    4 reads:
+        40,181
+        5.72%
+
+    5 reads:
+        7,140
+        1.02%
+
+    6 reads:
+        76,414
+        10.89%
+
+    7 reads:
+        74,044
+        10.55%
+
+    8 reads:
+        503,194
+        71.69%
+
+Because read_count itself saturates at the storage capacity, a value of 8
+means:
+
+    8 OR MORE
+
+not necessarily exactly 8.
+
+Therefore:
+
+    at least 71.69% of late-stack rows do not prove that their concrete read
+    list is exhaustive.
+
+Breakdown of read_count=8:
+
+EXTERIOR:
+    312,355 rows
+
+INTERIOR:
+    190,839 rows
+
+Main kinds at the cap:
+
+Draw:
+    454,160
+
+Dispatch:
+    39,246
+
+CopyResource:
+    7,099
+
+ClearRTV:
+    2,689
+
+This is a major lineage limitation missed in the first report.
+
+The full binding hashes remain useful for equality/change detection.
+
+But exact producer->consumer reconstruction requires a better identity
+transport for high-fan-in passes.
+
+======================================================================
+11. SEMANTIC FOUNDATION RECHECK
+======================================================================
+
+The second pass re-counted all Semantic Authority rows independently.
+
+Stable semantics remain consistent.
+
+Notable identities:
+
+MAIN_HDR:
+    1 nonzero identity
+
+MAIN_DEPTH_CURRENT:
+    1 nonzero identity
+
+MOTION:
+    1 nonzero identity
+
+NORMAL_MASK_CURRENT:
+    2 alternating identities
+
+SAO_RAWAO_CURRENT/PREVIOUS:
+    2 alternating identities
+
+SHADOW_MASK:
+    3 nonzero identities
+
+Exterior volumetric density:
+    stable A/B resources
+
+VOLUMETRIC_PREVIOUS_DEPTH / PRE_WATER_DEPTH_CURRENT:
+    same physical resource with epoch-role transition
+
+Still unresolved:
+
+    REDUCED_REFLECTION_LIGHTING
+    REDUCED_TEMPORAL_LIGHTING_HISTORY
+
+Both remain only initial zero/unavailable rows.
+
+Do NOT promote them from name alone.
+
+======================================================================
+12. MODE INDEPENDENCE OF CORE POST CHAIN
+======================================================================
+
+A set of late structural pass families occurs on every active scene frame:
+
+    10,850 / 10,850
+
+with exact mode distribution:
+
+Mode 0:
+    4,824
+
+Mode 1:
+    2,941
+
+Mode 2:
+    2,497
+
+Mode 3:
+    410
+
+Mode 4:
+    178
+
+This exactly matches the active scene-frame mode population.
+
+Therefore the core low-resolution/post/temporal chain is not a GZFX-mode
+artifact.
+
+GZFX modes alter ownership/effects as intended without causing Skyrim's core
+late post chain to disappear.
+
+======================================================================
+13. PERFORMANCE INTERPRETATION RECHECK
+======================================================================
+
+Per-second telemetry does NOT show a simple relation:
+
+    more pipeline rows -> worse frame time
+
+The observed Pearson correlation in this session between:
+
+    average frame ms
+    and
+    pipeline_runs per second
+
+is approximately:
+
+    -0.217
+
+Correlation between:
+
+    average frame ms
+    and
+    queue_high_water
+
+is approximately:
+
+    0.0015
+
+These are descriptive statistics, NOT a performance proof.
+
+They do support the owner's instruction that forensic FPS cannot be treated as
+a clean release-performance measurement.
+
+The current build mixes:
+
+    Skyrim workload
+    GZFX GPU work
+    telemetry CPU work
+    file-system activity
+    scene transitions
+    driver behavior
+
+and cannot isolate one cause.
+
+======================================================================
+14. SECOND-PASS VERDICT
+======================================================================
+
+The first DATA pass was directionally correct.
+
+The second pass adds four controlling refinements:
+
+1. Deferred command-list opacity is localized to the late stack.
+2. It occurs after the strongest global temporal/post candidates.
+3. Explicit-operation lineage is stale-bound-state contamination, not merely
+   missing rows.
+4. Concrete read-resource lists are capped/truncated on most late passes.
+
+It also strengthens one major semantic clue:
+
+    the exterior full-resolution R16_FLOAT lane is a perfect temporal
+    ping-pong pair across all exterior frames.
+
+No research has started.
+
+END SECOND DATA PASS
