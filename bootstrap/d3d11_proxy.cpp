@@ -29,6 +29,8 @@ namespace
         const void*, DWORD);
 
     using GzfxInitializeFn = bool(*)() noexcept;
+    using GzfxGetInitializationStateFn =
+        std::uint32_t(*)() noexcept;
     using GzfxAttachPrimaryFn = bool(*)(
         IDXGISwapChain*,
         ID3D11Device*,
@@ -66,6 +68,8 @@ namespace
     CoreRegisterLayersFn g_coreRegisterLayers = nullptr;
 
     GzfxInitializeFn g_gzfxInitialize = nullptr;
+    GzfxGetInitializationStateFn
+        g_gzfxGetInitializationState = nullptr;
     GzfxAttachPrimaryFn g_gzfxAttachPrimary = nullptr;
     GzfxStartupEventFn g_gzfxStartupEvent = nullptr;
 
@@ -339,6 +343,12 @@ namespace
                     g_gzfxModule,
                     "GZFX_Initialize"));
 
+        g_gzfxGetInitializationState =
+            reinterpret_cast<GzfxGetInitializationStateFn>(
+                GetProcAddress(
+                    g_gzfxModule,
+                    "GZFX_GetInitializationState"));
+
         g_gzfxAttachPrimary =
             reinterpret_cast<GzfxAttachPrimaryFn>(
                 GetProcAddress(
@@ -353,7 +363,16 @@ namespace
 
         ReplayPendingEvents();
 
-        if (g_gzfxInitialize != nullptr)
+        const std::uint32_t initializationState =
+            g_gzfxGetInitializationState != nullptr
+                ? g_gzfxGetInitializationState()
+                : 0;
+
+        // If dinput8 loaded GZFX first, renderer_forensics may re-enter this
+        // proxy while GZFX_Initialize is already inside its own call_once.
+        // Never recursively invoke initialization in that state.
+        if (g_gzfxInitialize != nullptr &&
+            initializationState == 0)
         {
             g_insideGzfxInitialization = true;
 
@@ -365,6 +384,22 @@ namespace
             EmitEvent(
                 "gzfx_initialize_complete",
                 initialized ? 0 : 1);
+        }
+        else if (initializationState == 1)
+        {
+            EmitEvent(
+                "gzfx_initialization_already_in_progress");
+        }
+        else if (initializationState == 2)
+        {
+            EmitEvent(
+                "gzfx_already_initialized");
+        }
+        else if (initializationState == 3)
+        {
+            EmitEvent(
+                "gzfx_initialization_failed",
+                1);
         }
     }
 
