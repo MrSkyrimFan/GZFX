@@ -1,0 +1,1131 @@
+GZFX 0.0.24 ENGINEERING RESULT
+Continuous Renderer Telemetry Listener
+Engineering date: October 24, 2026
+Status: CODE PASS / CI PASS / MERGED / PACKAGED / FIELD SESSION PENDING
+
+======================================================================
+1. EXECUTIVE RESULT
+======================================================================
+
+GZFX now contains a continuous renderer telemetry listener designed for
+full-stack Skyrim renderer discovery.
+
+Runtime:
+
+    0.0.24-renderer-telemetry-listener
+
+Purpose:
+
+    let the user play Skyrim naturally
+    while GZFX continuously records the renderer session
+    for later Project Chat analysis.
+
+This replaces manual capture choreography as the PRIMARY renderer-discovery
+workflow.
+
+Manual screenshots/captures remain available as optional visual references.
+
+PR:
+
+    #27
+    Renderer telemetry listener
+
+Final PR head:
+
+    5b3c791fcca675450223db01f78f108c2b05f198
+
+Source merge:
+
+    05403b6d7618e1b21bf600ad835f3b2bed403fc0
+
+Post-merge package refresh:
+
+    667435afb1f17b748c88b35a3d56789f46f19f6d
+
+Final package:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Blob:
+
+    37643fdec24460cc4265d3b913dac0fa2ba43983
+
+Size:
+
+    337,516 bytes
+
+PR CI:
+
+    run 40159215046
+    19 / 19 PASS
+
+Merged-main CI:
+
+    run 40159423560
+    19 / 19 PASS
+
+Package-refresh comparison:
+
+    05403b6d...
+    ->
+    667435af...
+
+changed exactly:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+No source drift exists in the package-refresh commit.
+
+======================================================================
+2. CONTROLLING PROJECT CLARIFICATION
+======================================================================
+
+This implementation follows the repository owner's correction after the
+0.0.23 Wave 4 field run.
+
+The current project priority is:
+
+    understand Skyrim's complete renderer
+    ->
+    own the complete graphics stack
+    ->
+    then perform final quality tuning and clean performance work.
+
+0.0.23 Mode 2 was intentionally untuned.
+
+Therefore:
+
+    current AO darkness/appearance
+    !=
+    final product-quality verdict.
+
+Likewise, current forensic FPS/timing:
+
+    includes heavy evidence collection
+    !=
+    clean release-performance evidence.
+
+0.0.24 is explicitly a FORENSIC build.
+
+The listener is meant to improve evidence quality and operator ergonomics, not
+to establish release FPS.
+
+======================================================================
+3. HIGH-LEVEL ARCHITECTURE
+======================================================================
+
+Renderer thread:
+
+    existing D3D11 hooks / Stage Scheduler / Semantic Authority /
+    Pipeline Cartography
+    ->
+    copy compact fixed-size numeric records
+    ->
+    bounded lock-free event ring
+
+Dedicated writer thread:
+
+    drain ring
+    ->
+    format CSV/TXT
+    ->
+    write session files
+    ->
+    rotate large pipeline files
+    ->
+    update health/status
+
+The writer thread does NOT:
+
+    call the D3D11 immediate context
+    call DXGI Present
+    query renderer state
+    Map GPU resources
+    resolve GPU timestamp queries
+    call Skyrim rendering functions.
+
+This preserves the D3D11 immediate-context threading boundary.
+
+======================================================================
+4. NEW MODULE
+======================================================================
+
+Added:
+
+    include/gzfx/diagnostics/telemetry_listener.hpp
+    src/diagnostics/telemetry_listener.cpp
+
+Public lifecycle:
+
+    Initialize
+    IsInitialized
+    Shutdown
+
+Renderer entry points:
+
+    OnPresent
+    OnResize
+    OnOwnedCommandList
+    OnSkyrimCommandList
+
+The listener is initialized after Wave 3 and Wave 4 during normal GZFX
+runtime initialization.
+
+======================================================================
+5. SESSION OUTPUT
+======================================================================
+
+Normal Skyrim runtime creates:
+
+    Documents/My Games/Skyrim Special Edition/GZFX/Telemetry/
+
+and then a timestamped directory:
+
+    session_YYYYMMDD_HHMMSS_PID/
+
+Core files:
+
+    manifest.txt
+    listener_status.txt
+    frames.csv
+    seconds.csv
+    stages.csv
+    semantics.csv
+    resources.csv
+    transitions.csv
+    ownership.csv
+    timings.csv
+    pipeline_runs_0001.csv
+    pipeline_runs_0002.csv
+    ...
+    telemetry_session_complete.txt
+
+The completion marker is written on a clean listener shutdown.
+
+An incomplete/crashed session without the marker remains analyzable but is
+not considered cleanly terminated.
+
+======================================================================
+6. EVENT RING
+======================================================================
+
+The listener uses a preallocated bounded lock-free ring based on per-slot
+sequence ownership.
+
+Producer behavior:
+
+    reserve slot atomically
+    copy POD event
+    publish sequence
+
+Consumer:
+
+    writer thread drains independently.
+
+If ring is full:
+
+    event is dropped
+    dropped counter increments
+    producer returns immediately.
+
+The renderer thread never waits for writer progress.
+
+======================================================================
+7. RING CAPACITY ENGINEERING DEVIATION
+======================================================================
+
+The research/blueprint proposed:
+
+    262,144 records.
+
+Final default:
+
+    65,536 records.
+
+Reason:
+
+During implementation, the event payload was deliberately expanded to retain
+concrete producer/consumer resource identities, not merely hashes.
+
+A 65,536-record default bounds forensic memory while still providing a large
+burst buffer.
+
+The exact runtime:
+
+    ring_capacity
+    event_bytes
+    queue_high_water
+    dropped
+
+are written into the session manifest/status.
+
+The capacity can be revisited from real listener evidence.
+
+This is preferable to allocating a much larger ring before observing actual
+Skyrim queue pressure.
+
+======================================================================
+8. DETERMINISTIC OVERFLOW BEHAVIOR
+======================================================================
+
+Telemetry MUST fail soft.
+
+A dedicated CI test reduces the ring to:
+
+    64 records
+
+and deliberately fills it before the writer starts.
+
+Expected:
+
+    producer does not block
+    process continues
+    dropped > 0
+    listener status becomes degraded
+    session still completes.
+
+This test passes.
+
+The normal telemetry listener test separately requires:
+
+    dropped = 0.
+
+This proves both:
+
+    normal healthy operation
+    and
+    bounded failure behavior.
+
+======================================================================
+9. PIPELINE CARTOGRAPHY CONTINUOUS MODE
+======================================================================
+
+Pipeline Cartography was extended instead of creating a second D3D11 state
+tracker.
+
+Added compact telemetry types:
+
+    PassTelemetry
+    ResourceTelemetry
+
+Added sinks:
+
+    SetTelemetrySinks
+    ClearTelemetrySinks
+
+Pipeline state is now tracked when:
+
+    manual capture is active
+    OR
+    continuous telemetry is active.
+
+Existing detailed manual Pipeline Cartography remains intact.
+
+The listener therefore consumes the same state model already proven during
+foundation work.
+
+======================================================================
+10. PASS-FAMILY COMPRESSION
+======================================================================
+
+A raw Skyrim frame can contain many repeated geometry draws.
+
+Logging each one as a full text row would be unnecessarily expensive.
+
+The listener creates a compact pass-family signature from:
+
+    pass kind
+    draw kind
+    shader identities/hashes
+    RTV identities
+    DSV identity
+    OM/CS UAV hashes
+    read-resource hash
+    write-resource hash
+    constant-buffer hash
+    sampler hash
+    blend state
+    depth state
+    raster state
+    topology
+    viewport
+
+Adjacent same-family passes in the same frame are compressed into:
+
+    first ordinal
+    last ordinal
+    repeat count
+    representative args.
+
+This preserves order and structural identity while reducing log volume.
+
+======================================================================
+11. PREEXISTING SKYRIM SHADERS
+======================================================================
+
+Safe field mode does not require experimental D3D device creation hooks.
+
+Therefore some Skyrim shaders were created before GZFX observed bytecode
+creation and have no bytecode fingerprint.
+
+Pass telemetry uses:
+
+    observed shader bytecode hash when available
+
+otherwise:
+
+    stable in-session shader object identity.
+
+This prevents preexisting Skyrim passes from collapsing into an unhelpful
+"shader 0" signature.
+
+======================================================================
+12. CONCRETE RESOURCE LINEAGE
+======================================================================
+
+Initial listener design retained:
+
+    read-resource hash
+    write-resource hash.
+
+Before merge this was strengthened.
+
+Each compact pass also preserves bounded concrete lists:
+
+    up to 8 unique read resource identities
+    up to 8 unique write resource identities
+
+plus:
+
+    read/write hashes for the full binding set.
+
+This is important.
+
+The next DATA pass can build actual:
+
+    producer
+    ->
+    resource
+    ->
+    consumer
+
+relationships instead of merely knowing that two pass binding sets differ.
+
+The bounded lists cover the principal pass resources while the hashes still
+detect changes outside the retained concrete list.
+
+======================================================================
+13. RESOURCE DISCOVERY
+======================================================================
+
+resources.csv records first-discovery metadata including:
+
+    canonical identity
+    birth sequence
+    resource type
+    width
+    height
+    depth
+    mip count
+    array size
+    format
+    bind flags
+    misc flags
+    sample count
+    usage
+    CPU access
+    structure stride
+    buffer bytes
+    owner hash
+    debug-name hash.
+
+This creates a session-local catalog for identities appearing in pipeline
+records.
+
+======================================================================
+14. RESOURCE CALLBACK LOCK DEVIATION
+======================================================================
+
+The blueprint preferred calling all sinks after Pipeline Cartography releases
+its internal mutex.
+
+Pass telemetry follows that principle.
+
+Resource first-discovery telemetry currently performs the listener callback
+while the Pipeline Cartography mutex is held.
+
+This is accepted for 0.0.24 because the callback:
+
+    performs only a lock-free fixed-record enqueue
+    does not call back into Pipeline Cartography
+    does not format strings
+    does not perform disk I/O
+    does not perform D3D work.
+
+There is no reentrant dependency.
+
+If field telemetry identifies this as measurable contention, resource event
+publication can be deferred outside the lock in a later repair.
+
+======================================================================
+15. STAGE SCHEDULER TELEMETRY
+======================================================================
+
+The listener registers callbacks for every current Stage Scheduler boundary.
+
+stages.csv continuously records:
+
+    frame
+    ordinal
+    boundary
+    phase
+    scheduler sequence
+    reason hash.
+
+This includes the currently mapped domains:
+
+    shadows
+    depth prepass
+    opaque MRT
+    CameraZ
+    stock AO
+    ambient composite
+    volumetrics
+    water
+    global TAA
+    HDR reduction
+    tonemap
+    post-tonemap
+    UI/present.
+
+No capture window is required.
+
+======================================================================
+16. SEMANTIC AUTHORITY TELEMETRY
+======================================================================
+
+At Present:
+
+    Semantic Authority Snapshot is copied.
+
+The listener compares it against the previous frame and writes ONLY semantic
+changes.
+
+semantics.csv includes:
+
+    semantic
+    confidence
+    physical identity
+    generation
+    shape
+    format
+    bind flags
+    observed
+    produced
+    consumed
+    current availability
+    previous availability
+    content epoch
+    epoch kind
+    environment scope
+    valid-from stage
+    valid-until stage
+    change mask.
+
+This provides a continuous semantic-resource timeline without writing 19
+unchanged rows every frame.
+
+======================================================================
+17. WAVE 3 CPU STATUS
+======================================================================
+
+Wave 3 now exposes:
+
+    TelemetryStatus GetTelemetryStatus()
+
+CPU-only fields include:
+
+    frame
+    executions
+    skips
+    history generation
+    history valid
+    history reuse candidate
+    hierarchy valid
+    temporal valid
+    last reset reason
+    latest GPU timing valid
+    latest GPU total ms.
+
+No COM ownership or GPU call is performed by this getter.
+
+======================================================================
+18. WAVE 4 CPU STATUS
+======================================================================
+
+Ambient Visibility v2 now exposes:
+
+    TelemetryStatus GetTelemetryStatus()
+
+CPU-only fields include:
+
+    frame
+    computes
+    applications
+    skips
+    signal history valid
+    Wave3 history generation
+    final visibility frame
+    last applied frame
+    latest GPU timing valid
+    latest GPU total ms.
+
+Again:
+
+    no GPU readback
+    no D3D state query
+    no disk I/O.
+
+======================================================================
+19. FRAME TELEMETRY
+======================================================================
+
+Renderer Forensics sends one FrameCounters snapshot at Present.
+
+frames.csv combines:
+
+    QPC timestamp
+    frame delta
+    approximate FPS
+    mode
+    environment
+    dimensions
+    device generation
+    surface generation
+    per-frame renderer activity deltas
+    Wave3 state
+    Wave4 state
+    queue depth
+    dropped event count.
+
+This provides a session-wide timeline for correlating renderer changes with
+what the user was doing.
+
+======================================================================
+20. ONE-SECOND SUMMARY
+======================================================================
+
+seconds.csv is derived on the writer thread.
+
+It aggregates approximately one second of frame data:
+
+    first/last frame
+    frame count
+    mean/min/max frame ms
+    approximate mean FPS
+    mode
+    environment
+    pipeline run count
+    stage event count
+    GZFX-owned command-list count
+    Skyrim command-list count
+    dropped count
+    queue high-water
+    bytes written.
+
+This should be the first high-level file inspected after future uploads.
+
+======================================================================
+21. TRANSITIONS
+======================================================================
+
+transitions.csv records high-value lifecycle changes:
+
+    listener start/stop
+    mode change
+    environment change
+    resolution change
+    device generation change
+    surface generation change
+    Wave3 history generation change
+    Wave4 history restart
+    frame gap
+    ResizeBuffers.
+
+Queue saturation is also visible in listener health counters.
+
+A queue-overflow-end transition is emitted when pressure recovers.
+
+The beginning of an overflow episode may not itself fit in the ring when the
+ring is already full; therefore the authoritative overflow evidence is the
+monotonic dropped counter/status.
+
+======================================================================
+22. COMMAND-LIST OWNERSHIP
+======================================================================
+
+Renderer Forensics now reports every observed ExecuteCommandList as:
+
+    GZFX-owned
+    or
+    Skyrim/unknown.
+
+For GZFX-owned lists the listener records the OwnedPass enum.
+
+Current owned domains include:
+
+    Wave3DepthHierarchy
+    Wave3TemporalGeometry
+    Wave3Diagnostics
+    Wave4AmbientVisibility
+    Wave4AmbientInjection.
+
+ownership.csv therefore gives a continuous ownership timeline as GZFX
+progressively replaces the graphics stack.
+
+======================================================================
+23. TIMING TELEMETRY
+======================================================================
+
+The listener does NOT add GPU timestamp queries.
+
+Wave3 and Wave4 continue using their existing asynchronous timing systems.
+
+The listener records newer already-resolved CPU timing snapshots.
+
+The writer thread never calls:
+
+    ID3D11DeviceContext::GetData
+    Flush
+    Map.
+
+This prevents the listener from becoming a GPU synchronization device.
+
+======================================================================
+24. WRITER THREAD
+======================================================================
+
+One dedicated writer thread:
+
+    waits up to ~250 ms
+    drains events in batches
+    formats CSV/TXT
+    flushes stream buffers roughly once per second
+    updates listener_status.txt.
+
+It performs no rendering calls.
+
+No per-event FlushFileBuffers exists.
+
+Pipeline files rotate at:
+
+    64 MiB per segment.
+
+======================================================================
+25. LISTENER HEALTH
+======================================================================
+
+listener_status.txt reports:
+
+    initialized
+    writer_alive
+    clean completion state
+    enqueued
+    written
+    dropped
+    queue depth
+    queue high-water
+    ring capacity
+    bytes written
+    current pipeline segment
+    last error
+    healthy/degraded status.
+
+The listener never silently discards telemetry without an observable dropped
+counter.
+
+======================================================================
+26. TEST-HARNESS LIFECYCLE
+======================================================================
+
+Legacy GZFX harnesses dynamically unload GZFX.dll with FreeLibrary.
+
+Leaving a listener writer thread or process-exit callback pointing inside an
+unloaded DLL would be unsafe.
+
+Therefore:
+
+If:
+
+    GZFX_TEST_OUTPUT_ROOT is active
+
+and:
+
+    GZFX_TEST_TELEMETRY_ACTIVE is not active
+
+then:
+
+    telemetry listener remains dormant.
+
+The dedicated telemetry harness explicitly enables it and calls exported:
+
+    GZFX_Shutdown()
+
+before unloading the DLL.
+
+The real Skyrim runtime registers best-effort normal-process shutdown through
+atexit because GZFX remains loaded for the game process lifetime.
+
+No blocking writer join is performed from DllMain/loader lock.
+
+======================================================================
+27. SETTINGS BLUEPRINT DEVIATION
+======================================================================
+
+The blueprint proposed adding:
+
+    [Telemetry]
+    Enabled=1
+    Pipeline=1
+    Semantics=1
+    Stages=1
+    Resources=1
+    Ownership=1
+    Timings=1
+
+to Settings.ini.
+
+0.0.24 does NOT expose that UI/settings surface yet.
+
+Instead:
+
+    real forensic build = telemetry on by default
+
+and an environment override exists:
+
+    GZFX_TELEMETRY_DISABLE
+
+Reason:
+
+The immediate goal is one controlled full-stack discovery campaign, not a
+finished end-user telemetry preferences system.
+
+Future release builds will default heavy telemetry OFF and can add a clean
+settings/UI surface then.
+
+This deviation does not reduce the evidence collected in the authorized test.
+
+======================================================================
+28. MANUAL CAPTURE POLICY
+======================================================================
+
+The old manual capture system remains.
+
+Nothing was deleted.
+
+But for renderer discovery it is now SECONDARY.
+
+The next user session does not require:
+
+    Shift+Numpad5
+
+at all.
+
+Manual capture may be used only when the user wants an extra visual reference.
+
+Continuous telemetry is now the primary source for:
+
+    pipeline order
+    semantics
+    resource lineage
+    transitions
+    ownership
+    timing.
+
+======================================================================
+29. CI
+======================================================================
+
+Final count:
+
+    19 tests
+
+Tests 1-17 remain the complete pre-listener suite.
+
+Added:
+
+18:
+    telemetry_listener
+
+19:
+    telemetry_listener_overflow
+
+Normal telemetry test proves:
+
+    complete session files
+    frames
+    stages
+    semantics
+    resources
+    pipeline runs
+    transitions
+    ownership
+    completion marker
+    zero drops.
+
+Overflow test proves:
+
+    bounded ring saturation
+    dropped > 0
+    no producer block/crash
+    session still completes.
+
+No existing test was removed.
+
+======================================================================
+30. PR CI
+======================================================================
+
+Final PR head:
+
+    5b3c791fcca675450223db01f78f108c2b05f198
+
+Run:
+
+    40159215046
+
+Result:
+
+    19 / 19 PASS
+    0 failed
+
+Total test time:
+
+    18.23 sec
+
+======================================================================
+31. MERGED-MAIN CI
+======================================================================
+
+Merge:
+
+    05403b6d7618e1b21bf600ad835f3b2bed403fc0
+
+Run:
+
+    40159423560
+
+Result:
+
+    19 / 19 PASS
+    0 failed
+
+Total test time:
+
+    18.94 sec
+
+======================================================================
+32. PACKAGE PROOF
+======================================================================
+
+Post-merge package refresh:
+
+    667435afb1f17b748c88b35a3d56789f46f19f6d
+
+Diff from source merge:
+
+    one file only
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Final ZIP blob:
+
+    37643fdec24460cc4265d3b913dac0fa2ba43983
+
+Final ZIP size:
+
+    337,516 bytes
+
+======================================================================
+33. WHAT THIS LISTENER IS FOR
+======================================================================
+
+The listener is intended to discover and map:
+
+    stable pass families
+    environment-specific passes
+    water production/composition
+    reflection production/composition
+    shadows and shadow masks
+    volumetrics
+    transparency/particles
+    global TAA ordering/history
+    HDR reduction/exposure
+    tonemap
+    image-space/post
+    UI boundary
+    resource ping-pong
+    semantic epochs
+    producer/consumer resource relationships
+    GZFX ownership growth.
+
+It brings Project Chat closer to Codex-style renderer visibility.
+
+The difference remains:
+
+    Codex can potentially inspect while work runs;
+    Project Chat receives the complete session after upload.
+
+======================================================================
+34. PERFORMANCE INTERPRETATION
+======================================================================
+
+0.0.24 is a FORENSIC build.
+
+Do not use its FPS as release GZFX performance.
+
+The listener is engineered to avoid the worst self-inflicted overhead:
+
+    no new render-thread file writes
+    no writer-thread D3D calls
+    no render-thread queue blocking
+    no listener GPU readback
+    no forced GPU flush.
+
+But it still:
+
+    continuously tracks renderer state
+    hashes pass state
+    queues telemetry
+    writes substantial session data.
+
+Release performance must later be measured in a quiet build with forensic
+telemetry disabled.
+
+======================================================================
+35. NEXT USER SESSION
+======================================================================
+
+Install the newest package.
+
+Do NOT use Shift+Numpad5 unless an extra visual reference is personally useful.
+
+Play naturally and expose diverse renderer domains.
+
+Recommended:
+
+EXTERIOR DAY:
+    Mode 0 ~20 sec
+    Mode 1 ~20 sec
+    Mode 2 ~20 sec
+    walk/turn normally.
+
+INTERIOR:
+    Mode 0 ~20 sec
+    Mode 1 ~20 sec
+    Mode 2 ~20 sec.
+
+EXTERIOR NIGHT:
+    Mode 0 ~20 sec
+    Mode 1 ~20 sec
+    Mode 2 ~20 sec.
+
+WATER:
+    approach water
+    look across water/reflections
+    move along shoreline
+    optionally enter/exit water.
+
+OTHER USEFUL CONTENT:
+    sky/clouds
+    strong shadows
+    fog/weather
+    fire/particles
+    bright/dark transitions
+    exterior/interior transitions.
+
+Optional:
+
+    brief Mode 3 / Mode 4 intervals.
+
+Quit Skyrim normally.
+
+Then upload ONLY the newest:
+
+    GZFX/Telemetry/session_*/
+
+folder as a ZIP.
+
+======================================================================
+36. NEXT DATA PHASE
+======================================================================
+
+First inspect:
+
+    manifest.txt
+    listener_status.txt
+    seconds.csv
+    transitions.csv
+
+Then:
+
+    stages.csv
+    semantics.csv
+    resources.csv
+    pipeline_runs_*.csv
+    ownership.csv
+    timings.csv
+
+The next DATA report should produce:
+
+    continuous renderer topology
+    environment-specific pass map
+    resource producer/consumer graph
+    unmapped renderer domains
+    high-confidence next semantic promotions
+    exact remaining gaps to full-stack ownership.
+
+Only after that evidence should the next architecture wave be selected.
+
+======================================================================
+37. CURRENT PROJECT STATE
+======================================================================
+
+Wave 1:
+    CLOSED
+
+Wave 2:
+    CLOSED
+
+Wave 3:
+    CLOSED
+
+Wave 4:
+    STACK OWNERSHIP ARCHITECTURE PROVEN
+    FINAL ARTISTIC QUALITY DEFERRED
+
+Current runtime:
+
+    0.0.24-renderer-telemetry-listener
+
+Current project phase:
+
+    TEST / FULL-STACK DISCOVERY
+
+Primary discovery authority:
+
+    Continuous Renderer Telemetry Listener
+
+Manual capture:
+
+    optional secondary evidence
+
+Next graphics wave:
+
+    NOT YET SELECTED
+
+Selection waits for the continuous telemetry DATA pass.
+
+======================================================================
+END OF 0.0.24 ENGINEERING RESULT
+======================================================================
