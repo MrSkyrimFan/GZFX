@@ -2,6 +2,7 @@
 #include "gzfx/diagnostics/resource_intelligence.hpp"
 #include "gzfx/diagnostics/semantic_probe.hpp"
 #include "gzfx/diagnostics/pipeline_cartography.hpp"
+#include "gzfx/diagnostics/telemetry_listener.hpp"
 #include "gzfx/render/scene_effects.hpp"
 #include "gzfx/render/renderer_execution_service.hpp"
 #include "gzfx/render/semantic_authority.hpp"
@@ -2160,8 +2161,28 @@ namespace gzfx::diagnostics
                     &ownedPass,
                     &ownedFrame);
 
-            (void)ownedPass;
-            (void)ownedFrame;
+            if (c == g_primaryContext)
+            {
+                if (gzfxOwned)
+                {
+                    telemetry_listener::
+                        OnOwnedCommandList(
+                            g_frame,
+                            g_drawOrdinalThisFrame.load(),
+                            ownedPass,
+                            commandList,
+                            restoreContextState != FALSE);
+                }
+                else
+                {
+                    telemetry_listener::
+                        OnSkyrimCommandList(
+                            g_frame,
+                            g_drawOrdinalThisFrame.load(),
+                            commandList,
+                            restoreContextState != FALSE);
+                }
+            }
 
             if (c == g_primaryContext &&
                 !gzfxOwned)
@@ -2666,6 +2687,39 @@ namespace gzfx::diagnostics
                         g_primaryContext);
                 }
 
+                telemetry_listener::FrameCounters
+                    telemetryCounters{};
+
+                telemetryCounters.frame =
+                    g_frame;
+                telemetryCounters.drawOrdinal =
+                    g_drawOrdinalThisFrame.load();
+                telemetryCounters.draws =
+                    g_draws.load();
+                telemetryCounters.drawIndexedCalls =
+                    g_drawIndexedCalls.load();
+                telemetryCounters.drawInstancedCalls =
+                    g_drawInstancedCalls.load();
+                telemetryCounters.drawIndexedInstancedCalls =
+                    g_drawIndexedInstancedCalls.load();
+                telemetryCounters.dispatchCalls =
+                    g_dispatchCalls.load();
+                telemetryCounters.renderTargetSets =
+                    g_rtSets.load();
+                telemetryCounters.renderTargetClears =
+                    g_rtvClears.load();
+                telemetryCounters.depthClears =
+                    g_dsvClears.load();
+                telemetryCounters.copies =
+                    g_copies.load();
+                telemetryCounters.resolves =
+                    g_resolves.load();
+                telemetryCounters.viewportSets =
+                    g_viewportSets.load();
+
+                telemetry_listener::OnPresent(
+                    telemetryCounters);
+
                 g_drawOrdinalThisFrame.store(0);
                 ++g_frame;
             }
@@ -2720,6 +2774,12 @@ namespace gzfx::diagnostics
             {
                 gzfx::render::semantic_authority::
                     OnResize();
+
+                telemetry_listener::OnResize(
+                    g_frame,
+                    width,
+                    height,
+                    format);
             }
 
             return result;

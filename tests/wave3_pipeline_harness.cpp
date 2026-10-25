@@ -13,6 +13,7 @@
 #include <vector>
 
 using InitializeFn = bool (*)();
+using ShutdownFn = void (*)();
 
 namespace
 {
@@ -239,12 +240,31 @@ int wmain(int argc, wchar_t** argv)
         return 3;
     }
 
+    wchar_t telemetryEnabledValue[8]{};
+    const bool telemetryActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_TELEMETRY_ACTIVE",
+            telemetryEnabledValue,
+            static_cast<DWORD>(
+                std::size(telemetryEnabledValue))) > 0;
+
+    wchar_t overflowValue[8]{};
+    const bool expectTelemetryOverflow =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_TELEMETRY_EXPECT_OVERFLOW",
+            overflowValue,
+            static_cast<DWORD>(
+                std::size(overflowValue))) > 0;
+
     const HMODULE gzfx = LoadLibraryW(dllPath.c_str());
     if (!gzfx) return 4;
 
     const auto initialize = reinterpret_cast<InitializeFn>(
         GetProcAddress(gzfx, "GZFX_Initialize"));
     if (!initialize || !initialize()) return 5;
+
+    const auto shutdown = reinterpret_cast<ShutdownFn>(
+        GetProcAddress(gzfx, "GZFX_Shutdown"));
 
     const wchar_t* className = L"GZFX.Wave3PipelineHarness";
     WNDCLASSEXW wc{};
@@ -807,6 +827,170 @@ int wmain(int argc, wchar_t** argv)
             << "\n";
 
         return 15;
+    }
+
+    if (telemetryActive)
+    {
+        if (shutdown == nullptr)
+        {
+            std::cerr << "Telemetry shutdown export unavailable\n";
+            return 16;
+        }
+
+        shutdown();
+
+        const auto telemetryRoot =
+            outputRoot /
+            L"GZFX" /
+            L"Telemetry";
+
+        std::filesystem::path session;
+
+        if (std::filesystem::exists(
+                telemetryRoot))
+        {
+            for (const auto& entry :
+                 std::filesystem::directory_iterator(
+                     telemetryRoot))
+            {
+                if (entry.is_directory())
+                {
+                    session =
+                        entry.path();
+                }
+            }
+        }
+
+        const auto existsNonEmpty =
+            [](const std::filesystem::path& path)
+            {
+                std::error_code error;
+
+                return
+                    std::filesystem::exists(
+                        path,
+                        error) &&
+                    !error &&
+                    std::filesystem::file_size(
+                        path,
+                        error) > 0 &&
+                    !error;
+            };
+
+        const bool coreFiles =
+            !session.empty() &&
+            existsNonEmpty(
+                session / L"manifest.txt") &&
+            existsNonEmpty(
+                session / L"listener_status.txt") &&
+            existsNonEmpty(
+                session / L"frames.csv") &&
+            existsNonEmpty(
+                session / L"stages.csv") &&
+            existsNonEmpty(
+                session / L"semantics.csv") &&
+            existsNonEmpty(
+                session / L"resources.csv") &&
+            existsNonEmpty(
+                session / L"pipeline_runs_0001.csv") &&
+            existsNonEmpty(
+                session / L"transitions.csv") &&
+            existsNonEmpty(
+                session / L"ownership.csv") &&
+            existsNonEmpty(
+                session / L"seconds.csv") &&
+            existsNonEmpty(
+                session /
+                    L"telemetry_session_complete.txt");
+
+        if (!coreFiles)
+        {
+            std::cerr
+                << "Telemetry session files incomplete\n";
+            return 17;
+        }
+
+        const std::string listenerStatus =
+            ReadAll(
+                session /
+                L"listener_status.txt");
+
+        const std::string stages =
+            ReadAll(
+                session /
+                L"stages.csv");
+
+        const std::string semantics =
+            ReadAll(
+                session /
+                L"semantics.csv");
+
+        const std::string ownership =
+            ReadAll(
+                session /
+                L"ownership.csv");
+
+        const std::uint64_t dropped =
+            FindUnsignedOnLine(
+                listenerStatus,
+                "dropped=",
+                "dropped=");
+
+        const bool stageCoverage =
+            stages.find(
+                "after_opaque_world_mrt") !=
+                    std::string::npos &&
+            stages.find(
+                "after_cameraz") !=
+                    std::string::npos &&
+            stages.find(
+                "after_stock_ao") !=
+                    std::string::npos &&
+            stages.find(
+                "at_ambient_screen_space_composite") !=
+                    std::string::npos;
+
+        const bool semanticCoverage =
+            semantics.find("MAIN_HDR") !=
+                    std::string::npos &&
+            semantics.find(
+                "MAIN_DEPTH_CURRENT") !=
+                    std::string::npos &&
+            semantics.find("MOTION") !=
+                    std::string::npos &&
+            semantics.find(
+                "NORMAL_MASK_CURRENT") !=
+                    std::string::npos &&
+            semantics.find(
+                "SAO_FILTERED") !=
+                    std::string::npos;
+
+        const bool ownershipCoverage =
+            ownership.find(",gzfx,") !=
+                std::string::npos;
+
+        const bool dropExpectation =
+            expectTelemetryOverflow
+                ? dropped > 0
+                : dropped == 0;
+
+        if (!stageCoverage ||
+            !semanticCoverage ||
+            !ownershipCoverage ||
+            !dropExpectation)
+        {
+            std::cerr
+                << "Telemetry listener acceptance failed\n"
+                << "dropped="
+                << dropped
+                << " expect_overflow="
+                << expectTelemetryOverflow
+                << "\n"
+                << listenerStatus
+                << "\n";
+
+            return 18;
+        }
     }
 
     for (auto*& rtv : cameraRtvs) if (rtv) rtv->Release();

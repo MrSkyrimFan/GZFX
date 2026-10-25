@@ -395,6 +395,17 @@ namespace gzfx::diagnostics::pipeline_cartography
         std::uintptr_t g_knownNormal = 0;
         std::uintptr_t g_knownAux = 0;
 
+        PassTelemetrySink g_passTelemetrySink = nullptr;
+        ResourceTelemetrySink g_resourceTelemetrySink = nullptr;
+        void* g_telemetryUser = nullptr;
+
+        bool TrackingActiveLocked() noexcept
+        {
+            return
+                g_captureActive ||
+                g_passTelemetrySink != nullptr;
+        }
+
         void HashMix(
             std::uint64_t& hash,
             const std::uint64_t value)
@@ -438,6 +449,426 @@ namespace gzfx::diagnostics::pipeline_cartography
             }
 
             return hash;
+        }
+
+        std::uint64_t HashViewBinding(
+            const ViewBinding& binding)
+        {
+            std::uint64_t hash =
+                14695981039346656037ull;
+
+            HashMix(
+                hash,
+                binding.resource);
+            HashMix(
+                hash,
+                static_cast<std::uint64_t>(
+                    binding.view.format));
+            HashMix(
+                hash,
+                binding.view.dimension);
+            HashMix(
+                hash,
+                static_cast<std::uint64_t>(
+                    binding.view.firstMip));
+            HashMix(
+                hash,
+                static_cast<std::uint64_t>(
+                    binding.view.mipCount));
+            HashMix(
+                hash,
+                static_cast<std::uint64_t>(
+                    binding.view.firstSlice));
+            HashMix(
+                hash,
+                static_cast<std::uint64_t>(
+                    binding.view.sliceCount));
+            HashMix(
+                hash,
+                static_cast<std::uint64_t>(
+                    binding.view.subresource));
+            HashMix(
+                hash,
+                binding.view.flags);
+
+            return hash;
+        }
+
+        ResourceTelemetry MakeResourceTelemetry(
+            const ResourceMeta& meta)
+        {
+            ResourceTelemetry out{};
+            out.identity = meta.id;
+            out.birth = meta.birth;
+            out.type =
+                static_cast<std::uint32_t>(
+                    meta.type);
+            out.width = meta.width;
+            out.height = meta.height;
+            out.depth = meta.depth;
+            out.mipLevels = meta.mipLevels;
+            out.arraySize = meta.arraySize;
+            out.format =
+                static_cast<std::uint32_t>(
+                    meta.format);
+            out.bindFlags = meta.bindFlags;
+            out.miscFlags = meta.miscFlags;
+            out.sampleCount = meta.sampleCount;
+            out.usage =
+                static_cast<std::uint32_t>(
+                    meta.usage);
+            out.cpuAccessFlags =
+                meta.cpuAccessFlags;
+            out.structureStride =
+                meta.structureStride;
+            out.bufferBytes =
+                meta.bufferBytes;
+            out.ownerHash =
+                HashBytes(
+                    meta.owner.data(),
+                    meta.owner.size());
+            out.debugNameHash =
+                HashBytes(
+                    meta.debugName.data(),
+                    meta.debugName.size());
+
+            return out;
+        }
+
+        PassTelemetry BuildPassTelemetryLocked(
+            const std::uint64_t frame,
+            const std::uint64_t ordinal,
+            const TelemetryPassKind kind,
+            const DrawKind drawKind,
+            const std::array<
+                std::uint64_t,
+                4>& args)
+        {
+            PassTelemetry out{};
+            out.frame = frame;
+            out.ordinal = ordinal;
+            out.kind = kind;
+            out.drawKind = drawKind;
+            out.args = args;
+
+            for (std::size_t i = 0;
+                 i < out.shaderHashes.size();
+                 ++i)
+            {
+                out.shaderHashes[i] =
+                    g_state.shaders[i].hash != 0
+                        ? g_state.shaders[i].hash
+                        : static_cast<std::uint64_t>(
+                            g_state.shaders[i].id);
+            }
+
+            for (std::size_t i = 0;
+                 i < out.rtvs.size();
+                 ++i)
+            {
+                out.rtvs[i] =
+                    g_state.rtvs[i].resource;
+            }
+
+            out.dsv =
+                g_state.dsv.resource;
+
+            std::uint64_t readHash =
+                14695981039346656037ull;
+
+            std::uint64_t cbHash =
+                14695981039346656037ull;
+
+            std::uint64_t samplerHash =
+                14695981039346656037ull;
+
+            for (std::size_t stage = 0;
+                 stage < kStageCount;
+                 ++stage)
+            {
+                for (std::size_t slot = 0;
+                     slot < kSrvSlots;
+                     ++slot)
+                {
+                    const auto& binding =
+                        g_state.srvs[
+                            stage][slot];
+
+                    if (binding.resource == 0)
+                    {
+                        continue;
+                    }
+
+                    HashMix(
+                        readHash,
+                        stage);
+                    HashMix(
+                        readHash,
+                        slot);
+                    HashMix(
+                        readHash,
+                        HashViewBinding(
+                            binding));
+
+                    bool alreadyListed = false;
+
+                    for (std::uint32_t i = 0;
+                         i < out.readResourceCount;
+                         ++i)
+                    {
+                        if (out.readResources[i] ==
+                            binding.resource)
+                        {
+                            alreadyListed = true;
+                            break;
+                        }
+                    }
+
+                    if (!alreadyListed &&
+                        out.readResourceCount <
+                            out.readResources.size())
+                    {
+                        out.readResources[
+                            out.readResourceCount++] =
+                            binding.resource;
+                    }
+                }
+
+                for (std::size_t slot = 0;
+                     slot < kCbSlots;
+                     ++slot)
+                {
+                    const auto& binding =
+                        g_state.cbs[
+                            stage][slot];
+
+                    if (binding.id == 0)
+                    {
+                        continue;
+                    }
+
+                    HashMix(
+                        cbHash,
+                        stage);
+                    HashMix(
+                        cbHash,
+                        slot);
+                    HashMix(
+                        cbHash,
+                        binding.id);
+                    HashMix(
+                        cbHash,
+                        binding.bytes);
+                }
+
+                for (std::size_t slot = 0;
+                     slot < kSamplerSlots;
+                     ++slot)
+                {
+                    const auto& binding =
+                        g_state.samplers[
+                            stage][slot];
+
+                    if (binding.id == 0)
+                    {
+                        continue;
+                    }
+
+                    HashMix(
+                        samplerHash,
+                        stage);
+                    HashMix(
+                        samplerHash,
+                        slot);
+                    HashMix(
+                        samplerHash,
+                        binding.hash);
+                }
+            }
+
+            std::uint64_t writeHash =
+                14695981039346656037ull;
+
+            const auto addWriteResource =
+                [&](const std::uintptr_t identity)
+                {
+                    if (identity == 0)
+                    {
+                        return;
+                    }
+
+                    for (std::uint32_t i = 0;
+                         i < out.writeResourceCount;
+                         ++i)
+                    {
+                        if (out.writeResources[i] ==
+                            identity)
+                        {
+                            return;
+                        }
+                    }
+
+                    if (out.writeResourceCount <
+                        out.writeResources.size())
+                    {
+                        out.writeResources[
+                            out.writeResourceCount++] =
+                            identity;
+                    }
+                };
+
+            for (const auto& binding :
+                 g_state.rtvs)
+            {
+                if (binding.resource != 0)
+                {
+                    HashMix(
+                        writeHash,
+                        HashViewBinding(
+                            binding));
+
+                    addWriteResource(
+                        binding.resource);
+                }
+            }
+
+            if (g_state.dsv.resource != 0)
+            {
+                HashMix(
+                    writeHash,
+                    HashViewBinding(
+                        g_state.dsv));
+
+                addWriteResource(
+                    g_state.dsv.resource);
+            }
+
+            std::uint64_t omUavHash =
+                14695981039346656037ull;
+
+            std::uint64_t csUavHash =
+                14695981039346656037ull;
+
+            for (const auto& binding :
+                 g_state.omUavs)
+            {
+                if (binding.resource == 0)
+                {
+                    continue;
+                }
+
+                const auto hash =
+                    HashViewBinding(
+                        binding);
+
+                HashMix(
+                    omUavHash,
+                    hash);
+                HashMix(
+                    writeHash,
+                    hash);
+
+                addWriteResource(
+                    binding.resource);
+            }
+
+            for (const auto& binding :
+                 g_state.csUavs)
+            {
+                if (binding.resource == 0)
+                {
+                    continue;
+                }
+
+                const auto hash =
+                    HashViewBinding(
+                        binding);
+
+                HashMix(
+                    csUavHash,
+                    hash);
+                HashMix(
+                    writeHash,
+                    hash);
+            }
+
+            out.omUavHash =
+                omUavHash;
+            out.csUavHash =
+                csUavHash;
+            out.readHash =
+                readHash;
+            out.writeHash =
+                writeHash;
+            out.constantBufferHash =
+                cbHash;
+            out.samplerHash =
+                samplerHash;
+
+            out.blendHash =
+                g_state.blendHash;
+            out.depthHash =
+                g_state.depthHash;
+            out.rasterHash =
+                g_state.rasterHash;
+
+            out.topology =
+                static_cast<std::uint32_t>(
+                    g_state.topology);
+            out.viewportWidth =
+                g_state.viewportWidth;
+            out.viewportHeight =
+                g_state.viewportHeight;
+
+            return out;
+        }
+
+        void EmitPassTelemetry(
+            const std::uint64_t frame,
+            const std::uint64_t ordinal,
+            const TelemetryPassKind kind,
+            const DrawKind drawKind = DrawKind::Draw,
+            const std::array<
+                std::uint64_t,
+                4> args = {}) noexcept
+        {
+            try
+            {
+                PassTelemetry telemetry{};
+                PassTelemetrySink sink = nullptr;
+                void* user = nullptr;
+
+                {
+                    std::scoped_lock lock(
+                        g_mutex);
+
+                    if (g_passTelemetrySink ==
+                        nullptr)
+                    {
+                        return;
+                    }
+
+                    telemetry =
+                        BuildPassTelemetryLocked(
+                            frame,
+                            ordinal,
+                            kind,
+                            drawKind,
+                            args);
+
+                    sink =
+                        g_passTelemetrySink;
+                    user =
+                        g_telemetryUser;
+                }
+
+                sink(
+                    telemetry,
+                    user);
+            }
+            catch (...)
+            {
+            }
         }
 
         std::uintptr_t CanonicalId(IUnknown* value)
@@ -928,9 +1359,21 @@ namespace gzfx::diagnostics::pipeline_cartography
                     DebugObjectName(
                         resource);
 
+                const ResourceTelemetry telemetry =
+                    MakeResourceTelemetry(
+                        meta);
+
                 g_resources.emplace(
                     id,
                     std::move(meta));
+
+                if (g_resourceTelemetrySink !=
+                    nullptr)
+                {
+                    g_resourceTelemetrySink(
+                        telemetry,
+                        g_telemetryUser);
+                }
             }
             else
             {
@@ -4416,6 +4859,53 @@ namespace gzfx::diagnostics::pipeline_cartography
         }
     }
 
+    void SetTelemetrySinks(
+        const PassTelemetrySink passSink,
+        const ResourceTelemetrySink resourceSink,
+        void* const user) noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(
+                g_mutex);
+
+            g_passTelemetrySink =
+                passSink;
+            g_resourceTelemetrySink =
+                resourceSink;
+            g_telemetryUser =
+                user;
+        }
+        catch (...)
+        {
+        }
+    }
+
+    void ClearTelemetrySinks() noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(
+                g_mutex);
+
+            g_passTelemetrySink =
+                nullptr;
+            g_resourceTelemetrySink =
+                nullptr;
+            g_telemetryUser =
+                nullptr;
+
+            if (!g_captureActive)
+            {
+                g_state =
+                    CurrentState{};
+            }
+        }
+        catch (...)
+        {
+        }
+    }
+
     bool AttachDevice(
         ID3D11Device* device) noexcept
     {
@@ -4686,7 +5176,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -4713,7 +5203,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -4757,7 +5247,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -4795,7 +5285,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -4832,7 +5322,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -4893,7 +5383,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -4991,7 +5481,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -5031,7 +5521,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -5089,7 +5579,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -5148,7 +5638,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -5185,7 +5675,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (g_captureActive)
+            if (TrackingActiveLocked())
             {
                 g_state.topology =
                     topology;
@@ -5205,7 +5695,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (!g_captureActive)
+            if (!TrackingActiveLocked())
             {
                 return;
             }
@@ -5242,7 +5732,7 @@ namespace gzfx::diagnostics::pipeline_cartography
             std::scoped_lock lock(
                 g_mutex);
 
-            if (g_captureActive)
+            if (TrackingActiveLocked())
             {
                 g_state =
                     CurrentState{};
@@ -5265,6 +5755,13 @@ namespace gzfx::diagnostics::pipeline_cartography
         ID3D11Buffer* indirectArgs,
         const UINT indirectOffset) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::Draw,
+            kind,
+            {a, b, c, d});
         try
         {
             std::scoped_lock lock(
@@ -5327,6 +5824,13 @@ namespace gzfx::diagnostics::pipeline_cartography
         ID3D11Buffer* indirectArgs,
         const UINT indirectOffset) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::Dispatch,
+            DrawKind::Draw,
+            {x, y, z, indirectOffset});
         try
         {
             std::scoped_lock lock(
@@ -5632,6 +6136,11 @@ namespace gzfx::diagnostics::pipeline_cartography
         ID3D11Resource* destination,
         ID3D11Resource* source) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::CopyResource);
         try
         {
             std::scoped_lock lock(
@@ -5681,6 +6190,13 @@ namespace gzfx::diagnostics::pipeline_cartography
         const UINT sourceSubresource,
         const D3D11_BOX* sourceBox) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::CopySubresource,
+            DrawKind::Draw,
+            {destinationSubresource, sourceSubresource, destinationX, destinationY});
         try
         {
             std::scoped_lock lock(
@@ -5746,6 +6262,13 @@ namespace gzfx::diagnostics::pipeline_cartography
         const UINT sourceSubresource,
         const DXGI_FORMAT format) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::Resolve,
+            DrawKind::Draw,
+            {destinationSubresource, sourceSubresource, static_cast<std::uint64_t>(format), 0});
         try
         {
             std::scoped_lock lock(
@@ -5801,6 +6324,11 @@ namespace gzfx::diagnostics::pipeline_cartography
         ID3D11RenderTargetView* view,
         const FLOAT color[4]) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::ClearRtv);
         try
         {
             std::scoped_lock lock(
@@ -5866,6 +6394,13 @@ namespace gzfx::diagnostics::pipeline_cartography
         const FLOAT depth,
         const UINT8 stencil) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::ClearDsv,
+            DrawKind::Draw,
+            {flags, stencil, 0, 0});
         try
         {
             std::scoped_lock lock(
@@ -5914,6 +6449,11 @@ namespace gzfx::diagnostics::pipeline_cartography
         ID3D11UnorderedAccessView* view,
         const UINT values[4]) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::ClearUavUint);
         try
         {
             std::scoped_lock lock(
@@ -5957,6 +6497,11 @@ namespace gzfx::diagnostics::pipeline_cartography
         ID3D11UnorderedAccessView* view,
         const FLOAT values[4]) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::ClearUavFloat);
         try
         {
             std::scoped_lock lock(
@@ -6010,6 +6555,11 @@ namespace gzfx::diagnostics::pipeline_cartography
         const std::uint64_t drawOrdinal,
         ID3D11ShaderResourceView* view) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::GenerateMips);
         try
         {
             std::scoped_lock lock(
@@ -6055,6 +6605,19 @@ namespace gzfx::diagnostics::pipeline_cartography
         ID3D11CommandList* commandList,
         const BOOL restoreContextState) noexcept
     {
+
+        EmitPassTelemetry(
+            frame,
+            drawOrdinal,
+            TelemetryPassKind::ExecuteCommandList,
+            DrawKind::Draw,
+            {
+                reinterpret_cast<std::uint64_t>(
+                    commandList),
+                restoreContextState ? 1ull : 0ull,
+                0,
+                0
+            });
         try
         {
             std::scoped_lock lock(

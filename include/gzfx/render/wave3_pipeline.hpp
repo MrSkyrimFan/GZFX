@@ -6,6 +6,21 @@
 
 namespace gzfx::render::wave3
 {
+    struct TelemetryStatus
+    {
+        std::uint64_t frame = 0;
+        std::uint64_t executions = 0;
+        std::uint64_t skips = 0;
+        std::uint64_t historyGeneration = 0;
+        bool historyValid = false;
+        bool historyReusedCandidate = false;
+        bool hierarchyValid = false;
+        bool temporalValid = false;
+        std::uint32_t lastResetReason = 0;
+        bool gpuTimingValid = false;
+        double gpuTotalMs = 0.0;
+    };
+
     struct FrameView
     {
         std::uint64_t frame = 0;
@@ -33,4 +48,6 @@ namespace gzfx::render::wave3
 
     void ReleaseFrameView(
         FrameView& view) noexcept;
+
+    TelemetryStatus GetTelemetryStatus() noexcept;
 }

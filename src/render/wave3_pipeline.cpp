@@ -5041,4 +5041,46 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
 
         view = {};
     }
+
+    TelemetryStatus GetTelemetryStatus() noexcept
+    {
+        TelemetryStatus out{};
+
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+
+            out.frame =
+                g_history.lastFrame;
+            out.executions =
+                g_executeCount;
+            out.skips =
+                g_skipCount;
+            out.historyGeneration =
+                g_history.generation;
+            out.historyValid =
+                g_history.valid;
+            out.historyReusedCandidate =
+                g_history.valid &&
+                g_history.lastReset ==
+                    ResetReason::None;
+            out.hierarchyValid =
+                g_runtime.hierarchy != nullptr;
+            out.temporalValid =
+                g_runtime.history[0].depth.texture !=
+                nullptr;
+            out.lastResetReason =
+                static_cast<std::uint32_t>(
+                    g_history.lastReset);
+            out.gpuTimingValid =
+                g_runtime.latestTiming.valid;
+            out.gpuTotalMs =
+                g_runtime.latestTiming.totalMs;
+        }
+        catch (...)
+        {
+        }
+
+        return out;
+    }
 }

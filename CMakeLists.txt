@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.23
+    VERSION 0.0.24
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -68,6 +68,7 @@ add_library(GZFX SHARED
     src/diagnostics/renderer_forensics.cpp
     src/diagnostics/resource_intelligence.cpp
     src/diagnostics/semantic_probe.cpp
+    src/diagnostics/telemetry_listener.cpp
     src/render/runtime_state.cpp
     src/render/semantic_authority.cpp
     src/render/stage_scheduler.cpp
@@ -372,4 +373,32 @@ add_test(
         "$<TARGET_FILE:GZFXWave3PipelineHarness>"
         "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/ambient-visibility-v2-output"
+)
+
+add_test(
+    NAME telemetry_listener
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/telemetry-listener-output"
+)
+
+set_tests_properties(
+    telemetry_listener
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_TELEMETRY_ACTIVE=1"
+)
+
+add_test(
+    NAME telemetry_listener_overflow
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/telemetry-listener-overflow-output"
+)
+
+set_tests_properties(
+    telemetry_listener_overflow
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_TELEMETRY_ACTIVE=1;GZFX_TEST_TELEMETRY_RING_CAPACITY=64;GZFX_TEST_TELEMETRY_FORCE_OVERFLOW=1;GZFX_TEST_TELEMETRY_EXPECT_OVERFLOW=1"
 )
