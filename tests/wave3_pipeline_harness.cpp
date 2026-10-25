@@ -1484,6 +1484,20 @@ int wmain(int argc, wchar_t** argv)
             presentTimeline.find("after_original_present") !=
                 std::string::npos;
 
+        const bool creationIdentityCoverage =
+            listenerStatus.find(
+                "stable_shader_creation_hooks_armed=true") !=
+                    std::string::npos &&
+            listenerStatus.find(
+                "resource_creation_hooks_armed=true") !=
+                    std::string::npos &&
+            listenerStatus.find(
+                "shader_creations_observed=0") ==
+                    std::string::npos &&
+            listenerStatus.find(
+                "resource_creations_observed=0") ==
+                    std::string::npos;
+
         bool deferredCoverage =
             !lateStackActive;
 
@@ -1859,6 +1873,7 @@ int wmain(int argc, wchar_t** argv)
             !ownershipCoverage ||
             !shaderIdentitySchema ||
             !presentTimelineCoverage ||
+            !creationIdentityCoverage ||
             !dropExpectation)
         {
             std::cerr
