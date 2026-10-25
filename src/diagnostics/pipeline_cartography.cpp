@@ -583,10 +583,15 @@ namespace gzfx::diagnostics::pipeline_cartography
                  ++i)
             {
                 out.shaderHashes[i] =
-                    g_state.shaders[i].hash != 0
-                        ? g_state.shaders[i].hash
-                        : static_cast<std::uint64_t>(
-                            g_state.shaders[i].id);
+                    g_state.shaders[i].hash;
+                out.shaderObjectIds[i] =
+                    g_state.shaders[i].id;
+
+                if (g_state.shaders[i].hash != 0)
+                {
+                    out.shaderHashKnownMask |=
+                        (1u << static_cast<std::uint32_t>(i));
+                }
             }
 
             for (std::size_t i = 0;
@@ -4966,6 +4971,92 @@ namespace gzfx::diagnostics::pipeline_cartography
         {
             std::scoped_lock lock(g_mutex);
             return RegisterResourceLocked(resource);
+        }
+        catch (...)
+        {
+            return 0;
+        }
+    }
+
+    void ObserveCreatedResource(
+        ID3D11Resource* const resource,
+        const char* const ownerModule) noexcept
+    {
+        try
+        {
+            if (resource == nullptr)
+            {
+                return;
+            }
+
+            const std::string owner =
+                ownerModule != nullptr &&
+                *ownerModule != '\0'
+                    ? ownerModule
+                    : "unknown";
+
+            std::scoped_lock lock(g_mutex);
+            RegisterResourceLocked(
+                resource,
+                &owner);
+        }
+        catch (...)
+        {
+        }
+    }
+
+    void ObserveCreatedShader(
+        const ShaderStage stage,
+        ID3D11DeviceChild* const shader,
+        const void* const bytecode,
+        const std::size_t bytecodeBytes,
+        const char* const ownerModule) noexcept
+    {
+        try
+        {
+            if (shader == nullptr)
+            {
+                return;
+            }
+
+            const std::string owner =
+                ownerModule != nullptr &&
+                *ownerModule != '\0'
+                    ? ownerModule
+                    : "unknown";
+
+            RegisterShaderCreated(
+                shader,
+                stage,
+                bytecode,
+                static_cast<SIZE_T>(bytecodeBytes),
+                owner);
+        }
+        catch (...)
+        {
+        }
+    }
+
+    std::uint64_t StableShaderHash(
+        const std::uintptr_t shaderObjectIdentity) noexcept
+    {
+        try
+        {
+            if (shaderObjectIdentity == 0)
+            {
+                return 0;
+            }
+
+            std::scoped_lock lock(g_mutex);
+
+            const auto found =
+                g_shaders.find(
+                    shaderObjectIdentity);
+
+            return
+                found != g_shaders.end()
+                    ? found->second.hash
+                    : 0;
         }
         catch (...)
         {
