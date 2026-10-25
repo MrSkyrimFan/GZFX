@@ -15,4 +15,5 @@ namespace gzfx::diagnostics
 
     bool ArmRendererForensics() noexcept;
     RendererForensicsStatus GetRendererForensicsStatus() noexcept;
+    std::uint64_t CurrentRendererFrame() noexcept;
 }
