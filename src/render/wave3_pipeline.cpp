@@ -341,6 +341,17 @@ namespace gzfx::render::wave3
             }
         }
 
+        bool TestCaptureRequest()
+        {
+            wchar_t value[8]{};
+
+            return GetEnvironmentVariableW(
+                L"GZFX_TEST_WAVE3_CAPTURE_REQUEST",
+                value,
+                static_cast<DWORD>(
+                    std::size(value))) > 0;
+        }
+
         bool TestStatusEveryFrame()
         {
             wchar_t value[8]{};
@@ -4619,6 +4630,18 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 }
 
                 std::scoped_lock lock(g_mutex);
+
+                static bool testCaptureRequested = false;
+
+                if (!testCaptureRequested &&
+                    TestCaptureRequest())
+                {
+                    g_captureRequested.store(
+                        true,
+                        std::memory_order_release);
+                    testCaptureRequested = true;
+                }
+
                 BeginRequestedCapture(event.frame);
 
                 execution::ExecutionLease lease{};
