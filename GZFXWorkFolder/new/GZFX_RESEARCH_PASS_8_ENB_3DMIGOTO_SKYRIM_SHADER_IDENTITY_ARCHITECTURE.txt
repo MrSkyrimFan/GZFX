@@ -1,0 +1,1824 @@
+GZFX RESEARCH PASS 8
+ENB / 3Dmigoto / Skyrim Shader-Identity Architecture
+Research date: October 25, 2026
+Status: RESEARCH COMPLETE
+Purpose: Determine how mature Skyrim/D3D11 graphics frameworks establish renderer ownership and identity, and identify the clean independent architecture GZFX should adopt.
+
+CONTROLLING PRIOR AUTHORITY:
+    GZFXWorkFolder/new/GZFX_0.0.25_LATE_STACK_FIELD_VALIDATION_FINDINGS.txt
+    GZFXWorkFolder/new/GZFX_RESEARCH_PASS_7_RENDER_TIMELINE_ENGINE_ANCHORS_AND_LATE_STACK_CLOSURE.txt
+
+======================================================================
+1. EXECUTIVE VERDICT
+======================================================================
+
+This research materially sharpens Research Pass 7.
+
+The useful lesson from ENB is NOT:
+
+    "copy ENB's proprietary implementation"
+
+and it is NOT:
+
+    "turn GZFX into another d3d11.dll proxy."
+
+The useful lesson is that a mature graphics framework must maintain stable
+identity across the rendering stack.
+
+The architecture repeatedly seen across ENB's shipped SDK/shaders, 3Dmigoto,
+ReShade, Community Shaders, PureDark's public Skyrim Upscaler, Nukem9's public
+Skyrim shader tooling, and GZFX's own successful field evidence is:
+
+    1. intercept graphics-device creation early;
+    2. know the primary device/context/swapchain from birth;
+    3. assign stable identities to shaders/resources when they are created;
+    4. track current D3D state continuously;
+    5. know which subsystem owns every injected command list;
+    6. anchor generic D3D activity to game-specific semantic phases;
+    7. run custom graphics work at an intentional stage, not simply "at Present";
+    8. restore/contain state so injected work cannot silently corrupt Skyrim;
+    9. use engine semantics and D3D evidence to cross-validate one another.
+
+GZFX already owns a surprising amount of this architecture.
+
+It already has:
+
+    - dinput8 bootstrap;
+    - SkyrimSE.exe IAT interception for D3D11/DXGI creation;
+    - primary device/context/swapchain discovery;
+    - immediate-context execution interception;
+    - semantic resource authority;
+    - detailed resource lineage;
+    - deferred-context recording;
+    - command-list execution service;
+    - stage scheduler;
+    - GPU work recorded on deferred contexts;
+    - explicit state restoration behavior;
+    - caller-module code in the experimental creation lane;
+    - resource birth records;
+    - shader bytecode hashing code.
+
+The critical gap is that GZFX's strongest stable creation-time identity lane is
+currently disabled in normal field builds behind:
+
+    GZFX_EXPERIMENTAL_DEVICE_CREATION_HOOKS
+
+As a consequence, normal telemetry often substitutes a runtime COM pointer when
+a stable shader bytecode hash is unavailable.
+
+That has forced late renderer research to repeatedly rediscover the same shader
+families from volatile pointer values and resource shapes.
+
+Research Pass 8 therefore recommends:
+
+    DO NOT replace GZFX's architecture with ENB/3Dmigoto wrappers.
+
+Instead:
+
+    PROMOTE a hardened creation-time identity registry
+    +
+    COMPLETE command-list ownership
+    +
+    ADD Skyrim engine semantic anchors from Research Pass 7
+    +
+    KEEP existing D3D state/resource cartography as independent proof.
+
+This is the shortest path from today's forensic renderer to a stable native
+graphics framework.
+
+======================================================================
+2. RESEARCH BOUNDARY AND SOURCE MATERIAL
+======================================================================
+
+The repository owner supplied the official ENBSeries Skyrim SE 0.505 archive
+for research.
+
+Uploaded archive:
+
+    enbseries_skyrimse_v0505.zip
+
+SHA256:
+
+    93fe8efc6ac354f0509d8f08dfe4547b8253d67235536ee757fc18d5600ba72d
+
+Archive entries:
+
+    35
+
+Primary static artifacts examined:
+
+    WrapperVersion/d3d11.dll
+    WrapperVersion/d3dcompiler_46e.dll
+    WrapperVersion/enblocal.ini
+    WrapperVersion/enbseries.ini
+    WrapperVersion/readme_en.txt
+    WrapperVersion/license_en.txt
+
+    WrapperVersion/enbeffectprepass.fx
+    WrapperVersion/enbdepthoffield.fx
+    WrapperVersion/enbadaptation.fx
+    WrapperVersion/enbbloom.fx
+    WrapperVersion/enblens.fx
+    WrapperVersion/enbeffect.fx
+    WrapperVersion/enbeffectpostpass.fx
+    WrapperVersion/enbunderwater.fx
+
+    enbseries_sdk.zip
+        enbseries.h
+        ExamplePlugin/ExamplePlugin.cpp
+
+Research methods used on the proprietary ENB binary were deliberately bounded
+to static package metadata:
+
+    PE import/export metadata;
+    printable type/name strings;
+    shipped SDK;
+    shipped editable shaders/config/readme;
+    official public ENB documentation.
+
+No ENB machine-code implementation was reconstructed into source.
+No proprietary algorithm was copied into GZFX.
+No ENB runtime graphics-state interception was performed.
+
+Public implementation references used for architecture comparison:
+
+    3Dmigoto
+    ReShade
+    Community Shaders
+    PureDark Skyrim-Upscaler
+    Nukem9 skyrimse-test
+    Microsoft D3D11 documentation.
+
+The goal is independent implementation from functional facts.
+
+======================================================================
+3. ENB 0.505 IS A TRUE D3D11 FRONT-END / PROXY
+======================================================================
+
+The official WrapperVersion places:
+
+    d3d11.dll
+
+beside SkyrimSE.exe.
+
+The binary exports the ordinary D3D11 creation surface, including:
+
+    D3D11CoreCreateDevice
+    D3D11CoreCreateLayeredDevice
+    D3D11CoreGetLayeredDeviceSize
+    D3D11CoreRegisterLayers
+    D3D11CreateDevice
+    D3D11CreateDeviceAndSwapChain
+
+It also exports ENB SDK functions:
+
+    ENBGetGameIdentifier
+    ENBGetParameter
+    ENBGetRenderInfo
+    ENBGetSDKVersion
+    ENBGetState
+    ENBGetVersion
+    ENBSetCallbackFunction
+    ENBSetParameter
+
+The binary imports Windows dynamic-loader functions including:
+
+    GetSystemDirectoryA
+    LoadLibraryA
+    GetProcAddress
+
+and contains the string:
+
+    \d3d11.dll
+
+This is consistent with the standard local-DLL proxy architecture:
+
+    Skyrim asks for d3d11.dll
+    ->
+    local ENB d3d11.dll loads
+    ->
+    ENB loads/resolves the real system D3D11 implementation
+    ->
+    ENB forwards/interposes D3D11 creation.
+
+enblocal.ini also exposes:
+
+    [PROXY]
+    EnableProxyLibrary
+    InitProxyFunctions
+    ProxyLibrary
+
+which confirms explicit support for chaining another proxy library.
+
+Research conclusion:
+
+    ENB establishes graphics ownership at the front door.
+
+This is not merely a Present hook installed after the renderer already exists.
+
+======================================================================
+4. ENB USES PERSISTENT WRAPPED COM OBJECTS
+======================================================================
+
+This is directly documented by ENB's own bundled SDK.
+
+ENBRenderInfo exposes:
+
+    d3d11device
+    d3d11devicecontext
+    dxgiswapchain
+
+The SDK states these are ENBSeries wrapped objects so changes can be tracked and
+restored.
+
+Static RTTI/type strings in the 0.505 d3d11.dll include:
+
+    myID3D11Device
+    myID3D11DeviceContext
+    myIDXGISwapChain
+    myIDXGIFactory
+    myIDXGIAdapter
+
+and wrappers for shader interfaces:
+
+    myID3D11VertexShader
+    myID3D11PixelShader
+    myID3D11GeometryShader
+    myID3D11HullShader
+    myID3D11DomainShader
+    myID3D11ComputeShader
+
+This strongly supports a persistent wrapper architecture rather than a handful
+of isolated hooks.
+
+The important architectural property is not the class names.
+
+It is:
+
+    every call continues to pass through an identity-aware graphics layer.
+
+That lets a framework know:
+
+    which device;
+    which context;
+    which swap chain;
+    which shader object;
+    which state mutation;
+
+without repeatedly reconstructing identity later.
+
+======================================================================
+5. ENB SDK EXPOSES AN EXPLICIT FRAME LIFECYCLE
+======================================================================
+
+Bundled ENB SDK version:
+
+    ENBSDKVERSION 1002
+
+Skyrim SE identifier:
+
+    ENBGAMEID_SKYRIMSE 0x10000006
+
+Important callback semantics:
+
+    ENBCallback_EndFrame
+        called at the end of the frame before display
+
+    ENBCallback_BeginFrame
+        called after the frame has been displayed
+
+plus:
+
+    OnInit
+    OnExit
+    PreReset
+    PostReset
+    PreSave
+    PostLoad.
+
+This is significant for GZFX.
+
+ENB does not treat "Present" as one vague semantic instant.
+
+Its public SDK intentionally distinguishes work before display from work after
+display.
+
+ENB's public 2026 changelog even records a correction to BeginFrame timing,
+showing that exact callback placement is treated as product-significant.
+
+Research lesson:
+
+    GZFX Research Pass 7's explicit PresentHookEnter /
+    BeforeOriginalDxgiPresent / AfterOriginalDxgiPresent proposal is correct.
+
+The old GZFX UiPresent marker is not an adequate substitute for a true display
+lifecycle.
+
+======================================================================
+6. ENB SHIPPED FX FILES REVEAL A MULTI-STAGE SEMANTIC POST STACK
+======================================================================
+
+The editable shader package is more useful architecturally than guessing from
+the proprietary DLL.
+
+ENB exposes separate stages with different semantic inputs and color domains.
+
+----------------------------------------------------------------------
+6.1 ENBEFFECTPREPASS.FX
+----------------------------------------------------------------------
+
+The shipped prepass operates with:
+
+    HDR scene color
+    scene depth
+    mask / skinned-object / SSS information
+    temporal/noise information
+    screen/frame state.
+
+The readme states this shader was added as a pre-pass and executes before
+enbdepthoffield.fx.
+
+This proves a deliberately exposed pre-DOF HDR processing stage.
+
+----------------------------------------------------------------------
+6.2 ENBDEPTHOFFIELD.FX
+----------------------------------------------------------------------
+
+The DOF shader consumes:
+
+    current color
+    original color
+    scene depth
+    focus/aperture state
+    adaptation state.
+
+Its own comments define ordered internal techniques such as aperture/focus
+steps.
+
+This is an explicit semantic effect, not a generic post-Present filter.
+
+----------------------------------------------------------------------
+6.3 ENBADAPTATION.FX
+----------------------------------------------------------------------
+
+The adaptation shader exposes:
+
+    current adaptation texture
+    previous adaptation texture
+
+and a downscale / temporal adaptation structure.
+
+This independently corroborates why GZFX sees a tiny HDR history/reduction
+family in Skyrim/late-post work.
+
+It does NOT prove that ENB's exact adaptation algorithm equals Skyrim's
+vanilla reduction chain.
+
+It proves that persistent temporal exposure/adaptation state is a first-class
+renderer concept in a mature Skyrim graphics framework.
+
+----------------------------------------------------------------------
+6.4 ENBBLOOM.FX / ENBLENS.FX
+----------------------------------------------------------------------
+
+The shipped bloom/lens files expose:
+
+    HDR color
+    original scene
+    scene depth
+    aperture/adaptation-related state
+    sun/lens-specific inputs
+    multiple temporary render targets at descending resolutions.
+
+This is another strong demonstration that a graphics framework needs a
+persistent resource graph, not merely one source texture at Present.
+
+----------------------------------------------------------------------
+6.5 ENBEFFECT.FX
+----------------------------------------------------------------------
+
+The main effect shader documents HDR color inputs and contains the main
+color/tonemap-style transformation path.
+
+It also contains an ORIGINALPOSTPROCESS path.
+
+ENB's 0.309 readme states the early Skyrim SE implementation was primarily
+intended to remove the original game post processing and replace it with the
+custom enbeffect.fx path or another post processor.
+
+Later versions add multipass support and many additional renderer features.
+
+Research conclusion:
+
+    the main ENB post stage sits inside a renderer ownership model,
+    not outside Skyrim as an arbitrary overlay.
+
+----------------------------------------------------------------------
+6.6 ENBEFFECTPOSTPASS.FX
+----------------------------------------------------------------------
+
+The post-pass explicitly documents LDR color input/output formats while still
+providing scene depth.
+
+This gives ENB a distinct post-tonemap/post-main-effect domain.
+
+That distinction is directly relevant to GZFX's unresolved:
+
+    PostTonemapPreUi
+
+boundary.
+
+----------------------------------------------------------------------
+6.7 ENBUNDERWATER.FX
+----------------------------------------------------------------------
+
+The underwater stage documents:
+
+    LDR scene color
+    scene depth
+    underwater mask
+
+and supports its own multipass effects.
+
+Again, the architecture is semantic:
+
+    underwater is not inferred because "some shader happened near water";
+    it is an owned renderer stage with explicit inputs.
+
+======================================================================
+7. ENB IS MUCH MORE THAN POST-PROCESSING
+======================================================================
+
+The official version history demonstrates progressively deeper ownership of
+Skyrim graphics.
+
+Publicly documented features include:
+
+    replacing/removing original post processing;
+    removing/fixing LDR limitations;
+    SSAO/SSIL;
+    subsurface scattering;
+    detailed shadows;
+    distant/LOD shadows;
+    water lighting;
+    water temporal-AA fixes;
+    water shadows;
+    water refraction/depth work;
+    screen-space reflections;
+    replacement SSR;
+    complex particle/fire lights;
+    complex parallax;
+    terrain blending;
+    grass lighting/material effects;
+    image-based lighting;
+    dynamic cubemaps;
+    volumetric-related fixes/effects;
+    sky/cloud lighting effects.
+
+Therefore ENB's success cannot be explained by:
+
+    "hook Present and run an FX shader."
+
+Its architecture has enough access to identify and alter important Skyrim
+rendering work before the final post chain.
+
+That is the same strategic direction GZFX is moving toward.
+
+======================================================================
+8. ENB'S OWN README CREDITS THE TWO MOST RELEVANT TECHNIQUES
+======================================================================
+
+The official 0.505 readme explicitly credits:
+
+    dumped shader information by Nukem9
+
+and:
+
+    3Dmigoto
+
+with the 3Dmigoto MIT license reproduced in the package.
+
+This is extremely useful research evidence.
+
+It tells us, from ENB's own distribution, that two proven technique classes
+contributed to its Skyrim SE renderer integration:
+
+    A. generic D3D11 interception/wrapping and shader override infrastructure;
+    B. Skyrim-specific shader knowledge.
+
+That is almost exactly the architecture GZFX needs to complete independently.
+
+======================================================================
+9. 3DMIGOTO: HOW A GENERIC D3D11 FRAMEWORK BUILDS STABLE IDENTITY
+======================================================================
+
+3Dmigoto is public source and therefore gives a clean architecture reference.
+
+Its D3D11 wrapper loads/resolves the real D3D11 implementation and inserts
+wrapper objects.
+
+Important public behaviors include:
+
+    wrapped device;
+    wrapped immediate context;
+    wrapped deferred contexts;
+    swap-chain/DXGI handling;
+    shader creation interception;
+    shader binding interception;
+    resource/state tracking;
+    frame analysis;
+    shader replacement.
+
+----------------------------------------------------------------------
+9.1 Deferred context creation
+----------------------------------------------------------------------
+
+3Dmigoto's HackerDevice::CreateDeferredContext:
+
+    calls the real device;
+    receives the real deferred context;
+    creates a HackerContext wrapper;
+    returns/hooks that wrapper.
+
+This is the same architectural problem GZFX solved in 0.0.25 with deferred
+context vtable recording, though implemented differently.
+
+----------------------------------------------------------------------
+9.2 Shader identity at creation
+----------------------------------------------------------------------
+
+3Dmigoto intercepts CreateVertexShader / CreatePixelShader / other stage
+creation through a common CreateShader path.
+
+It computes a hash from the shader bytecode and records:
+
+    shader object -> stable shader hash.
+
+Its public code supports several hash approaches.
+
+Particularly relevant is a bytecode-oriented hash that can select meaningful
+DXBC sections such as:
+
+    SHDR / SHEX
+    input signatures
+    output signatures
+    patch constant signatures
+
+instead of treating a runtime COM pointer as the shader's identity.
+
+This is a major lesson for GZFX.
+
+----------------------------------------------------------------------
+9.3 Handle reuse is treated as real
+----------------------------------------------------------------------
+
+3Dmigoto explicitly cleans shader maps when a shader object handle is reused.
+
+This matches the lesson GZFX already learned for command-list pointer reuse:
+
+    raw pointer identity is not historical identity.
+
+Stable content identity plus generation/creation identity is required.
+
+======================================================================
+10. NUKEM9: SKYRIM-SPECIFIC SHADER KNOWLEDGE
+======================================================================
+
+Nukem9's public skyrimse-test repository contains shader analyzer/dumper tools
+that explain the other half of the ENB architecture clue.
+
+The public tooling reconstructs Skyrim shader metadata such as:
+
+    shader family;
+    technique identity;
+    technique names;
+    sampler/resource names;
+    constant-buffer organization.
+
+Public shader families include:
+
+    Lighting
+    Effect
+    Water
+    ImageSpace
+    Utility
+    Particle
+    Grass
+    Sky
+    DistantTree
+    BloodSplatter
+    RunGrass
+
+The public tooling also documents Skyrim constant-buffer groupings including:
+
+    b0  PerTechnique
+    b1  PerMaterial
+    b2  PerGeometry
+    b8  InstanceData
+    b9  PreviousBones
+    b10 Bones
+    b11 AlphaTestRef
+    b12 PerFrame
+
+This strongly corroborates GZFX's already-proven use of the Skyrim b12
+per-frame/camera lane.
+
+The key research lesson is NOT to import a historical shader database.
+
+It is:
+
+    generic shader hashes become vastly more useful when correlated with
+    Skyrim-specific semantic knowledge.
+
+======================================================================
+11. ENB STATIC BINARY EVIDENCE IS CONSISTENT WITH SHADER-IDENTITY OWNERSHIP
+======================================================================
+
+The supplied ENB d3d11.dll imports shader-analysis APIs including:
+
+    D3DCompile
+    D3DGetInputSignatureBlob
+    D3DReflect
+    D3DDisassemble
+
+Static printable strings also contain numerous shader-like identifiers.
+
+Examples include:
+
+    Shader_GameSSR
+    Shader_UNDERWATER
+    Shader_WaterTAA
+    Shader_WaterTAAhdr
+
+and multiple hexadecimal-style identifiers such as:
+
+    Shader_1EB60894
+    Shader_2DDCA5EA
+    Shader_5051E0B4
+    Shader_6DD5E46C_...
+    CShader_C5E5DA12_...
+
+Thirty distinct strings matching the observed hexadecimal Shader/CShader name
+pattern were found in the supplied binary.
+
+Combined with:
+
+    ENB's explicit 3Dmigoto credit;
+    ENB's explicit Nukem9 shader-information credit;
+    shader wrapper RTTI;
+    D3D shader reflection/disassembly imports;
+
+the static evidence is strongly consistent with a renderer architecture that
+maintains game-shader identity.
+
+This research does NOT assert ENB's exact private hash algorithm.
+
+That is unnecessary.
+
+The architecture is the useful fact.
+
+======================================================================
+12. PUREDARK SKYRIM UPSCALER: INDEPENDENT CONFIRMATION OF THE SAME NEEDS
+======================================================================
+
+PureDark's public Skyrim-Upscaler is another valuable independent reference.
+
+It does not use ENB's architecture.
+
+Yet it independently needed many of the same integration points.
+
+Its public UpscalerHooks.cpp:
+
+    IAT-hooks D3D11CreateDeviceAndSwapChain early;
+
+    hooks CreateTexture2D early enough to discover key game surfaces;
+
+    identifies motion vectors from resource creation characteristics;
+
+    identifies depth from resource creation characteristics;
+
+    tracks transparent/opaque buffers;
+
+    hooks Skyrim camera jitter logic;
+
+    hooks a pre-UI engine location for upscaling;
+
+    replaces/disables Skyrim TAA behavior when another temporal upscaler owns
+    that job.
+
+The source comments explicitly state that hooking later initialization was too
+late because depth and motion textures had already been created.
+
+This is a critical independent lesson:
+
+    creation-time observation matters.
+
+It also independently confirms:
+
+    Present is not the right semantic location for every graphics feature.
+
+The public project uses a pre-UI Skyrim engine hook for the upscaling pass.
+
+======================================================================
+13. COMMUNITY SHADERS COMPLETES THE TRIANGLE
+======================================================================
+
+Research Pass 7 already established that Community Shaders directly observes
+named Skyrim engine renderer phases and image-space effects.
+
+The combined picture is now:
+
+    3Dmigoto:
+        generic D3D identity/interception
+
+    Nukem9:
+        Skyrim shader semantics
+
+    Community Shaders:
+        Skyrim engine semantic anchors
+
+    PureDark:
+        creation-time render-target discovery + pre-UI temporal integration
+
+    ENB:
+        mature standalone framework demonstrating all of these problem classes
+        have to be solved together.
+
+GZFX should synthesize the architecture independently.
+
+======================================================================
+14. CURRENT GZFX FRONT DOOR IS ALREADY GOOD
+======================================================================
+
+Current source:
+
+    src/diagnostics/d3d11_lifecycle.cpp
+
+already patches SkyrimSE.exe's imports for:
+
+    D3D11CreateDevice
+    D3D11CreateDeviceAndSwapChain
+
+and:
+
+    CreateDXGIFactory
+    CreateDXGIFactory1
+    CreateDXGIFactory2
+
+When device creation succeeds, GZFX already:
+
+    attaches pipeline cartography to the device;
+    records device/context/swapchain;
+    attaches renderer_execution_service to the primary objects.
+
+Therefore GZFX already observes the primary Skyrim renderer from device birth.
+
+This is important because it means:
+
+    WE DO NOT NEED TO BECOME A D3D11.DLL PROXY.
+
+The dinput8 delivery model can remain.
+
+A d3d11 proxy would increase conflict/chaining complexity without solving the
+actual remaining problem.
+
+======================================================================
+15. GZFX ALREADY CONTAINS A CREATION-TIME IDENTITY SYSTEM
+======================================================================
+
+Current source:
+
+    src/diagnostics/pipeline_cartography.cpp
+
+already contains hooks for:
+
+    CreateBuffer
+    CreateTexture1D
+    CreateTexture2D
+    CreateTexture3D
+
+    CreateVertexShader
+    CreateGeometryShader
+    CreateGeometryShaderWithStreamOutput
+    CreatePixelShader
+    CreateHullShader
+    CreateDomainShader
+    CreateComputeShader
+
+    CreateDeferredContext.
+
+When creation is observed, current code can record:
+
+Resources:
+
+    canonical object identity
+    birth sequence
+    creator/caller module
+    resource type
+    dimensions
+    format
+    bind flags
+    usage
+    CPU access
+    debug name.
+
+Shaders:
+
+    canonical object identity
+    birth sequence
+    shader stage
+    bytecode hash
+    bytecode byte count
+    creator/caller module
+    debug name.
+
+Caller module is derived from:
+
+    _ReturnAddress()
+    ->
+    GetModuleHandleExW(FROM_ADDRESS)
+    ->
+    module filename.
+
+This is already the seed of the identity architecture revealed by ENB/3Dmigoto.
+
+======================================================================
+16. BUT NORMAL GZFX FIELD BUILDS DISABLE THAT LANE
+======================================================================
+
+AttachDevice() currently checks:
+
+    GZFX_EXPERIMENTAL_DEVICE_CREATION_HOOKS
+
+If the variable is not enabled:
+
+    g_creationInterceptionEnabled = false
+    and the function returns without replacing the device vtable.
+
+A source comment explicitly says:
+
+    execution-level cartography does not require device creation interception;
+    the creation lane remains experimental until isolated proof;
+    default field builds keep it disabled.
+
+That was a defensible earlier safety decision.
+
+It is no longer a good permanent architecture.
+
+The 0.0.24/0.0.25 campaigns demonstrated the cost:
+
+    runtime pointer identities repeatedly masquerade as shader identities;
+    cross-run shader correlation is weak;
+    engine-pass recognition must rediscover structures from dimensions and
+    resource graphs;
+    field shader pointers are useful only inside one process.
+
+The next architecture should NOT simply flip the experimental environment
+variable on and declare victory.
+
+It should extract the useful creation-identity pieces into a hardened,
+production-quality subsystem with explicit acceptance tests.
+
+======================================================================
+17. CURRENT TELEMETRY HAS A SHADER IDENTITY TYPE ERROR
+======================================================================
+
+This is subtle and important.
+
+PassTelemetry has a field named:
+
+    shaderHashes[]
+
+But BuildPassTelemetryLocked currently writes:
+
+    bytecode hash, if creation interception captured one;
+
+otherwise:
+
+    canonical shader object pointer/identity.
+
+Therefore the same telemetry column can mean either:
+
+    content identity
+
+or:
+
+    process-local COM identity.
+
+This is why field values such as:
+
+    0x25ECC9...
+
+were correctly treated as runtime shader pointers and never as contracts.
+
+The field name is semantically overloaded.
+
+The next blueprint should split this explicitly.
+
+Recommended shader identity payload per stage:
+
+    object_id
+    object_generation / birth
+    exact_bytecode_hash
+    structural_bytecode_hash
+    bytecode_bytes
+    owner_module
+    identity_confidence.
+
+Telemetry must never silently substitute one identity domain for another.
+
+======================================================================
+18. RECOMMENDED SHADER FINGERPRINT MODEL
+======================================================================
+
+A stable GZFX shader record should include multiple fingerprints because they
+serve different purposes.
+
+A. Exact hash
+
+    hash the complete DXBC blob.
+
+Purpose:
+
+    exact shader-build identity.
+
+Current GZFX FNV-1a full-blob hash can serve this role.
+
+B. Structural/program hash
+
+    hash executable/signature DXBC sections while excluding volatile compiler
+    metadata.
+
+Public 3Dmigoto demonstrates this approach using code/signature sections.
+
+Purpose:
+
+    survive irrelevant compiler/debug metadata changes while still detecting
+    functional shader changes.
+
+GZFX should independently implement its own parser/hasher.
+
+C. Optional embedded DXBC identity
+
+    where valid/available, record the DXBC embedded digest/header identity.
+
+Purpose:
+
+    another independent cross-check.
+
+D. Reflection signature
+
+Use D3DReflect when available to record bounded facts such as:
+
+    shader stage/model;
+    bound resource count;
+    constant-buffer count;
+    signature/resource layout hash.
+
+Purpose:
+
+    structural corroboration, not semantic naming.
+
+All fingerprints should be immutable creation records.
+
+======================================================================
+19. SELF-CALIBRATING SKYRIM SHADER SEMANTICS
+======================================================================
+
+This is one of the strongest new architectural ideas from combining Pass 7 and
+Pass 8.
+
+GZFX does NOT need to ship an enormous hardcoded Skyrim shader database.
+
+Instead:
+
+    engine semantic anchor
+    +
+    creation-time stable shader fingerprint
+    +
+    D3D resource graph
+
+can calibrate itself.
+
+Example:
+
+1. The verified Skyrim ISTemporalAA engine anchor fires.
+
+2. GZFX records:
+       engine event = ISTemporalAA enter
+       current VS/PS/CS exact and structural fingerprints
+       bound SRVs/RTVs/UAVs
+       MOTION/depth semantic relationships
+       output graph.
+
+3. The same anchor exits.
+
+4. GZFX now has a field-proven association:
+
+       this shader-family fingerprint
+       participates in Skyrim global TAA
+       on this runtime.
+
+5. Future frames/runs can use the fingerprint as a secondary fast recognizer.
+
+6. The engine anchor remains the primary authority when available.
+
+This avoids both bad extremes:
+
+    hardcoding volatile shader pointers;
+
+and:
+
+    maintaining a giant manually curated address/hash database as sole truth.
+
+The same calibration can apply to:
+
+    HDR downsample/adaptation;
+    tonemap;
+    water TAA;
+    water blend;
+    reflection apply;
+    image copies;
+    shadow/image-space phases.
+
+======================================================================
+20. RESOURCE BIRTH IDENTITY SHOULD ALSO BECOME FIRST-CLASS
+======================================================================
+
+PureDark's public upscaler independently demonstrates why resource creation
+matters.
+
+It discovers motion/depth/other targets at CreateTexture2D time because later
+renderer initialization can be too late.
+
+GZFX currently reconstructs many resources from bound views and shapes, which
+has worked impressively well.
+
+But creation-time records add:
+
+    true birth order;
+    creator module;
+    original descriptor;
+    stable generation;
+    ability to distinguish object-address reuse;
+    ability to correlate named engine target creation later.
+
+Recommended resource identity:
+
+    canonical object id
+    birth generation
+    creator module
+    descriptor hash
+    dimensions/format/binds
+    debug name if present
+    first semantic use
+    last semantic use.
+
+Do NOT use resource creation shape alone as semantic truth.
+
+Use it as one axis of evidence.
+
+======================================================================
+21. ENB STATE-TRACKING LESSON VS GZFX DEFERRED EXECUTION
+======================================================================
+
+ENB's SDK emphasizes that wrapped D3D objects track changes so state can be
+restored.
+
+GZFX does not need to copy that exact implementation.
+
+GZFX has a potentially cleaner equivalent for its own injected graphics work:
+
+    record work on deferred contexts;
+    execute through renderer_execution_service;
+    explicitly choose RestoreContextState behavior;
+    preserve ownership tags;
+    keep Skyrim's immediate state isolated.
+
+This is already a good architecture.
+
+The problem is not that GZFX lacks all state containment.
+
+The problem is that some GZFX paths bypass the central service.
+
+Examples already identified:
+
+    visible_pass
+    resource_intelligence diagnostics
+    semantic_probe diagnostics
+
+can directly call ExecuteCommandList.
+
+Research recommendation:
+
+    make renderer_execution_service the single ownership/state-execution
+    gateway for every GZFX-produced command list.
+
+That gives GZFX the same architectural benefit ENB advertises:
+
+    custom graphics work is attributable and state-safe.
+
+without requiring a full COM-wrapper rewrite.
+
+======================================================================
+22. COMMAND-LIST OWNERSHIP IS PART OF THE RENDERER IDENTITY MODEL
+======================================================================
+
+The 0.0.25 "Skyrim list" confusion was not just a telemetry bug.
+
+It exposed an architectural principle.
+
+Stable identity must cover:
+
+    shaders
+    resources
+    command lists
+    contexts
+    swapchains
+    engine phases
+    present epochs.
+
+Every GZFX command list must carry:
+
+    subsystem owner;
+    logical pass;
+    creation/recording context generation;
+    frame;
+    present epoch;
+    finish generation;
+    execution generation.
+
+After that repair, any truly external command list can be investigated from a
+clean baseline.
+
+Do not build further "Skyrim deferred renderer" assumptions until GZFX's own
+work is impossible to misclassify.
+
+======================================================================
+23. WHY GZFX SHOULD NOT SWITCH TO A FULL PROXY/WRAPPER DESIGN
+======================================================================
+
+ENB and 3Dmigoto prove that full wrappers work.
+
+They do not prove that wrappers are the best next step for GZFX.
+
+GZFX already has:
+
+    dinput8 bootstrap;
+    early executable-IAT D3D interception;
+    proven primary renderer acquisition;
+    MinHook;
+    per-context interception;
+    deferred work isolation;
+    semantic authority;
+    resource lineage.
+
+A full ID3D11Device/Context/DXGI wrapper rewrite would add:
+
+    COM QueryInterface complexity;
+    interface-version upgrade handling;
+    reference-counting hazards;
+    proxy chaining complexity;
+    compatibility risk with other graphics layers;
+    large new test surface;
+
+without directly solving the current semantic blocker.
+
+The better plan is:
+
+    retain current delivery/interception model;
+    centralize identity and ownership;
+    harden only the creation methods needed for identity;
+    add verified Skyrim engine anchors.
+
+This gets the architectural benefit with substantially less disruption.
+
+======================================================================
+24. HARDENING THE CURRENT EXPERIMENTAL DEVICE-CREATION LANE
+======================================================================
+
+Research recommendation for the next blueprint:
+
+Do NOT enable the entire old experimental device vtable lane blindly.
+
+Split it into explicit capabilities.
+
+CAPABILITY A — ShaderIdentityCreation
+
+Intercept only shader creation functions:
+
+    CreateVertexShader
+    CreatePixelShader
+    CreateGeometryShader
+    CreateGeometryShaderWithStreamOutput
+    CreateHullShader
+    CreateDomainShader
+    CreateComputeShader.
+
+Record identity only.
+
+No replacement.
+No mutation.
+No shader-bytecode modification.
+
+CAPABILITY B — ResourceBirthIdentity
+
+Intercept only resource creation required for provenance:
+
+    CreateBuffer
+    CreateTexture1D
+    CreateTexture2D
+    CreateTexture3D.
+
+Record identity only.
+
+No descriptor modification.
+
+CAPABILITY C — DeferredContextBirth
+
+Coordinate with the already-proven 0.0.25 deferred cartography attach path.
+
+Each capability must have:
+
+    independent installation result;
+    byte/vtable validation;
+    conflict detection;
+    counters;
+    fail-closed fallback;
+    harness coverage.
+
+This is much safer than one broad "experimental device hooks" switch.
+
+======================================================================
+25. HOOK INSTALLATION / COMPATIBILITY STRATEGY
+======================================================================
+
+The primary renderer device is already captured by GZFX's D3D11 creation IAT
+hook.
+
+Creation identity hooks should therefore be installed immediately after the
+real device is returned and before Skyrim receives control back from the
+creation call.
+
+This reproduces the important timing property seen in ENB/PureDark:
+
+    observe creation before important resources/shaders are born.
+
+Implementation options should be evaluated in BLUEPRINT:
+
+OPTION 1:
+    validated per-instance vtable clone for only selected creation methods.
+
+Pros:
+    already exists in GZFX;
+    isolated to primary device instance.
+
+Cons:
+    hook-chain/conflict concerns.
+
+OPTION 2:
+    MinHook selected underlying method targets.
+
+Pros:
+    existing library;
+    can chain original target.
+
+Cons:
+    global/shared method target;
+    more care with multiple devices/hooks.
+
+OPTION 3:
+    full COM wrapper.
+
+Not recommended for the next wave.
+
+Whichever option is chosen must detect an already-modified target/vtable and
+fail closed or chain safely.
+
+======================================================================
+26. SHADER REFLECTION SHOULD BE BOUNDED AND OFF THE HOT PATH
+======================================================================
+
+ENB's imports include D3DReflect/D3DDisassemble.
+
+3Dmigoto performs bytecode analysis.
+
+GZFX can capture useful shader structure without turning every draw into a
+disassembler.
+
+At Create*Shader time only:
+
+    calculate hashes;
+    optionally run D3DReflect once;
+    store bounded structural metadata.
+
+Do NOT disassemble every shader during gameplay.
+
+If human-readable disassembly is ever needed for a specific unknown family:
+
+    dump it once as a targeted diagnostic artifact.
+
+Creation-time work is naturally amortized and dramatically cheaper than
+per-draw analysis.
+
+======================================================================
+27. ENGINE SEMANTICS + SHADER IDENTITY IS STRONGER THAN EITHER ALONE
+======================================================================
+
+Research Pass 7 proposed engine anchors.
+
+Research Pass 8 now explains how to make them durable.
+
+Engine anchor alone:
+
+    tells us WHAT Skyrim says it is doing.
+
+Shader identity alone:
+
+    tells us WHICH GPU program is executing.
+
+Resource graph alone:
+
+    tells us WHAT data flows through it.
+
+Together:
+
+    engine semantic
+    +
+    stable shader fingerprint
+    +
+    resource inputs/outputs
+    +
+    timing/order
+
+provides a much stronger renderer contract.
+
+Acceptance rule example:
+
+    BeforeGlobalTAA is locked only if:
+
+        verified ISTemporalAA engine entry occurs;
+        stable shader fingerprint family is observed;
+        MOTION is read;
+        MAIN_DEPTH_CURRENT is read;
+        current/history color is read;
+        expected temporal outputs are written;
+        ordering is consistent across field environments.
+
+No single pointer or texture shape is enough.
+
+======================================================================
+28. NEW INTERPRETATION OF ENB'S SUCCESS
+======================================================================
+
+The research supports the following high-level reconstruction of why ENB can
+modify Skyrim so deeply.
+
+Not private implementation details, but architecture classes:
+
+LAYER 1 — LOAD / GRAPHICS FRONT DOOR
+
+    local d3d11 proxy
+    real system D3D11 forwarding
+    optional proxy chaining.
+
+LAYER 2 — PERSISTENT GRAPHICS OBJECT CONTROL
+
+    wrapped device/context/swapchain/factory/adapter
+    wrapped shader objects
+    state tracking/restoration.
+
+LAYER 3 — SKYRIM SHADER IDENTITY
+
+    shader bytecode interception/analysis techniques
+    game-specific dumped shader knowledge.
+
+LAYER 4 — GAME/RENDERER SEMANTICS
+
+    knowledge of Skyrim renderer behavior
+    game shader categories
+    water/shadow/material/post domains.
+
+LAYER 5 — OWNED SEMANTIC EFFECT STACK
+
+    prepass
+    depth/DOF
+    adaptation
+    bloom/lens
+    main HDR post/tonemap
+    LDR postpass
+    underwater
+    other feature-specific renderer replacements.
+
+LAYER 6 — FRAME / PLUGIN LIFECYCLE
+
+    begin/end frame
+    reset/init lifecycle
+    wrapped D3D objects exposed to plugins.
+
+That is the useful blueprint class.
+
+GZFX can implement the same problem classes with a different internal design.
+
+======================================================================
+29. GZFX EQUIVALENT ARCHITECTURE
+======================================================================
+
+GZFX should converge toward:
+
+LAYER 1 — EXISTING BOOTSTRAP / FRONT DOOR
+
+    dinput8
+    SkyrimSE.exe D3D11/DXGI IAT hooks
+    primary device/context/swapchain acquisition.
+
+KEEP.
+
+LAYER 2 — RENDER OBJECT IDENTITY SERVICE
+
+    shader creation fingerprints
+    resource birth records
+    context generations
+    swapchain/surface generations
+    owner module.
+
+PROMOTE / HARDEN.
+
+LAYER 3 — D3D STATE / RESOURCE GRAPH
+
+    existing pipeline_cartography
+    semantic_authority
+    explicit operands
+    deferred recorder.
+
+KEEP / CONSOLIDATE.
+
+LAYER 4 — SKYRIM ENGINE SEMANTIC ANCHORS
+
+    Research Pass 7 resolver
+    Main_PostProcessing
+    HDR/adaptation
+    ISTemporalAA
+    water
+    UI
+    shadows.
+
+ADD.
+
+LAYER 5 — STAGE SCHEDULER / OWNERSHIP API
+
+    named renderer boundaries
+    verified resource availability
+    one central command-list execution gateway.
+
+HARDEN.
+
+LAYER 6 — GZFX FEATURE STACK
+
+    ambient visibility
+    future indirect radiance
+    shadows
+    atmosphere
+    water
+    reflections
+    HDR/post
+    etc.
+
+RESUME only after cartography acceptance.
+
+This preserves GZFX's own architecture while adopting the mature identity
+principles proven elsewhere.
+
+======================================================================
+30. POTENTIAL 0.0.26 / NEXT-WAVE TELEMETRY
+======================================================================
+
+The next blueprint should strongly consider compact new files.
+
+shader_registry.csv
+
+    object_id
+    birth
+    stage
+    exact_hash
+    structural_hash
+    bytecode_bytes
+    reflection_signature
+    creator_module
+    debug_name_hash.
+
+resource_births.csv
+
+    object_id
+    birth
+    creator_module
+    type
+    dimensions
+    format
+    bind_flags
+    usage
+    descriptor_hash.
+
+engine_events.csv
+
+    frame
+    present_epoch
+    qpc
+    thread
+    anchor
+    event
+    enter_exit.
+
+present_timeline.csv
+
+    present_epoch
+    frame
+    phase
+    qpc
+    thread
+    result.
+
+command_list_provenance.csv
+
+    list_generation
+    context_generation
+    owner_class
+    owner_subsystem
+    creator/finish/execute module
+    record/execute threads
+    present_epoch.
+
+stage_correlations.csv
+
+    engine_anchor
+    stage_candidate
+    shader fingerprints
+    resource signature
+    confidence
+    contradiction flags.
+
+These are compact compared with pass-level firehose telemetry.
+
+======================================================================
+31. DO NOT BUILD A STATIC SHADER HASH CONTRACT
+======================================================================
+
+Stable shader hashes are powerful.
+
+They are not eternal semantic truth.
+
+A Bethesda update, compiler change, modded shader, Community Shaders, or future
+GZFX ownership layer can change bytecode.
+
+Therefore:
+
+    hash -> semantic
+
+must be version-scoped and evidence-backed.
+
+Use hashes as:
+
+    fast recognizers;
+    cross-run correlation;
+    contradiction detection.
+
+Do not make:
+
+    "hash X always means TAA"
+
+the sole contract.
+
+Primary authority remains:
+
+    engine semantic anchor
+    +
+    verified resource behavior.
+
+======================================================================
+32. IMPORTANT COMPATIBILITY ADVANTAGE OF GZFX'S CURRENT DELIVERY MODEL
+======================================================================
+
+ENB's d3d11 proxy architecture is powerful, but a local graphics-DLL proxy is a
+natural collision point with:
+
+    ReShade;
+    overlays;
+    upscalers;
+    other D3D wrappers.
+
+ENB's own readme warns that overlays/capture tools can interfere.
+
+GZFX's dinput8 bootstrap avoids claiming the d3d11 filename.
+
+If GZFX can achieve complete identity through:
+
+    early IAT interception
+    +
+    narrow validated device/context hooks
+    +
+    engine anchors
+
+then it can retain a potentially cleaner compatibility position.
+
+Therefore:
+
+    do not change bootstrap architecture merely because ENB uses d3d11.dll.
+
+The lesson is interception timing and persistent identity, not the filename.
+
+======================================================================
+33. LEGAL / CLEAN-ROOM DISCIPLINE FOR THIS RESEARCH
+======================================================================
+
+The supplied ENB 0.505 license contains unusually broad contractual language
+against decompilation/reverse engineering and against runtime graphics-state
+interception by competing renderers.
+
+This research therefore keeps a clean engineering boundary.
+
+Facts we may independently use:
+
+    D3D11/DXGI public API behavior;
+    package layout;
+    public exports/imports;
+    official SDK contracts;
+    official editable FX shader interfaces;
+    official public feature/changelog claims;
+    public 3Dmigoto implementation;
+    public Nukem9 tools;
+    public Community Shaders architecture;
+    public PureDark implementation;
+    our own Skyrim/GZFX field evidence.
+
+Do NOT:
+
+    copy ENB proprietary machine-code implementation;
+    import ENB binary routines;
+    duplicate ENB preset-variable architecture;
+    build automated ENB-preset conversion;
+    make ENB runtime state a calibration feed for GZFX.
+
+This is both technically unnecessary and creates avoidable contractual risk.
+
+The architecture can be derived independently from public/open and shipped
+extension interfaces.
+
+======================================================================
+34. EXTERNAL SOURCE MATRIX
+======================================================================
+
+ENB 0.505 official supplied package
+
+Proves/strongly supports:
+    d3d11 proxy/front door;
+    SDK frame lifecycle;
+    wrapped device/context/swapchain;
+    multi-stage semantic FX stack;
+    3Dmigoto usage;
+    Nukem9 shader-info usage;
+    game-specific feature breadth.
+
+Does NOT publicly disclose:
+    private internal algorithms;
+    exact shader hash algorithm;
+    exact private engine hook map.
+
+----------------------------------------------------------------------
+3Dmigoto
+
+Public source proves:
+    persistent D3D11 wrappers;
+    deferred-context wrapping;
+    shader creation hashing;
+    handle-reuse handling;
+    shader/resource override/state architecture.
+
+----------------------------------------------------------------------
+Nukem9 skyrimse-test
+
+Public source proves:
+    Skyrim shader family/technique metadata can be reconstructed;
+    sampler/cbuffer/technique semantics are discoverable;
+    b12 PerFrame is part of the Skyrim shader architecture.
+
+----------------------------------------------------------------------
+Community Shaders
+
+Public source proves:
+    direct Skyrim engine semantic anchors are practical;
+    named ImageSpace effects exist for HDR/TAA/water/copy;
+    world/water/UI renderer phases can be hooked.
+
+----------------------------------------------------------------------
+PureDark Skyrim-Upscaler
+
+Public source proves:
+    early D3D creation interception is required for key resource discovery;
+    motion/depth surfaces can be found at creation;
+    camera jitter requires engine integration;
+    temporal upscaling belongs at a pre-UI engine point, not arbitrary Present.
+
+----------------------------------------------------------------------
+ReShade
+
+Public source proves:
+    generic D3D11 creation/context/command-list lifecycle wrapping can be made
+    robust and renderer-agnostic.
+
+----------------------------------------------------------------------
+Microsoft
+
+Authoritative source for:
+    D3D11 creation;
+    deferred contexts;
+    command lists;
+    state behavior;
+    DXGI presentation.
+
+======================================================================
+35. PUBLIC REFERENCES
+======================================================================
+
+ENBSeries Skyrim SE:
+https://enbdev.com/download_mod_tesskyrimse.html
+https://enbdev.com/mod_tesskyrimse_v0505.htm
+https://enbdev.com/news.html
+
+3Dmigoto:
+https://github.com/bo3b/3Dmigoto
+https://github.com/bo3b/3Dmigoto/blob/master/DirectX11/D3D11Wrapper.cpp
+https://github.com/bo3b/3Dmigoto/blob/master/DirectX11/HackerDevice.cpp
+https://github.com/bo3b/3Dmigoto/blob/master/DirectX11/HackerContext.cpp
+
+Nukem9:
+https://github.com/Nukem9/skyrimse-test
+
+Community Shaders:
+https://github.com/community-shaders/skyrim-community-shaders
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/FrameAnnotations.cpp
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Deferred.cpp
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Features/Upscaling.cpp
+https://github.com/community-shaders/skyrim-community-shaders/blob/dev/src/Hooks.cpp
+
+PureDark Skyrim Upscaler:
+https://github.com/PureDark/Skyrim-Upscaler
+https://github.com/PureDark/Skyrim-Upscaler/blob/main/src/UpscalerHooks.cpp
+
+ReShade:
+https://github.com/crosire/reshade
+
+Microsoft Direct3D 11:
+https://learn.microsoft.com/windows/win32/direct3d11/
+
+======================================================================
+36. FINAL RESEARCH VERDICT
+======================================================================
+
+The deeper ENB investigation does NOT tell GZFX to imitate ENB's binary.
+
+It tells us why the current GZFX cartography became unnecessarily difficult.
+
+We already intercept enough of D3D11.
+
+We have been missing stable, authoritative identity.
+
+The most valuable principles to carry into the next BLUEPRINT are:
+
+    stable shader identity from creation;
+    stable resource provenance from creation;
+    complete GZFX command-list ownership;
+    explicit real Present epochs;
+    verified Skyrim engine semantic anchors;
+    cross-correlation between engine semantics and D3D behavior.
+
+The striking part is that GZFX already contains the beginning of nearly every
+one of these systems.
+
+The next wave is therefore not a renderer rewrite.
+
+It is a consolidation / promotion wave that turns scattered forensic
+capabilities into one authoritative renderer identity layer.
+
+If implemented and field-validated correctly, this should allow GZFX to stop
+asking:
+
+    "what anonymous pass might this be?"
+
+and start answering:
+
+    "Skyrim entered ISTemporalAA; these exact stable shaders executed; these
+    semantic resources were read; these outputs were produced; this happened
+    before UI and before the actual DXGI Present."
+
+That is the level of renderer ownership required before GZFX resumes the
+graphics-feature roadmap.
+
+RESEARCH PASS 8 COMPLETE.
+
+NEXT WORKFLOW PHASE:
+
+    BLUEPRINT
+
+No implementation is authorized by this research record alone.
+
+END RESEARCH PASS 8
