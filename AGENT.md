@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.28.txt` and `GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.28.txt` in full. They preserve the exact 0.0.28 lifecycle-hardened field-validation handoff and are the controlling continuity records alongside this file. Use the 0.0.27 records only for deeper history.
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.28.txt` first, then `GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.28.txt`, `GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.28.txt`, and `GZFXWorkFolder/old/GZFX_0.0.28_PRE_FIELD_LIFECYCLE_HARDENING_ENGINEERING_RESULT.txt` in full. These preserve the exact 0.0.28 lifecycle-hardened field-validation handoff and are the controlling continuity records alongside this file. Use the 0.0.27 records only for deeper history.
 
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
