@@ -7,7 +7,9 @@ namespace gzfx::diagnostics::engine_epochs
     struct Status
     {
         std::uint64_t runtimeProfile = 0;
-        bool runtimeSupported = false;
+        bool rendererCoreSupported = true;
+        bool runtimeKnown = false;
+        bool engineProfileAvailable = false;
         bool postProcessingArmed = false;
         bool preUiArmed = false;
         std::uint64_t postProcessingTargetRva = 0;
@@ -36,5 +38,11 @@ namespace gzfx::diagnostics::engine_epochs
             const std::uint8_t* bytes,
             std::uint64_t matchRva,
             std::uint64_t imageBaseRva = 0) noexcept;
+
+        std::uint32_t ClassifyRuntime(
+            std::uint16_t major,
+            std::uint16_t minor,
+            std::uint16_t patch,
+            std::uint16_t build) noexcept;
     }
 }
