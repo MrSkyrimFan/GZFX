@@ -25,7 +25,6 @@ namespace gzfx::diagnostics::deferred_context_cartography
         constexpr std::size_t kMaxRunsPerRecording = 65536;
         constexpr std::size_t kMaxSealedLists = 256;
 
-        constexpr std::size_t kRelease = 2;
         constexpr std::size_t kVSSetConstantBuffers = 7;
         constexpr std::size_t kPSSetShaderResources = 8;
         constexpr std::size_t kPSSetShader = 9;
