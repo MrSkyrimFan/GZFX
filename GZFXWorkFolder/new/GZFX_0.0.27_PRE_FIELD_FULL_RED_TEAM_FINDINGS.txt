@@ -1,0 +1,585 @@
+GZFX 0.0.27 PRE-FIELD FULL RED-TEAM FINDINGS
+Review date: October 25, 2026
+Status: DATA / RED-TEAM COMPLETE
+Disposition: ONE MORE HARDENING WAVE JUSTIFIED BEFORE ANOTHER REAL-SKYRIM RUN
+Current runtime: 0.0.27-universal-frontdoor-late-contracts
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+The owner requested one additional full pass over EVERYTHING before spending
+another real-Skyrim field run.
+
+This pass re-audited:
+
+    the raw 0.0.26 telemetry archive;
+    0.0.26 findings;
+    Research Passes 7-10;
+    ENB / ReShade / 3Dmigoto architecture lessons;
+    current 0.0.27 source;
+    D3D11 bootstrap ABI;
+    both supported startup orders;
+    renderer-object qualification;
+    runtime classification;
+    HDR/TAA late contracts;
+    telemetry shutdown/closure;
+    package/CI assumptions;
+    continuity documentation.
+
+The red-team objective was specifically to find things that automated tests
+could currently miss.
+
+Result:
+
+    0.0.27 is materially stronger than 0.0.26, but another field run now would
+    still leave avoidable ambiguity.
+
+A bounded 0.0.28 pre-field hardening wave is justified.
+
+======================================================================
+2. RAW 0.0.26 TELEMETRY RE-AUDIT
+======================================================================
+
+Raw archive re-opened:
+
+    GZFXkkkkkkkkkjjjjjjjggftt.zip
+
+Archive SHA256 from the accepted field record:
+
+    c7f2f0e990ce611cc76f6b1f4885dda4972846171a4158dca5e55847d11e47b3
+
+Session:
+
+    session_20261025_153503_145720
+
+Frames:
+
+    1..10,037
+
+Active scene frames:
+
+    9,103
+
+Reconfirmed stage populations:
+
+    ui_present                           10,037
+
+    after_opaque_world_mrt                9,103
+    after_cameraz                         9,103
+    after_stock_ao                        9,103
+    before_ambient_screen_space_composite 9,103
+    at_ambient_screen_space_composite     9,103
+    after_ambient_screen_space_composite  9,103
+
+    BeforeGlobalTAA                       9,103
+    AfterGlobalTAA                        9,103
+
+    after_depth_prepass                    9,102
+
+    HDRReduction                           6,303
+
+Exterior-only population:
+
+    before_volumetric_apply               5,969
+    after_volumetric_apply                5,969
+    publish_pre_water_depth               5,969
+
+No evidence requires reopening Waves 1-3.
+
+======================================================================
+3. RAW LATE-SPINE REPLAY — EXTERIOR
+======================================================================
+
+Representative exterior frame:
+
+    frame 861
+
+Around the stable global TAA pass:
+
+    640x360 RGBA16F
+        PS 0xF026B1E764F561A5
+
+    160x90 RGBA16F
+        PS 0x8906DFE9AFA8D050
+
+    40x23 RGBA16F
+        PS 0xE137371A74F69AA2
+
+    10x6 RGBA16F
+        PS 0xE137371A74F69AA2
+
+    3x2 RGBA16F
+        PS 0xE137371A74F69AA2
+
+    2x2 RGBA16F
+        same reduction family on this frame
+
+    640x360 downstream processing
+        PS 0xDA12D7342C71A0B8
+        reads the true 2x2 terminal
+
+    640x360 downstream processing
+        PS 0x6A5D8FBECC2404BD
+
+    full-resolution RGBA8 current image
+        PS 0x99D22A3D198A3B69
+
+    global TAA
+        PS 0xE8D58B595587B316
+
+This directly supports the 0.0.27 2x2-terminal repair.
+
+======================================================================
+4. RAW LATE-SPINE REPLAY — INTERIOR
+======================================================================
+
+Representative interior frame:
+
+    frame 4789
+
+Interior path contains additional full-resolution HDR work before reduction:
+
+    full-resolution RGBA16F
+        PS 0xB1E4B892510DB3F6
+
+    full-resolution RGBA16F
+        PS 0x1066E41D475505A3
+
+then:
+
+    640x360
+    160x90
+    40x23
+    10x6
+    3x2
+    2x2
+    downstream 640x360 processing
+    full-resolution RGBA8
+    global TAA
+
+This directly supports 0.0.27's bounded same-frame full-resolution HDR ancestry.
+
+The raw data therefore does NOT identify another HDR/TAA semantic blocker before
+field test.
+
+======================================================================
+5. GLOBAL TAA REMAINS LOCKED
+======================================================================
+
+Raw data reconfirms:
+
+    BeforeGlobalTAA = 9,103 / 9,103 active frames
+    AfterGlobalTAA  = 9,103 / 9,103 active frames
+
+Stable field PS:
+
+    0xE8D58B595587B316
+
+Resource structure remains:
+
+    full-resolution current/history color
+    MOTION
+    MAIN_DEPTH_CURRENT
+    two full-resolution RGBA8 temporal outputs.
+
+No contradictory evidence was found.
+
+Global TAA remains the strongest late-stack semantic contract.
+
+======================================================================
+6. POST-TAA DATA REMAINS INTERESTING BUT NOT LOCKABLE
+======================================================================
+
+Raw field rows show repeatable full-resolution work after the global TAA pass,
+including stable families such as:
+
+    0xF026B1E764F561A5
+    0xBE86B79F4CA211B3
+    0x2FB4F7E056B71926
+    0x875707C93138CB03
+
+This may later help close:
+
+    PostTonemapPreUi
+    final sink / UI distribution
+
+but it is still insufficient to name the pre-UI boundary without an independent
+semantic landmark.
+
+Do not promote PostTonemapPreUi from these hashes alone.
+
+======================================================================
+7. RED-TEAM FINDING A — STARTUP TRACE CAN MIX MULTIPLE RUNS
+======================================================================
+
+Current source:
+
+    src/diagnostics/startup_trace.cpp
+
+writes:
+
+    Diagnostics/renderer_startup.csv
+
+in append mode.
+
+The file is shared across launches.
+
+Current behavior does not create a process/session boundary in the file and does
+not truncate it on the first Record() of a fresh process.
+
+Therefore a later field upload can contain:
+
+    launch N startup rows
+    launch N+1 startup rows
+    launch N+2 startup rows
+
+in one file.
+
+This can make startup ordering appear valid or invalid based on stale evidence
+from another process.
+
+DATA classification:
+
+    REAL FORENSIC INTEGRITY DEFECT
+
+Required next-wave direction:
+
+    first startup Record() in each process must create/truncate;
+    subsequent calls append;
+    include PID and a monotonic sequence.
+
+======================================================================
+8. RED-TEAM FINDING B — FIRST SUCCESSFUL D3D DEVICE CAN POISON PRIMARY
+======================================================================
+
+Current d3d11 front-door behavior attempts to attach the first successful D3D11
+device/context returned through the proxy.
+
+This is too broad.
+
+Potential pre-Skyrim devices include:
+
+    WARP;
+    REFERENCE;
+    SOFTWARE;
+    Microsoft Basic Render Driver;
+    diagnostic/helper devices.
+
+If such a device is attached first, current primary-object code rejects a
+different device later.
+
+Therefore the real Skyrim hardware renderer could be rejected after a helper
+device wins the race.
+
+Public mature D3D11 frameworks explicitly distinguish software/reference/basic
+devices from real application hardware renderers.
+
+DATA classification:
+
+    REAL PRIMARY-SELECTION RISK
+
+Required direction:
+
+    qualify primary candidates before attaching.
+
+Real process criteria should include:
+
+    hardware-class device;
+    not WARP;
+    not REFERENCE;
+    not SOFTWARE;
+    not NULL;
+    not Microsoft Basic Render Driver;
+    main-executable caller provenance where available;
+    process-owned output window when a swapchain is supplied.
+
+Tests may explicitly opt WARP in.
+
+======================================================================
+9. RED-TEAM FINDING C — D3D-FIRST AND GZFX-FIRST PATHS ARE NOT EQUIVALENT
+======================================================================
+
+0.0.27 correctly added explicit pre-Present renderer attach from the d3d11
+front door.
+
+But another supported startup order remains:
+
+    dinput8 path loads GZFX first
+    ->
+    GZFX ArmD3D11LifecycleProbe patches Skyrim's D3D IAT
+    ->
+    Skyrim later calls D3D11CreateDevice[AndSwapChain].
+
+In that path:
+
+    d3d11_lifecycle currently attaches pipeline_cartography
+    and renderer_execution_service,
+
+but it does NOT call:
+
+    renderer_forensics::AttachPrimaryRendererObjects.
+
+Result:
+
+    creation hooks can still capture resource/shader birth,
+    but immediate-context renderer-forensics observation may wait until first
+    Present.
+
+That means pre-Present context commands can differ between startup orders.
+
+DATA classification:
+
+    REAL STARTUP-PARITY DEFECT
+
+Required direction:
+
+    d3d11_lifecycle successful primary creation path must explicitly attach the
+    renderer-forensics primary objects too.
+
+Add an acceptance test for GZFX-first pre-Present attachment.
+
+======================================================================
+10. RED-TEAM FINDING D — D3D11 PROXY EXPORT CONTRACT IS MISALIGNED
+======================================================================
+
+0.0.27 d3d11.dll exports:
+
+    D3D11CreateDevice
+    D3D11CreateDeviceAndSwapChain
+
+plus undocumented/internal:
+
+    D3D11CoreCreateDevice
+    D3D11CoreCreateLayeredDevice
+    D3D11CoreGetLayeredDeviceSize
+    D3D11CoreRegisterLayers
+
+but does NOT export:
+
+    D3D11On12CreateDevice
+
+which is a documented D3D11 API entry point.
+
+The partial D3D11Core export set also does not reproduce the full historic
+internal d3d11.dll ordinal surface.
+
+Because GZFX's proxy is a product bootstrap, it should make the narrowest
+truthful public API promise rather than pretending a partial undocumented ABI is
+stable.
+
+DATA classification:
+
+    REAL PROXY-CONTRACT DEFECT
+
+Required next-wave direction:
+
+    export/forward documented public D3D11 entry points:
+        D3D11CreateDevice
+        D3D11CreateDeviceAndSwapChain
+        D3D11On12CreateDevice
+
+    remove partial D3D11Core wrappers from the GZFX public proxy contract.
+
+D3D11On12CreateDevice should forward only and must not claim Skyrim-primary
+ownership.
+
+======================================================================
+11. RED-TEAM FINDING E — REAL SKYRIM CLEAN SHUTDOWN IS NOT PROVEN BY TESTS
+======================================================================
+
+Important source correction:
+
+    runtime.cpp DOES register std::atexit when telemetry initializes in a
+    non-test process.
+
+However:
+
+    all relevant harnesses call GZFX_Shutdown manually.
+
+Therefore the automated clean-shutdown proof does NOT exercise Skyrim's real
+automatic-exit path.
+
+Real 0.0.25 and 0.0.26 field uploads repeatedly lacked:
+
+    telemetry_session_complete.txt
+
+despite drained queues.
+
+That means the current automatic shutdown path is not producing the desired
+field closure evidence.
+
+The current telemetry Shutdown performs:
+
+    file writes;
+    ring drain;
+    writer-thread wake;
+    writer-thread join;
+    final file flush.
+
+That work should happen before process teardown begins, while worker threads are
+still alive, not during late DLL/CRT teardown.
+
+DATA classification:
+
+    PROVEN FIELD CLOSURE DEFECT
+    CURRENT AUTOMATED TEST IS INSUFFICIENT
+
+Required direction:
+
+    remove dependency on DLL std::atexit for process-level telemetry closure.
+
+Preferred next-wave mechanism:
+
+    intercept ExitProcess before the real ExitProcess call;
+    call GZFX_Shutdown exactly once;
+    allow telemetry to drain/join/flush;
+    then call the original ExitProcess.
+
+The process-exit hook should live in the long-lived d3d11 bootstrap rather than
+inside unloadable GZFX.dll.
+
+Add a parent/child test where the child exits normally WITHOUT calling
+GZFX_Shutdown manually.
+
+======================================================================
+12. RED-TEAM FINDING F — UNIVERSAL RUNTIME CATALOG IS TOO NARROW
+======================================================================
+
+0.0.27's architectural rule is correct:
+
+    universal D3D renderer core
+    +
+    optional engine profile.
+
+But current diagnostics mark only these exact versions as known:
+
+    1.5.97
+    1.6.1170
+    1.7.104
+
+That is too sparse for Skyrim's real downgrade-heavy ecosystem.
+
+Common runtime families include, among others:
+
+    1.5.97
+
+    1.6.317 / 318 / 323 / 342 / 353
+
+    1.6.629 / 640 / 659
+
+    1.6.1130 / 1170 / 1179
+
+    1.7.99 / 104
+
+A runtime being absent from this diagnostic list must never imply the universal
+renderer core is unsupported.
+
+DATA classification:
+
+    DIAGNOSTIC / PRODUCT-COMPATIBILITY MODEL TOO NARROW
+
+Required direction:
+
+    expand known-runtime catalog;
+    preserve rendererCoreSupported for unknown future versions;
+    keep field certification separate from catalog recognition;
+    keep engineProfileAvailable independent.
+
+======================================================================
+13. RED-TEAM FINDING G — STARTUP TRACE SHOULD TRAVEL WITH TELEMETRY
+======================================================================
+
+0.0.27 writes renderer_startup.csv only under:
+
+    Diagnostics/
+
+This forces the field operator to send:
+
+    telemetry ZIP
+    +
+    Diagnostics ZIP
+
+for one test cycle.
+
+This is unnecessary.
+
+Required direction:
+
+    preserve Diagnostics/renderer_startup.csv;
+
+    after clean telemetry shutdown, copy/snapshot the current-process startup
+    trace into the telemetry session root.
+
+Then one telemetry-session ZIP contains the complete evidence bundle.
+
+DATA classification:
+
+    FIELD-TEST ERGONOMICS / EVIDENCE-CLOSURE IMPROVEMENT
+
+======================================================================
+14. RED-TEAM FINDING H — DOCUMENTATION DRIFT
+======================================================================
+
+Root AGENT.md:
+
+    top banner correctly points at 0.0.27,
+
+but its locked-foundation/current-state section still describes:
+
+    runtime 0.0.26
+    old field phase.
+
+README.md:
+
+    current frontier correctly describes 0.0.27,
+
+but the opening architecture diagram still omits the new d3d11 graphics
+front-door bootstrap.
+
+DATA classification:
+
+    CONTINUITY DRIFT
+
+Required direction:
+
+    update both as part of 0.0.28 closure.
+
+======================================================================
+15. WHAT DID NOT BREAK UNDER RED-TEAM REVIEW
+======================================================================
+
+No new contradictory evidence was found for:
+
+    Waves 1-3 closure;
+    Wave 4 renderer ownership architecture;
+    stable shader identity;
+    command-list ownership correction;
+    physical Present epoch design;
+    global TAA structural contract;
+    HDR interior ancestry hypothesis;
+    2x2 HDR terminal correction;
+    fail-closed executable engine profiles.
+
+Do NOT reopen those branches without new contradictory field evidence.
+
+======================================================================
+16. NEXT PHASE
+======================================================================
+
+DATA / RED-TEAM COMPLETE.
+
+Proceed to one focused RESEARCH pass covering:
+
+    documented D3D11 proxy API contract;
+    primary-device qualification;
+    safe process-exit lifecycle;
+    startup-order parity;
+    current Skyrim runtime catalog / downgrade relevance;
+    one-ZIP field evidence closure.
+
+Then produce an approved 0.0.28 hardening blueprint and implement it.
+
+Do NOT run Skyrim 0.0.27 again before this hardening cycle is complete.
+
+END RED-TEAM FINDINGS
