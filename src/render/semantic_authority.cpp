@@ -117,6 +117,20 @@ namespace gzfx::render::semantic_authority
             std::uint64_t volumetricApplyOrdinal = 0;
             std::uintptr_t volumetricPreviousDepthIdentity = 0;
             bool preWaterDepthPublished = false;
+
+            bool lateStageEligible = false;
+            std::uint32_t hdrReductionStep = 0;
+            std::uintptr_t hdrReductionLastIdentity = 0;
+            UINT hdrReductionLastWidth = 0;
+            UINT hdrReductionLastHeight = 0;
+            bool hdrReductionComplete = false;
+            std::uintptr_t hdrReductionFinalIdentity = 0;
+
+            bool tonemapEntrySignaled = false;
+
+            bool taaPending = false;
+            std::uint64_t taaOrdinal = 0;
+            bool taaComplete = false;
         };
 
         struct Promotion
@@ -237,14 +251,14 @@ namespace gzfx::render::semantic_authority
                 return 62;
             case B::WaterDomain:
                 return 70;
-            case B::BeforeGlobalTAA:
-                return 80;
-            case B::AfterGlobalTAA:
-                return 81;
             case B::HDRReduction:
-                return 90;
+                return 80;
             case B::BeforeTonemap:
+                return 90;
+            case B::BeforeGlobalTAA:
                 return 100;
+            case B::AfterGlobalTAA:
+                return 101;
             case B::PostTonemapPreUi:
                 return 110;
             case B::UiPresent:
@@ -1939,6 +1953,298 @@ namespace gzfx::render::semantic_authority
             return false;
         }
 
+        std::uint32_t CountFullResolutionReadsLocked(
+            const DXGI_FORMAT format)
+        {
+            std::array<std::uintptr_t, 32> identities{};
+            std::uint32_t count = 0;
+
+            for (const auto& stage : g_state.srvs)
+            {
+                for (const auto& binding : stage)
+                {
+                    if (!IsFullResolutionFormat(
+                            binding,
+                            format))
+                    {
+                        continue;
+                    }
+
+                    bool duplicate = false;
+
+                    for (std::uint32_t i = 0;
+                         i < count;
+                         ++i)
+                    {
+                        if (identities[i] ==
+                            binding.identity)
+                        {
+                            duplicate = true;
+                            break;
+                        }
+                    }
+
+                    if (!duplicate &&
+                        count < identities.size())
+                    {
+                        identities[count++] =
+                            binding.identity;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        std::uint32_t CountFullResolutionWritesLocked(
+            const bool compute,
+            const DXGI_FORMAT format)
+        {
+            std::uint32_t count = 0;
+
+            const auto writes =
+                CurrentWritesLocked(compute);
+
+            for (const auto& output : writes)
+            {
+                if (IsFullResolutionFormat(
+                        output,
+                        format))
+                {
+                    ++count;
+                }
+            }
+
+            return count;
+        }
+
+        bool HasFullResolutionWriteLocked(
+            const bool compute,
+            const DXGI_FORMAT format)
+        {
+            return
+                CountFullResolutionWritesLocked(
+                    compute,
+                    format) != 0;
+        }
+
+        void DetectLatePreExecutionLocked(
+            const bool compute,
+            const std::uint64_t frame,
+            const std::uint64_t ordinal,
+            std::vector<PendingStage>& stages)
+        {
+            if (!g_frame.lateStageEligible)
+            {
+                return;
+            }
+
+            using B = stage_scheduler::Boundary;
+            using P = stage_scheduler::Phase;
+
+            if (g_frame.hdrReductionComplete &&
+                !g_frame.tonemapEntrySignaled &&
+                g_frame.hdrReductionFinalIdentity != 0 &&
+                ReadsLocked(
+                    g_frame.hdrReductionFinalIdentity) &&
+                HasFullResolutionWriteLocked(
+                    compute,
+                    DXGI_FORMAT_R8G8B8A8_UNORM))
+            {
+                g_frame.tonemapEntrySignaled =
+                    true;
+
+                stages.push_back(
+                    PendingStage{
+                        B::BeforeTonemap,
+                        P::BeforeExecution,
+                        "hdr_tonemap_entry"
+                    });
+            }
+
+            if (!g_frame.tonemapEntrySignaled ||
+                g_frame.taaComplete ||
+                g_frame.taaPending)
+            {
+                return;
+            }
+
+            const auto motion =
+                ResourceIdLocked(
+                    Semantic::MotionVectors);
+
+            const auto depth =
+                ResourceIdLocked(
+                    Semantic::MainDepthCurrent);
+
+            const bool readsRequired =
+                motion != 0 &&
+                depth != 0 &&
+                ReadsLocked(motion) &&
+                ReadsLocked(depth);
+
+            if (!readsRequired ||
+                CountFullResolutionReadsLocked(
+                    DXGI_FORMAT_R8G8B8A8_UNORM) <
+                    2 ||
+                CountFullResolutionWritesLocked(
+                    compute,
+                    DXGI_FORMAT_R8G8B8A8_UNORM) !=
+                    2)
+            {
+                return;
+            }
+
+            g_frame.taaPending = true;
+            g_frame.taaOrdinal =
+                ordinal;
+
+            stages.push_back(
+                PendingStage{
+                    B::BeforeGlobalTAA,
+                    P::BeforeExecution,
+                    "global_taa_entry"
+                });
+        }
+
+        void ObserveHdrReductionLocked(
+            const bool compute,
+            const std::uint64_t frame,
+            std::vector<PendingStage>& stages)
+        {
+            if (!g_frame.lateStageEligible ||
+                g_frame.hdrReductionComplete)
+            {
+                return;
+            }
+
+            const auto mainHdr =
+                ResourceIdLocked(
+                    Semantic::SceneColorHDR);
+
+            const auto writes =
+                CurrentWritesLocked(compute);
+
+            for (const auto& output : writes)
+            {
+                if (output.identity == 0 ||
+                    output.shape.dimension !=
+                        D3D11_RESOURCE_DIMENSION_TEXTURE2D ||
+                    output.shape.format !=
+                        DXGI_FORMAT_R16G16B16A16_FLOAT ||
+                    output.shape.width == 0 ||
+                    output.shape.height == 0 ||
+                    g_screenWidth == 0 ||
+                    g_screenHeight == 0)
+                {
+                    continue;
+                }
+
+                if (g_frame.hdrReductionStep == 0)
+                {
+                    if (mainHdr == 0 ||
+                        !ReadsLocked(mainHdr) ||
+                        output.shape.width >
+                            g_screenWidth / 2 ||
+                        output.shape.height >
+                            g_screenHeight / 2)
+                    {
+                        continue;
+                    }
+
+                    g_frame.hdrReductionStep = 1;
+                    g_frame.hdrReductionLastIdentity =
+                        output.identity;
+                    g_frame.hdrReductionLastWidth =
+                        output.shape.width;
+                    g_frame.hdrReductionLastHeight =
+                        output.shape.height;
+                    continue;
+                }
+
+                const bool consumesPrevious =
+                    ReadsLocked(
+                        g_frame.hdrReductionLastIdentity);
+
+                const std::uint64_t previousArea =
+                    static_cast<std::uint64_t>(
+                        g_frame.hdrReductionLastWidth) *
+                    g_frame.hdrReductionLastHeight;
+
+                const std::uint64_t currentArea =
+                    static_cast<std::uint64_t>(
+                        output.shape.width) *
+                    output.shape.height;
+
+                const bool descends =
+                    output.shape.width <=
+                        g_frame.hdrReductionLastWidth &&
+                    output.shape.height <=
+                        g_frame.hdrReductionLastHeight &&
+                    currentArea <
+                        previousArea;
+
+                if (!consumesPrevious ||
+                    !descends)
+                {
+                    continue;
+                }
+
+                ++g_frame.hdrReductionStep;
+                g_frame.hdrReductionLastIdentity =
+                    output.identity;
+                g_frame.hdrReductionLastWidth =
+                    output.shape.width;
+                g_frame.hdrReductionLastHeight =
+                    output.shape.height;
+
+                if (g_frame.hdrReductionStep >= 4 &&
+                    output.shape.width <= 4 &&
+                    output.shape.height <= 4)
+                {
+                    g_frame.hdrReductionComplete =
+                        true;
+                    g_frame.hdrReductionFinalIdentity =
+                        output.identity;
+
+                    stages.push_back(
+                        PendingStage{
+                            stage_scheduler::Boundary::
+                                HDRReduction,
+                            stage_scheduler::Phase::
+                                AfterExecution,
+                            "hdr_reduction_complete"
+                        });
+
+                    return;
+                }
+            }
+
+            (void)frame;
+        }
+
+        void CompleteLateStagesLocked(
+            const std::uint64_t ordinal,
+            std::vector<PendingStage>& stages)
+        {
+            if (g_frame.taaPending &&
+                g_frame.taaOrdinal ==
+                    ordinal)
+            {
+                g_frame.taaPending = false;
+                g_frame.taaComplete = true;
+
+                stages.push_back(
+                    PendingStage{
+                        stage_scheduler::Boundary::
+                            AfterGlobalTAA,
+                        stage_scheduler::Phase::
+                            AfterExecution,
+                        "global_taa_complete"
+                    });
+            }
+        }
+
         bool DetectVolumetricApplyLocked(
             const std::uint64_t frame)
         {
@@ -2772,6 +3078,12 @@ namespace gzfx::render::semantic_authority
                             "volumetric_temporal_apply_with_previous_depth"
                         });
                 }
+
+                DetectLatePreExecutionLocked(
+                    false,
+                    frame,
+                    ordinal,
+                    stages);
             }
 
             SignalStages(stages, frame, ordinal);
@@ -2899,6 +3211,8 @@ namespace gzfx::render::semantic_authority
 
                     g_frame.ambientCompositePending =
                         false;
+                    g_frame.lateStageEligible =
+                        true;
                 }
 
                 if (g_frame.volumetricApplyPending &&
@@ -2917,6 +3231,15 @@ namespace gzfx::render::semantic_authority
                     g_frame.volumetricApplyPending =
                         false;
                 }
+
+                ObserveHdrReductionLocked(
+                    false,
+                    frame,
+                    stages);
+
+                CompleteLateStagesLocked(
+                    ordinal,
+                    stages);
             }
 
             SignalStages(stages, frame, ordinal);
@@ -2953,6 +3276,12 @@ namespace gzfx::render::semantic_authority
                             "main_opaque_mrt_complete_before_compute_cameraz"
                         });
                 }
+
+                DetectLatePreExecutionLocked(
+                    true,
+                    frame,
+                    ordinal,
+                    stages);
             }
 
             SignalStages(stages, frame, ordinal);
@@ -3035,6 +3364,15 @@ namespace gzfx::render::semantic_authority
                         }
                     }
                 }
+
+                ObserveHdrReductionLocked(
+                    true,
+                    frame,
+                    stages);
+
+                CompleteLateStagesLocked(
+                    ordinal,
+                    stages);
             }
 
             SignalStages(stages, frame, ordinal);
