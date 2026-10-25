@@ -1857,6 +1857,8 @@ int wmain(int argc, wchar_t** argv)
             !deferredCoverage ||
             !semanticCoverage ||
             !ownershipCoverage ||
+            !shaderIdentitySchema ||
+            !presentTimelineCoverage ||
             !dropExpectation)
         {
             std::cerr
@@ -1889,6 +1891,7 @@ int wmain(int argc, wchar_t** argv)
     Release(hdrReduceC);
     Release(hdrReduceB);
     Release(hdrReduceA);
+    Release(hdrFalseRoot);
     Release(rawIndirect);
     Release(aoFinal);
     Release(aoTemp);
