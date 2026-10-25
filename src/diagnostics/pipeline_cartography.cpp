@@ -4936,6 +4936,20 @@ namespace gzfx::diagnostics::pipeline_cartography
         }
     }
 
+    std::uintptr_t ObserveResource(
+        ID3D11Resource* const resource) noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+            return RegisterResourceLocked(resource);
+        }
+        catch (...)
+        {
+            return 0;
+        }
+    }
+
     void SetTelemetrySinks(
         const PassTelemetrySink passSink,
         const ResourceTelemetrySink resourceSink,
