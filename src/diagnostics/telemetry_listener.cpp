@@ -2291,6 +2291,38 @@ namespace gzfx::diagnostics::telemetry_listener
                 std::memory_order_release);
         }
 
+        void WriteSessionCloseState(
+            const char* const state)
+        {
+            if (state == nullptr ||
+                g_sessionRoot.empty())
+            {
+                return;
+            }
+
+            std::ofstream out(
+                g_sessionRoot /
+                    L"session_close_state.txt",
+                std::ios::out |
+                    std::ios::trunc);
+
+            if (!out)
+            {
+                return;
+            }
+
+            out
+                << "state=" << state << "\n"
+                << "qpc=" << QpcNow() << "\n"
+                << "enqueued=" << g_enqueued.load() << "\n"
+                << "written=" << g_written.load() << "\n"
+                << "dropped=" << g_dropped.load() << "\n"
+                << "queue_depth=" << g_ring.ApproxSize() << "\n"
+                << "writer_alive="
+                << (g_writerAlive.load() ? "true" : "false")
+                << "\n";
+        }
+
         void EmitFrameTransitions(
             const std::uint64_t frame,
             const std::uint32_t mode,
@@ -2614,6 +2646,9 @@ namespace gzfx::diagnostics::telemetry_listener
                 return;
             }
 
+            WriteSessionCloseState(
+                "shutdown_requested");
+
             EnqueuePendingPass();
 
             g_initialized.store(
@@ -2666,6 +2701,9 @@ namespace gzfx::diagnostics::telemetry_listener
                     g_wakeEvent);
                 g_wakeEvent = nullptr;
             }
+
+            WriteSessionCloseState(
+                "complete");
         }
         catch (...)
         {
