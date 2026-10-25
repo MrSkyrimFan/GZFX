@@ -2083,6 +2083,30 @@ namespace gzfx::diagnostics::telemetry_listener
             g_stop.store(
                 false);
 
+            wchar_t forceOverflow[8]{};
+
+            if (GetEnvironmentVariableW(
+                    L"GZFX_TEST_TELEMETRY_FORCE_OVERFLOW",
+                    forceOverflow,
+                    static_cast<DWORD>(
+                        std::size(forceOverflow))) > 0)
+            {
+                for (std::size_t i = 0;
+                     i < g_ring.Capacity() * 2;
+                     ++i)
+                {
+                    Event burst{};
+                    burst.type =
+                        EventType::Resource;
+                    burst.u[0] =
+                        0xF0000000ull + i;
+                    burst.u[1] =
+                        i + 1;
+
+                    Enqueue(burst);
+                }
+            }
+
             g_writer =
                 std::thread(
                     &WriterMain);
