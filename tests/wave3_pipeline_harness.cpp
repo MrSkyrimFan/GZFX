@@ -658,8 +658,8 @@ int wmain(int argc, wchar_t** argv)
 
                 if (mip == 0)
                 {
-                    ID3D11ShaderResourceView* depthSrv = nullptr;
-                    context->PSSetShaderResources(0, 1, &depthSrv);
+                    ID3D11ShaderResourceView* nullDepthSrv = nullptr;
+                    context->PSSetShaderResources(0, 1, &nullDepthSrv);
                 }
 
                 context->Draw(3, 0);
