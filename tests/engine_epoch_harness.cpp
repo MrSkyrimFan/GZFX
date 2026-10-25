@@ -23,11 +23,15 @@ namespace
             bytes.data() + 9,
             sizeof(displacement));
 
-        return
-            expectedTarget -
+        const std::int64_t match =
+            static_cast<std::int64_t>(
+                expectedTarget) -
             13 -
             static_cast<std::int64_t>(
                 displacement);
+
+        return static_cast<std::uint64_t>(
+            match);
     }
 }
 
