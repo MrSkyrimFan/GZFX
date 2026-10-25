@@ -27,19 +27,36 @@ namespace
             std::istreambuf_iterator<char>());
     }
 
-    std::uint64_t FindUnsignedAfter(
+    std::uint64_t FindUnsignedOnLine(
         const std::string& text,
-        const std::string& marker)
+        const std::string& lineMarker,
+        const std::string& fieldMarker)
     {
-        const auto position = text.find(marker);
+        const auto lineStart =
+            text.find(lineMarker);
 
-        if (position == std::string::npos)
+        if (lineStart == std::string::npos)
+        {
+            return 0;
+        }
+
+        const auto lineEnd =
+            text.find('\n', lineStart);
+
+        const auto field =
+            text.find(
+                fieldMarker,
+                lineStart);
+
+        if (field == std::string::npos ||
+            (lineEnd != std::string::npos &&
+             field >= lineEnd))
         {
             return 0;
         }
 
         const auto start =
-            position + marker.size();
+            field + fieldMarker.size();
 
         const auto end =
             text.find_first_not_of(
@@ -391,27 +408,50 @@ int wmain(int argc, wchar_t** argv)
         std::string::npos;
 
     const auto normalGenerationA =
-        FindUnsignedAfter(
+        FindUnsignedOnLine(
             statusA,
-            "native_normal=0x");
+            "native_normal=",
+            " generation=");
+
+    const auto normalGenerationB =
+        FindUnsignedOnLine(
+            statusB,
+            "native_normal=",
+            " generation=");
+
+    const auto normalGenerationC =
+        FindUnsignedOnLine(
+            statusC,
+            "native_normal=",
+            " generation=");
 
     const auto contractA =
-        FindUnsignedAfter(
+        FindUnsignedOnLine(
             statusA,
+            "native_normal=",
             " contract=");
 
     const auto contractB =
-        FindUnsignedAfter(
+        FindUnsignedOnLine(
             statusB,
+            "native_normal=",
             " contract=");
 
     const auto contractC =
-        FindUnsignedAfter(
+        FindUnsignedOnLine(
             statusC,
+            "native_normal=",
             " contract=");
 
     // Physical native-normal identity/generation is allowed to ping-pong.
     // The production contract must remain stable and history must survive.
+    const bool physicalPingPong =
+        normalGenerationA != 0 &&
+        normalGenerationB != 0 &&
+        normalGenerationC != 0 &&
+        normalGenerationA != normalGenerationB &&
+        normalGenerationB != normalGenerationC;
+
     const bool stableContract =
         contractA != 0 &&
         contractA == contractB &&
@@ -422,6 +462,7 @@ int wmain(int argc, wchar_t** argv)
         !temporal ||
         !reused ||
         !noReset ||
+        !physicalPingPong ||
         !stableContract)
     {
         std::cerr
@@ -429,8 +470,18 @@ int wmain(int argc, wchar_t** argv)
             << "statusA:\n" << statusA
             << "\nstatusB:\n" << statusB
             << "\nstatusC:\n" << statusC
-            << "\nnormal_generation_probe="
+            << "\nnormal_generations="
             << normalGenerationA
+            << ","
+            << normalGenerationB
+            << ","
+            << normalGenerationC
+            << "\ncontracts="
+            << contractA
+            << ","
+            << contractB
+            << ","
+            << contractC
             << "\n";
 
         return 15;
