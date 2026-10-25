@@ -1,0 +1,864 @@
+GZFX 0.0.22 ENGINEERING RESULT
+Wave 3 Temporal Continuity Repair
+Engineering date: October 24, 2026
+Status: CODE PASS / CI PASS / MERGED / PACKAGED / FIELD TEST PENDING
+
+======================================================================
+1. EXECUTIVE RESULT
+======================================================================
+
+The 0.0.21 real-Skyrim field gate exposed one primary Wave 3 lifecycle defect:
+
+    expected NORMAL_MASK_CURRENT physical ping-pong
+    ->
+    Semantic Authority physical generation changed
+    ->
+    TemporalHistory treated it as logical discontinuity
+    ->
+    history reset every Wave 3 execution
+
+0.0.22 repairs that failure without reopening or weakening the field-closed
+Wave 1 / Wave 2 renderer foundation.
+
+The repair is merged to main.
+
+Target runtime:
+
+    0.0.22-temporal-continuity-repair
+
+Source implementation PR:
+
+    #25
+    Repair Wave 3 temporal continuity and capture ergonomics
+
+Source merge commit:
+
+    676ae4e1d37993aaf9e77f568278338d0d2f6547
+
+Post-merge package-refresh commit:
+
+    45773d3564321a4032ad58eff4745fb59015e0dd
+
+Package-refresh proof:
+
+    source merge -> package refresh
+    changed exactly one file:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Final package blob:
+
+    eeff80c8a5e3b0a8301cddc63b48a37357a5e1a2
+
+Final package size:
+
+    289,476 bytes
+
+PR Windows x64 CI:
+
+    run 40146367696
+    SUCCESS
+    16 / 16 tests PASS
+
+Merged-main Windows x64 CI:
+
+    run 40146581788
+    SUCCESS
+    16 / 16 tests PASS
+
+No test was removed.
+
+======================================================================
+2. AUTHORITY USED
+======================================================================
+
+This engineering pass was controlled by:
+
+    GZFX_0.0.21_WAVE3_FIELD_FINDINGS.txt
+    GZFX_RESEARCH_PASS_4_WAVE3_TEMPORAL_CONTINUITY.txt
+    GZFX_0.0.22_TEMPORAL_CONTINUITY_REPAIR_BLUEPRINT.txt
+
+Those records have now been archived from:
+
+    GZFXWorkFolder/new/
+
+to:
+
+    GZFXWorkFolder/old/
+
+The active new/ area is cleared for the next DATA cycle.
+
+======================================================================
+3. PRIMARY ROOT CAUSE REPAIRED
+======================================================================
+
+0.0.21 used:
+
+    SemanticInputView.semanticGeneration
+
+as a hard temporal continuity token for:
+
+    MAIN_DEPTH_CURRENT
+    MOTION
+    NORMAL_MASK_CURRENT
+
+Semantic Authority generation is intentionally tied to physical backing
+identity / authority promotion.
+
+That is correct for:
+
+    COM lifetime
+    SRV cache invalidation
+    diagnostics
+    identity replacement evidence
+
+It is NOT a logical temporal semantic continuity token.
+
+The native normal target is known to ping-pong between valid physical render
+targets in ordinary Skyrim rendering.
+
+Therefore the same logical semantic:
+
+    NORMAL_MASK_CURRENT
+
+can have:
+
+    physical resource A
+    ->
+    physical resource B
+    ->
+    physical resource A
+
+while preserving:
+
+    format
+    dimensions
+    stage
+    semantic meaning
+    current validity
+
+0.0.22 separates those concepts.
+
+======================================================================
+4. SEMANTIC CONTRACT TOKENS
+======================================================================
+
+Added a stable logical contract token to:
+
+    native_input::SemanticInputView
+
+New member:
+
+    std::uint64_t contractToken
+
+The token is deterministically derived from:
+
+    semantic enum
+    D3D11 resource dimension
+    width
+    height
+    mip level count
+    array size
+    sample count
+    sample quality
+    native resource format
+    production typed SRV format
+
+The token explicitly excludes:
+
+    COM pointer
+    canonical resource identity
+    Semantic Authority physical generation
+
+Therefore:
+
+same semantic layout on a ping-pong resource
+->
+same contract token
+
+actual layout / semantic contract change
+->
+different contract token
+
+The physical semantic generation remains available and continues to drive
+native view-cache rebuilding where appropriate.
+
+This is the intended separation:
+
+PHYSICAL IDENTITY
+    resource lifetime / SRV cache / evidence
+
+LOGICAL CONTRACT
+    temporal continuity
+
+======================================================================
+5. TEMPORAL HISTORY RESET MODEL
+======================================================================
+
+Wave 3 HistoryState now stores:
+
+    depthContractToken
+    motionContractToken
+    normalContractToken
+
+instead of using physical semantic generations as hard continuity tokens.
+
+Reset reason:
+
+    semantic_generation_changed
+
+was replaced by:
+
+    semantic_contract_changed
+
+Expected native ping-pong no longer resets temporal history.
+
+Hard reset remains fail-closed for real continuity breaks including:
+
+    first valid frame
+    frame gap
+    device generation change
+    surface generation change
+    dimensions change
+    semantic contract change
+    camera generation change
+    environment transition
+    runtime rebuild
+    missing required input
+    execution failure
+
+GPU camera-cut logic continues to invalidate temporal reuse for the affected
+frame through the existing cut-state path without adding a permanent CPU/GPU
+readback stall.
+
+======================================================================
+6. IMPORTANT CAMERA-CUT PERFORMANCE DECISION
+======================================================================
+
+An implementation experiment briefly considered reading the GPU cut-state
+buffer back every frame so CPU history state could label camera-cut resets.
+
+That design was rejected before merge.
+
+Reason:
+
+    a synchronous per-frame GPU -> CPU readback on the render thread would
+    damage the very performance architecture Wave 3 exists to establish.
+
+Final design:
+
+    camera-cut rejection stays GPU-native during ordinary frames
+
+Capture-only camera-continuity evidence may read the cut-state buffer because
+manual evidence is bounded.
+
+CPU reset-event logging records the renderer/contract lifecycle resets that do
+not require a GPU stall.
+
+This is a deliberate correctness/performance boundary, not missing work.
+
+======================================================================
+7. CAMERAZ BACKGROUND DIAGNOSTIC FIX
+======================================================================
+
+0.0.21 used:
+
+    stockValid =
+        isfinite(CameraZ) &&
+        CameraZ > 0
+
+as the CameraZ geometry predicate.
+
+The field run proved this was wrong.
+
+Public reconstructed Skyrim CameraZ code clamps reconstructed depth to a
+positive far value.
+
+Therefore sky/background can contain positive CameraZ values.
+
+0.0.22 now determines:
+
+    stockFar =
+        maximum finite CameraZ mip0 depth
+
+Then:
+
+    epsilon =
+        max(
+            abs(stockFar) * 1e-5,
+            1e-4)
+
+    stockBackground =
+        abs(stockDepth - stockFar) <= epsilon
+
+    stockGeometry =
+        finite
+        && stockDepth > 0
+        && !stockBackground
+
+Capture evidence now reports:
+
+    stock_far_value
+    stock_far_epsilon
+    stock_background_pixels
+    stock_geometry_pixels
+    common_geometry
+    gzfx_only_geometry
+    stock_only_geometry
+    both_background
+
+Numerical error statistics are calculated only for common geometry.
+
+This removes the 0.0.21 false classification where broad sky/background was
+reported as stock-only geometry.
+
+======================================================================
+8. HUMAN CAPTURE INPUT OWNERSHIP
+======================================================================
+
+0.0.21 had two independent Shift+Numpad5 edge-detection paths:
+
+    Wave 3 AfterOpaqueWorldMRT polling
+    UI / Present semantic-capture polling
+
+The real field run produced:
+
+    12 Wave 3 captures
+    7 semantic captures
+
+from twelve intended user requests.
+
+That mismatch is fixed.
+
+The UI input handler is now the single human hotkey owner.
+
+One:
+
+    Shift + Numpad5
+
+request calls:
+
+    semantic_probe::RequestManualCapture()
+
+and:
+
+    wave3::RequestManualCapture()
+
+Wave 3 no longer directly polls GetAsyncKeyState for its own separate capture
+edge.
+
+One physical press now fans out into the evidence systems.
+
+======================================================================
+9. HUMAN-DOABLE ARM-THEN-ACT CAPTURE
+======================================================================
+
+The 0.0.21 test required the user to:
+
+    move
+    + strafe
+    + turn camera
+    + hold Shift
+    + press Numpad5
+
+simultaneously.
+
+That is now explicitly prohibited by project governance.
+
+0.0.22 Wave 3 capture is delayed after the request.
+
+Current production delay:
+
+    30 Wave 3 executions
+
+The intended human workflow is:
+
+    press Shift+Numpad5
+    release the capture chord
+    return hands to ordinary movement/mouse controls
+    perform requested movement
+    Wave 3 captures after the bounded delay
+
+If the exact target frame is skipped because the renderer temporarily does not
+produce AfterOpaqueWorldMRT, the capture uses the first valid Wave 3 frame at
+or after the target.
+
+This prevents a capture from becoming permanently stuck because one exact
+frame was unavailable.
+
+======================================================================
+10. BLUEPRINT DEVIATION - NO 60-FRAME FULL READBACK WINDOW
+======================================================================
+
+Research/blueprint proposed:
+
+    ~15 frame arm delay
+    +
+    ~60 frame observation window
+    +
+    select maximum mean-motion frame
+
+The final implementation intentionally uses one delayed representative frame
+instead of performing full-resolution motion/debug readbacks for every frame
+in a 60-frame window.
+
+Reason:
+
+A 2560x1440 R16G16 motion surface plus debug/history readback across dozens of
+frames would introduce a large artificial render-thread synchronization cost
+during the exact motion test being measured.
+
+The final implementation preserves the real user requirement:
+
+    capture first
+    then move naturally
+
+without introducing repeated full-resolution readback stalls.
+
+This deviation is accepted for 0.0.22 field validation.
+
+If later testing proves one delayed frame insufficient, the correct next
+upgrade is a small GPU reduction / asynchronous evidence ring, not sixty
+synchronous full-frame CPU readbacks.
+
+======================================================================
+11. BOUNDED RESET EVIDENCE
+======================================================================
+
+Added:
+
+    Diagnostics/Wave3/wave3_reset_events.csv
+
+It records successful-frame hard lifecycle resets with:
+
+    sequence
+    frame
+    reason
+    depth contract
+    motion contract
+    normal contract
+    camera generation
+    device generation
+    surface generation
+    environment
+
+The event history is bounded to:
+
+    256 entries
+
+No unbounded log growth is introduced.
+
+======================================================================
+12. BOUNDED GPU TIMING EVIDENCE
+======================================================================
+
+0.0.21 wrote only the latest resolved timing row.
+
+0.0.22 retains a bounded recent history:
+
+    maximum 256 resolved timing samples
+
+wave3_gpu_timing.csv now contains:
+
+    frame
+    depth_base_ms
+    depth_tail_ms
+    temporal_ms
+    camera_store_ms
+    total_ms
+
+Manual Wave 3 captures also write:
+
+    gpu_timing_summary.txt
+
+with:
+
+    sample count
+    latest total
+    mean total
+    p95 total
+    maximum total
+
+The existing asynchronous timestamp/disjoint query strategy remains intact.
+
+No GPU flush was added merely to obtain timing.
+
+======================================================================
+13. TEMPORAL NUMERIC CAPTURE EVIDENCE
+======================================================================
+
+Manual Wave 3 captures now write:
+
+    temporal_stats.txt
+
+containing:
+
+    history_accepted_percent
+    reject_depth_world_percent
+    reject_normal_percent
+    reject_uv_invalid_percent
+    mean_confidence
+    max_confidence
+
+The existing accessible grayscale masks remain:
+
+    history_accepted.bmp
+    reject_depth_or_world_position.bmp
+    reject_world_normal.bmp
+    reject_uv_or_invalid.bmp
+    history_confidence.bmp
+
+This makes the next field verdict much faster and less dependent on visual
+interpretation.
+
+======================================================================
+14. CAPTURE SUMMARY IMPROVEMENTS
+======================================================================
+
+Wave 3 capture/status evidence now includes logical contract tokens alongside
+physical resource generations.
+
+That allows future field review to prove:
+
+    physical normal generation changes
+    while
+    logical normal contract remains constant
+
+without guessing from resource IDs.
+
+======================================================================
+15. SYNTHETIC REGRESSION - EXACT FIELD FAILURE REPRODUCED
+======================================================================
+
+The Wave 3 pipeline harness was strengthened to reproduce the real field bug.
+
+It creates:
+
+    normal A
+    normal B
+
+with the same valid semantic contract.
+
+Synthetic scene frames alternate:
+
+    A
+    ->
+    B
+    ->
+    A
+    ->
+    continued ping-pong
+
+The harness requires:
+
+1. physical native-normal Semantic Authority generations actually change;
+
+2. logical native-normal contract tokens remain equal;
+
+3. Wave 3 remains executed;
+
+4. hierarchy remains valid;
+
+5. temporal infrastructure remains valid;
+
+6. later continuous frames report:
+
+       history_reused_candidate=true
+
+7. later continuous frames report:
+
+       history_reset_reason=none
+
+This test would fail under the 0.0.21 physical-generation reset model.
+
+It passes under 0.0.22.
+
+======================================================================
+16. SYNTHETIC CONTRACT TEST
+======================================================================
+
+wave3_math now tests the stable contract-token helper.
+
+It proves:
+
+same semantic layout
+->
+same token
+
+size change
+->
+different token
+
+view-format change
+->
+different token
+
+The token is deterministic and deliberately independent of physical identity.
+
+======================================================================
+17. SYNTHETIC DELAYED CAPTURE TEST
+======================================================================
+
+The Wave 3 pipeline test also arms the manual capture request without physical
+keyboard input.
+
+It then runs enough frames for the delayed target.
+
+Acceptance requires:
+
+    Diagnostics/Wave3/manual0001/wave3_summary.txt
+
+to exist.
+
+This proves the arm-then-act capture path completes through the same internal
+request mechanism used by the UI.
+
+======================================================================
+18. TEST GATE
+======================================================================
+
+Final merged-main CTest result:
+
+    16 / 16 PASS
+    0 failures
+
+Tests:
+
+1. runtime_smoke
+2. d3d11_lifecycle_probe
+3. renderer_forensics
+4. resource_intelligence
+5. visible_pass
+6. menu_only
+7. pre_ui_effects
+8. ambient_depth_ao
+9. ambient_depth_ssil
+10. ambient_visibility_flat_ao
+11. ambient_visibility_uniform_ssil
+12. renderer_semantic_probe
+13. semantic_authority_foundation
+14. native_surface_temporal
+15. wave3_math
+16. wave3_pipeline
+
+Merged-main run:
+
+    40146581788
+    SUCCESS
+
+Total merged-main CTest time reported by CI:
+
+    10.54 sec
+
+======================================================================
+19. CI WORKFLOW ADJUSTMENT FOR THE NEW AUTHORITY MODEL
+======================================================================
+
+The user permanently moved GZFX findings/research/blueprint/engineering records
+into the repository.
+
+Before this repair, every authority-only main commit triggered:
+
+    Windows build
+    tests
+    package
+    Lance ZIP refresh
+
+even though source did not change.
+
+The push workflow now ignores:
+
+    LANCE YOUR FILE IS HERE/**
+    GZFXWorkFolder/**
+    README.md
+    AGENT.md
+
+Pull-request CI remains active.
+
+Source changes still trigger the normal main build/package workflow.
+
+This prevents the permanent repo-native authority workflow from causing
+meaningless binary rebuilds every time a TXT report is added or archived.
+
+======================================================================
+20. REPOSITORY / PACKAGE PROOF
+======================================================================
+
+PR:
+
+    #25
+
+PR head:
+
+    e6c5a158803fcad95138f79d26be366fb02c999f
+
+PR CI:
+
+    Windows x64
+    run 40146367696
+    SUCCESS
+    16 / 16 PASS
+
+Source merge:
+
+    676ae4e1d37993aaf9e77f568278338d0d2f6547
+
+Merged-main CI:
+
+    Windows x64
+    run 40146581788
+    SUCCESS
+    16 / 16 PASS
+
+Package refresh:
+
+    45773d3564321a4032ad58eff4745fb59015e0dd
+
+Comparison:
+
+    676ae4e1...
+    ->
+    45773d35...
+
+changed only:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Final ZIP:
+
+    blob:
+    eeff80c8a5e3b0a8301cddc63b48a37357a5e1a2
+
+    size:
+    289,476 bytes
+
+No hidden source change exists in the package-refresh commit.
+
+======================================================================
+21. WHAT REMAINS UNCHANGED
+======================================================================
+
+0.0.22 intentionally does NOT change:
+
+    native motion sign
+    native motion coordinate space
+    native normal decode
+    R32 hierarchy
+    hierarchy mip strategy
+    AfterOpaqueWorldMRT stage
+    Stage Scheduler field model
+    Wave 1 semantic authority model
+    Wave 2 stage model
+    global TAA mapping
+    water mapping
+    reflection mapping
+    RT2.B semantics
+    RT3 channel semantics
+    production AO
+    production GI
+
+The field run gave no evidence that those systems required redesign.
+
+======================================================================
+22. CURRENT WAVE 3 STATUS
+======================================================================
+
+CODE:
+
+    PASS
+
+PR CI:
+
+    PASS
+
+MERGED-MAIN CI:
+
+    PASS
+
+PACKAGE:
+
+    PASS
+
+REAL-SKYRIM 0.0.21 FIELD:
+
+    partial pass
+    temporal lifecycle failed
+
+REAL-SKYRIM 0.0.22 FIELD:
+
+    PENDING
+
+Therefore:
+
+    WAVE 3 REMAINS OPEN UNTIL THE COMPACT 0.0.22 FIELD GATE PASSES.
+
+======================================================================
+23. NEXT FIELD GATE
+======================================================================
+
+The next field test is deliberately smaller and human-doable.
+
+Six capture requests:
+
+1. exterior stationary
+2. exterior slow movement/pan
+3. exterior fast turn/movement
+4. interior stationary after transition
+5. interior movement
+6. exterior stationary after returning outside
+
+For movement captures:
+
+    press Shift+Numpad5 FIRST
+    release keys
+    THEN perform movement normally
+
+Do not attempt simultaneous capture chord + steering.
+
+The runtime delay handles the capture.
+
+The resulting evidence should prove:
+
+    physical native-normal ping-pong survives
+    history acceptance > 0 on stationary continuity
+    confidence accumulates
+    movement increases rejection appropriately
+    no per-frame reset spam
+    transition lifecycle remains fail-closed
+    CameraZ sky/background classification is corrected
+    GPU timing remains healthy
+    foundation stage ordering remains intact
+
+======================================================================
+24. NEXT WORKFLOW STATE
+======================================================================
+
+The completed cycle:
+
+    DATA
+    ->
+    RESEARCH
+    ->
+    BLUEPRINT
+    ->
+    IMPLEMENTATION
+
+is now archived.
+
+Current phase:
+
+    TEST
+
+After the user uploads the next Skyrim evidence ZIP:
+
+    DATA begins again
+
+and the next findings TXT goes directly into:
+
+    GZFXWorkFolder/new/
+
+No manual authority-folder round trip is required.
+
+======================================================================
+END OF 0.0.22 ENGINEERING RESULT
+======================================================================
