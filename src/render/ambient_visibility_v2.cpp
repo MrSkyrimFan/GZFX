@@ -415,9 +415,10 @@ namespace gzfx::render::ambient_visibility_v2
             g_currentCameraFrame = 0;
         }
 
-        const char* ShaderSource()
+        const std::string& ShaderSource()
         {
-            return R"GZFX(
+            static const std::string source =
+                std::string(R"GZFX(
 cbuffer AVParameters : register(b0)
 {
     uint2 ResourceSize;
@@ -902,7 +903,8 @@ void RawGtaoCS(
                     1.0);
 
             float2 uv0 =
-                currentUv +
+                curren)GZFX" +
+                R"GZFX(tUv +
                 logicalOffset;
 
             float2 uv1 =
@@ -1351,7 +1353,8 @@ void TemporalCS(
             if (p.x < 0 ||
                 p.y < 0 ||
                 p.x >= int(activeSize.x) ||
-                p.y >= int(activeSize.y))
+                p.y >= int(act)GZFX" +
+                R"GZFX(iveSize.y))
             {
                 continue;
             }
@@ -1486,6 +1489,8 @@ void PackCS(
 
 #endif
 )GZFX";
+
+            return source;
         }
 
         bool Compile(
@@ -1509,11 +1514,13 @@ void PackCS(
 
             ID3DBlob* errors = nullptr;
 
+            const auto& source =
+                ShaderSource();
+
             const HRESULT result =
                 D3DCompile(
-                    ShaderSource(),
-                    std::strlen(
-                        ShaderSource()),
+                    source.data(),
+                    source.size(),
                     "GZFXAmbientVisibilityV2",
                     pack
                         ? packMacros
