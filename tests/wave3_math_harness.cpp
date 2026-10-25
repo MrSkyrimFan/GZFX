@@ -56,6 +56,66 @@ int main()
         return 6;
     }
 
+    const auto normalA =
+        ContractToken(
+            3,
+            3,
+            2560,
+            1440,
+            1,
+            1,
+            1,
+            0,
+            28,
+            28);
+
+    const auto normalB =
+        ContractToken(
+            3,
+            3,
+            2560,
+            1440,
+            1,
+            1,
+            1,
+            0,
+            28,
+            28);
+
+    const auto changedSize =
+        ContractToken(
+            3,
+            3,
+            1920,
+            1080,
+            1,
+            1,
+            1,
+            0,
+            28,
+            28);
+
+    const auto changedView =
+        ContractToken(
+            3,
+            3,
+            2560,
+            1440,
+            1,
+            1,
+            1,
+            0,
+            28,
+            10);
+
+    if (normalA == 0 ||
+        normalA != normalB ||
+        normalA == changedSize ||
+        normalA == changedView)
+    {
+        return 7;
+    }
+
     std::cout << "Wave 3 math contract passed.\n";
     return 0;
 }

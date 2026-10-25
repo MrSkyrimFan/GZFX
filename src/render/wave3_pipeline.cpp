@@ -48,8 +48,13 @@ namespace gzfx::render::wave3
             DeviceGenerationChanged,
             SurfaceGenerationChanged,
             ResourceDimensionsChanged,
-            SemanticGenerationChanged,
+            SemanticContractChanged,
             CameraGenerationChanged,
+            CameraCutTranslation,
+            CameraCutRotation,
+            CameraMatrixDiscontinuity,
+            CameraProjectionDiscontinuity,
+            DynamicResolutionInvalid,
             EnvironmentTransition,
             RuntimeRebuild,
             MissingRequiredInput,
@@ -170,14 +175,29 @@ namespace gzfx::render::wave3
             std::uint64_t surfaceGeneration = 0;
             UINT width = 0;
             UINT height = 0;
-            std::uint64_t depthGeneration = 0;
-            std::uint64_t motionGeneration = 0;
-            std::uint64_t normalGeneration = 0;
+            std::uint64_t depthContractToken = 0;
+            std::uint64_t motionContractToken = 0;
+            std::uint64_t normalContractToken = 0;
             std::uint64_t cameraGeneration = 0;
             semantic_authority::EnvironmentClass environment =
                 semantic_authority::EnvironmentClass::UnknownTransition;
             std::size_t readIndex = 0;
             ResetReason lastReset = ResetReason::FirstValidFrame;
+        };
+
+        struct ResetEvent
+        {
+            std::uint64_t sequence = 0;
+            std::uint64_t frame = 0;
+            ResetReason reason = ResetReason::None;
+            std::uint64_t depthContract = 0;
+            std::uint64_t motionContract = 0;
+            std::uint64_t normalContract = 0;
+            std::uint64_t cameraGeneration = 0;
+            std::uint64_t deviceGeneration = 0;
+            std::uint64_t surfaceGeneration = 0;
+            semantic_authority::EnvironmentClass environment =
+                semantic_authority::EnvironmentClass::UnknownTransition;
         };
 
         struct PendingCapture
@@ -197,11 +217,16 @@ namespace gzfx::render::wave3
         Runtime g_runtime{};
         HistoryState g_history{};
         PendingCapture g_capture{};
-        bool g_captureKeyDown = false;
+        std::atomic<bool> g_captureRequested{false};
         std::uint32_t g_captureIndex = 0;
+        constexpr std::uint64_t kCaptureArmDelayFrames = 30;
         std::uint64_t g_executeCount = 0;
         std::uint64_t g_skipCount = 0;
         std::uint64_t g_lastStatusFrame = 0;
+        std::uint64_t g_resetSequence = 0;
+        std::vector<ResetEvent> g_resetEvents{};
+        std::vector<GpuTiming> g_timingHistory{};
+        constexpr std::size_t kEvidenceHistoryLimit = 256;
 
         std::string HResultText(const HRESULT value)
         {
@@ -266,10 +291,20 @@ namespace gzfx::render::wave3
                 return "surface_generation_changed";
             case ResetReason::ResourceDimensionsChanged:
                 return "resource_dimensions_changed";
-            case ResetReason::SemanticGenerationChanged:
-                return "semantic_generation_changed";
+            case ResetReason::SemanticContractChanged:
+                return "semantic_contract_changed";
             case ResetReason::CameraGenerationChanged:
                 return "camera_generation_changed";
+            case ResetReason::CameraCutTranslation:
+                return "camera_cut_translation";
+            case ResetReason::CameraCutRotation:
+                return "camera_cut_rotation";
+            case ResetReason::CameraMatrixDiscontinuity:
+                return "camera_matrix_discontinuity";
+            case ResetReason::CameraProjectionDiscontinuity:
+                return "camera_projection_discontinuity";
+            case ResetReason::DynamicResolutionInvalid:
+                return "dynamic_resolution_invalid";
             case ResetReason::EnvironmentTransition:
                 return "environment_transition";
             case ResetReason::RuntimeRebuild:
@@ -304,6 +339,40 @@ namespace gzfx::render::wave3
             {
                 out << text;
             }
+        }
+
+        bool TestCaptureRequest()
+        {
+            static const bool enabled =
+                []()
+                {
+                    wchar_t value[8]{};
+
+                    return GetEnvironmentVariableW(
+                        L"GZFX_TEST_WAVE3_CAPTURE_REQUEST",
+                        value,
+                        static_cast<DWORD>(
+                            std::size(value))) > 0;
+                }();
+
+            return enabled;
+        }
+
+        bool TestStatusEveryFrame()
+        {
+            static const bool enabled =
+                []()
+                {
+                    wchar_t value[8]{};
+
+                    return GetEnvironmentVariableW(
+                        L"GZFX_TEST_WAVE3_STATUS_EVERY_FRAME",
+                        value,
+                        static_cast<DWORD>(
+                            std::size(value))) > 0;
+                }();
+
+            return enabled;
         }
 
         fs::path DiagnosticsRoot()
@@ -1741,6 +1810,20 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 g_runtime.latestTiming.temporalMs = delta(2, 3);
                 g_runtime.latestTiming.cameraStoreMs = delta(3, 4);
                 g_runtime.latestTiming.totalMs = delta(0, 4);
+
+                g_timingHistory.push_back(
+                    g_runtime.latestTiming);
+
+                if (g_timingHistory.size() >
+                    kEvidenceHistoryLimit)
+                {
+                    g_timingHistory.erase(
+                        g_timingHistory.begin(),
+                        g_timingHistory.begin() +
+                            static_cast<std::ptrdiff_t>(
+                                g_timingHistory.size() -
+                                kEvidenceHistoryLimit));
+                }
             }
         }
 
@@ -2284,14 +2367,14 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 return ResetReason::ResourceDimensionsChanged;
             }
 
-            if (inputs.mainDepth.semanticGeneration !=
-                    g_history.depthGeneration ||
-                inputs.motion.semanticGeneration !=
-                    g_history.motionGeneration ||
-                inputs.nativeNormal.semanticGeneration !=
-                    g_history.normalGeneration)
+            if (inputs.mainDepth.contractToken !=
+                    g_history.depthContractToken ||
+                inputs.motion.contractToken !=
+                    g_history.motionContractToken ||
+                inputs.nativeNormal.contractToken !=
+                    g_history.normalContractToken)
             {
-                return ResetReason::SemanticGenerationChanged;
+                return ResetReason::SemanticContractChanged;
             }
 
             if (inputs.cameraGeneration !=
@@ -2332,12 +2415,12 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 lease.surfaceGeneration;
             g_history.width = inputs.width;
             g_history.height = inputs.height;
-            g_history.depthGeneration =
-                inputs.mainDepth.semanticGeneration;
-            g_history.motionGeneration =
-                inputs.motion.semanticGeneration;
-            g_history.normalGeneration =
-                inputs.nativeNormal.semanticGeneration;
+            g_history.depthContractToken =
+                inputs.mainDepth.contractToken;
+            g_history.motionContractToken =
+                inputs.motion.contractToken;
+            g_history.normalContractToken =
+                inputs.nativeNormal.contractToken;
             g_history.cameraGeneration =
                 inputs.cameraGeneration;
             g_history.environment =
@@ -2423,18 +2506,24 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                         inputs->mainDepth.texture)
                     << " generation="
                     << inputs->mainDepth.semanticGeneration
+                    << " contract="
+                    << inputs->mainDepth.contractToken
                     << "\n"
                     << "motion="
                     << PointerText(
                         inputs->motion.texture)
                     << " generation="
                     << inputs->motion.semanticGeneration
+                    << " contract="
+                    << inputs->motion.contractToken
                     << "\n"
                     << "native_normal="
                     << PointerText(
                         inputs->nativeNormal.texture)
                     << " generation="
                     << inputs->nativeNormal.semanticGeneration
+                    << " contract="
+                    << inputs->nativeNormal.contractToken
                     << "\n"
                     << "camera="
                     << PointerText(
@@ -2488,23 +2577,28 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 root / L"wave3_status.txt",
                 out.str());
 
-            if (g_runtime.latestTiming.valid)
+            if (!g_timingHistory.empty())
             {
                 std::ostringstream timing;
                 timing
-                    << "frame,depth_base_ms,depth_tail_ms,temporal_ms,camera_store_ms,total_ms\n"
-                    << g_runtime.latestTiming.frame
-                    << ","
-                    << g_runtime.latestTiming.depthBaseMs
-                    << ","
-                    << g_runtime.latestTiming.depthTailMs
-                    << ","
-                    << g_runtime.latestTiming.temporalMs
-                    << ","
-                    << g_runtime.latestTiming.cameraStoreMs
-                    << ","
-                    << g_runtime.latestTiming.totalMs
-                    << "\n";
+                    << "frame,depth_base_ms,depth_tail_ms,temporal_ms,camera_store_ms,total_ms\n";
+
+                for (const auto& sample : g_timingHistory)
+                {
+                    timing
+                        << sample.frame
+                        << ","
+                        << sample.depthBaseMs
+                        << ","
+                        << sample.depthTailMs
+                        << ","
+                        << sample.temporalMs
+                        << ","
+                        << sample.cameraStoreMs
+                        << ","
+                        << sample.totalMs
+                        << "\n";
+                }
 
                 WriteText(
                     root / L"wave3_gpu_timing.csv",
@@ -2584,7 +2678,7 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                     g_history.generation);
             parameters.debugFlags =
                 g_capture.active &&
-                g_capture.frame == inputs.frame
+                inputs.frame >= g_capture.frame
                     ? 1u
                     : 0u;
             parameters.reductionMode = 0;
@@ -3499,6 +3593,166 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 visible);
         }
 
+        bool CaptureTemporalStats(
+            const execution::ExecutionLease& lease,
+            const fs::path& directory,
+            const HistorySet& history)
+        {
+            std::vector<std::array<std::uint8_t, 4>> masks;
+            std::vector<float> confidence;
+
+            if (!ReadRgba8(
+                    lease.device,
+                    lease.immediate,
+                    g_runtime.debugMask.texture,
+                    g_runtime.width,
+                    g_runtime.height,
+                    masks) ||
+                !ReadScalarTexture(
+                    lease.device,
+                    lease.immediate,
+                    history.confidence.texture,
+                    g_runtime.confidenceFormat,
+                    g_runtime.width,
+                    g_runtime.height,
+                    confidence) ||
+                masks.size() != confidence.size() ||
+                masks.empty())
+            {
+                return false;
+            }
+
+            std::array<std::uint64_t, 4> counts{};
+            double confidenceSum = 0.0;
+            float confidenceMax = 0.0f;
+
+            for (std::size_t i = 0; i < masks.size(); ++i)
+            {
+                for (std::size_t channel = 0;
+                     channel < counts.size();
+                     ++channel)
+                {
+                    if (masks[i][channel] != 0)
+                    {
+                        ++counts[channel];
+                    }
+                }
+
+                const float value =
+                    std::clamp(
+                        confidence[i],
+                        0.0f,
+                        1.0f);
+
+                confidenceSum += value;
+                confidenceMax =
+                    std::max(
+                        confidenceMax,
+                        value);
+            }
+
+            const double scale =
+                100.0 /
+                static_cast<double>(
+                    masks.size());
+
+            std::ostringstream out;
+            out
+                << std::fixed
+                << std::setprecision(4)
+                << "history_accepted_percent="
+                << static_cast<double>(counts[0]) * scale
+                << "\n"
+                << "reject_depth_world_percent="
+                << static_cast<double>(counts[1]) * scale
+                << "\n"
+                << "reject_normal_percent="
+                << static_cast<double>(counts[2]) * scale
+                << "\n"
+                << "reject_uv_invalid_percent="
+                << static_cast<double>(counts[3]) * scale
+                << "\n"
+                << "mean_confidence="
+                << confidenceSum /
+                    static_cast<double>(
+                        confidence.size())
+                << "\n"
+                << "max_confidence="
+                << confidenceMax
+                << "\n";
+
+            WriteText(
+                directory / L"temporal_stats.txt",
+                out.str());
+
+            return true;
+        }
+
+        void CaptureTimingSummary(
+            const fs::path& directory)
+        {
+            if (g_timingHistory.empty())
+            {
+                WriteText(
+                    directory / L"gpu_timing_summary.txt",
+                    "status=no_resolved_samples\n");
+                return;
+            }
+
+            std::vector<double> totals;
+            totals.reserve(g_timingHistory.size());
+
+            double sum = 0.0;
+            double maximum = 0.0;
+
+            for (const auto& sample : g_timingHistory)
+            {
+                totals.push_back(sample.totalMs);
+                sum += sample.totalMs;
+                maximum =
+                    std::max(
+                        maximum,
+                        sample.totalMs);
+            }
+
+            std::sort(
+                totals.begin(),
+                totals.end());
+
+            const std::size_t p95Index =
+                static_cast<std::size_t>(
+                    std::floor(
+                        0.95 *
+                        static_cast<double>(
+                            totals.size() - 1)));
+
+            std::ostringstream out;
+            out
+                << std::fixed
+                << std::setprecision(4)
+                << "samples="
+                << totals.size()
+                << "\n"
+                << "latest_total_ms="
+                << g_timingHistory.back().totalMs
+                << "\n"
+                << "mean_total_ms="
+                << sum /
+                    static_cast<double>(
+                        totals.size())
+                << "\n"
+                << "p95_total_ms="
+                << totals[p95Index]
+                << "\n"
+                << "max_total_ms="
+                << maximum
+                << "\n";
+
+            WriteText(
+                directory / L"gpu_timing_summary.txt",
+                out.str());
+        }
+
         bool CaptureMotion(
             const execution::ExecutionLease& lease,
             const native_input::GeometryInputs& inputs,
@@ -3781,10 +4035,12 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
             const ResetReason resetReason)
         {
             if (!g_capture.active ||
-                g_capture.frame != inputs.frame)
+                inputs.frame < g_capture.frame)
             {
                 return true;
             }
+
+            g_capture.frame = inputs.frame;
 
             std::error_code ec;
             fs::create_directories(
@@ -3840,6 +4096,14 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 g_capture.directory,
                 g_runtime.history[writeIndex]) && ok;
 
+            ok = CaptureTemporalStats(
+                lease,
+                g_capture.directory,
+                g_runtime.history[writeIndex]) && ok;
+
+            CaptureTimingSummary(
+                g_capture.directory);
+
             ok = CaptureMotion(
                 lease,
                 inputs,
@@ -3862,6 +4126,12 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 << ResetReasonName(resetReason) << "\n"
                 << "history_generation="
                 << g_history.generation << "\n"
+                << "depth_contract="
+                << inputs.mainDepth.contractToken << "\n"
+                << "motion_contract="
+                << inputs.motion.contractToken << "\n"
+                << "normal_contract="
+                << inputs.nativeNormal.contractToken << "\n"
                 << "normal_history_format="
                 << static_cast<unsigned>(g_runtime.normalHistoryFormat)
                 << "\n"
@@ -4093,10 +4363,30 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
             std::vector<double> absoluteErrors;
             std::vector<double> relativeErrors;
 
+            float stockFar = 0.0f;
+
+            for (const float value : stockValues)
+            {
+                if (std::isfinite(value))
+                {
+                    stockFar =
+                        std::max(
+                            stockFar,
+                            value);
+                }
+            }
+
+            const float stockFarEpsilon =
+                std::max(
+                    std::abs(stockFar) * 1.0e-5f,
+                    1.0e-4f);
+
             std::uint64_t common = 0;
             std::uint64_t gzfxOnlyCount = 0;
             std::uint64_t stockOnlyCount = 0;
             std::uint64_t bothBackground = 0;
+            std::uint64_t stockBackgroundCount = 0;
+            std::uint64_t stockGeometryCount = 0;
 
             for (std::size_t i = 0;
                  i < stockValues.size();
@@ -4107,8 +4397,26 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
 
                 const bool gzfxValid =
                     std::isfinite(gzfx) && gzfx > 0.0f;
+
+                const bool stockBackground =
+                    std::isfinite(native) &&
+                    std::abs(native - stockFar) <=
+                        stockFarEpsilon;
+
                 const bool stockValid =
-                    std::isfinite(native) && native > 0.0f;
+                    std::isfinite(native) &&
+                    native > 0.0f &&
+                    !stockBackground;
+
+                if (stockBackground)
+                {
+                    ++stockBackgroundCount;
+                }
+
+                if (stockValid)
+                {
+                    ++stockGeometryCount;
+                }
 
                 if (gzfxValid && stockValid)
                 {
@@ -4176,6 +4484,10 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
             out
                 << "status=complete\n"
                 << "frame=" << frame << "\n"
+                << "stock_far_value=" << stockFar << "\n"
+                << "stock_far_epsilon=" << stockFarEpsilon << "\n"
+                << "stock_background_pixels=" << stockBackgroundCount << "\n"
+                << "stock_geometry_pixels=" << stockGeometryCount << "\n"
                 << "common_geometry=" << common << "\n"
                 << "gzfx_only_geometry=" << gzfxOnlyCount << "\n"
                 << "stock_only_geometry=" << stockOnlyCount << "\n"
@@ -4192,37 +4504,121 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
             return true;
         }
 
-        void PollCaptureRequest(const std::uint64_t frame)
+        void BeginRequestedCapture(
+            const std::uint64_t frame)
         {
-            const bool shift =
-                (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
-            const bool numpad5 =
-                (GetAsyncKeyState(VK_NUMPAD5) & 0x8000) != 0 ||
-                (GetAsyncKeyState(VK_CLEAR) & 0x8000) != 0;
-            const bool down = shift && numpad5;
-
-            if (down && !g_captureKeyDown &&
-                !g_capture.active)
+            if (!g_captureRequested.exchange(
+                    false,
+                    std::memory_order_acq_rel) ||
+                g_capture.active)
             {
-                ++g_captureIndex;
-                g_capture = {};
-                g_capture.active = true;
-                g_capture.frame = frame;
-                g_capture.index = g_captureIndex;
-
-                std::wostringstream name;
-                name
-                    << L"manual"
-                    << std::setw(4)
-                    << std::setfill(L'0')
-                    << g_captureIndex;
-
-                g_capture.directory =
-                    DiagnosticsRoot() /
-                    name.str();
+                return;
             }
 
-            g_captureKeyDown = down;
+            ++g_captureIndex;
+            g_capture = {};
+            g_capture.active = true;
+            g_capture.frame =
+                frame + kCaptureArmDelayFrames;
+            g_capture.index = g_captureIndex;
+
+            std::wostringstream name;
+            name
+                << L"manual"
+                << std::setw(4)
+                << std::setfill(L'0')
+                << g_captureIndex;
+
+            g_capture.directory =
+                DiagnosticsRoot() /
+                name.str();
+        }
+
+        void WriteResetEvents()
+        {
+            const fs::path root = DiagnosticsRoot();
+
+            if (root.empty())
+            {
+                return;
+            }
+
+            std::ostringstream out;
+            out
+                << "sequence,frame,reason,depth_contract,motion_contract,"
+                   "normal_contract,camera_generation,device_generation,"
+                   "surface_generation,environment\n";
+
+            for (const auto& event : g_resetEvents)
+            {
+                out
+                    << event.sequence
+                    << ","
+                    << event.frame
+                    << ","
+                    << ResetReasonName(event.reason)
+                    << ","
+                    << event.depthContract
+                    << ","
+                    << event.motionContract
+                    << ","
+                    << event.normalContract
+                    << ","
+                    << event.cameraGeneration
+                    << ","
+                    << event.deviceGeneration
+                    << ","
+                    << event.surfaceGeneration
+                    << ","
+                    << semantic_authority::EnvironmentName(
+                        event.environment)
+                    << "\n";
+            }
+
+            WriteText(
+                root / L"wave3_reset_events.csv",
+                out.str());
+        }
+
+        void RecordResetEvent(
+            const native_input::GeometryInputs& inputs,
+            const execution::ExecutionLease& lease,
+            const ResetReason reason)
+        {
+            if (reason == ResetReason::None)
+            {
+                return;
+            }
+
+            ResetEvent event{};
+            event.sequence = ++g_resetSequence;
+            event.frame = inputs.frame;
+            event.reason = reason;
+            event.depthContract =
+                inputs.mainDepth.contractToken;
+            event.motionContract =
+                inputs.motion.contractToken;
+            event.normalContract =
+                inputs.nativeNormal.contractToken;
+            event.cameraGeneration =
+                inputs.cameraGeneration;
+            event.deviceGeneration =
+                lease.deviceGeneration;
+            event.surfaceGeneration =
+                lease.surfaceGeneration;
+            event.environment =
+                inputs.previousCompletedEnvironment;
+
+            g_resetEvents.push_back(event);
+
+            if (g_resetEvents.size() >
+                kEvidenceHistoryLimit)
+            {
+                g_resetEvents.erase(
+                    g_resetEvents.begin());
+            }
+
+            WriteResetEvents();
         }
 
         void InvalidateHistory(
@@ -4246,7 +4642,19 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 }
 
                 std::scoped_lock lock(g_mutex);
-                PollCaptureRequest(event.frame);
+
+                static bool testCaptureRequested = false;
+
+                if (!testCaptureRequested &&
+                    TestCaptureRequest())
+                {
+                    g_captureRequested.store(
+                        true,
+                        std::memory_order_release);
+                    testCaptureRequested = true;
+                }
+
+                BeginRequestedCapture(event.frame);
 
                 execution::ExecutionLease lease{};
 
@@ -4329,7 +4737,7 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                     return;
                 }
 
-                const ResetReason resetReason =
+                ResetReason resetReason =
                     EvaluateReset(
                         inputs,
                         lease,
@@ -4405,14 +4813,23 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
                 }
 
                 ++g_executeCount;
+
+                if (resetReason != ResetReason::None)
+                {
+                    RecordResetEvent(
+                        inputs,
+                        lease,
+                        resetReason);
+                }
+
                 CommitHistoryState(
                     inputs,
                     lease,
                     writeIndex,
-                    ResetReason::None);
+                    resetReason);
 
                 if (g_capture.active &&
-                    g_capture.frame == event.frame)
+                    event.frame >= g_capture.frame)
                 {
                     CaptureAfterOpaque(
                         lease,
@@ -4423,6 +4840,7 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
 
                 if (resetReason != ResetReason::None ||
                     g_capture.active ||
+                    TestStatusEveryFrame() ||
                     event.frame <= 3 ||
                     event.frame - g_lastStatusFrame >= 120)
                 {
@@ -4519,6 +4937,19 @@ void CameraStoreCS(uint3 dispatchId : SV_DispatchThreadID)
         catch (...)
         {
             return false;
+        }
+    }
+
+    void RequestManualCapture() noexcept
+    {
+        try
+        {
+            g_captureRequested.store(
+                true,
+                std::memory_order_release);
+        }
+        catch (...)
+        {
         }
     }
 }

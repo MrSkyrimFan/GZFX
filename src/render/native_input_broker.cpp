@@ -1,6 +1,7 @@
 #include "gzfx/render/native_input_broker.hpp"
 
 #include "gzfx/diagnostics/resource_intelligence.hpp"
+#include "gzfx/render/wave3_math.hpp"
 
 #include <array>
 #include <mutex>
@@ -246,6 +247,21 @@ namespace gzfx::render::native_input
             out->frame = frame;
             out->semanticGeneration =
                 authority.resource.generation;
+            out->contractToken =
+                wave3_math::ContractToken(
+                    static_cast<std::uint32_t>(semantic),
+                    static_cast<std::uint32_t>(
+                        D3D11_RESOURCE_DIMENSION_TEXTURE2D),
+                    liveDesc.Width,
+                    liveDesc.Height,
+                    liveDesc.MipLevels,
+                    liveDesc.ArraySize,
+                    liveDesc.SampleDesc.Count,
+                    liveDesc.SampleDesc.Quality,
+                    static_cast<std::uint32_t>(
+                        liveDesc.Format),
+                    static_cast<std::uint32_t>(
+                        viewFormat));
             out->deviceGeneration = deviceGeneration;
             out->surfaceGeneration = surfaceGeneration;
             out->stage = stage;

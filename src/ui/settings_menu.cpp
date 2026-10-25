@@ -3,6 +3,7 @@
 #include "gzfx/diagnostics/semantic_probe.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/settings.hpp"
+#include "gzfx/render/wave3_pipeline.hpp"
 
 #include <Windows.h>
 #include <windowsx.h>
@@ -515,7 +516,7 @@ namespace gzfx::ui
                    "Shift+Numpad2 reload; "
                    "Shift+Numpad3 cycle view; "
                    "Shift+Numpad4 capture frame+settings; "
-                   "Shift+Numpad5 capture stock renderer semantics; "
+                   "Shift+Numpad5 arm semantic + Wave3 capture; "
                    "mouse click/drag sliders; "
                    "mouse click toggles\n";
         }
@@ -1572,9 +1573,12 @@ namespace gzfx::ui
                     semantic_probe::
                     RequestManualCapture();
 
+                gzfx::render::wave3::
+                    RequestManualCapture();
+
                 WriteState(
                     frame,
-                    "semantic_capture_requested");
+                    "semantic_wave3_capture_requested");
             }
         }
         catch (...)

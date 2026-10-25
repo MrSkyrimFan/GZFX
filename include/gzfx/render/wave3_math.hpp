@@ -12,6 +12,48 @@ namespace gzfx::render::wave3_math
         float y = 0.0f;
     };
 
+
+    inline std::uint64_t ContractToken(
+        const std::uint32_t semantic,
+        const std::uint32_t dimension,
+        const std::uint32_t width,
+        const std::uint32_t height,
+        const std::uint32_t mipLevels,
+        const std::uint32_t arraySize,
+        const std::uint32_t sampleCount,
+        const std::uint32_t sampleQuality,
+        const std::uint32_t resourceFormat,
+        const std::uint32_t viewFormat) noexcept
+    {
+        std::uint64_t hash = 1469598103934665603ull;
+
+        const auto mix =
+            [&](const std::uint64_t value)
+            {
+                for (std::uint32_t byte = 0; byte < 8; ++byte)
+                {
+                    hash ^=
+                        static_cast<std::uint8_t>(
+                            (value >> (byte * 8u)) & 0xFFu);
+
+                    hash *= 1099511628211ull;
+                }
+            };
+
+        mix(semantic);
+        mix(dimension);
+        mix(width);
+        mix(height);
+        mix(mipLevels);
+        mix(arraySize);
+        mix(sampleCount);
+        mix(sampleQuality);
+        mix(resourceFormat);
+        mix(viewFormat);
+
+        return hash;
+    }
+
     inline std::uint32_t MipCount(
         std::uint32_t width,
         std::uint32_t height) noexcept

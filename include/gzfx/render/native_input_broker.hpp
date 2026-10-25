@@ -32,6 +32,7 @@ namespace gzfx::render::native_input
 
         std::uint64_t frame = 0;
         std::uint64_t semanticGeneration = 0;
+        std::uint64_t contractToken = 0;
         std::uint64_t deviceGeneration = 0;
         std::uint64_t surfaceGeneration = 0;
 

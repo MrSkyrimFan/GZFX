@@ -3,6 +3,7 @@
 #include <dxgi.h>
 
 #include <array>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -25,6 +26,50 @@ namespace
         return std::string(
             std::istreambuf_iterator<char>(in),
             std::istreambuf_iterator<char>());
+    }
+
+    std::uint64_t FindUnsignedOnLine(
+        const std::string& text,
+        const std::string& lineMarker,
+        const std::string& fieldMarker)
+    {
+        const auto lineStart =
+            text.find(lineMarker);
+
+        if (lineStart == std::string::npos)
+        {
+            return 0;
+        }
+
+        const auto lineEnd =
+            text.find('\n', lineStart);
+
+        const auto field =
+            text.find(
+                fieldMarker,
+                lineStart);
+
+        if (field == std::string::npos ||
+            (lineEnd != std::string::npos &&
+             field >= lineEnd))
+        {
+            return 0;
+        }
+
+        const auto start =
+            field + fieldMarker.size();
+
+        const auto end =
+            text.find_first_not_of(
+                "0123456789",
+                start);
+
+        return std::stoull(
+            text.substr(
+                start,
+                end == std::string::npos
+                    ? std::string::npos
+                    : end - start));
     }
 
     void SetIdentity(float* matrix)
@@ -102,7 +147,15 @@ int wmain(int argc, wchar_t** argv)
     std::filesystem::create_directories(outputRoot, ec);
 
     if (ec ||
-        !SetEnvironmentVariableW(L"GZFX_TEST_OUTPUT_ROOT", outputRoot.c_str()))
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_OUTPUT_ROOT",
+            outputRoot.c_str()) ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_WAVE3_STATUS_EVERY_FRAME",
+            L"1") ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_WAVE3_CAPTURE_REQUEST",
+            L"1"))
     {
         return 3;
     }
@@ -163,9 +216,11 @@ int wmain(int argc, wchar_t** argv)
     Target hdr = CreateTarget(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
     Target motion = CreateTarget(device, width, height, DXGI_FORMAT_R16G16_FLOAT);
     Target normal = CreateTarget(device, width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+    Target normalB = CreateTarget(device, width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
     Target aux = CreateTarget(device, width, height, DXGI_FORMAT_R8G8_UNORM);
 
-    if (!hdr.texture || !motion.texture || !normal.texture || !aux.texture)
+    if (!hdr.texture || !motion.texture || !normal.texture ||
+        !normalB.texture || !aux.texture)
     {
         return 9;
     }
@@ -232,13 +287,9 @@ int wmain(int argc, wchar_t** argv)
     context->ClearRenderTargetView(hdr.rtv, hdrClear);
     context->ClearRenderTargetView(motion.rtv, motionClear);
     context->ClearRenderTargetView(normal.rtv, normalClear);
+    context->ClearRenderTargetView(normalB.rtv, normalClear);
     context->ClearRenderTargetView(aux.rtv, auxClear);
     context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH, 0.45f, 0);
-
-    ID3D11RenderTargetView* mrt[4] = {hdr.rtv, motion.rtv, normal.rtv, aux.rtv};
-    context->OMSetRenderTargets(4, mrt, dsv);
-    context->Draw(3, 0);
-    context->Draw(3, 0);
 
     constexpr UINT cameraMipLevels = 9;
     D3D11_TEXTURE2D_DESC cameraZDesc{};
@@ -270,28 +321,201 @@ int wmain(int argc, wchar_t** argv)
         }
     }
 
-    // Binding CameraZ mip 0 makes the semantic authority signal
-    // AfterOpaqueWorldMRT before this draw executes. Wave 3 must run there.
-    for (UINT mip = 0; mip < cameraMipLevels; ++mip)
+    const auto diagnostics =
+        outputRoot / L"GZFX" / L"Diagnostics" / L"Wave3";
+
+    const auto runFrame =
+        [&](Target& normalTarget)
+        {
+            context->ClearRenderTargetView(
+                hdr.rtv,
+                hdrClear);
+            context->ClearRenderTargetView(
+                motion.rtv,
+                motionClear);
+            context->ClearRenderTargetView(
+                normalTarget.rtv,
+                normalClear);
+            context->ClearRenderTargetView(
+                aux.rtv,
+                auxClear);
+            context->ClearDepthStencilView(
+                dsv,
+                D3D11_CLEAR_DEPTH,
+                0.45f,
+                0);
+
+            ID3D11RenderTargetView* mrt[4] =
+            {
+                hdr.rtv,
+                motion.rtv,
+                normalTarget.rtv,
+                aux.rtv
+            };
+
+            context->OMSetRenderTargets(
+                4,
+                mrt,
+                dsv);
+            context->Draw(3, 0);
+            context->Draw(3, 0);
+
+            // Binding CameraZ mip 0 makes Semantic Authority signal
+            // AfterOpaqueWorldMRT before the draw executes.
+            for (UINT mip = 0;
+                 mip < cameraMipLevels;
+                 ++mip)
+            {
+                context->OMSetRenderTargets(
+                    1,
+                    &cameraRtvs[mip],
+                    nullptr);
+                context->Draw(3, 0);
+            }
+
+            context->OMSetRenderTargets(
+                0,
+                nullptr,
+                nullptr);
+
+            const std::string status =
+                ReadAll(
+                    diagnostics /
+                    L"wave3_status.txt");
+
+            swap->Present(0, 0);
+            return status;
+        };
+
+    const std::string statusA =
+        runFrame(normal);
+    const std::string statusB =
+        runFrame(normalB);
+    const std::string statusC =
+        runFrame(normal);
+
+    std::string statusFinal = statusC;
+
+    for (int frame = 3;
+         frame < 35;
+         ++frame)
     {
-        context->OMSetRenderTargets(1, &cameraRtvs[mip], nullptr);
-        context->Draw(3, 0);
+        statusFinal =
+            runFrame(
+                (frame & 1) == 0
+                    ? normal
+                    : normalB);
     }
 
-    context->OMSetRenderTargets(0, nullptr, nullptr);
-    swap->Present(0, 0);
+    const bool executed =
+        statusFinal.find("status=executed") !=
+        std::string::npos;
 
-    const auto diagnostics = outputRoot / L"GZFX" / L"Diagnostics" / L"Wave3";
-    const std::string status = ReadAll(diagnostics / L"wave3_status.txt");
+    const bool hierarchy =
+        statusFinal.find("hierarchy_valid=true") !=
+        std::string::npos;
 
-    const bool executed = status.find("status=executed") != std::string::npos;
-    const bool hierarchy = status.find("hierarchy_valid=true") != std::string::npos;
-    const bool temporal = status.find("temporal_valid=true") != std::string::npos;
-    const bool convention = status.find("history_generation=") != std::string::npos;
+    const bool temporal =
+        statusFinal.find("temporal_valid=true") !=
+        std::string::npos;
 
-    if (!executed || !hierarchy || !temporal || !convention)
+    const bool reused =
+        statusFinal.find(
+            "history_reused_candidate=true") !=
+        std::string::npos;
+
+    const bool noReset =
+        statusFinal.find(
+            "history_reset_reason=none") !=
+        std::string::npos;
+
+    const bool delayedCapture =
+        std::filesystem::exists(
+            diagnostics /
+            L"manual0001" /
+            L"wave3_summary.txt");
+
+    const auto normalGenerationA =
+        FindUnsignedOnLine(
+            statusA,
+            "native_normal=",
+            " generation=");
+
+    const auto normalGenerationB =
+        FindUnsignedOnLine(
+            statusB,
+            "native_normal=",
+            " generation=");
+
+    const auto normalGenerationC =
+        FindUnsignedOnLine(
+            statusC,
+            "native_normal=",
+            " generation=");
+
+    const auto contractA =
+        FindUnsignedOnLine(
+            statusA,
+            "native_normal=",
+            " contract=");
+
+    const auto contractB =
+        FindUnsignedOnLine(
+            statusB,
+            "native_normal=",
+            " contract=");
+
+    const auto contractC =
+        FindUnsignedOnLine(
+            statusC,
+            "native_normal=",
+            " contract=");
+
+    // Physical native-normal identity/generation is allowed to ping-pong.
+    // The production contract must remain stable and history must survive.
+    const bool physicalPingPong =
+        normalGenerationA != 0 &&
+        normalGenerationB != 0 &&
+        normalGenerationC != 0 &&
+        normalGenerationA != normalGenerationB &&
+        normalGenerationB != normalGenerationC;
+
+    const bool stableContract =
+        contractA != 0 &&
+        contractA == contractB &&
+        contractB == contractC;
+
+    if (!executed ||
+        !hierarchy ||
+        !temporal ||
+        !reused ||
+        !noReset ||
+        !physicalPingPong ||
+        !stableContract ||
+        !delayedCapture)
     {
-        std::cerr << "Wave 3 integration failed\n" << status << "\n";
+        std::cerr
+            << "Wave 3 ping-pong continuity failed\n"
+            << "statusA:\n" << statusA
+            << "\nstatusB:\n" << statusB
+            << "\nstatusC:\n" << statusC
+            << "\nstatusFinal:\n" << statusFinal
+            << "\ndelayed_capture="
+            << delayedCapture
+            << "\nnormal_generations="
+            << normalGenerationA
+            << ","
+            << normalGenerationB
+            << ","
+            << normalGenerationC
+            << "\ncontracts="
+            << contractA
+            << ","
+            << contractB
+            << ","
+            << contractC
+            << "\n";
+
         return 15;
     }
 
@@ -301,6 +525,7 @@ int wmain(int argc, wchar_t** argv)
     if (dsv) dsv->Release();
     if (depth) depth->Release();
     Release(aux);
+    Release(normalB);
     Release(normal);
     Release(motion);
     Release(hdr);
