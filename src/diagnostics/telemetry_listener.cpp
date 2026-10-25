@@ -70,7 +70,7 @@ namespace gzfx::diagnostics::telemetry_listener
             std::uint64_t qpc = 0;
             std::uint64_t frame = 0;
             std::uint64_t ordinal = 0;
-            std::array<std::uint64_t, 32> u{};
+            std::array<std::uint64_t, 40> u{};
             std::array<double, 4> d{};
         };
 
@@ -1324,7 +1324,7 @@ namespace gzfx::diagnostics::telemetry_listener
                     << fps;
 
                 for (std::size_t i = 0;
-                     i <= 20;
+                     i <= 25;
                      ++i)
                 {
                     row
@@ -1336,8 +1336,8 @@ namespace gzfx::diagnostics::telemetry_listener
                     << ","
                     << event.d[1];
 
-                for (std::size_t i = 21;
-                     i <= 27;
+                for (std::size_t i = 26;
+                     i <= 32;
                      ++i)
                 {
                     row
@@ -1349,9 +1349,9 @@ namespace gzfx::diagnostics::telemetry_listener
                     << ","
                     << event.d[2]
                     << ","
-                    << event.u[28]
+                    << event.u[33]
                     << ","
-                    << event.u[29]
+                    << event.u[34]
                     << "\n";
 
                 const auto text =
@@ -1435,7 +1435,7 @@ namespace gzfx::diagnostics::telemetry_listener
                     << event.frame;
 
                 for (std::size_t i = 2;
-                     i < event.u.size();
+                     i < 32;
                      ++i)
                 {
                     row
@@ -2092,14 +2092,17 @@ namespace gzfx::diagnostics::telemetry_listener
     {
         try
         {
-            if (!g_initialized.exchange(
-                    false,
-                    std::memory_order_acq_rel))
+            if (!g_initialized.load(
+                    std::memory_order_acquire))
             {
                 return;
             }
 
             EnqueuePendingPass();
+
+            g_initialized.store(
+                false,
+                std::memory_order_release);
 
             Event stop{};
             stop.type =
@@ -2335,6 +2338,13 @@ namespace gzfx::diagnostics::telemetry_listener
                 wave4.wave3HistoryGeneration;
             event.u[31] =
                 wave4.finalVisibilityFrame;
+            event.u[32] =
+                wave4.lastAppliedFrame;
+            event.u[33] =
+                g_ring.ApproxSize();
+            event.u[34] =
+                g_dropped.load(
+                    std::memory_order_relaxed);
 
             event.d[2] =
                 wave4.gpuTimingValid
