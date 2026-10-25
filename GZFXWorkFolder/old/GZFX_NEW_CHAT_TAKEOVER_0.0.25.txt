@@ -1,0 +1,718 @@
+GZFX NEW CHAT TAKEOVER — CONTROLLING HANDOFF
+Generated: October 25, 2026
+Repository: MrSkyrimFan/GZFX
+Purpose: exact continuation authority after Project Chat context limit
+
+CURRENT MAIN AT CREATION:
+    241fe59d0cb82b081f4960009af2b512c11da5b5
+    docs: lock 0.0.25 late-stack field-validation state
+
+======================================================================
+0. NEXT AGENT — DO THIS FIRST
+======================================================================
+
+You are taking over the active GZFX project.
+
+Do NOT ask Lance to reconstruct prior work.
+Do NOT ask for old TXT uploads.
+Do NOT restart 0.0.25 implementation.
+Do NOT start a new graphics feature.
+Do NOT tune AO/visual quality yet.
+
+First read, from CURRENT main:
+
+    AGENT.md
+    README.md
+    GZFXWorkFolder/new/README.md
+    GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.25.txt
+    GZFXWorkFolder/old/GZFX_0.0.25_LATE_STACK_CARTOGRAPHY_CLOSURE_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/old/GZFX_RESEARCH_PASS_6_LATE_STACK_CARTOGRAPHY_CLOSURE.txt
+    GZFXWorkFolder/old/GZFX_0.0.25_LATE_STACK_CARTOGRAPHY_CLOSURE_BLUEPRINT.txt
+
+Also read the archived 0.0.24 telemetry DATA reports referenced in the
+technical appendix.
+
+Verify current main SHA after reading. Repository may have advanced after this
+handoff was written.
+
+CURRENT PHASE:
+
+    TEST / LATE-STACK FIELD VALIDATION
+
+NEXT ACTION:
+
+    Lance installs/tests already-published 0.0.25.
+    NO coding before field evidence unless a packaging/repository defect is
+    discovered.
+
+======================================================================
+1. PERMANENT REPOSITORY WORKFLOW
+======================================================================
+
+ALL engineering memory now lives in the repository.
+
+Permanent cycle:
+
+    DATA
+    ->
+    RESEARCH
+    ->
+    BLUEPRINT
+    ->
+    IMPLEMENT
+    ->
+    TEST
+    ->
+    repeat
+
+Folders:
+
+    GZFXWorkFolder/new/
+        active cycle only
+
+    GZFXWorkFolder/old/
+        completed/archived cycles
+
+At handoff creation:
+
+    new/ is CLEAN except:
+        GZFXWorkFolder/new/README.md
+
+This is correct.
+
+Do not repopulate new/ until new field evidence arrives.
+
+Chat policy:
+
+    keep Project Chat SHORT.
+
+Use chat for:
+
+    concise English summaries
+    owner decisions
+    exact game-test instructions.
+
+Put full technical records in repo.
+
+Every new agent must obey AGENT.md.
+
+======================================================================
+2. USER / PRODUCT PRIORITY
+======================================================================
+
+Lance's current priority:
+
+    understand Skyrim's complete renderer
+    ->
+    own the complete graphics stack
+    ->
+    then clean performance
+    ->
+    then final artistic quality.
+
+Do NOT grade unfinished development presets as final product quality.
+
+0.0.23 Mode 2 was intentionally untuned.
+
+Current builds are forensic and write telemetry.
+
+Therefore:
+
+    forensic FPS != release performance.
+
+Do not waste cycles tuning sliders/effect aesthetics while renderer
+architecture remains the active problem.
+
+======================================================================
+3. LOCKED FOUNDATION
+======================================================================
+
+Foundation:
+    0.0.20-foundation-epochs-stage-correctness
+
+Wave 1:
+    CLOSED
+
+Wave 2:
+    CLOSED
+
+Wave 3:
+    CLOSED
+
+Broad foundation renderer cartography:
+    COMPLETE
+
+Wave 4:
+    renderer-stack ownership architecture PROVEN
+    final artistic quality DEFERRED
+
+Do not reopen without contradictory evidence.
+
+======================================================================
+4. 0.0.24 TELEMETRY CAMPAIGN — COMPLETE
+======================================================================
+
+0.0.24 built the continuous XForge-style renderer listener.
+
+Lance uploaded:
+
+    GZFXholyshitthisis400mb.zip
+
+Archive:
+    417,196,650 bytes
+
+SHA256:
+    719cb8078e249f3fe40fea002d86fdb73f8ecd11657a37e72e594b4daa1c2fb5
+
+Session:
+    session_20261024_222813_93584
+
+Compressed upload represented:
+    ~7.15 GB telemetry text
+
+Evidence:
+    11,508 frames
+    ~386.56 sec
+    14,967,211 events
+    0 dropped
+    queue high-water 2,260 / 65,536
+    14,627,763 compact pass rows
+    ~36,430,713 represented operations
+    2,170 resources discovered
+    2,114 resources used
+    9,487 Skyrim/unknown command-list executions.
+
+The data was reviewed THREE times.
+
+Do NOT ask Lance to repeat the 400 MB run.
+
+Key conclusions:
+
+- early/mid locked stage foundation remained coherent;
+- late renderer became structurally visible;
+- HDR reduction/adaptation candidate became strong;
+- global temporal/TAA candidate became very strong;
+- perfect temporal ping-pong families were found;
+- deferred command-list opacity was localized to the LATE stack;
+- all 9,487 Skyrim command-list executions occurred after the strong global
+  temporal candidate;
+- late unresolved domain collapsed to only 107 structural families;
+- old 8-resource concrete-read cap was inadequate;
+- copy/resolve/clear compact lineage was contaminated by stale bound state.
+
+Read the appendix and archived DATA reports for exact resource IDs/counts.
+
+======================================================================
+5. RESEARCH PASS 6 — COMPLETE
+======================================================================
+
+Research concluded:
+
+ID3D11CommandList cannot be enumerated after FinishCommandList through the
+normal D3D11 API.
+
+Correct observation architecture:
+
+    CreateDeferredContext
+    ->
+    observe commands while deferred context records
+    ->
+    FinishCommandList seals GZFX record
+    ->
+    ExecuteCommandList joins sealed runs to real frame.
+
+Research authorized stage promotion:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+Research explicitly did NOT authorize:
+
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+Do not invent those.
+
+======================================================================
+6. 0.0.25 IMPLEMENTATION — COMPLETE
+======================================================================
+
+Runtime:
+
+    0.0.25-late-stack-cartography-closure
+
+PR:
+    #28 Late-stack cartography closure
+
+Final PR head:
+    c195c693eedbbe548690175475f38f532d4ebdda
+
+Merge:
+    ec0294172be4659560ab8c34989374e64eb3994a
+
+Package refresh:
+    050a13243022ef8ba4e51de16aa0603c6238b0ff
+
+Final ZIP:
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+ZIP blob:
+    953465c6a67a73372e503d39480d022283a8287f
+
+ZIP size:
+    362,110 bytes
+
+Package-refresh comparison changed exactly:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+No source drift in package refresh.
+
+======================================================================
+7. 0.0.25 CORE CHANGES
+======================================================================
+
+Added deferred context cartography:
+
+    include/gzfx/diagnostics/deferred_context_cartography.hpp
+    src/diagnostics/deferred_context_cartography.cpp
+
+Renderer Forensics now hooks:
+
+    ID3D11Device::CreateDeferredContext
+
+and attaches context-local trackers.
+
+Deferred recording covers the D3D11 state/draw/dispatch/copy/clear/resolve
+surface needed for renderer architecture.
+
+FinishCommandList seals:
+
+    command-list identity + generation
+    context identity + generation
+    recording generation
+    restore-state semantics
+    run stream
+    complete/overflow status.
+
+Raw pointer identity is NOT trusted as history.
+
+Nested deferred lists are handled.
+
+Primary immediate ExecuteCommandList joins known internal runs to the real
+gameplay frame.
+
+======================================================================
+8. 0.0.25 LINEAGE FIXES
+======================================================================
+
+Explicit operations now carry TRUE operands.
+
+CopyResource:
+    source / destination
+
+CopySubresourceRegion:
+    source / destination / subresources
+
+Resolve:
+    source / destination / subresources / format
+
+ClearRTV / ClearDSV / ClearUAV:
+    true resource behind the view
+
+GenerateMips:
+    true SRV resource
+
+ExecuteCommandList:
+    no fake bound-state resource list as contents.
+
+Concrete resource capacity increased:
+
+    reads retained = 24
+    writes retained = 12
+
+Telemetry now separately records:
+
+    total counts
+    retained counts
+    overflow booleans
+
+so truncated lists can no longer masquerade as complete.
+
+======================================================================
+9. 0.0.25 PROMOTED LATE STAGES
+======================================================================
+
+Runtime detectors use resource shape/dependency behavior.
+
+NO observed field shader pointers are hardcoded.
+
+Promoted:
+
+    HDRReduction
+        reason=hdr_reduction_complete
+
+    BeforeTonemap
+        reason=hdr_tonemap_entry
+
+    BeforeGlobalTAA
+        reason=global_taa_entry
+
+    AfterGlobalTAA
+        reason=global_taa_complete
+
+Still intentionally unmapped:
+
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+Field validation is still required before treating new promotions as fully
+locked real-Skyrim boundaries.
+
+======================================================================
+10. TELEMETRY VOLUME CHANGE
+======================================================================
+
+0.0.24 wrote detailed pipeline data for almost everything.
+
+0.0.25 defaults detailed pipeline logging to the unresolved late stack:
+
+    start:
+        AfterAmbientScreenSpaceComposite
+
+    stop:
+        UiPresent
+
+Global lightweight evidence remains continuous:
+
+    frames
+    seconds
+    stages
+    semantics
+    resources
+    transitions
+    ownership
+    timings
+    health.
+
+Test override exists for full pipeline detail.
+
+Expected result:
+
+    next field ZIP materially smaller than 400 MB.
+
+======================================================================
+11. NEW DEFERRED OUTPUT
+======================================================================
+
+0.0.25 telemetry adds:
+
+    deferred_lists.csv
+    deferred_runs_0001.csv
+    deferred_runs_0002.csv
+    ...
+
+listener_status includes deferred health such as:
+
+    deferred_contexts_attached
+    deferred_lists_finished
+    deferred_lists_executed
+    deferred_opaque_executions
+    deferred_recorded_runs
+    deferred_record_overflows
+    deferred_registry_evictions.
+
+This is the first evidence to inspect after the next field upload.
+
+======================================================================
+12. CI / PACKAGE PROOF
+======================================================================
+
+Final PR CI:
+
+    run 40166589782
+    20 / 20 PASS
+    0 failed
+    20.67 sec
+
+Merged-main CI:
+
+    run 40166807536
+    20 / 20 PASS
+    0 failed
+    20.35 sec
+
+New test:
+
+    late_stack_cartography
+
+It covers the synthetic late-stack integration including deferred recording,
+explicit copy lineage, access-overflow evidence, and HDR/TAA stage ordering.
+
+No existing test was removed.
+
+======================================================================
+13. IMPORTANT FAILURE / REPAIR HISTORY
+======================================================================
+
+Do not erase failed engineering history.
+
+Meaningful fixes during 0.0.25 included:
+
+    8dfcf361...
+        silence unused late-stage detector frame parameter
+
+    719d6d6e...
+        mirror D3D11 deferred resource hazard unbinding
+
+    c195c693...
+        avoid depth SRV shadow in late-stack harness
+
+The hazard-unbinding fix is product-significant:
+when a resource becomes an output, conflicting tracked SRV reads are removed
+to mirror D3D11 behavior.
+
+See engineering result / appendix for more detail.
+
+======================================================================
+14. CLOSURE STATUS AT CHAT LIMIT
+======================================================================
+
+The previous chat appeared to die while archiving/docs were being finished.
+
+Repository inspection AFTER interruption proves closure actually completed.
+
+Current main:
+
+    241fe59d0cb82b081f4960009af2b512c11da5b5
+
+message:
+
+    docs: lock 0.0.25 late-stack field-validation state
+
+GZFXWorkFolder/new/ currently contains ONLY:
+
+    README.md
+
+Therefore:
+
+    DATA records archived
+    RESEARCH archived
+    BLUEPRINT archived
+    engineering result archived
+    README/AGENT field-validation state locked
+    active new/ folder clean
+
+Do NOT repeat closure unless current repository evidence contradicts this.
+
+======================================================================
+15. EXACT NEXT USER TEST
+======================================================================
+
+Lance should install the newest:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Target session:
+
+    about 2-3 minutes
+
+Include roughly:
+
+    exterior day       20-30 sec
+    interior           20-30 sec
+    exterior night     20-30 sec
+    water/reflections  20-30 sec
+    fire/particles/transparency if convenient
+
+Represent:
+
+    Mode 0
+    Mode 1
+    Mode 2
+
+No need for exact equal timing.
+
+NO Shift+Numpad5 required.
+
+Then:
+
+    quit Skyrim normally
+    WAIT until SkyrimSE.exe is fully gone
+    only then copy/ZIP telemetry
+
+Upload ONLY newest:
+
+    Documents/My Games/Skyrim Special Edition/GZFX/Telemetry/session_*/
+
+Do not ask for the old 0.0.24 session again.
+
+======================================================================
+16. NEXT DATA PASS — FIRST CHECKS
+======================================================================
+
+When Lance uploads the 0.0.25 session:
+
+FIRST:
+
+    listener_status.txt
+    manifest.txt
+    seconds.csv
+    transitions.csv
+    stages.csv
+
+Then immediately verify:
+
+    deferred_contexts_attached > 0
+    deferred_lists_finished > 0
+    deferred_lists_executed > 0
+    deferred_runs files exist
+    opaque execution fraction
+    deferred overflow count
+    queue drops
+    clean completion marker
+    archive size / bytes_written
+
+Then validate stages:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+Expected order:
+
+    HDRReduction
+    ->
+    BeforeTonemap
+    ->
+    BeforeGlobalTAA
+    ->
+    AfterGlobalTAA
+    ->
+    late deferred domain
+    ->
+    UiPresent territory.
+
+Then reconstruct:
+
+    hidden deferred pass families
+    true copy/resolve lineage
+    final full-resolution sink
+    post-TAA resource graph
+    exterior-only late domains
+    interior-only late domains.
+
+======================================================================
+17. QUESTIONS THE NEXT DATA MUST ANSWER
+======================================================================
+
+1. Did real Skyrim create deferred contexts that our hook attached to?
+
+2. What fraction of the 0.0.24 opaque command lists are now expanded?
+
+3. What passes/resources were hidden inside them?
+
+4. Do the promoted HDR/TAA boundaries fire once per active frame in correct
+   order?
+
+5. Does true explicit copy lineage close the mysterious final full-res sink?
+
+6. Can WaterDomain finally be identified from evidence?
+
+7. Can PostTonemapPreUi finally be identified?
+
+8. Are any deferred recordings overflowing/truncated?
+
+9. Did late-only detail materially reduce telemetry size?
+
+10. Is cartography now sufficiently closed to return to graphics ownership
+    features rather than building more instrumentation?
+
+Do not answer these from theory.
+Answer from the next field session.
+
+======================================================================
+18. THINGS NOT AUTHORIZED YET
+======================================================================
+
+Do NOT:
+
+    tune final Ambient Visibility
+    optimize final release FPS
+    start indirect radiance
+    replace TAA
+    replace tonemap
+    implement water replacement
+    invent WaterDomain
+    invent PostTonemapPreUi
+    hardcode observed shader pointer addresses
+    hardcode observed frame ordinals
+    reopen locked Waves 1-3 without contradictory evidence
+    ask Lance to perform manual capture choreography.
+
+======================================================================
+19. OWNER COMMUNICATION STYLE
+======================================================================
+
+Lance explicitly wants main chat:
+
+    short
+    fast
+    English
+    minimal jargon.
+
+He is comfortable with technical concepts but does not want to read giant
+reports in chat.
+
+Full technical detail belongs in repository records.
+
+When reporting DATA:
+
+    give the conclusion
+    explain whether owner intervention is needed
+    stop before RESEARCH if the workflow requires owner review.
+
+When authorized to finish the full phase pipeline:
+
+    DATA
+    RESEARCH
+    BLUEPRINT
+    IMPLEMENT
+    CI
+    MERGE
+    PACKAGE
+    ARCHIVE
+    TEST INSTRUCTIONS.
+
+======================================================================
+20. TAKEOVER SUMMARY
+======================================================================
+
+You are NOT inheriting a broken half-implementation.
+
+You are inheriting:
+
+    0.0.25 merged
+    20/20 CI green
+    package published
+    closure docs archived
+    new/ clean
+    project waiting on real Skyrim field validation.
+
+The next correct move is:
+
+    field test 0.0.25
+    ->
+    upload newest telemetry session
+    ->
+    DATA phase.
+
+READ THE TECHNICAL APPENDIX FOR ALL RESOURCE IDs, DATA DETAILS, AND
+IMPLEMENTATION-SPECIFIC CONTINUITY.
+
+END CONTROLLING TAKEOVER HANDOFF
