@@ -446,12 +446,35 @@ namespace gzfx::diagnostics::telemetry_listener
         {
             wchar_t value[8]{};
 
-            return
-                GetEnvironmentVariableW(
+            if (GetEnvironmentVariableW(
                     L"GZFX_TELEMETRY_DISABLE",
                     value,
                     static_cast<DWORD>(
-                        std::size(value))) > 0;
+                        std::size(value))) > 0)
+            {
+                return true;
+            }
+
+            wchar_t outputRoot[8]{};
+            wchar_t testActive[8]{};
+
+            const bool testHarness =
+                GetEnvironmentVariableW(
+                    L"GZFX_TEST_OUTPUT_ROOT",
+                    outputRoot,
+                    static_cast<DWORD>(
+                        std::size(outputRoot))) > 0;
+
+            const bool telemetryTest =
+                GetEnvironmentVariableW(
+                    L"GZFX_TEST_TELEMETRY_ACTIVE",
+                    testActive,
+                    static_cast<DWORD>(
+                        std::size(testActive))) > 0;
+
+            return
+                testHarness &&
+                !telemetryTest;
         }
 
         std::string Timestamp()
