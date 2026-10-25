@@ -4448,4 +4448,46 @@ void PackCS(
         {
         }
     }
+
+    TelemetryStatus GetTelemetryStatus() noexcept
+    {
+        TelemetryStatus out{};
+
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+
+            out.frame =
+                g_signalHistory.lastFrame;
+            out.computes =
+                g_computeCount;
+            out.applications =
+                g_applyCount;
+            out.skips =
+                g_skipCount;
+            out.signalHistoryValid =
+                g_signalHistory.valid;
+            out.wave3HistoryGeneration =
+                g_signalHistory.wave3HistoryGeneration;
+            out.finalVisibilityFrame =
+                g_finalVisibilityFrame;
+            out.lastAppliedFrame =
+                g_lastAppliedFrame;
+
+            if (!g_timingHistory.empty())
+            {
+                const auto& timing =
+                    g_timingHistory.back();
+
+                out.gpuTimingValid = true;
+                out.gpuTotalMs =
+                    timing.totalMs;
+            }
+        }
+        catch (...)
+        {
+        }
+
+        return out;
+    }
 }
