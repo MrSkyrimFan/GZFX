@@ -23,25 +23,29 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.26-renderer-identity-engine-epochs
-current phase: TEST / RENDERER-IDENTITY + ENGINE-EPOCH FIELD VALIDATION
+current runtime: 0.0.27-universal-frontdoor-late-contracts
+current phase: TEST / UNIVERSAL FRONT-DOOR + LATE-CONTRACT FIELD VALIDATION
 primary discovery authority: Continuous Renderer Telemetry Listener
+graphics front door: standalone GZFX d3d11.dll bootstrap + dinput8 input bridge
 stable shader/resource identity: observed at D3D11 creation time
 physical DXGI present timeline: explicit present epochs
 deferred command lists: owner-tagged with late-detail-independent retained evidence
-verified Skyrim engine epoch profile: Steam AE 1.6.1170 post-processing + pre-UI, fail-closed on other runtimes
-field-validation candidates: HDRReduction / BeforeTonemap / BeforeGlobalTAA / AfterGlobalTAA
+universal renderer core: runtime-independent D3D11/DXGI architecture
+known runtime families: 1.5.97 / 1.6.1170 / 1.7.104
+verified optional engine epoch profile: Steam AE 1.6.1170 only; other runtimes keep full D3D core and fail closed on engine hooks
+field-locked late contract: BeforeGlobalTAA / AfterGlobalTAA structural family
+field-validation candidates: HDRReduction / BeforeTonemap
 still unpromoted: WaterDomain / PostTonemapPreUi / AfterShadowProduction
 next graphics wave: NOT YET SELECTED
 ```
 
 Wave 3 remains field-closed. Wave 4 proved that GZFX can generate its own ambient-visibility signal and replace Skyrim's filtered SAO input before Skyrim's native Ambient Screen-Space Composite. Final artistic tuning remains intentionally deferred until the renderer architecture is sufficiently owned.
 
-The 0.0.25 field campaign proved that the remaining late-stack problem was primarily identity/timeline correctness, not missing renderer structure: the HDR/TAA resource spine remained present, the greedy HDR detector could poison itself on an earlier downsample, the old `UiPresent` marker was not the physical DXGI Present boundary, and most of the supposedly "Skyrim" deferred-list population was GZFX's own untagged work.
+The 0.0.26 real-Skyrim field campaign proved the renderer-identity architecture and exposed two narrow remaining issues: the live game is Skyrim 1.7.104 rather than 1.6.1170, and the lazy dinput8 bootstrap can allow long-lived renderer resources to exist before GZFX's creation observers arm. That same field session locked the global TAA family at 9,103 / 9,103 active scene frames and proved the remaining HDR misses are detector-ancestry/terminal logic, not missing renderer structure.
 
-0.0.26 consolidates that evidence into a stable renderer-identity layer. Shader content hashes and process-local object identities are now separate; resource/shader provenance is captured at creation; every known GZFX command-list producer is explicitly owned; deferred evidence survives outside the immediate late-detail window; physical Present phases are recorded; and a verified, fail-closed Steam AE 1.6.1170 profile observes Skyrim post-processing and pre-UI engine epochs without adding SKSE or Address Library.
+0.0.27 moves renderer ownership to the graphics front door with a tiny standalone `d3d11.dll` bootstrap while retaining `dinput8.dll` for input. The renderer core remains runtime-independent and engine executable hooks are optional profiles: 1.5.97, 1.6.1170 and 1.7.104 are recognized Skyrim runtime families, but only the already-validated 1.6.1170 engine-epoch profile is allowed to patch the executable. Missing engine profiles do not disable GZFX's D3D renderer core. The HDR detector now accepts bounded full-resolution HDR ancestry and commits the observed 2x2 terminal instead of stopping at 3x2.
 
-**Important:** 0.0.26 remains a forensic field-validation build. Its FPS is not release-performance evidence. `WaterDomain`, `PostTonemapPreUi`, and `AfterShadowProduction` remain intentionally unclaimed until the next real-Skyrim DATA pass correlates stable shader/resource identity, engine epochs, HDR/TAA structure, and the physical Present timeline. The next graphics feature is not selected yet.
+**Important:** GZFX 0.0.27 is standalone. ENB and ReShade were architecture research references, not runtime dependencies or coexistence targets. The field package contains only GZFX's own `dinput8.dll`, `d3d11.dll`, and `GZFX.dll`. `WaterDomain`, `PostTonemapPreUi`, and `AfterShadowProduction` remain intentionally unclaimed pending real-Skyrim evidence.
 
 ## Permanent authority workflow
 
