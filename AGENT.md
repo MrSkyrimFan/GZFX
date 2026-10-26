@@ -190,7 +190,7 @@ foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.29-hdr-branch-recovery
+0.0.30-post-tonemap-preui-cartography
 
 Wave 1:
 CLOSED
@@ -209,8 +209,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-HDR / TONEMAP / GLOBAL-TAA IMAGE-SPACE SPINE FIELD-CLOSED
-next graphics wave NOT YET SELECTED
+TEST / POST-TONEMAP PRE-UI CARTOGRAPHY FIELD VALIDATION
 
 graphics bootstrap:
 standalone GZFX d3d11.dll + dinput8.dll
@@ -269,8 +268,9 @@ runtime field certification:
 1.7.104 PROVEN
 other catalog runtimes architecture-supported but not field-certified by this campaign
 
-next graphics wave:
-NOT YET SELECTED
+active graphics wave:
+PostTonemapPreUi cartography / evidence only
+semantic remains UNPROMOTED
 ```
 
 0.0.28 real-Skyrim DATA proved the lifecycle/front-door hardening in live Skyrim
@@ -315,8 +315,16 @@ runtime-independent, but this campaign does not claim real-field certification
 for 1.5.97, other 1.6.x families, 1.6.1179, or 1.7.99.
 
 Do not invent WaterDomain, PostTonemapPreUi, or AfterShadowProduction from
-names, hashes, draw ordinals, TAA completion, or proximity to Present. Those
-remain separate future evidence problems.
+names, hashes, draw ordinals, TAA completion, or proximity to Present.
+
+0.0.30 is an evidence-only PostTonemapPreUi cartography wave. It preserves all
+field-locked HDR/TAA semantics, extends detailed late telemetry through physical
+BeforeOriginalPresent, and performs discovery-only masked scans on Skyrim
+1.7.104 for the known post-processing and pre-UI opcode skeletons. Discovery
+does NOT set engineProfileAvailable and does NOT install hooks. The next field
+DATA must decide whether those candidates are unique/credible and where the
+post-TAA scene-to-UI interval actually lies before PostTonemapPreUi can ever be
+promoted.
 
 ## 11. Repository lifecycle proof
 
