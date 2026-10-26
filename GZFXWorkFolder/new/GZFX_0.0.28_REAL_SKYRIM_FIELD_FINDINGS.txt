@@ -1,0 +1,918 @@
+GZFX 0.0.28 REAL-SKYRIM FIELD FINDINGS
+DATA Pass — Lifecycle-Hardened Renderer Validation
+Review date: October 25, 2026
+Status: DATA COMPLETE / FRONT-DOOR + LIFECYCLE PASS / PROVEN INTERIOR HDR SEMANTIC-STATE DEFECT
+Runtime under test: 0.0.28-pre-field-lifecycle-hardening
+
+======================================================================
+1. EXECUTIVE VERDICT
+======================================================================
+
+This is a TRUSTWORTHY field session.
+
+0.0.28 successfully fixed the field-evidence problems it was built to fix:
+
+    process-scoped startup evidence is clean;
+    the real primary hardware renderer was accepted;
+    explicit primary attach occurred before the first tracked Skyrim resource;
+    core long-lived Skyrim render targets now have creation-time provenance;
+    runtime 1.7.104 is recognized while the optional engine profile fails closed;
+    physical Present epochs are coherent;
+    command-list ownership remains coherent;
+    telemetry closed naturally and completely;
+    dropped evidence is zero.
+
+The session also exposes one narrow but real remaining semantic-authority defect:
+
+    the physical HDR reduction / exposure / tonemap spine exists on
+    EVERY active scene frame, including EVERY interior frame;
+
+    but the semantic HDRReduction and BeforeTonemap labels fire on only
+    241 / 2,881 interior frames.
+
+The failure is NOT missing renderer information.
+
+It is NOT a missing 2x2 terminal.
+
+It is NOT a different interior late stack.
+
+It is a state-machine/root-restart defect in the current bounded HDR ancestry
+logic.
+
+Strongest evidence:
+
+    active scene frames:
+        7,541
+
+    physical true 2x2 terminal:
+        7,541 / 7,541
+
+    stable 0x99D22A3D198A3B69 full-resolution pre-TAA pass:
+        7,541 / 7,541
+
+    stable 0xE8D58B595587B316 global TAA pass:
+        7,541 / 7,541
+
+    BeforeGlobalTAA:
+        7,541 / 7,541
+
+    AfterGlobalTAA:
+        7,541 / 7,541
+
+    semantic HDRReduction:
+        exterior: 4,660 / 4,660
+        interior:   241 / 2,881
+
+    semantic BeforeTonemap:
+        exterior: 4,660 / 4,660
+        interior:   241 / 2,881
+
+Therefore:
+
+    FIELD EVIDENCE QUALITY = PASS
+    0.0.28 LIFECYCLE HARDENING = PASS
+    FRONT-DOOR RESOURCE BIRTH CAPTURE = PASS
+    GLOBAL TAA CONTRACT = RECONFIRMED
+    TRUE 2x2 TERMINAL = PHYSICALLY PRESENT ON ALL ACTIVE FRAMES
+    INTERIOR HDR SEMANTIC CLASSIFICATION = FAIL
+    BEFORETONEMAP CLASSIFICATION = FAIL WHEN INTERIOR HDR ROOT RESTART FAILS
+
+No additional blind field run is justified before research/repair.
+
+======================================================================
+2. SOURCE ARCHIVE
+======================================================================
+
+Uploaded archive:
+
+    GZFXtttredyellow.zip
+
+Compressed bytes:
+
+    62,391,508
+
+SHA256:
+
+    43cff37522fe0cbdb0666cc2a71523270ff98d6fb4ae859aadd236b3bacfce8e
+
+Archive entries:
+
+    126
+
+Total uncompressed bytes:
+
+    736,223,144
+
+Telemetry session:
+
+    GZFX/Telemetry/session_20261025_174702_158800
+
+Telemetry runtime:
+
+    0.0.28-pre-field-lifecycle-hardening
+
+PID:
+
+    158800
+
+======================================================================
+3. SESSION COVERAGE
+======================================================================
+
+Frame range:
+
+    1..8,428
+
+Active scene frames:
+
+    7,541
+
+Environment coverage inferred from the explicit environment transitions:
+
+    first exterior segment:
+        frames 835..3298
+        2,464 active frames
+
+    interior segment:
+        frames 3339..6219
+        2,881 active frames
+
+    second exterior segment:
+        frames 6233..8428
+        2,196 active frames
+
+Total active environment counts:
+
+    exterior: 4,660
+    interior: 2,881
+
+Development-mode coverage on active scene frames:
+
+    Mode 0: 4,032
+    Mode 1: 1,735
+    Mode 2: 1,484
+    Mode 3:   164
+    Mode 4:   126
+
+The requested primary Modes 0/1/2 are strongly represented.
+
+The user's intended daylight exterior -> interior -> night exterior field path
+is represented by the three active environment segments.
+
+======================================================================
+4. TELEMETRY HEALTH AND NATURAL SHUTDOWN
+======================================================================
+
+listener_status:
+
+    enqueued=1,334,048
+    written=1,334,048
+    dropped=0
+    queue_depth=0
+    queue_high_water=812
+    ring_capacity=65,536
+    bytes_written=678,242,922
+    detailed_pipeline_rows=1,022,351
+    complete=true
+    status=healthy
+
+Final session_close_state:
+
+    state=complete
+    enqueued=1,334,048
+    written=1,334,048
+    dropped=0
+    queue_depth=0
+    writer_alive=false
+
+telemetry_session_complete:
+
+    status=complete
+    written=1,334,048
+    dropped=0
+
+renderer_startup includes:
+
+    process_exit_intercepted
+
+DATA verdict:
+
+    NATURAL PROCESS EXIT = PASS
+    WRITER DRAIN/JOIN = PASS
+    SESSION COMPLETION PROOF = PASS
+    DROPS = ZERO
+
+This closes the repeated 0.0.25/0.0.26 missing-completion problem.
+
+listener_status.txt itself records writer_alive=true because that status snapshot
+is emitted before the writer thread clears its alive flag. The final
+session_close_state.txt is the later closure authority and records
+writer_alive=false.
+
+======================================================================
+5. STARTUP / PRIMARY-RENDERER ORDER
+======================================================================
+
+Current-process renderer_startup.csv contains one clean PID and monotonic
+sequence 1..13.
+
+Exact important order:
+
+    1  d3d11_proxy_process_attach
+    2  first_d3d11_export_enter
+    3  exit_process_hook_armed
+    4  real_device_creation_complete
+    5  primary_candidate_accepted
+    6  gzfx_load_begin
+    7  real_device_creation_complete
+    8  gzfx_initialize_complete
+    9  primary_attach_complete
+    10 first_resource_creation_observed
+    11 first_shader_creation_observed
+    12 first_present
+    13 process_exit_intercepted
+
+Primary accepted objects:
+
+    device:
+        0x250E1E126B0
+
+    immediate/context:
+        0x251E96231E0 at device creation
+        primary attach context 0x250E1E1BA78 as recorded by attach event
+
+Important timing:
+
+    primary attach -> first tracked resource:
+        25,992 QPC ticks
+        2.5992 ms
+
+    primary attach -> first tracked shader:
+        6,585,024 QPC ticks
+        0.6585024 s
+
+    primary attach -> first Present:
+        21,591,754 QPC ticks
+        2.1591754 s
+
+No stale launch rows exist.
+
+No production software/helper primary was accepted.
+
+DATA verdict:
+
+    PROCESS-SCOPED STARTUP = PASS
+    QUALIFIED PRIMARY = PASS
+    PRE-RESOURCE PRIMARY ATTACH = PASS
+    PRE-PRESENT ATTACH = PASS
+
+======================================================================
+6. CORE RESOURCE CREATION PROVENANCE — MAJOR 0.0.28 SUCCESS
+======================================================================
+
+0.0.26 still saw several important long-lived renderer resources as
+unknown/preexisting because GZFX armed after some Skyrim renderer creation.
+
+0.0.28 fixes that.
+
+Core semantic resources now exist in creation-time resources.csv with real birth
+records after primary attach, and pipeline_resources identifies their owner as
+SkyrimSE.exe.
+
+Examples:
+
+MAIN_HDR:
+    identity 0x251E9628C90
+    birth 1
+    2560x1440
+    format 10 / RGBA16F family
+    owner SkyrimSE.exe
+
+MAIN_DEPTH_CURRENT:
+    identity 0x251E9730EF0
+    birth 33
+    2560x1440
+    format 44
+    owner SkyrimSE.exe
+
+MOTION:
+    identity 0x251E96F73C0
+    birth 10
+    2560x1440
+    format 34
+    owner SkyrimSE.exe
+
+NORMAL family:
+    0x251E9628450 birth 7
+    0x251E9629210 birth 8
+    2560x1440
+    format 28
+    owner SkyrimSE.exe
+
+AUXILIARY_RT3:
+    identity 0x251E9627C10
+    birth 3
+    owner SkyrimSE.exe
+
+STOCK_CAMERAZ:
+    identity 0x251E96F7C00
+    birth 32
+
+PRE_WATER_DEPTH_CURRENT:
+    identity 0x251E9731CB0
+    birth 34
+
+Creation hooks:
+
+    stable_shader_creation_hooks_armed=true
+    resource_creation_hooks_armed=true
+    shader_creations_observed=16,126
+    resource_creations_observed=22,558
+
+DATA verdict:
+
+    FRONT-DOOR RESOURCE BIRTH CAPTURE = FIELD-PROVEN
+    CORE PROVENANCE GAP FROM 0.0.26 = CLOSED
+
+======================================================================
+7. RUNTIME MODEL / OPTIONAL ENGINE PROFILE
+======================================================================
+
+Live runtime:
+
+    1.7.104.0
+
+engine status:
+
+    renderer_core_supported=true
+    engine_runtime_known=true
+    engine_profile_available=false
+    post_processing anchor unavailable
+    pre_ui anchor unavailable
+    engine events = 0
+
+This is expected.
+
+Only 1.6.1170 currently has the independently verified executable engine
+profile.
+
+DATA verdict:
+
+    UNIVERSAL D3D CORE ON 1.7.104 = PASS
+    RUNTIME CATALOG = PASS
+    OPTIONAL ENGINE PROFILE FAIL-CLOSED = PASS
+
+Do not misclassify the absent 1.7.104 executable profile as renderer-core
+failure.
+
+======================================================================
+8. PHYSICAL PRESENT TIMELINE
+======================================================================
+
+listener_status:
+
+    present_epochs=8,428
+
+present_timeline:
+
+    unique epochs:
+        8,428
+
+    epoch range:
+        1..8,428
+
+Every epoch contains exactly, in order:
+
+    hook_enter
+    callbacks_begin
+    callbacks_end
+    before_original_present
+    after_original_present
+
+Counts:
+
+    8,428 of each phase
+
+All recorded HRESULT values:
+
+    0
+
+No malformed or incomplete epoch was found.
+
+DATA verdict:
+
+    PHYSICAL PRESENT TIMELINE = PASS
+
+======================================================================
+9. COMMAND-LIST OWNERSHIP
+======================================================================
+
+listener_status:
+
+    deferred_contexts_attached=7
+    deferred_lists_finished=20,912
+    deferred_lists_executed=0
+    deferred_opaque_executions=0
+    deferred_recorded_runs=76,247
+    deferred_record_overflows=0
+    deferred_registry_evictions=0
+
+ownership.csv:
+
+    rows:
+        20,912
+
+    owner=gzfx:
+        20,912
+
+    owner=external:
+        0
+
+    restore_state=1:
+        20,912
+
+seconds.csv:
+
+    external_command_lists max:
+        0
+
+    external_command_lists sum:
+        0
+
+As established by the 0.0.26 field findings, the listsExecuted counter tracks
+observed non-GZFX command lists; zero is expected when all observed ownership is
+GZFX.
+
+DATA verdict:
+
+    COMMAND-LIST OWNERSHIP = COHERENT
+    OLD FAKE EXTERNAL/SKYRIM POPULATION = STILL CLOSED
+
+======================================================================
+10. FOUNDATION REGRESSION CHECK
+======================================================================
+
+Stage counts:
+
+    ui_present                            8,428
+
+    after_opaque_world_mrt                7,541
+    after_cameraz                         7,541
+    after_stock_ao                        7,541
+    before_ambient_screen_space_composite 7,541
+    at_ambient_screen_space_composite     7,541
+    after_ambient_screen_space_composite  7,541
+
+    after_depth_prepass                    7,540
+
+Exterior-only:
+
+    before_volumetric_apply               4,660
+    after_volumetric_apply                4,660
+    publish_pre_water_depth               4,660
+
+The one-frame depth-prepass delta matches prior field behavior and is not a new
+regression.
+
+No evidence requires reopening Waves 1-3 or Wave 4 ownership architecture.
+
+======================================================================
+11. GLOBAL TAA — RECONFIRMED 1:1
+======================================================================
+
+Active scene frames:
+
+    7,541
+
+BeforeGlobalTAA:
+
+    7,541
+
+AfterGlobalTAA:
+
+    7,541
+
+Environment:
+
+    exterior:
+        4,660 / 4,660
+
+    interior:
+        2,881 / 2,881
+
+Stable global TAA pixel shader:
+
+    0xE8D58B595587B316
+
+The physical pipeline contains that full-resolution 2560x1440 TAA pass on:
+
+    exterior:
+        4,660 / 4,660
+
+    interior:
+        2,881 / 2,881
+
+pipeline_shaders identifies it as:
+
+    stage PS
+    birth 16026
+    bytecode bytes 10036
+    owner SkyrimSE.exe
+
+DATA verdict:
+
+    GLOBAL TAA STRUCTURAL CONTRACT = RECONFIRMED
+    BeforeGlobalTAA / AfterGlobalTAA = 1:1 EVERY ACTIVE SCENE FRAME
+
+Do not reopen this branch without contradictory evidence.
+
+======================================================================
+12. PHYSICAL HDR / EXPOSURE / TONEMAP SPINE — COMPLETE ON ALL FRAMES
+======================================================================
+
+The important result is that the REAL pipeline is more complete than the
+semantic stage counts imply.
+
+A streaming pass over all 1,022,351 detailed pipeline rows proves every active
+scene frame contains the late reduction/adaptation family.
+
+Stable structural population by environment:
+
+0xF026B1E764F561A5 at 640x360:
+    exterior 4,660
+    interior 2,881
+
+0x8906DFE9AFA8D050 at 160x90:
+    exterior 4,660
+    interior 2,881
+
+0xE137371A74F69AA2 at 40x23:
+    exterior 4,660
+    interior 2,881
+
+0xE137371A74F69AA2 at 10x6:
+    exterior 4,660
+    interior 2,881
+
+0xE137371A74F69AA2 at 3x2:
+    exterior 4,660
+    interior 2,881
+
+true 2x2 terminal:
+    exterior 4,660 / 4,660
+    interior 2,881 / 2,881
+
+The normal 2x2 terminal shader is:
+
+    0x877420B175E42589
+
+with five field frames using the reduction-family shader at 2x2 instead.
+The 2x2 structural terminal itself is present on ALL active scene frames.
+
+Downstream:
+
+0xDA12D7342C71A0B8 at 640x360:
+    exterior 4,660
+    interior 2,881
+
+0x6A5D8FBECC2404BD at 640x360:
+    exterior 4,660
+    interior 2,881
+
+0x99D22A3D198A3B69 at full 2560x1440:
+    exterior 4,660
+    interior 2,881
+
+0xE8D58B595587B316 global TAA:
+    exterior 4,660
+    interior 2,881
+
+These shaders are creation-time known and owned by SkyrimSE.exe.
+
+DATA verdict:
+
+    PHYSICAL HDR REDUCTION STRUCTURE = 7,541 / 7,541
+    TRUE 2x2 TERMINAL = 7,541 / 7,541
+    FULL-RES PRE-TAA / TONEMAP CANDIDATE = 7,541 / 7,541
+    GLOBAL TAA = 7,541 / 7,541
+
+The remaining defect is semantic-authority state, not missing renderer
+cartography.
+
+======================================================================
+13. HDRReduction / BeforeTonemap SEMANTIC COUNTS
+======================================================================
+
+Semantic HDRReduction:
+
+    exterior:
+        4,660 / 4,660
+
+    interior:
+          241 / 2,881
+          8.365%
+
+    interior missed:
+        2,640 / 2,881
+        91.635%
+
+Semantic BeforeTonemap:
+
+    identical population:
+        exterior 4,660 / 4,660
+        interior   241 / 2,881
+
+Segment view:
+
+first exterior segment:
+    active              2,464
+    HDRReduction        2,464
+    BeforeTonemap       2,464
+    BeforeGlobalTAA     2,464
+    AfterGlobalTAA      2,464
+
+interior:
+    active              2,881
+    HDRReduction          241
+    BeforeTonemap         241
+    BeforeGlobalTAA     2,881
+    AfterGlobalTAA      2,881
+
+second exterior segment:
+    active              2,196
+    HDRReduction        2,196
+    BeforeTonemap       2,196
+    BeforeGlobalTAA     2,196
+    AfterGlobalTAA      2,196
+
+Therefore BeforeTonemap itself is no longer blocked by the old 3x2-versus-2x2
+terminal bug when HDRReduction reaches completion.
+
+Instead, both semantic stages disappear together when the HDR root state fails
+to restart on the interior-derived path.
+
+======================================================================
+14. EXACT INTERIOR SPLIT — PERFECT CORRELATION
+======================================================================
+
+Canonical MAIN_HDR:
+
+    0x251E9628C90
+
+Real interior derived full-resolution HDR resource:
+
+    0x251E9627950
+
+Stable full-resolution interior transform pixel shader:
+
+    0x1066E41D475505A3
+
+That transform appears on exactly:
+
+    2,640 interior frames
+
+and on no exterior frames.
+
+The stable 640x360 HDR reduction-root family:
+
+    PS 0xF026B1E764F561A5
+
+splits interiors perfectly:
+
+A. Interior frames where the real reduction root reads canonical MAIN_HDR:
+
+    read0 = 0x251E9628C90
+    frames = 241
+    semantic HDRReduction = TRUE on all 241
+
+B. Interior frames where the real reduction root reads derived full-res HDR:
+
+    read0 = 0x251E9627950
+    frames = 2,640
+    semantic HDRReduction = FALSE on all 2,640
+
+Confusion matrix:
+
+    canonical MAIN_HDR root + semantic hit:
+        241
+
+    derived HDR root + semantic miss:
+        2,640
+
+    cross cases:
+        0
+
+This is a deterministic, perfect correlation.
+
+The physical reduction chain after that root is otherwise the same and reaches
+2x2 in every frame.
+
+======================================================================
+15. WHY THE 0.0.27 ANCESTRY REPAIR FAILED IN THE REAL GAME
+======================================================================
+
+Current source:
+
+    src/render/semantic_authority.cpp
+    ObserveHdrReductionLocked()
+
+0.0.27 added:
+
+    hdrReductionSourceIdentity
+    hdrFullResAncestryDepth
+
+and allows up to three full-resolution HDR descendants.
+
+However, ancestry discovery occurs only while:
+
+    hdrReductionStep == 0
+
+The real Skyrim late stack contains an earlier plausible 640x360 reduction
+candidate before the final real reduction root.
+
+The detector can therefore enter:
+
+    hdrReductionStep = 1
+
+on that false earlier root.
+
+Once that happens:
+
+    full-resolution ancestry discovery is no longer executed.
+
+The later restart logic allows a fresh root only when the new downsample reads:
+
+    hdrReductionSourceIdentity
+
+or, if that is still zero:
+
+    canonical MAIN_HDR.
+
+On the 2,640 affected interior frames, the sequence is effectively:
+
+    canonical MAIN_HDR
+    ->
+    earlier plausible false reduction root
+        detector enters step 1
+    ->
+    later real full-resolution interior HDR transform
+        PS 0x1066E41D475505A3
+        writes 0x251E9627950
+    ->
+    real 640x360 HDR root
+        PS 0xF026B1E764F561A5
+        reads 0x251E9627950
+    ->
+    160x90
+    ->
+    40x23
+    ->
+    10x6
+    ->
+    3x2
+    ->
+    2x2
+    ->
+    downstream exposure/reconstruction
+    ->
+    full-res 0x99D22A3D198A3B69
+    ->
+    global TAA
+
+Because the full-resolution descendant appears AFTER the false root was already
+latched, the current ancestry state is not updated to 0x251E9627950.
+
+The fresh-root restart then asks whether the real 640x360 root reads canonical
+MAIN_HDR.
+
+It does not.
+
+It reads 0x251E9627950.
+
+Therefore restart fails and semantic HDRReduction never reaches the physically
+present 2x2 terminal.
+
+On the 241 interior frames where the real root reads canonical MAIN_HDR
+directly, restart succeeds and both HDRReduction and BeforeTonemap fire.
+
+DATA classification:
+
+    0.0.27 TERMINAL FIX = WORKING
+    0.0.27 FULL-RES ANCESTRY IDEA = VALID
+    0.0.27 ANCESTRY/RESTART STATE MACHINE = INCOMPLETE
+
+This is narrower than the original 0.0.26 uncertainty.
+
+======================================================================
+16. WHAT 0.0.28 PROVED
+======================================================================
+
+Proven or strongly closed by this session:
+
+1. GZFX's d3d11 front door attaches early enough in real Skyrim 1.7.104.
+
+2. Qualified primary selection did not get poisoned by a helper/software
+   device.
+
+3. Core long-lived Skyrim resources now have creation-time births and creator
+   provenance.
+
+4. Process-scoped renderer_startup.csv is clean and self-contained.
+
+5. Natural ExitProcess interception closes telemetry completely.
+
+6. One telemetry session now carries renderer_startup.csv.
+
+7. Runtime 1.7.104 is recognized correctly while the unverified executable
+   profile remains disabled.
+
+8. Physical Present epochs are one-to-one and complete.
+
+9. Command-list ownership remains coherent.
+
+10. Waves 1-3 foundation landmarks remain stable.
+
+11. Global TAA remains exactly one-to-one on every active scene frame.
+
+12. The true 2x2 HDR/exposure terminal exists on every active scene frame.
+
+13. The stable pre-TAA full-resolution 0x99D22A3D198A3B69 pass exists on every
+    active scene frame.
+
+14. The remaining interior HDR/BeforeTonemap miss is a semantic state-machine
+    defect, not a cartography blind spot.
+
+======================================================================
+17. WHAT REMAINS OPEN
+======================================================================
+
+The immediate open issue is narrow:
+
+    repair HDR semantic-authority restart/ancestry behavior so a verified
+    full-resolution HDR descendant that appears after a poisoned early
+    reduction candidate can become the source of the later coherent reduction
+    chain.
+
+The repair must remain fail-closed.
+
+Do NOT solve this by:
+
+    accepting arbitrary shader names;
+    hardcoding field draw ordinals;
+    hardcoding one process-local resource pointer;
+    declaring every 2x2 chain HDR without ancestry;
+    reopening broad renderer cartography.
+
+After the HDR semantic root is corrected, BeforeTonemap should be reevaluated
+from the already-proven 2x2 terminal and stable full-resolution transition.
+
+Still intentionally unpromoted:
+
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+No current field evidence justifies inventing those semantics.
+
+======================================================================
+18. NEXT PHASE
+======================================================================
+
+DATA COMPLETE.
+
+Next phase:
+
+    TARGETED RESEARCH
+
+Research should focus on the smallest truthful state-machine design for:
+
+    false-root recovery;
+    same-frame full-resolution HDR ancestry after a candidate root has already
+    started;
+    bounded branch/restart behavior;
+    preserving the proven true-2x2 terminal;
+    preserving global TAA independence;
+    avoiding arbitrary graph traversal.
+
+The research should use:
+
+    this field evidence;
+    current semantic_authority.cpp;
+    the existing hdr_descendant_reduction_contract test;
+    the exact 2,640-frame interior failure topology.
+
+The existing synthetic acceptance is insufficient because it models:
+
+    MAIN_HDR -> HDR descendant -> false root -> real root
+
+while the real failure topology contains:
+
+    MAIN_HDR -> false root -> later HDR descendant -> real root.
+
+That ordering difference is the central missing test case.
+
+No additional real-Skyrim field run is required before this research and repair.
+
+Do NOT start a new graphics feature.
+
+END 0.0.28 FIELD FINDINGS
