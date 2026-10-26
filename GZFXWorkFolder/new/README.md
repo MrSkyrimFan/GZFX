@@ -9,52 +9,36 @@ Current runtime:
 Current phase:
 
 ```text
-TEST / NO-DRIFT-CLOSED HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
+DATA COMPLETE / TWO INDEPENDENT 0.0.29 REAL-SKYRIM PASSES
 ```
 
-The owner-required extra pre-field no-drift cycle is complete and archived in
-`../old/`.
-
-That cycle performed:
+Active authority:
 
 ```text
-DATA
--> RESEARCH
--> NEW FINDINGS
--> BLUEPRINT
--> TEST-ONLY IMPLEMENTATION
--> PR / CI
--> MERGE / MERGED-MAIN CI
--> PACKAGE
--> BINARY NO-DRIFT VERIFICATION
+GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
 ```
 
-Final proof:
+Both complete DATA passes agree.
 
-- current 0.0.29 algorithm independently replayed 7,541/7,541 prior active field frames;
-- PR #33 changed no product source;
-- PR #33: 37/37 PASS;
-- merged main: 37/37 PASS;
-- tests now lock equal-size delayed HDR sibling recovery, exact per-active-frame semantic counts, capacity 4/5, depth 3/4, and frame isolation;
-- product executable code/data is byte-identical to the original merged 0.0.29 build after normalizing only PE linker/debug timestamps;
-- current package remains exactly GZFX.dll, d3d11.dll, and dinput8.dll.
+Primary field result:
 
-This directory is intentionally clear of active-cycle TXT authority.
+- active scene frames: 12,123;
+- HDRReduction: 12,123 / 12,123;
+- BeforeTonemap: 12,123 / 12,123;
+- BeforeGlobalTAA: 12,123 / 12,123;
+- AfterGlobalTAA: 12,123 / 12,123;
+- true physical 2x2 terminal: 12,123 / 12,123;
+- exterior active frames: 8,882, all target stages present;
+- interior active frames: 3,241, all target stages present;
+- the 0.0.29 derived-HDR sibling path was physically exercised on 2,884 interior frames and remained complete;
+- independent raw replay of the current 0.0.29 algorithm reproduced HDRReduction and BeforeTonemap on all 12,123 active frames with zero frame-set mismatch;
+- telemetry dropped=0 and shutdown is complete;
+- primary startup, resource provenance, command-list ownership, and physical Present remain clean.
 
-The next real-Skyrim telemetry upload starts the next DATA cycle here.
+Do NOT begin research automatically.
 
-Primary field objective:
+The owner explicitly requested a discussion after both complete DATA passes to
+decide the next phase.
 
-- HDRReduction on every active exterior frame;
-- HDRReduction on every active interior frame;
-- BeforeTonemap on every active scene frame;
-- true <=2x2 terminal on every active scene frame;
-- BeforeGlobalTAA / AfterGlobalTAA remain 1:1;
-- lifecycle, ownership, zero drops, and complete shutdown remain clean.
-
-Do not start 0.0.30 or another graphics feature before that field DATA is
-reviewed.
-
-Read root `AGENT.md` and
-`GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.29_NODRIFT.txt`
-first.
+No product code has been modified in this DATA cycle.
