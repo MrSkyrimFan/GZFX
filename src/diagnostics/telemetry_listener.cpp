@@ -957,6 +957,38 @@ namespace gzfx::diagnostics::telemetry_listener
             Enqueue(event);
         }
 
+        enum class DetailGateAction : std::uint32_t
+        {
+            None = 0,
+            Start = 1,
+            Stop = 2
+        };
+
+        DetailGateAction DetailGateForStage(
+            const render::stage_scheduler::Boundary boundary,
+            const render::stage_scheduler::Phase phase) noexcept
+        {
+            using B = render::stage_scheduler::Boundary;
+            using P = render::stage_scheduler::Phase;
+
+            return
+                boundary ==
+                        B::AfterAmbientScreenSpaceComposite &&
+                    phase == P::AfterExecution
+                    ? DetailGateAction::Start
+                    : DetailGateAction::None;
+        }
+
+        DetailGateAction DetailGateForPresent(
+            const PresentPhase phase) noexcept
+        {
+            return
+                phase ==
+                    PresentPhase::BeforeOriginalPresent
+                    ? DetailGateAction::Stop
+                    : DetailGateAction::None;
+        }
+
         void OnStage(
             const render::stage_scheduler::
                 Event& stage,
@@ -967,26 +999,21 @@ namespace gzfx::diagnostics::telemetry_listener
             using P =
                 render::stage_scheduler::Phase;
 
-            if (!g_fullPipelineDetail &&
-                stage.boundary ==
-                    B::AfterAmbientScreenSpaceComposite &&
-                stage.phase ==
-                    P::AfterExecution)
+            if (!g_fullPipelineDetail)
             {
-                EnqueuePendingPass();
-                g_detailActive.store(
-                    true,
-                    std::memory_order_release);
-            }
+                const auto action =
+                    DetailGateForStage(
+                        stage.boundary,
+                        stage.phase);
 
-            if (!g_fullPipelineDetail &&
-                stage.boundary ==
-                    B::UiPresent)
-            {
-                EnqueuePendingPass();
-                g_detailActive.store(
-                    false,
-                    std::memory_order_release);
+                if (action ==
+                    DetailGateAction::Start)
+                {
+                    EnqueuePendingPass();
+                    g_detailActive.store(
+                        true,
+                        std::memory_order_release);
+                }
             }
 
             Event event{};
@@ -1522,7 +1549,7 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "detail_gate="
                 << (g_fullPipelineDetail
                     ? "full_pipeline"
-                    : "late_only")
+                    : "late_to_before_original_present")
                 << "\n"
                 << "detailed_pipeline_rows="
                 << g_detailedPipelineRows.load()
@@ -1563,6 +1590,30 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "\n"
                 << "engine_profile_available="
                 << (engineStatus.engineProfileAvailable ? "true" : "false")
+                << "\n"
+                << "engine_discovery_supported="
+                << (engineStatus.discoverySupported ? "true" : "false")
+                << "\n"
+                << "engine_discovery_only="
+                << (engineStatus.discoveryOnly ? "true" : "false")
+                << "\n"
+                << "engine_post_processing_discovery_matches="
+                << engineStatus.postProcessingDiscoveryMatches
+                << "\n"
+                << "engine_post_processing_candidate_match_rva="
+                << Hex(engineStatus.postProcessingCandidateMatchRva)
+                << "\n"
+                << "engine_post_processing_candidate_target_rva="
+                << Hex(engineStatus.postProcessingCandidateTargetRva)
+                << "\n"
+                << "engine_pre_ui_discovery_matches="
+                << engineStatus.preUiDiscoveryMatches
+                << "\n"
+                << "engine_pre_ui_candidate_match_rva="
+                << Hex(engineStatus.preUiCandidateMatchRva)
+                << "\n"
+                << "engine_pre_ui_candidate_target_rva="
+                << Hex(engineStatus.preUiCandidateTargetRva)
                 << "\n"
                 << "engine_post_processing_anchor="
                 << (engineStatus.postProcessingArmed ? "armed" : "unavailable")
@@ -1655,7 +1706,7 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "detail_gate="
                 << (g_fullPipelineDetail
                     ? "full_pipeline"
-                    : "late_only")
+                    : "late_to_before_original_present")
                 << "\n"
                 << "performance_note=forensic_build_not_release_fps_evidence\n"
                 << "renderer_identity_policy=creation_time_exact_hash\n"
@@ -3222,6 +3273,16 @@ namespace gzfx::diagnostics::telemetry_listener
         const std::uint32_t flags,
         const std::int32_t hresult) noexcept
     {
+        if (!g_fullPipelineDetail &&
+            DetailGateForPresent(phase) ==
+                DetailGateAction::Stop)
+        {
+            EnqueuePendingPass();
+            g_detailActive.store(
+                false,
+                std::memory_order_release);
+        }
+
         Event event{};
         event.type = EventType::PresentTimeline;
         event.frame = frame;
@@ -3322,4 +3383,53 @@ namespace gzfx::diagnostics::telemetry_listener
 
         Enqueue(event);
     }
+    namespace testing
+    {
+        std::uint32_t DetailGateStageAction(
+            const std::uint32_t boundary,
+            const std::uint32_t phase) noexcept
+        {
+            return static_cast<std::uint32_t>(
+                DetailGateForStage(
+                    static_cast<
+                        render::stage_scheduler::Boundary>(
+                            boundary),
+                    static_cast<
+                        render::stage_scheduler::Phase>(
+                            phase)));
+        }
+
+        std::uint32_t DetailGatePresentAction(
+            const std::uint32_t phase) noexcept
+        {
+            return static_cast<std::uint32_t>(
+                DetailGateForPresent(
+                    static_cast<PresentPhase>(
+                        phase)));
+        }
+    }
+
+}
+
+
+extern "C" __declspec(dllexport)
+std::uint32_t GZFX_TestTelemetryDetailGateStage(
+    const std::uint32_t boundary,
+    const std::uint32_t phase) noexcept
+{
+    return static_cast<std::uint32_t>(
+        gzfx::diagnostics::telemetry_listener::
+            testing::DetailGateStageAction(
+                boundary,
+                phase));
+}
+
+extern "C" __declspec(dllexport)
+std::uint32_t GZFX_TestTelemetryDetailGatePresent(
+    const std::uint32_t phase) noexcept
+{
+    return static_cast<std::uint32_t>(
+        gzfx::diagnostics::telemetry_listener::
+            testing::DetailGatePresentAction(
+                phase));
 }
