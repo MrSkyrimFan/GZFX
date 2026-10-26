@@ -1,0 +1,133 @@
+GZFX NEW CHAT TAKEOVER — 0.0.29 HDR / TONEMAP FIELD-CLOSED
+Date: October 25-26, 2026
+Status: CONTROLLING CURRENT HANDOFF
+
+READ FIRST:
+
+    AGENT.md
+    GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.29_FIELD_CLOSED.txt
+    GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.29_FIELD_CLOSED.txt
+
+CURRENT RUNTIME:
+    0.0.29-hdr-branch-recovery
+
+CURRENT PHASE:
+    HDR / TONEMAP / GLOBAL-TAA IMAGE-SPACE SPINE FIELD-CLOSED
+    NEXT GRAPHICS WAVE NOT YET SELECTED
+
+CRITICAL RULE:
+    Do NOT reopen the 0.0.29 HDR branch-recovery problem without contradictory
+    new evidence.
+
+0.0.29 FIELD RESULT:
+
+    12,123 active frames
+
+    HDRReduction:
+        12,123 / 12,123
+
+    BeforeTonemap:
+        12,123 / 12,123
+
+    BeforeGlobalTAA:
+        12,123 / 12,123
+
+    AfterGlobalTAA:
+        12,123 / 12,123
+
+    true <=2x2:
+        12,123 / 12,123
+
+    former failing derived-HDR sibling path:
+        2,884 / 2,884 successful
+
+    independent raw replay mismatch:
+        0
+
+    dropped:
+        0
+
+    shutdown:
+        complete
+
+FIELD-LOCKED:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+BeforeTonemap definition:
+
+    immediately before Skyrim's compound HDR tonemap/blend/cinematic
+    image-space pass.
+
+FIELD CERTIFICATION:
+
+    1.7.104:
+        PROVEN
+
+Other runtime families:
+    architecture-supported
+    not field-certified by this campaign
+
+STILL UNPROMOTED:
+
+    PostTonemapPreUi
+    WaterDomain
+    AfterShadowProduction
+
+CLOSURE IMPLEMENTATION:
+
+    PR #34
+    head 18b01b38db1bddb06b4810f99c8ffd030915754b
+    run 40257000915
+    37/37 PASS
+
+    merge c2a1478ce972d886954c294c0c69280ba361609f
+
+PR #34 changed only:
+    AGENT.md
+    README.md
+
+Product code:
+    unchanged
+
+Runtime:
+    unchanged
+
+Tests:
+    unchanged
+
+Product binary code/data:
+    normalized byte-for-byte identical to field-tested baseline.
+
+MERGED-MAIN WORKFLOW:
+
+    intentionally not triggered because the repository workflow ignores
+    docs-only pushes changing README.md / AGENT.md.
+
+Do not invent a merged-main run ID.
+
+PACKAGE:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    blob 3c5d2473228e1a4d2d2a59fd19cc136a7671d791
+    401,287 bytes
+
+    exact:
+        GZFX.dll
+        d3d11.dll
+        dinput8.dll
+
+This is still the exact successful field-test package.
+
+NEXT ENGINEERING TARGET:
+
+    NOT AUTHORIZED YET.
+
+Research suggests PostTonemapPreUi is the nearest unresolved late-stage target,
+but it must begin as its own DATA / RESEARCH / BLUEPRINT cycle.
+
+END TAKEOVER
