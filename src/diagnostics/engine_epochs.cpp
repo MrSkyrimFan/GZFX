@@ -25,6 +25,7 @@ namespace gzfx::diagnostics::engine_epochs
     namespace
     {
         constexpr std::uint64_t kAe1170Profile = 0x0001000604920000ull;
+        constexpr std::uint64_t kAe17104Profile = 0x0001000700680000ull;
 
         constexpr std::uint32_t kRuntimeKnown = 1u << 0;
         constexpr std::uint32_t kEngineProfile = 1u << 1;
@@ -43,6 +44,23 @@ namespace gzfx::diagnostics::engine_epochs
             0xD2, 0x48, 0x8D, 0x0D, 0x46, 0x37, 0x2E, 0x02,
             0xE8, 0xD1, 0xF7, 0xE9, 0xFF, 0x48, 0x8B, 0x05,
             0x42, 0xC1, 0x64, 0x02, 0x48, 0x8B, 0x48, 0x10
+        };
+
+        // Discovery-only masks for 1.7.104. Relocation/call displacements and
+        // the leading byte are intentionally wildcarded. Fixed opcode bytes
+        // remain mandatory. Discovery never authorizes a hook by itself.
+        constexpr std::array<std::uint8_t, 24> kPostProcessingDiscoveryMask =
+        {
+            0, 1, 1, 1, 0, 0, 0, 0,
+            1, 0, 0, 0, 0, 1, 1, 1,
+            0, 0, 0, 0, 1, 1, 1, 1
+        };
+
+        constexpr std::array<std::uint8_t, 24> kPreUiDiscoveryMask =
+        {
+            0, 1, 1, 1, 0, 0, 0, 0,
+            1, 0, 0, 0, 0, 1, 1, 1,
+            0, 0, 0, 0, 1, 1, 1, 1
         };
 
         using PostProcessingFn =
@@ -172,6 +190,22 @@ namespace gzfx::diagnostics::engine_epochs
                 << (g_status.runtimeKnown ? "true" : "false") << "\n"
                 << "engine_profile_available="
                 << (g_status.engineProfileAvailable ? "true" : "false") << "\n"
+                << "discovery_supported="
+                << (g_status.discoverySupported ? "true" : "false") << "\n"
+                << "discovery_only="
+                << (g_status.discoveryOnly ? "true" : "false") << "\n"
+                << "post_processing_discovery_matches="
+                << g_status.postProcessingDiscoveryMatches << "\n"
+                << "post_processing_candidate_match_rva="
+                << Hex(g_status.postProcessingCandidateMatchRva) << "\n"
+                << "post_processing_candidate_target_rva="
+                << Hex(g_status.postProcessingCandidateTargetRva) << "\n"
+                << "pre_ui_discovery_matches="
+                << g_status.preUiDiscoveryMatches << "\n"
+                << "pre_ui_candidate_match_rva="
+                << Hex(g_status.preUiCandidateMatchRva) << "\n"
+                << "pre_ui_candidate_target_rva="
+                << Hex(g_status.preUiCandidateTargetRva) << "\n"
                 << "post_processing_armed=" << (g_status.postProcessingArmed ? "true" : "false") << "\n"
                 << "post_processing_target_rva=" << Hex(g_status.postProcessingTargetRva) << "\n"
                 << "pre_ui_armed=" << (g_status.preUiArmed ? "true" : "false") << "\n"
@@ -389,6 +423,49 @@ namespace gzfx::diagnostics::engine_epochs
             return matches;
         }
 
+        template <std::size_t N>
+        std::vector<std::uint8_t*> FindMasked(
+            const ImageInfo& image,
+            const std::array<std::uint8_t, N>& signature,
+            const std::array<std::uint8_t, N>& mask)
+        {
+            std::vector<std::uint8_t*> matches;
+
+            if (image.text == nullptr ||
+                image.textSize < N)
+            {
+                return matches;
+            }
+
+            for (std::size_t i = 0;
+                 i + N <= image.textSize;
+                 ++i)
+            {
+                bool matched = true;
+
+                for (std::size_t j = 0;
+                     j < N;
+                     ++j)
+                {
+                    if (mask[j] != 0 &&
+                        image.text[i + j] !=
+                            signature[j])
+                    {
+                        matched = false;
+                        break;
+                    }
+                }
+
+                if (matched)
+                {
+                    matches.push_back(
+                        image.text + i);
+                }
+            }
+
+            return matches;
+        }
+
         std::uint8_t* DecodeCallTarget(
             std::uint8_t* const call)
         {
@@ -407,6 +484,78 @@ namespace gzfx::diagnostics::engine_epochs
             return
                 call + 5 +
                 displacement;
+        }
+
+        struct DiscoveryResult
+        {
+            std::uint32_t validMatches = 0;
+            std::uint64_t matchRva = 0;
+            std::uint64_t targetRva = 0;
+        };
+
+        template <std::size_t N>
+        DiscoveryResult DiscoverAnchor(
+            const ImageInfo& image,
+            const std::array<std::uint8_t, N>& signature,
+            const std::array<std::uint8_t, N>& mask)
+        {
+            DiscoveryResult result{};
+
+            const auto matches =
+                FindMasked(
+                    image,
+                    signature,
+                    mask);
+
+            std::uint8_t* uniqueMatch = nullptr;
+            std::uint8_t* uniqueTarget = nullptr;
+
+            for (auto* const match : matches)
+            {
+                auto* const call =
+                    match + 8;
+
+                auto* const target =
+                    DecodeCallTarget(call);
+
+                if (target == nullptr ||
+                    target < image.base ||
+                    target >=
+                        image.base +
+                        image.imageSize ||
+                    !ExecutableAddress(target))
+                {
+                    continue;
+                }
+
+                ++result.validMatches;
+
+                if (result.validMatches == 1)
+                {
+                    uniqueMatch = match;
+                    uniqueTarget = target;
+                }
+                else
+                {
+                    uniqueMatch = nullptr;
+                    uniqueTarget = nullptr;
+                }
+            }
+
+            if (result.validMatches == 1 &&
+                uniqueMatch != nullptr &&
+                uniqueTarget != nullptr)
+            {
+                result.matchRva =
+                    static_cast<std::uint64_t>(
+                        uniqueMatch - image.base);
+
+                result.targetRva =
+                    static_cast<std::uint64_t>(
+                        uniqueTarget - image.base);
+            }
+
+            return result;
         }
 
         template <std::size_t N>
@@ -570,6 +719,54 @@ namespace gzfx::diagnostics::engine_epochs
 
             if (!g_status.engineProfileAvailable)
             {
+                if (g_status.runtimeProfile ==
+                    kAe17104Profile)
+                {
+                    g_status.discoverySupported = true;
+                    g_status.discoveryOnly = true;
+
+                    const ImageInfo image =
+                        MainImage();
+
+                    if (image.base == nullptr ||
+                        image.text == nullptr)
+                    {
+                        WriteStatus(
+                            "known_runtime_discovery_image_unavailable");
+                        return;
+                    }
+
+                    const auto post =
+                        DiscoverAnchor(
+                            image,
+                            kPostProcessingSignature,
+                            kPostProcessingDiscoveryMask);
+
+                    const auto preUi =
+                        DiscoverAnchor(
+                            image,
+                            kPreUiSignature,
+                            kPreUiDiscoveryMask);
+
+                    g_status.postProcessingDiscoveryMatches =
+                        post.validMatches;
+                    g_status.postProcessingCandidateMatchRva =
+                        post.matchRva;
+                    g_status.postProcessingCandidateTargetRva =
+                        post.targetRva;
+
+                    g_status.preUiDiscoveryMatches =
+                        preUi.validMatches;
+                    g_status.preUiCandidateMatchRva =
+                        preUi.matchRva;
+                    g_status.preUiCandidateTargetRva =
+                        preUi.targetRva;
+
+                    WriteStatus(
+                        "known_runtime_discovery_only_no_hooks");
+                    return;
+                }
+
                 WriteStatus(
                     g_status.runtimeKnown
                         ? "known_runtime_engine_profile_unavailable"
@@ -763,6 +960,74 @@ namespace gzfx::diagnostics::engine_epochs
                 kPreUiExpectedRva);
         }
 
+        template <std::size_t N>
+        CallFixtureResult ValidateDiscoveryFixture(
+            const std::uint8_t* bytes,
+            const std::array<std::uint8_t, N>& signature,
+            const std::array<std::uint8_t, N>& mask,
+            const std::uint64_t matchRva) noexcept
+        {
+            CallFixtureResult result{};
+
+            if (bytes == nullptr)
+            {
+                return result;
+            }
+
+            for (std::size_t i = 0;
+                 i < N;
+                 ++i)
+            {
+                if (mask[i] != 0 &&
+                    bytes[i] != signature[i])
+                {
+                    return result;
+                }
+            }
+
+            if (bytes[8] != 0xE8)
+            {
+                return result;
+            }
+
+            std::int32_t displacement = 0;
+            std::memcpy(
+                &displacement,
+                bytes + 9,
+                sizeof(displacement));
+
+            result.targetRva =
+                matchRva +
+                13 +
+                static_cast<std::int64_t>(
+                    displacement);
+
+            result.matched = true;
+            return result;
+        }
+
+        CallFixtureResult ValidateAe17104PostProcessingDiscoveryFixture(
+            const std::uint8_t* bytes,
+            const std::uint64_t matchRva) noexcept
+        {
+            return ValidateDiscoveryFixture(
+                bytes,
+                kPostProcessingSignature,
+                kPostProcessingDiscoveryMask,
+                matchRva);
+        }
+
+        CallFixtureResult ValidateAe17104PreUiDiscoveryFixture(
+            const std::uint8_t* bytes,
+            const std::uint64_t matchRva) noexcept
+        {
+            return ValidateDiscoveryFixture(
+                bytes,
+                kPreUiSignature,
+                kPreUiDiscoveryMask,
+                matchRva);
+        }
+
         std::uint32_t ClassifyRuntime(
             const std::uint16_t major,
             const std::uint16_t minor,
@@ -808,6 +1073,47 @@ bool GZFX_TestValidateAe1170PreUi(
     const auto result =
         gzfx::diagnostics::engine_epochs::testing::
             ValidateAe1170PreUiFixture(
+                bytes,
+                matchRva);
+
+    if (outTargetRva != nullptr)
+    {
+        *outTargetRva = result.targetRva;
+    }
+
+    return result.matched;
+}
+
+
+extern "C" __declspec(dllexport)
+bool GZFX_TestValidateAe17104PostProcessingDiscovery(
+    const std::uint8_t* bytes,
+    const std::uint64_t matchRva,
+    std::uint64_t* outTargetRva) noexcept
+{
+    const auto result =
+        gzfx::diagnostics::engine_epochs::testing::
+            ValidateAe17104PostProcessingDiscoveryFixture(
+                bytes,
+                matchRva);
+
+    if (outTargetRva != nullptr)
+    {
+        *outTargetRva = result.targetRva;
+    }
+
+    return result.matched;
+}
+
+extern "C" __declspec(dllexport)
+bool GZFX_TestValidateAe17104PreUiDiscovery(
+    const std::uint8_t* bytes,
+    const std::uint64_t matchRva,
+    std::uint64_t* outTargetRva) noexcept
+{
+    const auto result =
+        gzfx::diagnostics::engine_epochs::testing::
+            ValidateAe17104PreUiDiscoveryFixture(
                 bytes,
                 matchRva);
 
