@@ -994,11 +994,6 @@ namespace gzfx::diagnostics::telemetry_listener
                 Event& stage,
             void*) noexcept
         {
-            using B =
-                render::stage_scheduler::Boundary;
-            using P =
-                render::stage_scheduler::Phase;
-
             if (!g_fullPipelineDetail)
             {
                 const auto action =
