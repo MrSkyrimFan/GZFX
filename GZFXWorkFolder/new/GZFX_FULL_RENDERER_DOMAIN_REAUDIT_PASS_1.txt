@@ -1,0 +1,628 @@
+GZFX FULL RENDERER-DOMAIN RE-AUDIT — PASS 1
+Raw Cross-Session Evidence Atlas
+Date: October 25-26, 2026
+Status: PASS 1 COMPLETE / PRIOR READINESS VERDICT CORRECTED
+Product code modified: NO
+
+======================================================================
+1. WHY THIS RE-AUDIT EXISTS
+======================================================================
+
+The owner correctly rejected the statement that GZFX was broadly ready to
+begin the full major-engineering campaign required to beat ENB + ReShade.
+
+That statement confused two different thresholds:
+
+A. enough renderer ownership to begin some serious effect engineering;
+
+B. enough renderer-domain knowledge to begin the complete better-than-ENB +
+   ReShade product campaign without knowingly leaving water, shadows, sky,
+   clouds, celestial lighting, fire, particles, weather or runtime families
+   half mapped.
+
+The user's requirement is B.
+
+Under that requirement, the prior broad green light was premature.
+
+This pass goes back through:
+
+- directly reprocessed raw 0.0.28, 0.0.29 and 0.0.30 telemetry sessions;
+- repository-preserved 0.0.19 manual-capture findings;
+- all three repository-preserved 0.0.24 continuous-telemetry DATA passes,
+  including the 417,196,650-byte archive analysis representing more than
+  7 GB of uncompressed telemetry;
+- the 0.0.24 late-family matrix;
+- Research Pass 7 named Skyrim renderer-anchor findings;
+- current public Skyrim renderer signposts used only as independent semantic
+  references.
+
+Raw 0.0.28-0.0.30 bytes were directly reprocessed in this pass.
+
+The older 0.0.19-0.0.24 Library ZIPs were located, including the 417 MB archive,
+but this execution environment did not expose an authorized raw-byte
+materialization path for those historical Library objects. Their repository-
+preserved findings and matrices were therefore re-audited rather than falsely
+claiming a fresh byte-level parse of unavailable historical ZIP bytes.
+
+======================================================================
+2. EXECUTIVE CORRECTION
+======================================================================
+
+WATER IS NOT ABSENT FROM THE MAP.
+
+SHADOWS ARE NOT ABSENT FROM THE MAP.
+
+VOLUMETRICS / EXTERIOR LIGHT SHAFT INFRASTRUCTURE ARE NOT ABSENT FROM THE MAP.
+
+The prior wording treated:
+
+    not yet split into final named semantic subdomains
+
+as though it meant:
+
+    not observed / not mapped.
+
+That was incorrect.
+
+The real current state is:
+
+- water/reflection infrastructure is strongly visible and repeatable, but its
+  subpasses are not yet separated into final WaterDomain contracts;
+
+- shadow-map production and full-resolution shadow-mask consumption are
+  strongly visible and repeatable, but directional sun/moon, local-light,
+  cloud-shadow and other shadow families are not yet independently classified;
+
+- exterior volumetric density, temporal history and apply stages are already
+  field-proven in day and night, but sun-ray, moon-ray, cloud and weather
+  subdomains are not yet independently named;
+
+- fire/local-light interiors are present in the historical captures, but the
+  existing analysis never isolated fire/emissive/particle/local-light pass
+  families from the broader interior renderer population.
+
+This is a domain-classification problem, not a no-data problem.
+
+======================================================================
+3. CONTROLLING RAW CROSS-SESSION BASELINE
+======================================================================
+
+Directly reprocessed full-pipeline snapshots:
+
+0.0.28:
+    three exterior frames
+    frames 865-867
+
+0.0.29:
+    three exterior frames
+    frames 4438-4440
+
+0.0.30:
+    three exterior frames
+    frames 10172-10174
+
+Across all three sessions:
+
+- resource birth order is stable;
+- resource dimensions/formats/array sizes are stable;
+- shadow-production shader hashes and ordering are stable;
+- dynamic reflection-cubemap shader hashes and slice behavior are stable;
+- half-resolution reflection/lighting compute/draw families are stable;
+- the full-resolution exterior apply families are stable;
+- HDR/TAA contracts remain stable.
+
+The repeated structural map survives completely different COM addresses across
+three independent Skyrim launches.
+
+======================================================================
+4. SHADOW-DOMAIN EVIDENCE — ALREADY SUBSTANTIAL
+======================================================================
+
+The following resource families occur with the same creation order,
+descriptors, access counts, shader structure and frame ordering in 0.0.28,
+0.0.29 and 0.0.30.
+
+A. LARGE TWO-SLICE SHADOW RESOURCE
+
+Birth:
+    35
+
+Descriptor:
+    4096x4096
+    array size 2
+    format 53 / R16_TYPELESS family
+    depth/shader-resource bind family
+
+Three-frame full-pipeline population:
+    2,856 writes
+    36 reads
+
+Per-frame production spans a large early shadow-rendering range.
+
+Observed slice population:
+    slice 1 dominates production;
+    slice 0 is also produced;
+    full-array read views occur downstream.
+
+B. SMALL TWO-SLICE SHADOW RESOURCE
+
+Birth:
+    36
+
+Descriptor:
+    512x512
+    array size 2
+    format 53 / R16_TYPELESS family
+
+Three-frame population:
+    360 writes
+    3 reads
+
+C. LARGE EIGHT-SLICE SHADOW RESOURCE
+
+Birth:
+    37
+
+Descriptor:
+    4096x4096
+    array size 8
+    format 53 / R16_TYPELESS family
+
+Three-frame population:
+    45 writes
+    9 reads
+
+Current exterior snapshots write slice 4 through a stable 522x522 production
+family. The full array is read by the downstream shadow-mask pass.
+
+D. FULL-RESOLUTION SHADOW MASK
+
+Current Semantic Authority already identifies:
+
+    SHADOW_MASK
+
+as:
+
+    full_resolution_mask_from_depth_and_shadow_arrays
+
+Descriptor:
+    2560x1440
+    R8G8B8A8_UNORM
+
+Stable mask pass across 0.0.28-0.0.30:
+
+    VS 0x20C86730A4E3FF1B
+    PS 0x101633D31556154F
+
+It reads:
+
+- MAIN_DEPTH_CURRENT;
+- the 4096x4096 two-slice shadow family;
+- the 4096x4096 eight-slice shadow family;
+- additional material/noise inputs;
+
+and writes the full-resolution SHADOW_MASK.
+
+Historical 0.0.19 manual evidence found SHADOW_MASK fresh across all 19 manual
+capture groups:
+
+- daylight exterior;
+- inn/tavern interior;
+- nighttime exterior.
+
+Current 0.0.28-0.0.30 continuous semantics likewise show it across exterior and
+interior active populations, apart from the familiar first-entry bookkeeping
+edge.
+
+PASS-1 SHADOW VERDICT:
+
+    SHADOW PRODUCTION INFRASTRUCTURE = STRONGLY MAPPED
+    SHADOW MASK CONSUMPTION = STRONGLY MAPPED
+    AFTERSHADOWPRODUCTION SEMANTIC BOUNDARY = NOT YET FIELD-LOCKED
+
+Still unresolved:
+
+- which array/slices are the directional sun/moon cascade family;
+- which are local-light or other shadow families;
+- whether and where cloud shadows enter the mask/lighting path;
+- exact day/night ownership changes;
+- exact engine exit boundary corresponding to Main_RenderShadowmasks;
+- PCF/filtering/control constants required for full production ownership.
+
+The correct description is therefore:
+
+    shadows are substantially cartographed but not fully decomposed.
+
+It is incorrect to say we lack renderer mapping for shadows in general.
+
+======================================================================
+5. WATER / REFLECTION EVIDENCE — ALREADY SUBSTANTIAL
+======================================================================
+
+A. PRE-WATER DEPTH
+
+GZFX already field-locks:
+
+    PublishPreWaterDepth
+    PRE_WATER_DEPTH_CURRENT
+
+on every exterior active frame.
+
+The same physical resource transitions from:
+
+    VOLUMETRIC_PREVIOUS_DEPTH
+    ->
+    PRE_WATER_DEPTH_CURRENT
+
+through the field-proven MAIN_DEPTH copy after volumetric temporal apply.
+
+This gives a verified exterior depth state immediately before the unresolved
+water/reflection domain.
+
+B. DYNAMIC SIX-FACE FLOAT16 CUBEMAP
+
+Birth:
+    38
+
+Descriptor:
+    512x512
+    array size 6
+    R16G16B16A16_FLOAT
+    render-target + shader-resource capable
+
+Cross-session three-frame population:
+    1,000 writes
+    27 reads
+
+All six faces are produced across the three captured frames.
+
+0.0.30 example:
+    frame 10172 updates faces 5 and 3;
+    frame 10173 updates faces 1 and 4;
+    frame 10174 updates faces 0 and 2.
+
+The cubemap is rendered with hundreds of normal world/material draws and paired
+with a 512x512 depth surface.
+
+This is strong dynamic environment/reflection-capture evidence.
+
+It is not a generic one-time static texture.
+
+C. HALF-RESOLUTION FLOAT16 REFLECTION/LIGHTING CHAIN
+
+Stable resources:
+
+Birth 84:
+    1280x720 RGBA16F
+    produced by compute
+
+Birth 85:
+    1280x720 RGBA16F
+    produced by a full-screen draw
+    consumed by compute and later exterior applies
+
+Birth 86:
+    1280x720 RGBA16F
+    compute intermediate
+
+Stable production family:
+
+    draw PS 0x78D7402EDBFED5D1
+    compute CS 0x1C67EAA68CF627C6
+    compute CS 0xFA6CD0523C1A4E70
+
+This chain is produced immediately before the later exterior full-resolution
+apply family and is consumed there.
+
+D. EXTERIOR-ONLY FULL-RESOLUTION APPLY FAMILIES
+
+Two especially strong families read the dynamic cubemap and half-resolution
+float16 surfaces.
+
+Primary family:
+
+    VS 0x48C5589B29E9D080
+    PS 0x9B6AD8FCEC04FB37
+
+Full-session recurrence:
+
+0.0.29:
+    8,882 / 8,882 exterior active frames
+    0 interior frames
+
+0.0.30:
+    5,517 / 5,517 exterior active frames
+    0 interior frames
+
+The pass reads, among other inputs:
+
+- the dynamic six-face cubemap;
+- two 1280x720 float16 reflection/lighting surfaces;
+- full-resolution HDR input;
+- early/pre-water depth-related input;
+- MOTION;
+- large 2048x2048 and 1024x1024 supporting textures;
+
+and writes:
+
+- a full-resolution HDR target;
+- MAIN_DEPTH_CURRENT as the bound depth target.
+
+Secondary family:
+
+    VS 0x299CCAF45A10E832
+    PS 0xFAF913163C701985
+
+Full-session recurrence:
+
+0.0.29:
+    8,471 unique exterior frames
+
+0.0.30:
+    4,983 unique exterior frames
+
+Again:
+    0 interior frames.
+
+Additional cubemap-consuming exterior families also exist at lower recurrence.
+
+E. PUBLIC SKYRIM SEMANTIC SIGNPOSTS ALREADY IDENTIFIED
+
+Prior Research Pass 7 already identified named Skyrim paths for:
+
+    Main_RenderWaterEffects
+    ISTemporalAA_Water
+    ISWaterBlend
+    ISApplyReflections
+
+PASS-1 WATER VERDICT:
+
+    PRE-WATER DEPTH = FIELD-LOCKED
+    DYNAMIC REFLECTION CUBEMAP = STRUCTURALLY VERIFIED
+    HALF-RES REFLECTION/LIGHTING CHAIN = STRUCTURALLY VERIFIED
+    EXTERIOR FULL-RES APPLY = STRUCTURALLY VERIFIED
+    FINAL WATERDOMAIN SUBPASS NAMES/BOUNDARIES = NOT YET FIELD-LOCKED
+
+Still unresolved:
+
+- exact correlation of each observed family to Main_RenderWaterEffects,
+  ISTemporalAA_Water, ISWaterBlend and ISApplyReflections;
+- whether the dynamic cubemap is used only for water or for broader exterior
+  reflection consumers;
+- exact refraction lane;
+- underwater path;
+- water surface material/shader families;
+- reflection quality/history controls;
+- WaterDomain entry and exit.
+
+The correct description is:
+
+    water/reflections are heavily present and partially mapped;
+    the remaining task is semantic decomposition and boundary locking.
+
+It is incorrect to say the data lacks water.
+
+======================================================================
+6. VOLUMETRICS / ATMOSPHERIC LIGHTING / RAY INFRASTRUCTURE
+======================================================================
+
+Historical 0.0.19 manual captures proved the same exterior 3D volumetric
+architecture in:
+
+- daylight exterior;
+- nighttime exterior;
+
+and its absence from the interior path.
+
+The clean field signal was:
+
+    294 dispatches per three-frame exterior capture
+    15 dispatches per three-frame interior capture
+
+The current field-locked families include:
+
+    VOLUMETRIC_DENSITY_A
+    VOLUMETRIC_DENSITY_B
+    BeforeVolumetricApply
+    AfterVolumetricApply
+    PublishPreWaterDepth
+
+The density volumes are:
+
+    320x192x90
+    R16_FLOAT
+    ping-pong / current-history structure
+
+The volumetric temporal apply consumes:
+
+- current density;
+- depth;
+- previous depth;
+- motion;
+- repartition data;
+
+and produces a full-resolution R16_FLOAT temporal result/history lane.
+
+The 0.0.24 continuous session proved a perfect full-resolution exterior R16
+history ping-pong across all 7,099 exterior active frames.
+
+A distinct later exterior-only pass then writes MAIN_HDR on every exterior
+frame.
+
+PASS-1 VOLUMETRIC VERDICT:
+
+    EXTERIOR VOLUMETRIC PRODUCTION = FIELD-MAPPED
+    VOLUMETRIC TEMPORAL APPLY = FIELD-LOCKED
+    DAY + NIGHT EXECUTION = FIELD-PROVEN
+    FINAL EXTERIOR APPLY = STRUCTURALLY VERIFIED
+
+Still unresolved:
+
+- sun-ray versus moon-ray parameter/branch identity;
+- directional-light shaft ownership;
+- cloud/sky contribution to volumetric scattering;
+- weather-specific fog/scattering control;
+- whether the later exterior apply contains only volumetric lighting or also
+  water/reflection/atmospheric composition;
+- constants required to replace rather than merely enhance Bethesda's system.
+
+Therefore:
+
+    ray/atmosphere infrastructure is mapped;
+    separate sun-ray and moon-ray semantic control is not yet mapped.
+
+======================================================================
+7. SKY / CLOUD / SUN / MOON EVIDENCE
+======================================================================
+
+The historical campaigns contain:
+
+- sustained daylight exterior;
+- sustained nighttime exterior;
+- sky/background pixels in CameraZ/depth validation;
+- exterior 3D volumetrics in both periods;
+- dynamic reflection capture of the exterior world;
+- many stable 1024x1024 and 2048x2048 sampled resources in the late exterior
+  apply families;
+- stable Skyrim Sky shader-class public signposts.
+
+However, the previous project analysis never performed a dedicated day-versus-
+night / sky-versus-cloud renderer-family differential.
+
+The directly available 0.0.28-0.0.30 full-pipeline snapshots are exterior
+snapshot windows from the same broad location and do not provide a controlled
+sun-versus-moon / clear-versus-cloudy contrast.
+
+The 0.0.24 continuous archive contained the required day/interior/night frame
+blocks, but the preserved analysis explicitly declined to label them with a
+canonical day/night semantic and did not extract a sky/cloud family matrix.
+
+PASS-1 SKY/CLOUD VERDICT:
+
+    SKY/CLOUD DATA EXISTS IN THE CAMPAIGNS
+    DEDICATED SKY/CLOUD/CELestial DECOMPOSITION WAS NEVER DONE
+
+Unresolved:
+
+- sky dome / atmosphere draw families;
+- cloud layer draw/compute families;
+- cloud shadow production and application;
+- sun disc and moon meshes/materials;
+- stars;
+- day/night celestial-light ownership;
+- sun versus moon directional shadow selection;
+- weather-driven sky/resource families.
+
+This gap is caused by incomplete analysis, not by the user failing to show sky,
+clouds, sun or moon.
+
+======================================================================
+8. FIRE / EMISSIVE / PARTICLE / LOCAL-LIGHT EVIDENCE
+======================================================================
+
+The owner confirms the repeated interior campaign used the Riverwood inn and
+included visible fire.
+
+The historical 0.0.19 report independently describes the interior group as a
+normal inn/tavern scene containing local lights, geometry, furniture, NPCs and
+clutter.
+
+The 0.0.24 full continuous analysis found:
+
+    59 interior-only late structural families
+
+versus:
+
+    11 exterior-only late structural families.
+
+It also identified a large late geometry/material/transparency/particle-type
+domain after ambient composition.
+
+However the project never performed the required differential to split:
+
+- fire particle/emissive draws;
+- flame animation/material resources;
+- smoke particles;
+- local-light contribution;
+- fire-cast shadow maps;
+- bloom/glow response;
+- other tavern transparencies and material draws.
+
+The current 0.0.28-0.0.30 full-pipeline snapshots are exterior. Their full
+pipeline files cannot substitute for a raw interior fire decomposition.
+
+PASS-1 FIRE VERDICT:
+
+    FIRE WAS PRESENT IN THE DATA
+    INTERIOR-ONLY STRUCTURAL FAMILIES WERE CAPTURED
+    FIRE-SPECIFIC PASS/RESOURCE IDENTITY WAS NEVER ISOLATED
+
+The gap again belongs to project analysis, not user capture coverage.
+
+======================================================================
+9. WEATHER / INTERIOR-EXTERIOR ADAPTATION
+======================================================================
+
+Already field-proven:
+
+- reliable exterior/interior/transition classification;
+- day and night share the exterior renderer architecture;
+- volumetrics are exterior-specific;
+- water/reflection apply families are exterior-specific;
+- core HDR/TAA is cross-environment;
+- shadow mask is cross-environment;
+- resource availability windows distinguish exterior-only semantics.
+
+Not yet field-proven:
+
+- deterministic weather identity;
+- weather transition events;
+- per-weather cloud/fog/sky parameter ownership;
+- current sun/moon state;
+- precipitation and wet-surface domains.
+
+Interior/exterior adaptation is ready.
+
+ENB-style per-weather ownership is not yet ready.
+
+======================================================================
+10. PASS-1 FULL-PRODUCT READINESS VERDICT
+======================================================================
+
+For isolated domains already closed, major engineering can begin safely:
+
+- AO / ambient visibility;
+- screen-space indirect lighting;
+- temporal accumulation/rejection/denoising;
+- HDR exposure architecture;
+- tonemap;
+- global TAA-aware post;
+- basic volumetric enhancement;
+- configuration/menu/presets/performance framework.
+
+But the owner's target is not an isolated subset.
+
+It is:
+
+    everything ENB + ReShade offer
+    owned natively
+    and done better.
+
+For that full target:
+
+    BROAD MAJOR-ENGINEERING CAMPAIGN = NOT YET GREEN
+
+Blocking semantic/domain closure remains:
+
+1. Water/reflections/refraction/underwater decomposition;
+2. shadow-family decomposition and AfterShadowProduction;
+3. sky/cloud/sun/moon/weather decomposition;
+4. fire/emissive/particle/local-light decomposition;
+5. PostTonemapPreUi verification;
+6. multi-runtime certification strategy.
+
+The current map is much stronger than previously stated, but it is not yet the
+complete renderer contract required for a no-half-measures ENB/ReShade
+replacement.
+
+END PASS 1
