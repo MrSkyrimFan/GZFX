@@ -1,0 +1,172 @@
+GZFX 0.0.29 HDR / TONEMAP FIELD-CLOSED TECHNICAL APPENDIX
+Date: October 25-26, 2026
+
+RUNTIME:
+    0.0.29-hdr-branch-recovery
+
+FIELD ARCHIVE:
+    GZFX343swd.zip
+
+SHA256:
+    1a1067d904601110acd84734921a494d90285f2715e0dc001f78e4dba32453dd
+
+SESSION:
+    session_20261025_192740_168836
+
+ACTIVE FRAMES:
+    12,123
+
+ENVIRONMENT:
+    exterior 8,882
+    interior 3,241
+
+LOCKED LATE SPINE:
+
+    MAIN_HDR-descended HDR reduction/adaptation
+    ->
+    HDRReduction
+    ->
+    BeforeTonemap
+    ->
+    Skyrim HDR tonemap/blend/cinematic
+    ->
+    BeforeGlobalTAA
+    ->
+    global TAA
+    ->
+    AfterGlobalTAA
+
+HDRReduction definition:
+
+    completion of coherent MAIN_HDR-descended reduction/adaptation at a true
+    <=2x2 terminal.
+
+Source model:
+    canonical MAIN_HDR implicit root
+    full-res sibling capacity 4
+    max ancestry depth 3
+    one reduction chain
+    strict area descent
+    unrelated branches fail closed
+
+BeforeTonemap definition:
+
+    pre-execution boundary immediately before Skyrim's compound
+    HDRTonemapBlendCinematic image-space family consuming the completed
+    reduction/adaptation result.
+
+FIELD COUNTS:
+
+    HDRReduction 12,123
+    BeforeTonemap 12,123
+    BeforeGlobalTAA 12,123
+    AfterGlobalTAA 12,123
+    true 2x2 12,123
+
+Derived full-res sibling:
+    2,884 frames
+    all successful
+
+Independent raw replay:
+    HDRReduction 12,123
+    BeforeTonemap 12,123
+    semantic mismatch 0
+
+LIFECYCLE:
+    startup trace 13 rows
+    primary attach before resource birth
+    process_exit_intercepted present
+    enqueued == written == 2,270,373
+    dropped 0
+    shutdown complete
+
+OWNERSHIP:
+    39,267 / 39,267 observed command lists GZFX-owned
+    external 0
+
+PRESENT:
+    16,586 physical epochs
+    complete five-phase population
+    nonzero HRESULT 0
+
+PUBLIC SKYRIM CORROBORATION:
+
+    current Community Shaders source exposes:
+        Main_HDRTonemapBlendCinematic_Render
+
+    current ISHDR.hlsl DOWNSAMPLE:
+        luminance/adaptation behavior
+
+    current ISHDR.hlsl BLEND:
+        AvgTex / exposure
+        Reinhard / Hejl tonemap
+        bloom
+        cinematic tint / contrast / fade
+
+No Community Shaders code copied into GZFX.
+
+RUNTIME SCOPE:
+    architecture independent of Skyrim executable offsets
+    field-certified 1.7.104 only
+
+NO-DRIFT TEST SUITE:
+    37 tests
+
+Critical tests:
+    hdr_descendant_reduction_contract
+    hdr_late_descendant_recovery_contract
+    hdr_unrelated_fullres_rejected
+    hdr_source_capacity_fourth_accepted
+    hdr_source_capacity_fifth_rejected
+    hdr_source_depth_three_accepted
+    hdr_source_depth_four_rejected
+    hdr_source_frame_isolation
+
+CLOSURE PR:
+    #34
+    head 18b01b38db1bddb06b4810f99c8ffd030915754b
+    run 40257000915
+    job 121360884936
+    37/37 PASS
+    total CTest 44.83 sec
+
+PR artifact:
+    12623007315
+    sha256:e2796cb86a0e2597a57cb25326170c962fbedd38f49a41ea8f901fc23369d23a
+
+MERGE:
+    c2a1478ce972d886954c294c0c69280ba361609f
+
+MERGED MAIN CI:
+    not triggered by design
+    docs-only README.md / AGENT.md push is paths-ignored
+
+PRODUCT BINARY NORMALIZED SHA256:
+
+    d3d11.dll
+        4319a80de2b1e4f8c73cfeeecc2ceae6ffde858c84839cd38d7b1b66819ed129
+
+    dinput8.dll
+        a00208da3d1247df46881d974d3537643772d3f7a1a28ad1a3cdc2736980d41a
+
+    GZFX.dll
+        c25c8934638de08cb05fd161c3dae6154c8367b57575f232419ce26354932b7a
+
+PRODUCT DRIFT:
+    zero after normalizing only PE/COFF and debug-directory timestamps
+
+PACKAGE:
+    blob 3c5d2473228e1a4d2d2a59fd19cc136a7671d791
+    401,287 bytes
+    exact three DLLs
+    unchanged from successful field-test package
+
+OPEN:
+    PostTonemapPreUi
+    WaterDomain
+    AfterShadowProduction
+
+NEXT GRAPHICS WAVE:
+    not selected
+
+END TECHNICAL APPENDIX
