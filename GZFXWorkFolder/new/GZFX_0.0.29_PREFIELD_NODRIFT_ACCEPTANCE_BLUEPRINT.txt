@@ -1,0 +1,399 @@
+GZFX 0.0.29 PRE-FIELD NO-DRIFT ACCEPTANCE BLUEPRINT
+Blueprint date: October 25, 2026
+Status: APPROVED FOR IMPLEMENTATION BY OWNER DIRECTIVE
+Runtime remains:
+    0.0.29-hdr-branch-recovery
+
+CONTROLLING AUTHORITY:
+    GZFX_0.0.29_PREFIELD_NODRIFT_DATA_PASS_3.txt
+    GZFX_RESEARCH_PASS_13_NODRIFT_ACCEPTANCE_HARDENING.txt
+    GZFX_0.0.29_PREFIELD_NODRIFT_NEW_FINDINGS.txt
+
+======================================================================
+1. OBJECTIVE
+======================================================================
+
+Close the remaining pre-field proof gaps without modifying working renderer
+product logic.
+
+This is an XForge-style no-drift acceptance-hardening wave.
+
+Product algorithm:
+
+    frozen unless a newly strengthened executable test proves it wrong.
+
+Authorized implementation surface:
+
+    tests/wave3_pipeline_harness.cpp
+    CMakeLists.txt
+
+Documentation / authority closure after engineering proof.
+
+Not authorized:
+
+    semantic_authority.cpp
+    renderer front door
+    telemetry implementation
+    effects
+    runtime version change.
+
+======================================================================
+2. LANE A — FIELD-FAITHFUL EQUAL-SIZE ROOT
+======================================================================
+
+Preserve historical:
+
+    hdrFalseRoot
+        smaller than real root
+
+for existing older recovery coverage.
+
+Add a separate:
+
+    hdrFieldFalseRoot
+
+with exactly the same synthetic dimensions as the real reduction root:
+
+    width / 4
+    height / 4
+
+but a distinct D3D11 resource identity.
+
+For:
+
+    GZFX_TEST_HDR_LATE_DESCENDANT_ACTIVE
+
+use:
+
+    MAIN_HDR
+    -> hdrFieldFalseRoot
+    -> delayed full-resolution sibling
+    -> hdrReduceA
+
+where:
+
+    hdrFieldFalseRoot
+    and
+    hdrReduceA
+
+have identical dimensions.
+
+This models the actual 0.0.28 failed geometry.
+
+======================================================================
+3. LANE B — DELAYED SAME-FRAME RECOVERY
+======================================================================
+
+Between:
+
+    field false root
+
+and:
+
+    later full-resolution HDR sibling
+
+emit bounded unrelated draws to non-RGBA16F targets.
+
+Use existing unrelated synthetic targets where possible.
+
+The filler exists only to prove state persistence.
+
+Do NOT:
+
+    inspect or assert the resulting ordinal;
+    add a product constant;
+    expose the field 26 gap as semantics.
+
+Comment explicitly:
+
+    field scale mirrored for realism only;
+    ordinal is not a contract.
+
+======================================================================
+4. LANE C — PER-FRAME STAGE ORACLE
+======================================================================
+
+Add a simple CSV helper to the harness that returns the ordered frame IDs for a
+specific stages.csv boundary.
+
+Use:
+
+    after_opaque_world_mrt
+
+as the active synthetic-frame authority.
+
+For positive late-HDR modes require exact frame-vector equality:
+
+    HDRReduction frames ==
+        active frames
+
+    BeforeTonemap frames ==
+        active frames
+
+    BeforeGlobalTAA frames ==
+        active frames
+
+    AfterGlobalTAA frames ==
+        active frames.
+
+Vector equality intentionally rejects:
+
+    missing frame;
+    duplicate stage on one frame;
+    extra stage on a non-active frame;
+    reordered/incorrect frame population.
+
+For negative HDR modes require:
+
+    HDRReduction frames empty
+    BeforeTonemap frames empty
+
+and:
+
+    BeforeGlobalTAA frames == active
+    AfterGlobalTAA frames == active.
+
+Replace substring-only late-stage acceptance.
+
+======================================================================
+5. LANE D — CAPACITY BOUNDARY
+======================================================================
+
+Add five full-resolution RGBA16F sibling targets.
+
+New environment modes:
+
+    GZFX_TEST_HDR_CAPACITY_FOURTH_ACTIVE
+    GZFX_TEST_HDR_CAPACITY_FIFTH_ACTIVE
+
+Both begin with a plausible false root.
+
+FOURTH mode:
+
+    register four direct MAIN_HDR siblings;
+    root reduction from sibling #4.
+
+Require:
+    HDRReduction one-to-one;
+    BeforeTonemap one-to-one.
+
+FIFTH mode:
+
+    emit five direct MAIN_HDR siblings;
+    root reduction only from sibling #5.
+
+Current fixed capacity 4 should reject #5.
+
+Require:
+    HDRReduction zero;
+    BeforeTonemap zero;
+    TAA one-to-one.
+
+This proves:
+    capacity 4;
+    no silent expansion;
+    no replacement/eviction that admits #5.
+
+======================================================================
+6. LANE E — DEPTH BOUNDARY
+======================================================================
+
+New environment modes:
+
+    GZFX_TEST_HDR_DEPTH_THREE_ACTIVE
+    GZFX_TEST_HDR_DEPTH_FOUR_ACTIVE
+
+THREE mode:
+
+    MAIN_HDR
+    -> full-res depth1
+    -> depth2
+    -> depth3
+    -> reduction from depth3.
+
+Require:
+    positive one-to-one HDR/tonemap.
+
+FOUR mode:
+
+    MAIN_HDR
+    -> depth1
+    -> depth2
+    -> depth3
+    -> depth4
+    -> reduction only from depth4.
+
+Require:
+    HDRReduction zero;
+    BeforeTonemap zero;
+    TAA one-to-one.
+
+This locks max depth 3.
+
+======================================================================
+7. LANE F — FRAME ISOLATION
+======================================================================
+
+New mode:
+
+    GZFX_TEST_HDR_FRAME_ISOLATION_ACTIVE
+
+Use one persistent full-resolution HDR resource identity.
+
+First synthetic active frame:
+
+    establish:
+        MAIN_HDR -> persistent derived source;
+
+    use that source for a valid reduction chain.
+
+All later synthetic active frames:
+
+    do NOT re-establish ancestry;
+
+    attempt the same reduction chain from the persistent old source.
+
+Require:
+
+    HDRReduction frames:
+        exactly first active frame only;
+
+    BeforeTonemap frames:
+        exactly first active frame only;
+
+    BeforeGlobalTAA:
+        every active frame;
+
+    AfterGlobalTAA:
+        every active frame.
+
+This proves verified HDR ancestry is frame-local even though the D3D resource
+identity survives.
+
+======================================================================
+8. LANE G — TEST COUNT
+======================================================================
+
+Existing suite:
+
+    32
+
+Add:
+
+    #33 hdr_source_capacity_fourth_accepted
+    #34 hdr_source_capacity_fifth_rejected
+    #35 hdr_source_depth_three_accepted
+    #36 hdr_source_depth_four_rejected
+    #37 hdr_source_frame_isolation
+
+Target:
+
+    37 / 37
+
+Existing #31 and #32 are strengthened, not removed.
+
+All previous 30 tests remain.
+
+======================================================================
+9. LANE H — PRODUCT NO-DRIFT
+======================================================================
+
+Product-source files must remain unchanged.
+
+Before-wave package DLL baseline:
+
+    d3d11.dll
+        36,352 bytes
+        CRC32 fc9f5e5f
+
+    dinput8.dll
+        35,328 bytes
+        CRC32 5e5ddb4f
+
+    GZFX.dll
+        935,424 bytes
+        CRC32 0f400b15
+
+After merged-main CI and package refresh:
+
+    independently decode the repository ZIP central directory;
+
+    require exact three entry names;
+
+    require all three inner DLL sizes and CRC32 values match baseline.
+
+If not:
+
+    do not field-test;
+    investigate drift.
+
+Outer ZIP SHA/blob may change.
+
+Inner DLL identity is the no-product-drift authority.
+
+======================================================================
+10. LANE I — FAILURE POLICY
+======================================================================
+
+If strengthened tests fail:
+
+    inspect the actual failure.
+
+If failure exposes product logic:
+
+    product source may be reopened only from that concrete evidence.
+
+If failure exposes harness error:
+
+    repair harness only.
+
+Do not weaken expected semantics.
+
+Preserve failed CI history.
+
+======================================================================
+11. BRANCH / CI / MERGE
+======================================================================
+
+1. branch from current main after this blueprint;
+2. modify only authorized test/build files;
+3. open PR;
+4. require 37/37 Windows x64;
+5. preserve failure history;
+6. source-audit final head;
+7. merge;
+8. require merged-main 37/37;
+9. verify package refresh;
+10. perform inner-DLL no-drift comparison;
+11. write engineering result;
+12. archive current cycle;
+13. clear new/;
+14. only then return to 0.0.29 field validation.
+
+======================================================================
+12. FIELD FRONTIER AFTER CLOSURE
+======================================================================
+
+If and only if:
+
+    final PR = green;
+    merged main = green;
+    product source = unchanged;
+    inner DLL identities = unchanged;
+    archive = complete;
+
+then the existing 0.0.29 package is considered no-drift pre-field closed and the
+owner may perform the next real-Skyrim session.
+
+No 0.0.30.
+No new graphics feature.
+
+======================================================================
+13. IMPLEMENTATION AUTHORITY
+======================================================================
+
+Owner explicitly authorized another complete pipeline through implementation.
+
+Proceed without another checkpoint.
+
+END NO-DRIFT BLUEPRINT
