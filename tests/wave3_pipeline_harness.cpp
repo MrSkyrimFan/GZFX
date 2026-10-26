@@ -346,6 +346,22 @@ int wmain(int argc, wchar_t** argv)
             static_cast<DWORD>(
                 std::size(hdrDescendantValue))) > 0;
 
+    wchar_t hdrLateDescendantValue[8]{};
+    const bool hdrLateDescendantActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_LATE_DESCENDANT_ACTIVE",
+            hdrLateDescendantValue,
+            static_cast<DWORD>(
+                std::size(hdrLateDescendantValue))) > 0;
+
+    wchar_t hdrUnrelatedFullResValue[8]{};
+    const bool hdrUnrelatedFullResActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_UNRELATED_FULLRES_ACTIVE",
+            hdrUnrelatedFullResValue,
+            static_cast<DWORD>(
+                std::size(hdrUnrelatedFullResValue))) > 0;
+
     wchar_t deferredOutsideDetailValue[8]{};
     const bool deferredOutsideDetailActive =
         GetEnvironmentVariableW(
@@ -850,9 +866,9 @@ int wmain(int argc, wchar_t** argv)
 
                     if (hdrDescendantActive)
                     {
-                        // Interior-style path observed in 0.0.26:
+                        // Existing 0.0.27 acceptance order:
                         // MAIN_HDR -> full-resolution HDR descendant ->
-                        // reduction spine.
+                        // false root -> real reduction spine.
                         context->OMSetRenderTargets(
                             1,
                             &hdrDerived.rtv,
@@ -874,10 +890,10 @@ int wmain(int argc, wchar_t** argv)
                             hdrDerived.srv;
                     }
 
-                    // Synthetic late image-space spine. First emit a false
-                    // reduction-root candidate that is smaller than the real
-                    // chain root. The detector must restart when the later
-                    // real root appears.
+                    // Emit the deliberately plausible early root first.
+                    // The new field-order test deliberately keeps this rooted
+                    // in canonical MAIN_HDR, then introduces a later sibling
+                    // full-resolution HDR source.
                     context->OMSetRenderTargets(
                         1,
                         &hdrFalseRoot.rtv,
@@ -894,6 +910,58 @@ int wmain(int argc, wchar_t** argv)
                         0,
                         1,
                         nullSrvs);
+
+                    if (hdrLateDescendantActive)
+                    {
+                        // Exact 0.0.28 real-Skyrim failure topology:
+                        // MAIN_HDR -> false root -> later full-resolution HDR
+                        // sibling -> real reduction root from that sibling.
+                        context->OMSetRenderTargets(
+                            1,
+                            &hdrDerived.rtv,
+                            nullptr);
+
+                        context->PSSetShaderResources(
+                            0,
+                            1,
+                            &hdr.srv);
+
+                        context->Draw(3, 0);
+
+                        context->PSSetShaderResources(
+                            0,
+                            1,
+                            nullSrvs);
+
+                        hdrReductionSource =
+                            hdrDerived.srv;
+                    }
+                    else if (hdrUnrelatedFullResActive)
+                    {
+                        // Negative contract: the same full-resolution RGBA16F
+                        // shape must NOT become an HDR source merely because
+                        // it can lead to a complete 2x2 chain. Its input has no
+                        // verified MAIN_HDR/full-resolution-HDR ancestry.
+                        context->OMSetRenderTargets(
+                            1,
+                            &hdrDerived.rtv,
+                            nullptr);
+
+                        context->PSSetShaderResources(
+                            0,
+                            1,
+                            &normal.srv);
+
+                        context->Draw(3, 0);
+
+                        context->PSSetShaderResources(
+                            0,
+                            1,
+                            nullSrvs);
+
+                        hdrReductionSource =
+                            hdrDerived.srv;
+                    }
 
                     ID3D11ShaderResourceView* reduceInput =
                         hdrReductionSource;
@@ -1490,32 +1558,42 @@ int wmain(int argc, wchar_t** argv)
                 "at_ambient_screen_space_composite") !=
                     std::string::npos;
 
+        const bool temporalStageCoverage =
+            stages.find(
+                "before_global_taa") !=
+                    std::string::npos &&
+            stages.find(
+                "after_global_taa") !=
+                    std::string::npos;
+
+        const bool hdrStageCoverage =
+            taaWithoutHdrActive
+                ? true
+                : (
+                    hdrUnrelatedFullResActive
+                        ? (
+                            stages.find(
+                                "hdr_reduction") ==
+                                    std::string::npos &&
+                            stages.find(
+                                "before_tonemap") ==
+                                    std::string::npos
+                        )
+                        : (
+                            stages.find(
+                                "hdr_reduction") !=
+                                    std::string::npos &&
+                            stages.find(
+                                "before_tonemap") !=
+                                    std::string::npos
+                        )
+                );
+
         const bool lateStageCoverage =
             !lateStackActive ||
             (
-                taaWithoutHdrActive
-                    ? (
-                        stages.find(
-                            "before_global_taa") !=
-                                std::string::npos &&
-                        stages.find(
-                            "after_global_taa") !=
-                                std::string::npos
-                    )
-                    : (
-                        stages.find(
-                            "hdr_reduction") !=
-                                std::string::npos &&
-                        stages.find(
-                            "before_tonemap") !=
-                                std::string::npos &&
-                        stages.find(
-                            "before_global_taa") !=
-                                std::string::npos &&
-                        stages.find(
-                            "after_global_taa") !=
-                                std::string::npos
-                    )
+                temporalStageCoverage &&
+                hdrStageCoverage
             );
 
         const bool semanticCoverage =

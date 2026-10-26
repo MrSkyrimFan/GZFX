@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.28
+    VERSION 0.0.29
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -631,4 +631,33 @@ set_tests_properties(
     hdr_descendant_reduction_contract
     PROPERTIES
         ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_DESCENDANT_ACTIVE=1"
+)
+
+
+add_test(
+    NAME hdr_late_descendant_recovery_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/hdr-late-descendant-recovery-output"
+)
+
+set_tests_properties(
+    hdr_late_descendant_recovery_contract
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_LATE_DESCENDANT_ACTIVE=1"
+)
+
+add_test(
+    NAME hdr_unrelated_fullres_rejected
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/hdr-unrelated-fullres-output"
+)
+
+set_tests_properties(
+    hdr_unrelated_fullres_rejected
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_UNRELATED_FULLRES_ACTIVE=1"
 )
