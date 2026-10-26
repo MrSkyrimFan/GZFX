@@ -22,7 +22,7 @@ Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
 current runtime: 0.0.29-hdr-branch-recovery
-current phase: TEST / NO-DRIFT-CLOSED HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
+current phase: HDR / TONEMAP / GLOBAL-TAA IMAGE-SPACE SPINE FIELD-CLOSED; NEXT GRAPHICS WAVE NOT YET SELECTED
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: standalone GZFX d3d11.dll bootstrap + dinput8 input bridge
 stable shader/resource identity: observed at D3D11 creation time
@@ -31,9 +31,10 @@ deferred command lists: owner-tagged with late-detail-independent retained evide
 universal renderer core: runtime-independent D3D11/DXGI architecture
 known runtime families: 1.5.97 / common 1.6.x / 1.7.99 / 1.7.104
 verified optional engine epoch profile: Steam AE 1.6.1170 only; other runtimes keep full D3D core and fail closed on engine hooks
-field-locked late contract: BeforeGlobalTAA / AfterGlobalTAA structural family
-HDR contract: bounded MAIN_HDR ancestry + bounded full-resolution sibling sources + true <=2x2 terminal
-field-validation candidates: HDRReduction / BeforeTonemap
+field-locked late contracts: HDRReduction / BeforeTonemap / BeforeGlobalTAA / AfterGlobalTAA
+HDRReduction contract: bounded MAIN_HDR ancestry + bounded full-resolution sibling sources + true <=2x2 terminal
+BeforeTonemap contract: immediately before Skyrim HDR tonemap/blend/cinematic image-space pass
+field certification: Skyrim 1.7.104 proven; other runtime families architecture-supported but not yet field-certified
 still unpromoted: WaterDomain / PostTonemapPreUi / AfterShadowProduction
 next graphics wave: NOT YET SELECTED
 ```
@@ -70,8 +71,21 @@ frames. PR #33 changed only the test harness and CMake, strengthening the exact
 field topology and locking capacity, ancestry-depth, frame-isolation, and
 one-to-one per-frame semantic coverage. PR and merged-main CI pass 37/37.
 Product executable code/data remained byte-identical after normalization of
-linker/debug PE timestamps. The repair remains pre-field until the next
-real-Skyrim run confirms full interior coverage.
+linker/debug PE timestamps.
+
+The subsequent 0.0.29 real-Skyrim field session then validated the repaired
+architecture on 12,123 active scene frames: HDRReduction, BeforeTonemap,
+BeforeGlobalTAA, and AfterGlobalTAA each covered 12,123/12,123 frames; the true
+<=2x2 HDR terminal covered 12,123/12,123; exterior coverage was 8,882/8,882;
+interior coverage was 3,241/3,241; and the exact derived-HDR sibling path that
+failed in 0.0.28 was exercised successfully on 2,884 interior frames. An
+independent raw replay reproduced HDRReduction and BeforeTonemap with zero
+frame-set mismatch.
+
+Accordingly, HDRReduction and BeforeTonemap are now field-locked structural
+contracts for Skyrim 1.7.104. BeforeGlobalTAA and AfterGlobalTAA remain locked.
+The architecture remains runtime-independent, but other runtime families are
+not claimed as real-field certified by this campaign.
 
 **Important:** GZFX remains standalone. ENB and ReShade are architecture
 research references, not runtime dependencies or coexistence targets. The field
