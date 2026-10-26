@@ -1,0 +1,430 @@
+GZFX 0.0.28 REAL-SKYRIM FIELD FINDINGS — INDEPENDENT DEEP PASS 2
+Review date: October 25, 2026
+Status: DATA PASS 2 COMPLETE / PASS 1 CONFIRMED / ROOT CAUSE NARROWED TO ONE DETERMINISTIC TOPOLOGY
+Runtime under test: 0.0.28-pre-field-lifecycle-hardening
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+The owner explicitly required a second complete analysis of the same field
+archive after the first DATA findings were written.
+
+This pass did NOT merely reread the first findings.
+
+It independently re-opened:
+
+    GZFXtttredyellow.zip
+
+and rebuilt the session from raw telemetry, including:
+
+    frames.csv
+    stages.csv
+    semantics.csv
+    resources.csv
+    ownership.csv
+    present_timeline.csv
+    renderer_startup.csv
+    transitions.csv
+    all ten pipeline_runs_*.csv segments
+    current semantic_authority.cpp
+
+It then independently reconstructed the actual HDR detector state machine
+against every detailed pipeline row.
+
+Archive integrity:
+
+    SHA256
+        43cff37522fe0cbdb0666cc2a71523270ff98d6fb4ae859aadd236b3bacfce8e
+
+    ZIP structural test
+        PASS
+        no corrupt entry
+
+    archive entries
+        126
+
+    uncompressed bytes
+        736,223,144
+
+    detailed pipeline rows
+        1,022,351
+
+======================================================================
+2. PASS-1 RESULTS RECONFIRMED
+======================================================================
+
+The second pass independently reconfirmed:
+
+    active scene frames:
+        7,541
+
+    environment:
+        exterior 4,660
+        interior 2,881
+
+    semantic HDRReduction:
+        exterior 4,660
+        interior   241
+
+    semantic BeforeTonemap:
+        exterior 4,660
+        interior   241
+
+    BeforeGlobalTAA:
+        7,541 / 7,541
+
+    AfterGlobalTAA:
+        7,541 / 7,541
+
+    physical 2x2 HDR/exposure terminal:
+        7,541 / 7,541
+
+    natural shutdown:
+        complete
+
+    telemetry:
+        enqueued == written == 1,334,048
+        dropped = 0
+        queue_depth = 0
+
+    physical Present:
+        8,428 epochs
+        every epoch has all five ordered phases
+        all HRESULTs zero
+
+    command-list ownership:
+        20,912 / 20,912 GZFX-owned
+        external = 0
+
+No contradiction to DATA Pass 1 was found.
+
+======================================================================
+3. EXACT DETECTOR REPLAY
+======================================================================
+
+Pass 2 independently implemented the current source behavior from:
+
+    src/render/semantic_authority.cpp
+    ObserveHdrReductionLocked()
+
+using only the raw pipeline graph and resource registry.
+
+The replay modeled:
+
+    hdrReductionStep
+    hdrReductionSourceIdentity
+    hdrFullResAncestryDepth
+    hdrReductionLastIdentity
+    width/height descent
+    fresh-root restart
+    <=2x2 terminal completion
+
+Result:
+
+    source GZFX HDRReduction stage hits:
+        4,901
+
+    independently replayed detector hits:
+        4,901
+
+    mismatched frames:
+        0
+
+    false positives:
+        0
+
+    false negatives relative to current implementation:
+        0
+
+This proves the field behavior is fully explained by the current state machine.
+
+The defect is not an unobserved event or telemetry interpretation error.
+
+======================================================================
+4. ALL 2,640 INTERIOR MISSES SHARE ONE TOPOLOGY
+======================================================================
+
+Every one of the 2,640 missed interior frames has exactly:
+
+A. one earlier downsample rooted directly in canonical MAIN_HDR;
+
+B. one later full-resolution RGBA16F output rooted directly in canonical
+   MAIN_HDR;
+
+C. one later real 640x360 reduction root that reads that new full-resolution
+   HDR output.
+
+Counts:
+
+    missed frames with exactly one full-res descendant of MAIN_HDR:
+        2,640 / 2,640
+
+    missed frames with exactly one downsample directly from MAIN_HDR:
+        2,640 / 2,640
+
+    missed frames with exactly one downsample from the later full-res HDR:
+        2,640 / 2,640
+
+There are no alternate miss topologies.
+
+======================================================================
+5. THE FAILURE ORDER IS PERFECTLY STABLE
+======================================================================
+
+For every missed interior frame:
+
+    false root
+    ->
+    26 draw ordinals
+    ->
+    later full-resolution HDR transform
+    ->
+    1 draw ordinal
+    ->
+    real reduction root
+
+Therefore:
+
+    false root -> full-res HDR:
+        min 26
+        max 26
+        median 26
+        all 2,640 frames = 26
+
+    full-res HDR -> real root:
+        min 1
+        max 1
+        median 1
+        all 2,640 frames = 1
+
+    false root -> real root:
+        all 2,640 frames = 27
+
+The order is deterministic across the complete field session.
+
+No draw-ordinal constant should become a renderer contract; these values are
+diagnostic proof only.
+
+======================================================================
+6. ALL 2,640 MISSES USE THE SAME STABLE SHADER FAMILIES
+======================================================================
+
+Earlier false-root family:
+
+    PS 0xB77078FE2A8A9067
+    output 640x360 RGBA16F
+    2,640 / 2,640 missed frames
+
+Later full-resolution HDR transform:
+
+    PS 0x1066E41D475505A3
+    output 2560x1440 RGBA16F
+    reads canonical MAIN_HDR
+    writes resource 0x251E9627950
+    2,640 / 2,640 missed frames
+
+Real reduction root:
+
+    PS 0xF026B1E764F561A5
+    output 640x360 RGBA16F
+    reads 0x251E9627950
+    2,640 / 2,640 missed frames
+
+The real root then continues through the normal stable spine to true 2x2.
+
+These hashes are evidence labels, NOT authorized hardcoded semantics.
+
+======================================================================
+7. ALL 241 INTERIOR SUCCESSES FORM THE COMPLEMENTARY TOPOLOGY
+======================================================================
+
+The 241 successful interior frames have:
+
+    no later full-resolution HDR descendant of canonical MAIN_HDR;
+
+    two downsample candidates that read canonical MAIN_HDR:
+        one earlier false root;
+        one later real root.
+
+The gap between those two roots is also exactly:
+
+    26 draw ordinals
+    on 241 / 241 frames.
+
+The later real root is always:
+
+    PS 0xF026B1E764F561A5
+
+Therefore current restart works only because the real root still reads the
+currently recognized source:
+
+    canonical MAIN_HDR.
+
+The earlier false-root shader varies among four stable families:
+
+    0xFD1B32B2582B3FE0    178 frames
+    0x8547DB427AE1C537     44 frames
+    0x0AE06538268EE1DD     16 frames
+    0xC1F06E4C2D84DA0C      3 frames
+
+That variation further argues against shader-hash-specific repair logic.
+
+======================================================================
+8. PERFECT CORRELATION RECONFIRMED INDEPENDENTLY
+======================================================================
+
+Interior semantic outcome can be predicted perfectly by only one structural
+question:
+
+    Does the real 640x360 root read canonical MAIN_HDR directly,
+    or a later full-resolution HDR descendant?
+
+Matrix:
+
+    direct canonical root + semantic success:
+        241
+
+    derived full-res root + semantic failure:
+        2,640
+
+    direct canonical root + failure:
+        0
+
+    derived root + success:
+        0
+
+This is not merely statistical correlation.
+
+It is exact field partitioning.
+
+======================================================================
+9. WHY CURRENT 0.0.27/0.0.28 LOGIC FAILS
+======================================================================
+
+Current logic discovers full-resolution ancestry only while:
+
+    hdrReductionStep == 0
+
+On the 2,640 miss frames:
+
+1. the earlier 640x360 branch reads canonical MAIN_HDR;
+
+2. current detector sets:
+       hdrReductionStep = 1;
+
+3. twenty-six ordinals later, Skyrim emits a new full-resolution RGBA16F
+   transform that reads canonical MAIN_HDR;
+
+4. because step != 0, current code does NOT run its full-resolution ancestry
+   discovery block;
+
+5. the next pass, one ordinal later, is the real reduction root and reads the
+   new full-resolution HDR identity;
+
+6. fresh-root recovery only recognizes the stored source identity, which is
+   still canonical MAIN_HDR;
+
+7. therefore the real root is rejected;
+
+8. the physical chain continues correctly to 2x2, but semantic HDRReduction
+   never completes;
+
+9. BeforeTonemap subsequently misses for the same frame.
+
+The key architectural correction is therefore:
+
+    full-resolution HDR ancestry must remain recoverable after a plausible
+    reduction branch has started, until one branch is actually proven by a
+    coherent terminal.
+
+======================================================================
+10. EXISTING SYNTHETIC TEST IS INCOMPLETE
+======================================================================
+
+Current 0.0.27 acceptance:
+
+    hdr_descendant_reduction_contract
+
+models:
+
+    MAIN_HDR
+    ->
+    full-resolution HDR descendant
+    ->
+    false root
+    ->
+    real root
+
+The real 2,640-frame failure is:
+
+    MAIN_HDR
+    ->
+    false root
+    ->
+    later full-resolution HDR descendant
+    ->
+    real root
+
+The test therefore proves the ancestry mechanism only when the descendant is
+known BEFORE the detector enters a candidate reduction chain.
+
+It does not test sibling-branch recovery after a candidate chain has started.
+
+This ordering gap fully explains why CI remained green.
+
+======================================================================
+11. ADDITIONAL PASS-2 FINDING — THE REPAIR SHOULD BE GRAPH-STRUCTURAL
+======================================================================
+
+Pass 2 found no need to expand renderer cartography.
+
+The raw graph already contains all required information:
+
+    canonical MAIN_HDR identity;
+    current pass reads;
+    current pass writes;
+    resource dimensions;
+    resource format;
+    same-frame ordering;
+    bounded full-resolution ancestry;
+    coherent descending reduction;
+    true 2x2 terminal.
+
+Therefore a repair can remain renderer-structural.
+
+It should NOT require:
+
+    engine offsets;
+    new shader hashing;
+    draw ordinal constants;
+    resource pointer constants;
+    new field probes;
+    ENB/ReShade runtime coupling;
+    broad arbitrary graph traversal.
+
+======================================================================
+12. HARD DATA VERDICT AFTER TWO COMPLETE PASSES
+======================================================================
+
+DATA is sufficient.
+
+There is no evidence deficit blocking engineering.
+
+The field session proves:
+
+    0.0.28 lifecycle/front-door hardening is working;
+    resource birth provenance is fixed;
+    global TAA is field-locked;
+    true 2x2 HDR terminal is universal in this session;
+    remaining HDRReduction/BeforeTonemap failure is one deterministic
+    same-frame sibling-branch state-machine defect.
+
+No additional Skyrim field test is justified before targeted research,
+blueprint, and repair.
+
+NEXT PHASE:
+
+    RESEARCH PASS 1
+
+END DATA PASS 2
