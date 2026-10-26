@@ -9,36 +9,59 @@ Current runtime:
 Current phase:
 
 ```text
-RESEARCH COMPLETE / TWO INDEPENDENT FIELD-CLOSURE PASSES
+HDR / TONEMAP / GLOBAL-TAA IMAGE-SPACE SPINE FIELD-CLOSED
+NEXT GRAPHICS WAVE NOT YET SELECTED
 ```
 
-Active authority:
+The complete 0.0.29 real-Skyrim field-closure cycle is archived in `../old/`.
+
+Controlling continuity:
 
 ```text
-GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
-GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
-GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_1.txt
-GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_2.txt
+GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.29_FIELD_CLOSED.txt
+GZFX_NEW_CHAT_TAKEOVER_0.0.29_FIELD_CLOSED.txt
+GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.29_FIELD_CLOSED.txt
+GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
 ```
 
-Both complete DATA passes agree.
+Field-locked on Skyrim 1.7.104:
 
-Both complete RESEARCH passes independently agree after adversarial review.
+- HDRReduction;
+- BeforeTonemap;
+- BeforeGlobalTAA;
+- AfterGlobalTAA.
 
-Research consensus:
+Real-Skyrim closure proof:
 
-- HDRReduction is ready for formal field-lock/promotion as a structural contract;
-- BeforeTonemap is ready for formal field-lock/promotion as the boundary immediately before Skyrim's HDR tonemap/blend/cinematic image-space pass;
-- BeforeGlobalTAA and AfterGlobalTAA remain locked;
-- the HDR / tonemap / global-TAA image-space spine is closed on the currently field-proven Skyrim 1.7.104 runtime;
-- field certification remains explicitly 1.7.104 only; other runtime families remain architecture-supported but not field-certified by this session;
-- PostTonemapPreUi remains unpromoted;
-- WaterDomain remains unpromoted;
-- AfterShadowProduction remains unpromoted;
-- no new HDR product repair is justified by DATA or either research pass.
+- active frames: 12,123;
+- HDRReduction: 12,123 / 12,123;
+- BeforeTonemap: 12,123 / 12,123;
+- BeforeGlobalTAA: 12,123 / 12,123;
+- AfterGlobalTAA: 12,123 / 12,123;
+- true <=2x2 terminal: 12,123 / 12,123;
+- former derived-HDR sibling failure path: 2,884 / 2,884 successful;
+- independent raw replay mismatch: 0;
+- telemetry drops: 0;
+- shutdown: complete.
 
-No product code has been modified in this DATA/RESEARCH cycle.
+Runtime scope:
 
-STOP HERE FOR OWNER REVIEW.
+- D3D11/DXGI architecture is runtime-independent;
+- Skyrim 1.7.104 is real-field certified by this campaign;
+- other runtime families remain architecture-supported but not field-certified by this campaign.
 
-Do NOT begin BLUEPRINT or IMPLEMENTATION until the owner authorizes the next phase.
+Still intentionally unpromoted:
+
+- PostTonemapPreUi;
+- WaterDomain;
+- AfterShadowProduction.
+
+PR #34 closed the authority state only. Product source, runtime, tests, and the
+successful field-test package did not change.
+
+This directory is intentionally clear of active-cycle TXT authority.
+
+Do not begin another graphics wave until the owner selects the next target.
+
+Research consensus identifies PostTonemapPreUi as the nearest unresolved
+late-stack target, but it is NOT authorized merely by this README.
