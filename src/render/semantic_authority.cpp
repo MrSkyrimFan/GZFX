@@ -31,6 +31,15 @@ namespace gzfx::render::semantic_authority
         constexpr std::size_t kUavSlots =
             D3D11_PS_CS_UAV_REGISTER_COUNT;
 
+        constexpr std::size_t kHdrFullResSourceCapacity = 4;
+        constexpr std::uint32_t kHdrFullResMaxDepth = 3;
+
+        struct HdrFullResSource
+        {
+            std::uintptr_t identity = 0;
+            std::uint32_t depth = 0;
+        };
+
         struct ResourceShape
         {
             D3D11_RESOURCE_DIMENSION dimension =
@@ -119,9 +128,11 @@ namespace gzfx::render::semantic_authority
             bool preWaterDepthPublished = false;
 
             bool lateStageEligible = false;
+            std::array<
+                HdrFullResSource,
+                kHdrFullResSourceCapacity> hdrFullResSources{};
+            std::uint32_t hdrFullResSourceCount = 0;
             std::uint32_t hdrReductionStep = 0;
-            std::uintptr_t hdrReductionSourceIdentity = 0;
-            std::uint32_t hdrFullResAncestryDepth = 0;
             std::uintptr_t hdrReductionLastIdentity = 0;
             UINT hdrReductionLastWidth = 0;
             UINT hdrReductionLastHeight = 0;
@@ -2113,6 +2124,116 @@ namespace gzfx::render::semantic_authority
                 });
         }
 
+        bool TryReadVerifiedHdrSourceDepthLocked(
+            const std::uintptr_t mainHdr,
+            std::uint32_t& depth)
+        {
+            if (mainHdr != 0 &&
+                ReadsLocked(mainHdr))
+            {
+                depth = 0;
+                return true;
+            }
+
+            bool found = false;
+            std::uint32_t bestDepth =
+                kHdrFullResMaxDepth;
+
+            for (std::uint32_t i = 0;
+                 i < g_frame.hdrFullResSourceCount;
+                 ++i)
+            {
+                const auto& source =
+                    g_frame.hdrFullResSources[i];
+
+                if (source.identity == 0 ||
+                    !ReadsLocked(source.identity))
+                {
+                    continue;
+                }
+
+                if (!found ||
+                    source.depth < bestDepth)
+                {
+                    found = true;
+                    bestDepth = source.depth;
+                }
+            }
+
+            if (found)
+            {
+                depth = bestDepth;
+            }
+
+            return found;
+        }
+
+        bool ReadsVerifiedHdrSourceLocked(
+            const std::uintptr_t mainHdr)
+        {
+            std::uint32_t depth = 0;
+
+            return
+                TryReadVerifiedHdrSourceDepthLocked(
+                    mainHdr,
+                    depth);
+        }
+
+        void ObserveFullResolutionHdrSourceLocked(
+            const std::uintptr_t mainHdr,
+            const ViewBinding& output)
+        {
+            if (output.identity == 0 ||
+                output.identity == mainHdr ||
+                output.shape.dimension !=
+                    D3D11_RESOURCE_DIMENSION_TEXTURE2D ||
+                output.shape.format !=
+                    DXGI_FORMAT_R16G16B16A16_FLOAT ||
+                output.shape.width !=
+                    g_screenWidth ||
+                output.shape.height !=
+                    g_screenHeight)
+            {
+                return;
+            }
+
+            std::uint32_t parentDepth = 0;
+
+            if (!TryReadVerifiedHdrSourceDepthLocked(
+                    mainHdr,
+                    parentDepth) ||
+                parentDepth >=
+                    kHdrFullResMaxDepth)
+            {
+                return;
+            }
+
+            for (std::uint32_t i = 0;
+                 i < g_frame.hdrFullResSourceCount;
+                 ++i)
+            {
+                if (g_frame.hdrFullResSources[i].
+                        identity ==
+                    output.identity)
+                {
+                    return;
+                }
+            }
+
+            if (g_frame.hdrFullResSourceCount >=
+                kHdrFullResSourceCapacity)
+            {
+                return;
+            }
+
+            auto& source =
+                g_frame.hdrFullResSources[
+                    g_frame.hdrFullResSourceCount++];
+
+            source.identity = output.identity;
+            source.depth = parentDepth + 1;
+        }
+
         void ObserveHdrReductionLocked(
             const bool compute,
             const std::uint64_t frame,
@@ -2146,42 +2267,31 @@ namespace gzfx::render::semantic_authority
                     continue;
                 }
 
+                const bool fullResolution =
+                    output.shape.width ==
+                        g_screenWidth &&
+                    output.shape.height ==
+                        g_screenHeight;
+
+                // Full-resolution HDR ancestry remains observable until the
+                // reduction chain is actually proven complete. This preserves
+                // bounded sibling branches that can appear after an earlier
+                // plausible reduction root has already started.
+                if (fullResolution)
+                {
+                    ObserveFullResolutionHdrSourceLocked(
+                        mainHdr,
+                        output);
+                    continue;
+                }
+
+                const bool readsVerifiedSource =
+                    ReadsVerifiedHdrSourceLocked(
+                        mainHdr);
+
                 if (g_frame.hdrReductionStep == 0)
                 {
-                    const std::uintptr_t sourceIdentity =
-                        g_frame.hdrReductionSourceIdentity != 0
-                            ? g_frame.hdrReductionSourceIdentity
-                            : mainHdr;
-
-                    const bool fullResolution =
-                        output.shape.width ==
-                            g_screenWidth &&
-                        output.shape.height ==
-                            g_screenHeight;
-
-                    // Interior rendering can perform one or more coherent
-                    // full-resolution HDR transforms before the actual
-                    // downsample spine. Preserve a deliberately tiny ancestry
-                    // budget so this cannot turn into arbitrary graph walking.
-                    if (fullResolution &&
-                        sourceIdentity != 0 &&
-                        output.identity !=
-                            sourceIdentity &&
-                        ReadsLocked(
-                            sourceIdentity) &&
-                        g_frame.hdrFullResAncestryDepth <
-                            3)
-                    {
-                        g_frame.hdrReductionSourceIdentity =
-                            output.identity;
-
-                        ++g_frame.hdrFullResAncestryDepth;
-                        continue;
-                    }
-
-                    if (sourceIdentity == 0 ||
-                        !ReadsLocked(
-                            sourceIdentity) ||
+                    if (!readsVerifiedSource ||
                         output.shape.width >
                             g_screenWidth / 2 ||
                         output.shape.height >
@@ -2225,24 +2335,14 @@ namespace gzfx::render::semantic_authority
                 if (!consumesPrevious ||
                     !descends)
                 {
-                    const std::uintptr_t sourceIdentity =
-                        g_frame.hdrReductionSourceIdentity != 0
-                            ? g_frame.hdrReductionSourceIdentity
-                            : mainHdr;
-
-                    // If an earlier plausible root was wrong, a later
-                    // downsample from the verified HDR source is allowed to
-                    // restart the bounded chain.
-                    const bool freshRoot =
-                        sourceIdentity != 0 &&
-                        ReadsLocked(
-                            sourceIdentity) &&
+                    // A later coherent root may begin from canonical MAIN_HDR
+                    // or any bounded, same-frame full-resolution HDR source
+                    // that has verified ancestry back to MAIN_HDR.
+                    if (readsVerifiedSource &&
                         output.shape.width <=
                             g_screenWidth / 2 &&
                         output.shape.height <=
-                            g_screenHeight / 2;
-
-                    if (freshRoot)
+                            g_screenHeight / 2)
                     {
                         g_frame.hdrReductionStep = 1;
                         g_frame.hdrReductionLastIdentity =
@@ -2264,9 +2364,8 @@ namespace gzfx::render::semantic_authority
                 g_frame.hdrReductionLastHeight =
                     output.shape.height;
 
-                // 0.0.26 field evidence proved that the real Skyrim chain
-                // continues from 3x2 to 2x2. Do not commit at the first
-                // <=4x4 node.
+                // The real Skyrim reduction family continues through 3x2 to
+                // a true <=2x2 terminal. Preserve that field-locked contract.
                 if (g_frame.hdrReductionStep >= 4 &&
                     output.shape.width <= 2 &&
                     output.shape.height <= 2)
