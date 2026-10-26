@@ -1,0 +1,282 @@
+GZFX 0.0.29 PRE-FIELD NO-DRIFT — NEW FINDINGS
+Synthesis after DATA Pass 3 + Research Pass 13
+Date: October 25, 2026
+Status: NEW FINDINGS COMPLETE / TEST-ONLY CLOSURE WAVE REQUIRED
+
+======================================================================
+1. VERDICT
+======================================================================
+
+Another full no-drift cycle found NO new contradiction in the merged 0.0.29
+renderer algorithm.
+
+The current bounded HDR source-set implementation independently replays:
+
+    7,541 / 7,541
+
+active frames from the complete prior Skyrim field dataset.
+
+Therefore:
+
+    semantic_authority.cpp is NOT authorized for speculative modification.
+
+What remains is an acceptance-proof problem.
+
+The current 32-test suite proves the main repair idea but does not yet lock all
+of the exact field and safety invariants that 0.0.29 now depends on.
+
+Before another real-Skyrim run, one bounded test-only hardening wave is
+justified.
+
+======================================================================
+2. FINDING NF-A — FIELD ROOT GEOMETRY IS NOT EXACTLY TESTED
+======================================================================
+
+Real failed topology on all 2,640 frames:
+
+    false root:
+        640x360
+
+    real root:
+        640x360
+
+Current test #31:
+
+    false root:
+        40x22
+
+    real root:
+        80x45
+
+Both reach restart logic, but by different geometric conditions.
+
+Required closure:
+
+    new/strengthened test must use two DISTINCT resource identities with the SAME
+    dimensions for false and real root.
+
+Do not delete the historical smaller-root acceptance that protects older
+recovery behavior.
+
+======================================================================
+3. FINDING NF-B — DELAYED SAME-FRAME STATE IS NOT TESTED
+======================================================================
+
+Real field:
+
+    false root
+    -> substantial unrelated work
+    -> later full-res sibling
+    -> real root.
+
+Current synthetic:
+
+    false root
+    -> immediately later sibling.
+
+Required closure:
+
+    insert bounded unrelated same-frame work between the false root and later
+    sibling.
+
+Do not assert a magic ordinal count.
+
+The contract is state survival across unrelated work.
+
+======================================================================
+4. FINDING NF-C — POSITIVE ORACLE IS PRESENCE-ONLY
+======================================================================
+
+Current late-stage CI can pass when the target stage string appears only once in
+the whole synthetic session.
+
+The real contract is one-to-one coverage.
+
+Required closure:
+
+    parse stages.csv;
+    count boundary rows;
+    derive active synthetic frame count from after_opaque_world_mrt;
+    require exact equality for:
+
+        HDRReduction
+        BeforeTonemap
+        BeforeGlobalTAA
+        AfterGlobalTAA
+
+on positive HDR tests.
+
+Negative HDR tests must require:
+
+    HDRReduction = 0
+    BeforeTonemap = 0
+
+while TAA remains one-to-one with active frames.
+
+======================================================================
+5. FINDING NF-D — CAPACITY BOUND IS SOURCE-ONLY, NOT CI-LOCKED
+======================================================================
+
+Current source:
+
+    capacity = 4
+    no eviction.
+
+Required executable contract:
+
+    four verified sibling sources:
+        fourth remains usable;
+
+    fifth verified sibling:
+        is rejected when capacity is full;
+
+    chain rooted only in fifth:
+        does not produce HDRReduction/BeforeTonemap.
+
+This must be black-box behavior.
+
+No product test hook.
+
+======================================================================
+6. FINDING NF-E — DEPTH BOUND IS SOURCE-ONLY, NOT CI-LOCKED
+======================================================================
+
+Current source:
+
+    max ancestry depth = 3.
+
+Required executable contract:
+
+    depth-3 source:
+        accepted;
+
+    depth-4 source:
+        rejected;
+
+    chain rooted only in depth 4:
+        cannot produce HDRReduction/BeforeTonemap.
+
+Again:
+
+    black-box D3D11 path;
+    no internal bypass.
+
+======================================================================
+7. FINDING NF-F — FRAME-LOCAL SOURCE IS SOURCE-ONLY, NOT CI-LOCKED
+======================================================================
+
+Current source correctly resets FrameState on frame transition.
+
+Required executable contract:
+
+    frame A establishes a derived HDR source;
+
+    frame B reuses the same resource identity without recreating MAIN_HDR
+    ancestry;
+
+    frame-B chain from that old identity must be rejected.
+
+This protects against future accidental movement of source state out of
+FrameState or incomplete reset.
+
+======================================================================
+8. FINDING NF-G — PRODUCT BINARY NO-DRIFT MUST BE PROVEN
+======================================================================
+
+This closure wave is test-only.
+
+Authorized product-source changes:
+
+    NONE.
+
+Therefore the final shipped DLL identities should not change.
+
+Current inner-file authority baseline:
+
+    d3d11.dll
+        36,352 bytes
+        CRC32 fc9f5e5f
+
+    dinput8.dll
+        35,328 bytes
+        CRC32 5e5ddb4f
+
+    GZFX.dll
+        935,424 bytes
+        CRC32 0f400b15
+
+After merge/package refresh:
+
+    compare exact entry names;
+    compare uncompressed byte sizes;
+    compare CRC32.
+
+Any DLL drift must be investigated before field handoff.
+
+Outer ZIP byte drift alone is not sufficient to claim product drift because ZIP
+container metadata may differ.
+
+======================================================================
+9. REQUIRED NEXT WAVE
+======================================================================
+
+Wave type:
+
+    0.0.29 PRE-FIELD NO-DRIFT ACCEPTANCE HARDENING
+
+Runtime:
+
+    remains 0.0.29-hdr-branch-recovery
+
+Product algorithm:
+
+    unchanged
+
+Expected source changes:
+
+    tests/wave3_pipeline_harness.cpp
+    CMakeLists.txt
+    documentation/authority records
+
+Expected suite:
+
+    35 tests
+
+New/strengthened proof:
+
+    field-faithful equal-size delayed recovery;
+    exact one-to-one stage counts;
+    capacity boundary;
+    depth boundary;
+    frame isolation;
+    package inner-DLL identity.
+
+======================================================================
+10. WHAT MUST NOT HAPPEN
+======================================================================
+
+Do NOT:
+
+    touch semantic_authority.cpp without a new failing executable proof;
+    hardcode the 26-ordinal field gap;
+    hardcode field shader hashes;
+    hardcode resource pointers;
+    weaken <=2x2 terminal;
+    make TAA depend on HDR;
+    promote WaterDomain;
+    promote PostTonemapPreUi;
+    promote AfterShadowProduction;
+    start a graphics feature.
+
+======================================================================
+11. NEXT PHASE
+======================================================================
+
+NEW FINDINGS COMPLETE.
+
+Proceed to a narrow BLUEPRINT for test-only no-drift hardening, then implement
+through CI / PR / merge / package verification.
+
+Do NOT field-test before this closure completes.
+
+END NEW FINDINGS
