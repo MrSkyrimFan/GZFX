@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.29-hdr-branch-recovery";
+        "0.0.30-post-tonemap-preui-cartography";
 }
 
 extern "C" __declspec(dllexport)

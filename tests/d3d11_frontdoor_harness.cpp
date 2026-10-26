@@ -234,7 +234,7 @@ int wmain(
     if (version == nullptr ||
         shutdown == nullptr ||
         std::string(version()).find(
-            "0.0.29") ==
+            "0.0.30") ==
             std::string::npos)
     {
         context->Release();

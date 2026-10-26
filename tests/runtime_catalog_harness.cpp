@@ -46,6 +46,9 @@ int wmain(
     constexpr std::uint32_t profile =
         1u << 1;
 
+    constexpr std::uint32_t discovery =
+        1u << 2;
+
     struct Runtime
     {
         std::uint16_t minor;
@@ -67,7 +70,7 @@ int wmain(
         {6, 1170, known | profile},
         {6, 1179, known},
         {7, 99, known},
-        {7, 104, known}
+        {7, 104, known | discovery}
     }};
 
     for (const auto& runtime :
