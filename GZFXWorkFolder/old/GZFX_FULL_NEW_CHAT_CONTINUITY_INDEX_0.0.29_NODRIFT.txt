@@ -1,0 +1,232 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.29 NO-DRIFT CLOSURE
+Created October 25-26, 2026 after the owner-required extra XForge-style
+pre-field closure cycle.
+
+THIS FILE IS THE CURRENT CONTROLLING INDEX.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+READ IN THIS ORDER:
+
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.29_NODRIFT.txt
+    5. GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.29_NODRIFT.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.29_PREFIELD_NODRIFT_ACCEPTANCE_ENGINEERING_RESULT.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.29_PREFIELD_NODRIFT_DATA_PASS_3.txt
+    8. GZFXWorkFolder/old/GZFX_RESEARCH_PASS_13_NODRIFT_ACCEPTANCE_HARDENING.txt
+    9. GZFXWorkFolder/old/GZFX_0.0.29_PREFIELD_NODRIFT_NEW_FINDINGS.txt
+    10. GZFXWorkFolder/old/GZFX_0.0.29_PREFIELD_NODRIFT_ACCEPTANCE_BLUEPRINT.txt
+
+Then, for the implementation that this cycle re-verified:
+
+    11. GZFXWorkFolder/old/GZFX_0.0.29_HDR_BRANCH_RECOVERY_ENGINEERING_RESULT.txt
+    12. GZFXWorkFolder/old/GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS.txt
+    13. GZFXWorkFolder/old/GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS_PASS_2.txt
+    14. GZFXWorkFolder/old/GZFX_RESEARCH_PASS_12_HDR_BRANCH_RECOVERY_PASS_1.txt
+    15. GZFXWorkFolder/old/GZFX_RESEARCH_PASS_12_HDR_BRANCH_RECOVERY_PASS_2.txt
+    16. GZFXWorkFolder/old/GZFX_0.0.29_HDR_BRANCH_RECOVERY_BLUEPRINT.txt
+
+LIVE FRONTIER:
+
+    runtime:
+        0.0.29-hdr-branch-recovery
+
+    phase:
+        TEST / NO-DRIFT-CLOSED HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
+
+    IMPORTANT:
+        0.0.29 has NOT yet been field-tested by Lance.
+
+    Do NOT begin 0.0.30.
+    Do NOT start another graphics feature.
+    Do NOT modify product code before the 0.0.29 field DATA is reviewed.
+
+NO-DRIFT CYCLE VERDICT:
+
+    current 0.0.29 algorithm independently replayed across all
+    1,022,351 prior detailed field rows:
+
+        7,541 / 7,541 active frames recovered
+
+    no product-semantic contradiction found.
+
+    extra cycle found acceptance weaknesses and converted them into executable
+    contracts before field testing.
+
+TEST-ONLY PR:
+
+    PR #33
+    final head:
+        6c8f3084bcbde2cb3b9c0b15035c473d4d2dab3d
+
+    changed files:
+        CMakeLists.txt
+        tests/wave3_pipeline_harness.cpp
+
+    product source changes:
+        NONE
+
+    PR run:
+        40251607208
+        37 / 37 PASS
+
+MERGE:
+
+    f923e21ee8d477fe34cf6df0ba70f715c2db8231
+
+MERGED-MAIN:
+
+    run:
+        40251939073
+
+    job:
+        121345555216
+
+    37 / 37 PASS
+    0 failures
+
+NEW HARD CONTRACTS:
+
+    strengthened:
+        #31 hdr_late_descendant_recovery_contract
+        #32 hdr_unrelated_fullres_rejected
+
+    added:
+        #33 hdr_source_capacity_fourth_accepted
+        #34 hdr_source_capacity_fifth_rejected
+        #35 hdr_source_depth_three_accepted
+        #36 hdr_source_depth_four_rejected
+        #37 hdr_source_frame_isolation
+
+    #31 now uses:
+        equal-size competing roots
+        delayed unrelated same-frame work
+        exact per-active-frame stage coverage
+
+    late-stage acceptance now requires exact ordered frame-vector equality,
+    not mere substring presence.
+
+BINARY NO-DRIFT PROOF:
+
+    strict raw CRC comparison initially differed.
+
+    This was treated as a blocker and investigated.
+
+    Every DLL differed from the prior 0.0.29 build in exactly four bytes:
+        PE/COFF TimeDateStamp
+        matching IMAGE_DEBUG_DIRECTORY TimeDateStamp
+
+    After zeroing ONLY those timestamp fields, every remaining byte is
+    identical across:
+        original merged 0.0.29 artifact
+        PR #33 artifact
+        merged-main PR #33 artifact
+
+    normalized SHA256:
+
+        d3d11.dll
+            4319a80de2b1e4f8c73cfeeecc2ceae6ffde858c84839cd38d7b1b66819ed129
+
+        dinput8.dll
+            a00208da3d1247df46881d974d3537643772d3f7a1a28ad1a3cdc2736980d41a
+
+        GZFX.dll
+            c25c8934638de08cb05fd161c3dae6154c8367b57575f232419ce26354932b7a
+
+    product executable code/data drift:
+        ZERO
+
+PACKAGE REFRESH:
+
+    commit:
+        8f35e2e6b95f96b7b231240d6cd7d9580d41aa8b
+
+    changed ONLY:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+CURRENT PACKAGE:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+    blob:
+        3c5d2473228e1a4d2d2a59fd19cc136a7671d791
+
+    bytes:
+        401,287
+
+    exact entries:
+        d3d11.dll
+        dinput8.dll
+        GZFX.dll
+
+    current raw CRC:
+        d3d11.dll 28a92d6a
+        dinput8.dll 93c85def
+        GZFX.dll fde6d50b
+
+    these exactly match the merged-main workflow artifact.
+
+LOCKED BEFORE FIELD:
+
+    Waves 1-3
+    Wave 4 ownership
+    D3D11 front door
+    qualified primary
+    creation-time identity
+    command-list ownership
+    physical Present epochs
+    process-scoped startup evidence
+    natural process-exit closure
+    global TAA structural contract
+    true <=2x2 terminal
+    bounded HDR source set
+    source capacity 4
+    max ancestry depth 3
+    frame-local source state
+    one conservative reduction chain
+    BeforeTonemap dependency
+    TAA independence
+    fail-closed optional engine profiles
+
+STILL UNPROMOTED:
+
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+EXACT NEXT ACTION:
+
+    real-Skyrim 0.0.29 field test.
+
+    Normal 2-3 minute session:
+        exterior daylight
+        interior
+        exterior night
+        water/reflections if convenient
+        fire/particles if convenient
+        Modes 0 / 1 / 2 naturally represented
+
+    No manual capture hotkey.
+
+    Quit normally.
+    Wait until SkyrimSE.exe disappears.
+
+    Upload ONLY newest:
+        Documents/My Games/Skyrim Special Edition/GZFX/Telemetry/session_*
+
+NEXT DATA MUST ANSWER FIRST:
+
+    HDRReduction exterior all active frames?
+    HDRReduction interior all active frames?
+    BeforeTonemap all active frames?
+    true <=2x2 all active frames?
+    Before/AfterGlobalTAA still 1:1?
+    primary/lifecycle clean?
+    ownership coherent?
+    dropped=0?
+    shutdown complete?
+
+END NO-DRIFT CONTINUITY INDEX
