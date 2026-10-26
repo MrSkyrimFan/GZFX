@@ -22,7 +22,7 @@ Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
 current runtime: 0.0.29-hdr-branch-recovery
-current phase: TEST / HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
+current phase: TEST / NO-DRIFT-CLOSED HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: standalone GZFX d3d11.dll bootstrap + dinput8 input bridge
 stable shader/resource identity: observed at D3D11 creation time
@@ -61,8 +61,17 @@ BeforeTonemap missed the otherwise-complete physical chain.
 sources for the current frame. The existing single reduction chain may restart
 only from canonical MAIN_HDR or one of those verified sources. Coherent descent,
 the true <=2x2 terminal, BeforeTonemap dependency, and independent global TAA
-contract are preserved. The repair is pre-field until the next real-Skyrim run
-confirms full interior coverage.
+contract are preserved.
+
+Before field testing, the owner required another complete no-drift pipeline.
+The current 0.0.29 algorithm was independently replayed across all 1,022,351
+detailed rows from the prior field archive and recovered 7,541/7,541 active
+frames. PR #33 changed only the test harness and CMake, strengthening the exact
+field topology and locking capacity, ancestry-depth, frame-isolation, and
+one-to-one per-frame semantic coverage. PR and merged-main CI pass 37/37.
+Product executable code/data remained byte-identical after normalization of
+linker/debug PE timestamps. The repair remains pre-field until the next
+real-Skyrim run confirms full interior coverage.
 
 **Important:** GZFX remains standalone. ENB and ReShade are architecture
 research references, not runtime dependencies or coexistence targets. The field
