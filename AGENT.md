@@ -181,14 +181,15 @@ Never make hue discrimination necessary for acceptance.
 
 ## 10. GZFX current locked foundation
 
-Current state after the 0.0.28 pre-field lifecycle hardening wave:
+Current state after the 0.0.28 real-Skyrim DATA cycle and the 0.0.29 HDR
+branch-recovery engineering wave:
 
 ```text
 foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.28-pre-field-lifecycle-hardening
+0.0.29-hdr-branch-recovery
 
 Wave 1:
 CLOSED
@@ -207,7 +208,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-TEST / PRE-FIELD LIFECYCLE-HARDENED RENDERER VALIDATION
+TEST / HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
 
 graphics bootstrap:
 standalone GZFX d3d11.dll + dinput8.dll
@@ -233,14 +234,16 @@ explicit primary-swapchain present epochs
 
 global TAA:
 field-locked structural contract
+1:1 on every 0.0.28 active scene frame
 
 HDR:
-bounded full-resolution ancestry
+bounded full-resolution source ancestry
+bounded sibling-branch recovery
 true <=2x2 terminal
 
 process lifecycle:
 qualified primary renderer
-pre-Present attach in both startup orders
+pre-resource / pre-Present attach
 ExitProcess-driven telemetry closure
 process-scoped startup evidence
 
@@ -251,27 +254,33 @@ PostTonemapPreUi
 
 next graphics wave:
 NOT YET SELECTED
-wait for 0.0.28 real-Skyrim field DATA
+wait for 0.0.29 real-Skyrim field DATA
 ```
 
-0.0.26 field DATA proved stable renderer identity and locked global TAA at
-9,103/9,103 active scene frames. It also exposed the interior HDR ancestry and
-3x2-versus-2x2 terminal defects.
+0.0.28 real-Skyrim DATA proved the lifecycle/front-door hardening in live Skyrim
+1.7.104: the qualified primary attached before tracked renderer-resource birth,
+core resources gained SkyrimSE.exe creation provenance, Present/ownership/TAA
+remained coherent, shutdown completed naturally with zero drops, and the true
+2x2 HDR terminal physically existed on every active scene frame.
 
-0.0.27 moved GZFX to a D3D11 graphics-front-door architecture and repaired those
-late-stage detector issues.
+That same field session exposed one deterministic semantic-state defect:
+2,640 / 2,881 interior frames inserted a later full-resolution HDR sibling after
+an earlier plausible reduction root had already started. The physical HDR spine
+remained present, but the old single-source detector could not restart from that
+later verified sibling.
 
-0.0.28 red-teams the field experiment itself: the D3D proxy exposes the
-documented public entry surface, software/helper devices cannot poison primary
-selection, both startup orders use the same renderer attach authority, startup
-evidence is process-scoped, and telemetry shutdown is driven before Windows
-process teardown rather than from DLL CRT exit behavior.
+0.0.29 replaces that greedy single-source state with a fixed, bounded set of
+verified full-resolution HDR sources descended from canonical MAIN_HDR. One
+conservative reduction chain remains; it may restart only from canonical
+MAIN_HDR or a verified bounded source. The field-locked coherent descent and true
+<=2x2 terminal remain unchanged. Automated acceptance includes the exact
+real-field ordering plus an unrelated-full-resolution negative rejection case.
 
-The current priority remains renderer ownership and field-proof quality, not
-unfinished-effect aesthetics or forensic-build FPS. Do not start another
-graphics-quality wave until 0.0.28 field DATA validates front-door resource
-birth, HDR/BeforeTonemap, TAA continuity, and clean process closure. Do not
-invent WaterDomain or PostTonemapPreUi from names or shader hashes alone.
+The current priority is field-proof of the 0.0.29 repair. Do not start another
+graphics-quality wave until real-Skyrim DATA confirms interior HDRReduction and
+BeforeTonemap coverage without regressing TAA, ownership, lifecycle, or the
+locked renderer foundation. Do not invent WaterDomain or PostTonemapPreUi from
+names, hashes, or draw ordinals alone.
 
 ## 11. Repository lifecycle proof
 
