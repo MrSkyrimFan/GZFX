@@ -1,0 +1,507 @@
+GZFX FULL RENDERER-DOMAIN RE-AUDIT — INDEPENDENT PASS 2
+Adversarial Classification and Full-Product Readiness Review
+Date: October 25-26, 2026
+Status: PASS 2 COMPLETE / PASS-1 CORRECTION CONFIRMED / FULL MAJOR-ENGINEERING GATE NOT YET GREEN
+Product code modified: NO
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+Pass 2 treats Pass 1 as potentially overconfident.
+
+It asks:
+
+- does a six-face cubemap automatically prove WaterDomain?
+- do shadow-looking arrays automatically prove every shadow system?
+- does exterior volumetric execution automatically prove sun rays, moon rays,
+  cloud lighting and weather control?
+- does the presence of fire in an inn automatically identify the fire passes?
+- is the project ready to promise a complete better-than-ENB + ReShade product
+  rather than a strong partial stack?
+
+The answer must remain fail-closed.
+
+======================================================================
+2. WATER FALSIFICATION
+======================================================================
+
+HYPOTHESIS:
+
+    the dynamic 512x512 six-face float16 cubemap plus half-resolution
+    float16 chain proves WaterDomain completely.
+
+REJECTED.
+
+What the evidence proves:
+
+- a real dynamic six-face exterior reflection capture exists;
+- all six faces are updated across the stable three-frame cadence;
+- it is paired with a depth surface;
+- a stable 1280x720 float16 draw/compute chain exists immediately before the
+  exterior late apply;
+- the cubemap and half-resolution surfaces are consumed by full-resolution
+  exterior-only passes;
+- PRE_WATER_DEPTH_CURRENT and PublishPreWaterDepth are already verified;
+- public Skyrim renderer names provide candidate semantic anchors for
+  Main_RenderWaterEffects, ISTemporalAA_Water, ISWaterBlend and
+  ISApplyReflections.
+
+What the evidence does NOT yet prove:
+
+- that the cubemap is exclusively a water resource rather than a broader
+  environment-reflection source;
+- which pass is water surface rendering;
+- which pass is water TAA;
+- which pass is reflection apply;
+- which pass is water blend/refraction;
+- where underwater rendering starts/ends;
+- which constants own Fresnel, roughness, wave normals, refraction,
+  reflection intensity and underwater fog.
+
+PASS-2 WATER CLASSIFICATION:
+
+    REFLECTION/WATER CLUSTER = HIGH CONFIDENCE
+    WATERDOMAIN COMPLETE = FALSE
+
+Required closure path:
+
+1. correlate Main_RenderWaterEffects with the observed exterior cluster;
+2. correlate ISTemporalAA_Water with the half-resolution/history family;
+3. correlate ISWaterBlend and ISApplyReflections with exact D3D families;
+4. field-prove entry/exit ordering relative to PublishPreWaterDepth, MAIN_HDR,
+   global TAA and physical Present;
+5. separately map water surface, reflection, refraction and underwater paths;
+6. lock WaterDomain only after those correlations survive multiple runs.
+
+No broad water discovery pass is needed.
+
+A targeted semantic-correlation pass is needed.
+
+======================================================================
+3. SHADOW FALSIFICATION
+======================================================================
+
+HYPOTHESIS:
+
+    the 4096/512 shadow resources and full-resolution shadow mask prove all
+    shadow engineering is ready.
+
+REJECTED.
+
+What the evidence proves:
+
+- stable early shadow production exists before depth/opaque world work;
+- large two-slice, small two-slice and large eight-slice R16 typeless depth
+  families recur identically across 0.0.28-0.0.30;
+- a stable full-resolution mask pass reads MAIN_DEPTH and the large shadow
+  array families;
+- Semantic Authority identifies SHADOW_MASK from the depth + shadow-array
+  structure;
+- SHADOW_MASK exists across day exterior, inn interior and night exterior;
+- public Skyrim renderer research exposes Main_RenderShadowmasks as a direct
+  semantic anchor.
+
+What the evidence does NOT yet prove:
+
+- exact directional cascade count/layout;
+- sun versus moon directional-light selection;
+- which slices/resources represent local-light shadows;
+- point/spot/cube shadow ownership;
+- cloud-shadow generation or application;
+- shadow filtering kernel/constant ownership;
+- shadow map resolution/control pathways;
+- the exact field-locked AfterShadowProduction exit.
+
+The 4096x4096 array-size-8 family currently writes one observed slice in the
+available exterior snapshots. That is a strong clue, not a final semantic.
+
+The 512x512 shadow-looking families also overlap with the dynamic reflection
+capture time range. Descriptor shape alone is insufficient to name every one.
+
+PASS-2 SHADOW CLASSIFICATION:
+
+    SHADOW PRODUCTION + SHADOW MASK = HIGH CONFIDENCE
+    COMPLETE SHADOW DOMAIN = FALSE
+
+Required closure path:
+
+1. anchor Main_RenderShadowmasks entry/exit;
+2. bracket all shadow resource production before the full-resolution mask;
+3. classify directional array/slices through controlled sun/day and moon/night
+   comparisons;
+4. classify local-light shadow families through interior light/fire evidence;
+5. isolate cloud-shadow contribution with clear/cloudy controlled evidence;
+6. identify filtering/constant-buffer ownership;
+7. promote AfterShadowProduction only after exact exit correlation.
+
+======================================================================
+4. SKY / CLOUD / CELESTIAL FALSIFICATION
+======================================================================
+
+HYPOTHESIS:
+
+    daylight/night captures plus volumetrics are enough to own sky, clouds,
+    sun, moon and stars.
+
+REJECTED.
+
+What is proven:
+
+- the user captured sustained daylight exterior and nighttime exterior;
+- sky/background is present in the scene-depth and CameraZ evidence;
+- the exterior volumetric system runs in day and night;
+- dynamic exterior reflection capture necessarily renders significant exterior
+  environment/sky content;
+- public Skyrim renderer references expose a distinct Sky shader class and
+  sun/moon/star-related parameter paths.
+
+What is not yet isolated:
+
+- sky dome/material pass family;
+- cloud layer pass family;
+- cloud animation/noise resources;
+- sun disc pass;
+- moon disc/phase pass;
+- star field pass;
+- cloud shadows;
+- sun/moon directional-light transition;
+- weather-driven sky parameter identity;
+- aurora and precipitation-related domains.
+
+Pass 1 correctly concluded that the historical evidence contains these visual
+conditions but the project never ran the renderer-family differential needed
+to label them.
+
+PASS-2 SKY CLASSIFICATION:
+
+    DATA COVERAGE EXISTS
+    SEMANTIC DECOMPOSITION INCOMPLETE
+
+Required closure path:
+
+- mine the historical day/interior/night continuous data by structural family;
+- separate families unique to daylight exterior, night exterior, and both;
+- correlate those families with the Sky shader class and current constant
+  buffers;
+- use controlled weather contrasts only where historical evidence cannot
+  disambiguate;
+- explicitly identify cloud-shadow interaction with the shadow mask.
+
+======================================================================
+5. VOLUMETRIC / SUN-RAY / MOON-RAY FALSIFICATION
+======================================================================
+
+HYPOTHESIS:
+
+    field-locked volumetric temporal apply means sun rays and moon rays are
+    ready as independent production systems.
+
+REJECTED.
+
+What is proven:
+
+- exterior 3D volumetric density current/history;
+- temporal application using depth, motion and previous depth;
+- full-resolution R16 temporal history;
+- later exterior MAIN_HDR application;
+- day and night execution;
+- stable exterior/interior split.
+
+What remains unresolved:
+
+- which constants select sun versus moon directional scattering;
+- whether one shader family serves both with different parameters;
+- celestial occlusion and shaft origin;
+- cloud interaction;
+- weather/fog density ownership;
+- whether the later MAIN_HDR apply combines water/reflection/atmosphere work;
+- production controls required for a better-than-ENB volumetric replacement.
+
+PASS-2 VOLUMETRIC CLASSIFICATION:
+
+    CORE VOLUMETRIC ARCHITECTURE = READY
+    SUN-RAY / MOON-RAY / WEATHER SUBDOMAINS = NOT READY
+
+======================================================================
+6. FIRE / LOCAL LIGHT / PARTICLE FALSIFICATION
+======================================================================
+
+HYPOTHESIS:
+
+    because fire was visible in every inn capture, fire is automatically
+    renderer-mapped.
+
+REJECTED.
+
+Visibility proves that fire-related work occurred.
+
+It does not prove which renderer families performed:
+
+- flame geometry/particles;
+- emissive material contribution;
+- smoke;
+- local point-light illumination;
+- local-light shadow maps;
+- bloom/glow response;
+- heat distortion;
+- lens/artistic post effects.
+
+The historical continuous telemetry retained 59 interior-only late structural
+families and a broad transparency/particle/material domain.
+
+The missing work is the controlled correlation:
+
+    fire visible / occluded / absent
+    ->
+    changed pass/resource families.
+
+PASS-2 FIRE CLASSIFICATION:
+
+    FIRE DATA EXISTS
+    FIRE SEMANTIC ATLAS = NOT BUILT
+
+Required closure path:
+
+1. reprocess historical inn frames and identify recurring interior-only
+   families;
+2. correlate flame/emissive candidates to material/shader state;
+3. identify local-light shadow resources relative to the inn/fire sequence;
+4. separate source emissive/light from downstream bloom/local glow;
+5. only request a new controlled capture if historical evidence cannot provide
+   a fire-on/fire-occluded contrast.
+
+======================================================================
+7. POST-TONEMAP / PRE-UI STATUS
+======================================================================
+
+0.0.30 produced one unique 1.7.104 pre-UI discovery candidate:
+
+    match RVA  0x116ADF2
+    target RVA 0x100A050
+
+It also proved the old UiPresent marker is a Present-time GZFX landmark, not
+Skyrim's real engine UI start.
+
+Post-processing masked discovery remains ambiguous at two candidates.
+
+Therefore:
+
+    PostTonemapPreUi remains unpromoted.
+
+The next work here is a bounded candidate/ABI/control-flow verification, not
+another broad late-stack search.
+
+======================================================================
+8. WHAT THE EXISTING DATA REALLY BOUGHT US
+======================================================================
+
+The accumulated data has already reduced the renderer problem dramatically.
+
+We are NOT facing:
+
+    unknown water
+    unknown shadows
+    unknown atmosphere
+    unknown post stack
+
+We are facing:
+
+    known structural clusters
+    with unresolved final semantic decomposition.
+
+The key clusters already established are:
+
+- core MRT/depth/motion/normal/aux;
+- CameraZ and AO/indirect;
+- SHADOW_MASK and its large shadow-array inputs;
+- exterior volumetric density/history/apply;
+- PRE_WATER_DEPTH;
+- dynamic six-face reflection capture;
+- half-resolution float16 reflection/lighting chain;
+- exterior full-resolution reflection/water/atmospheric apply;
+- HDR reduction/adaptation;
+- tonemap;
+- global TAA;
+- full late interval to physical Present.
+
+That is a large amount of renderer ownership.
+
+But the remaining missing labels are exactly the labels needed to promise all
+of ENB/ReShade's world-domain functionality without guesswork.
+
+======================================================================
+9. CORRECT FULL-PRODUCT READINESS ANSWER
+======================================================================
+
+Question:
+
+    Are we ready to begin the full major-engineering campaign for a complete,
+    better-than-ENB + ReShade GZFX product?
+
+Correct answer:
+
+    NO — NOT YET.
+
+We are ready to engineer closed subsystems.
+
+We are not yet ready to declare the complete graphics stack mapped and begin
+building every promised subsystem in one broad production campaign.
+
+The user's standard is not:
+
+    some excellent post effects.
+
+It is:
+
+    complete native ownership of the graphics capabilities users expect from
+    ENB and ReShade, with better integration and quality.
+
+That requires renderer-domain closure first.
+
+======================================================================
+10. REQUIRED RENDERER-DOMAIN CLOSURE PROGRAM
+======================================================================
+
+PHASE A — EXHAUST EXISTING EVIDENCE
+
+Before asking the owner for another generic field run:
+
+1. construct a machine-readable cross-run shadow atlas;
+2. construct a machine-readable water/reflection atlas;
+3. reclassify historical 0.0.24 day/interior/night structural families;
+4. isolate interior-only fire/local-light/particle candidates;
+5. isolate daylight-only, night-only and common sky/cloud/celestial candidates;
+6. correlate public named Skyrim engine stages with the observed D3D families;
+7. enumerate exact unresolved contrasts.
+
+PHASE B — TARGETED ENGINE ANCHORS
+
+Resolve/verify only the anchors needed to disambiguate current clusters:
+
+Water:
+    Main_RenderWaterEffects
+    ISTemporalAA_Water
+    ISWaterBlend
+    ISApplyReflections
+
+Shadows:
+    Main_RenderShadowmasks
+
+UI:
+    unique 1.7.104 pre-UI candidate
+
+Sky/weather where necessary:
+    minimum stable engine/state anchors, not a generic giant hook framework.
+
+PHASE C — MINIMAL CONTROLLED FIELD CAMPAIGN
+
+Only after Phase A/B identifies remaining uncertainty, run deliberate contrasts
+rather than another generic walk:
+
+- fixed-camera clear daylight;
+- fixed-camera cloudy daylight;
+- fixed-camera clear night with moon;
+- fixed-camera night without useful moon illumination if achievable;
+- water visible versus same view with water excluded/occluded;
+- inn fire visible versus fire occluded/out of frame;
+- exterior local-light night sample;
+- underwater entry/exit;
+- weather transition sample.
+
+Each contrast must have automatic frame windows and no manual octopus hotkeys.
+
+PHASE D — PROMOTION GATES
+
+Promote only after cross-run proof:
+
+    WaterDomain
+    AfterShadowProduction
+    SkyDomain / CloudDomain if added
+    CelestialLighting / Weather state if added
+    Fire/Particle/LocalLight identities where needed
+    PostTonemapPreUi
+
+PHASE E — FULL MAJOR ENGINEERING
+
+Only then issue the broad production mandate for:
+
+- AO/SSIL/radiance;
+- shadows;
+- water/reflections/refraction;
+- volumetrics/rays/atmosphere;
+- sky/cloud/weather/celestial rendering;
+- fire/local-light/emissive/particles;
+- HDR/post/color/bloom;
+- presets/editor/compatibility/performance;
+- multi-runtime certification.
+
+======================================================================
+11. NO-DRIFT READINESS GATES
+======================================================================
+
+The full major-engineering gate should require all of the following:
+
+GATE 1:
+    core renderer ownership and lifecycle locked
+    CURRENTLY PASS
+
+GATE 2:
+    AO/depth/motion/normal/temporal inputs locked
+    CURRENTLY PASS
+
+GATE 3:
+    HDR/tonemap/global TAA locked
+    CURRENTLY PASS on 1.7.104
+
+GATE 4:
+    water/reflection/refraction/underwater domain locked
+    CURRENTLY PARTIAL
+
+GATE 5:
+    shadow production decomposed and locked
+    CURRENTLY PARTIAL
+
+GATE 6:
+    sky/cloud/celestial/weather domain decomposed
+    CURRENTLY OPEN
+
+GATE 7:
+    fire/emissive/particle/local-light domain decomposed
+    CURRENTLY OPEN
+
+GATE 8:
+    true post-tonemap/pre-UI boundary locked
+    CURRENTLY PARTIAL / unique candidate found
+
+GATE 9:
+    representative runtime strategy and certification harness
+    CURRENTLY PARTIAL
+
+Broad better-than-ENB/ReShade production should not receive a full green until
+Gates 4-9 are closed or deliberately split into separately governed production
+waves with no false claim of whole-stack readiness.
+
+======================================================================
+12. PASS-2 FINAL VERDICT
+======================================================================
+
+Pass 1 is confirmed.
+
+The assistant's earlier statement that broad major engineering was ready was
+incorrect under the owner's full-product standard.
+
+The corrected verdict is:
+
+- the renderer foundation is advanced;
+- water and shadows are much more mapped than previously acknowledged;
+- the existing data has not been fully mined for sky/cloud/celestial/fire
+  semantics;
+- no additional generic field run is justified yet;
+- the next project phase should be FULL RENDERER-DOMAIN CLOSURE USING EXISTING
+  DATA FIRST;
+- only after that reprocessing should minimal targeted captures be requested;
+- the complete major-engineering campaign is NOT YET AUTHORIZED by the current
+  evidence state.
+
+END PASS 2
