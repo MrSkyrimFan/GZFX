@@ -1,0 +1,658 @@
+GZFX RESEARCH PASS 14 — INDEPENDENT PASS 2
+ADVERSARIAL FALSIFICATION OF 0.0.29 HDR / TONEMAP FIELD CLOSURE
+Research date: October 25, 2026
+Status: RESEARCH PASS 2 COMPLETE / PASS-1 PROMOTION VERDICT CONFIRMED
+Product code modified during research:
+    NO
+
+Controlling inputs:
+    both 0.0.29 real-Skyrim DATA passes
+    current main source
+    current public D3D11 documentation
+    current public Community Shaders source
+    current public ReShade source
+    historical GZFX Research Passes 6, 7 and 9
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+Pass 2 deliberately assumes Pass 1 may be overconfident.
+
+It attempts to falsify:
+
+    HDRReduction promotion
+    BeforeTonemap promotion
+
+by asking:
+
+A. Could the field detector be consistently recognizing the wrong chain?
+
+B. Could the 2x2 family be an unrelated tiny post-process chain?
+
+C. Could "BeforeTonemap" actually be after tonemapping or refer to a different
+   image-space operation?
+
+D. Could external graphics frameworks have contaminated the field result?
+
+E. Does one tested runtime justify a universal support claim?
+
+F. Does the successful HDR/Tonemap result accidentally justify
+   PostTonemapPreUi or WaterDomain?
+
+G. Is another renderer repair justified before promotion?
+
+======================================================================
+2. FIELD SESSION CONTAMINATION CHECK
+======================================================================
+
+The current 0.0.29 session loaded_modules evidence was independently rechecked.
+
+Observed application-local graphics modules include:
+
+    SkyrimSE.exe
+    GZFX d3d11.dll
+    GZFX DINPUT8.dll
+    GZFX.dll
+    normal system D3D11 / DXGI
+    Steam / NVIDIA runtime modules
+
+No recognizable active module is present for:
+
+    ReShade
+    ENB
+    SKSE
+    Community Shaders
+
+Therefore the field success is not the result of Community Shaders, ReShade,
+ENB or SKSE modifying the live renderer underneath GZFX.
+
+The public projects used in this research are independent external references,
+not runtime participants in the captured session.
+
+======================================================================
+3. FALSE-POSITIVE HYPOTHESIS A
+"ANY TINY RGBA16F CHAIN COULD LOOK LIKE HDR"
+======================================================================
+
+Rejected.
+
+The 0.0.29 detector does not accept an arbitrary tiny chain.
+
+Its root must read:
+
+    canonical MAIN_HDR
+    or
+    one of a bounded set of verified full-resolution HDR descendants rooted in
+    MAIN_HDR.
+
+Continuation requires:
+
+    read of prior chain output;
+    non-increasing dimensions;
+    strictly decreasing area.
+
+Terminal requires:
+
+    coherent chain step count;
+    width <=2;
+    height <=2.
+
+Pre-field no-drift CI explicitly proves an unrelated full-resolution float16
+branch followed by a complete downsample-to-2x2 chain is rejected:
+
+    hdr_unrelated_fullres_rejected
+
+PASS.
+
+The real field result then independently replayed the same structural algorithm
+against raw resource identities with zero frame mismatch.
+
+Therefore:
+
+    "arbitrary small chain" is not a viable explanation.
+
+======================================================================
+4. FALSE-POSITIVE HYPOTHESIS B
+"THE 2x2 TERMINAL MAY BE REAL, BUT NOT EXPOSURE/ADAPTATION"
+======================================================================
+
+Strongly rejected.
+
+Evidence is conjunctive:
+
+1. the chain is MAIN_HDR-descended;
+
+2. it is float16 throughout the reduction family;
+
+3. it reaches a true <=2x2 terminal on every active scene frame;
+
+4. the terminal is consumed immediately downstream by the stable
+   full-resolution image-space transition;
+
+5. current public ISHDR.hlsl has a DOWNSAMPLE family with:
+       luminance variants;
+       AdaptTex;
+       DOWNADAPT behavior;
+
+6. its BLEND family samples:
+       AvgTex
+
+   and uses:
+       avgValue
+
+   in exposure behavior before tonemapping.
+
+This makes the exposure/adaptation interpretation substantially more specific
+than simple size coincidence.
+
+Pass 2 finds no plausible competing interpretation that explains all six facts.
+
+======================================================================
+5. FALSE-POSITIVE HYPOTHESIS C
+"BEFORETONEMAP MAY BE MISNAMED OR MISORDERED"
+======================================================================
+
+Rejected, with one documentation nuance.
+
+Current GZFX behavior signals BeforeTonemap:
+
+    BEFORE execution
+
+of the first full-resolution R8G8B8A8_UNORM pass that:
+
+    follows completed HDRReduction;
+    reads the final reduction/adaptation terminal identity.
+
+Therefore the GZFX event is mechanically a pre-execution boundary.
+
+Independent public Skyrim renderer evidence is unusually explicit.
+
+Current Community Shaders State.h describes a per-frame:
+
+    TonemapOwner
+
+and documents:
+
+    kVanilla:
+        "Vanilla ISHDR tonemap runs unmodified."
+
+It also describes HandlePostProcessing as dispatching:
+
+    "the HDR tonemap pass"
+
+with:
+    input scene render target
+    output tonemapped render target.
+
+Current Hooks.cpp wraps a Skyrim path named:
+
+    Main_HDRTonemapBlendCinematic_Render
+
+and current PostProcessing.h explicitly says:
+
+    "Tonemap-time entry is driven by
+     PostProcessingExtensions::Main_HDRTonemapBlendCinematic_Render"
+
+Current ISHDR.hlsl BLEND performs:
+
+    adaptation/exposure;
+    Reinhard or Hejl-Burgess-Dawson tonemapping;
+    bloom;
+    saturation;
+    tint;
+    contrast;
+    cinematic intensity;
+    fade.
+
+Therefore the event name BeforeTonemap is semantically justified.
+
+Nuance:
+
+    the engine pass is compound.
+
+Recommended definition:
+
+    BeforeTonemap =
+        immediately before Skyrim's HDR tonemap/blend/cinematic image-space
+        pass.
+
+Do not claim it is a boundary before every later color operation or display
+mapping path that a future mod/framework might introduce.
+
+======================================================================
+6. FALSE-POSITIVE HYPOTHESIS D
+"THE SUCCESS MAY BE ONE-LUCKY-SESSION OVERFITTING"
+======================================================================
+
+Not supported.
+
+The evidence is cumulative across several real-Skyrim campaigns:
+
+0.0.26:
+    global TAA:
+        9,103 / 9,103 active frames
+
+    physical HDR reduction family:
+        present in exterior and interior
+
+    defects identified:
+        interior ancestry
+        3x2-vs-2x2 terminal
+
+0.0.28:
+    physical true 2x2:
+        7,541 / 7,541
+
+    physical stable pre-TAA full-res pass:
+        7,541 / 7,541
+
+    semantic failure isolated to:
+        2,640 interior derived-sibling frames
+
+0.0.29:
+    physical true 2x2:
+        12,123 / 12,123
+
+    HDRReduction:
+        12,123 / 12,123
+
+    BeforeTonemap:
+        12,123 / 12,123
+
+    exact former derived-sibling path:
+        2,884 / 2,884 successful
+
+    independent raw replay mismatch:
+        0
+
+The sequence is not:
+
+    one new heuristic happened to go green once.
+
+It is:
+
+    repeated field structure
+    ->
+    specific failures
+    ->
+    bounded repairs
+    ->
+    exact former failure topology passing at scale.
+
+That is sufficient for current-runtime field locking.
+
+======================================================================
+7. FALSE-POSITIVE HYPOTHESIS E
+"SHADER HASH CONFIRMATION COULD BE FOOLING US"
+======================================================================
+
+Rejected because shader hash is not the authority.
+
+The 0.0.29 field session itself contains a useful counterexample:
+
+    stable global TAA PS
+        0xE8D58B595587B316
+
+appears in two extra raw rows on:
+
+    frame 10802
+    frame 11903
+
+yet semantic TAA remains exactly once per active frame.
+
+Therefore the implementation does not simply map:
+
+    hash -> semantic.
+
+HDR/Tonemap authority is:
+
+    resource identity
+    shape
+    same-frame lineage
+    bounded source ancestry
+    execution ordering
+    terminal dependency.
+
+Stable hashes are forensic corroboration only.
+
+This makes the successful field result harder, not easier, to explain as a
+hash collision/overfit artifact.
+
+======================================================================
+8. D3D11 API MODEL RECHECK
+======================================================================
+
+Microsoft's documented state model continues to support GZFX's interpretation.
+
+PSSetShaderResources:
+
+    binds explicit SRV interfaces.
+
+OMSetRenderTargets:
+
+    binds explicit RTV/DSV interfaces.
+
+Both APIs enforce conflict behavior for overlapping resource subranges.
+
+This means the resource bindings observed by GZFX are actual runtime D3D11
+state, not names inferred from external metadata.
+
+Current ReShade also exposes first-class events for:
+
+    resource/view lifecycle;
+    bind_render_targets_and_depth_stencil;
+    bind pipeline/shaders;
+    draw;
+    dispatch;
+    present;
+    finish_present.
+
+Its generic depth example tracks resource candidates across real rendering
+events.
+
+Pass-2 conclusion:
+
+    structural D3D resource identity is an appropriate foundation for a
+    runtime-independent GZFX semantic contract.
+
+======================================================================
+9. RUNTIME PORTABILITY FALSIFICATION
+======================================================================
+
+This is the strongest limitation found by Pass 2.
+
+Current field certification is ONLY:
+
+    SkyrimSE.exe 1.7.104.0
+
+The structural detector itself is not dependent on executable offsets.
+
+Therefore it is reasonable to lock:
+
+    the architecture / structural semantic contract.
+
+It is NOT reasonable to claim:
+
+    real-field certification on every supported runtime family.
+
+Current support language must distinguish:
+
+ARCHITECTURE:
+    runtime-independent D3D11 contract
+    locked
+
+FIELD CERTIFICATION:
+    1.7.104:
+        proven
+
+    1.5.97:
+        pending
+
+    common 1.6.x families:
+        pending except for unrelated engine-profile validation where already
+        proven
+
+    1.7.99:
+        pending
+
+    1.6.1179:
+        pending
+
+This is a scope constraint, not a reason to withhold promotion on the tested
+runtime.
+
+======================================================================
+10. POSTTONEMAPPREUI ADVERSARIAL REVIEW
+======================================================================
+
+Pass 2 tried to determine whether HDR/Tonemap closure now makes
+PostTonemapPreUi automatically obvious.
+
+It does not.
+
+Current public Community Shaders source provides an excellent semantic clue:
+
+    MenuManagerDrawInterfaceStart
+
+Current Hooks.cpp comment:
+
+    "Disable scene TAA for the duration of the menu interface render"
+
+Current Upscaling.cpp comment around the same hook:
+
+    redirect framebuffer before vanilla UI renders.
+
+This strongly confirms that the engine location is a real UI transition.
+
+But the 0.0.29 GZFX field session does NOT have a verified 1.7.104 executable
+PRE_UI engine epoch.
+
+Historical Research Pass 9 explicitly required field correlation among:
+
+    post-processing;
+    global TAA;
+    final full-resolution target;
+    actual DXGI Present;
+    pre-UI engine landmark
+
+before renaming/promoting PostTonemapPreUi.
+
+That condition is still unmet.
+
+Therefore:
+
+    PostTonemapPreUi remains unpromoted.
+
+Do not equate:
+
+    AfterGlobalTAA
+
+with:
+
+    PostTonemapPreUi.
+
+There can still be legitimate scene/image-space work between TAA and UI.
+
+======================================================================
+11. WATERDOMAIN ADVERSARIAL REVIEW
+======================================================================
+
+Pass 2 finds no new reason to promote WaterDomain.
+
+Historical research already identified credible public water anchors:
+
+    Main_RenderWaterEffects
+    ISTemporalAA_Water
+    ISWaterBlend
+    ISApplyReflections
+
+but required correlation with GZFX's:
+
+    PRE_WATER_DEPTH_CURRENT
+    exterior-only temporal resources
+    later MAIN_HDR work.
+
+0.0.29's successful HDR/Tonemap run does not perform that correlation.
+
+Water/reflections were useful session coverage, but coverage is not semantic
+proof.
+
+Keep WaterDomain unpromoted.
+
+======================================================================
+12. AFTERSHADOWPRODUCTION ADVERSARIAL REVIEW
+======================================================================
+
+No new evidence.
+
+The field campaign and research remain late-stack focused.
+
+Keep AfterShadowProduction unpromoted.
+
+======================================================================
+13. SHOULD HDRREDUCTION BE FIELD-LOCKED?
+======================================================================
+
+YES.
+
+Pass 2 failed to falsify it.
+
+Required exact scope:
+
+    HDRReduction =
+        FIELD-LOCKED STRUCTURAL CONTRACT
+        Skyrim 1.7.104 real-field proven
+
+The product should preserve:
+
+    bounded MAIN_HDR ancestry;
+    bounded full-resolution sibling sources;
+    coherent reduction;
+    true <=2x2 terminal;
+    fail-closed rejection of unrelated chains.
+
+No new product repair is indicated.
+
+======================================================================
+14. SHOULD BEFORETONEMAP BE FIELD-LOCKED?
+======================================================================
+
+YES.
+
+Pass 2 failed to falsify it.
+
+Required exact scope:
+
+    BeforeTonemap =
+        FIELD-LOCKED STRUCTURAL CONTRACT
+        immediately before Skyrim's HDR tonemap/blend/cinematic pass
+        Skyrim 1.7.104 real-field proven
+
+No rename is required.
+
+Documentation should carry the compound-pass definition.
+
+No new product repair is indicated.
+
+======================================================================
+15. WHAT "LATE STACK CLOSED" MAY AND MAY NOT MEAN
+======================================================================
+
+Authorized wording:
+
+    HDR / tonemap / global-TAA image-space spine:
+        CLOSED on current field-proven runtime.
+
+Not authorized:
+
+    entire late renderer stack:
+        CLOSED.
+
+Still unresolved:
+
+    PostTonemapPreUi
+    WaterDomain
+    AfterShadowProduction
+
+This distinction prevents a successful HDR field campaign from silently
+closing unrelated renderer semantics.
+
+======================================================================
+16. PASS-2 BLUEPRINT RECOMMENDATION
+======================================================================
+
+Pass 2 independently agrees with Pass 1.
+
+The next blueprint should be a BOUNDED CLOSURE / PROMOTION wave, not a repair
+wave.
+
+It should:
+
+1. formally move:
+       HDRReduction
+       BeforeTonemap
+
+   from field-validation candidates to locked structural contracts;
+
+2. preserve:
+       BeforeGlobalTAA
+       AfterGlobalTAA
+
+   as locked;
+
+3. define the long-form BeforeTonemap semantic in authority docs;
+
+4. record:
+       1.7.104 field-certified
+       other runtime families architecture-supported but not yet field-certified;
+
+5. preserve every existing 37-test no-drift acceptance;
+
+6. make no algorithmic HDR detector change unless blueprint review finds an
+   actual authority mismatch;
+
+7. keep:
+       PostTonemapPreUi
+       WaterDomain
+       AfterShadowProduction
+
+   explicitly unpromoted.
+
+After that closure, the next late-stage engineering/research target should be:
+
+    PostTonemapPreUi
+
+because it is now the nearest missing semantic boundary between a completely
+mapped tonemap/TAA spine and known UI/present behavior.
+
+But PostTonemapPreUi should be handled as its own evidence problem.
+
+Do not smuggle a speculative detector into the promotion blueprint.
+
+======================================================================
+17. INDEPENDENT PASS-2 VERDICT
+======================================================================
+
+Pass 1 is CONFIRMED.
+
+Final research consensus:
+
+    HDRReduction:
+        PROMOTE / FIELD-LOCK
+
+    BeforeTonemap:
+        PROMOTE / FIELD-LOCK
+
+    BeforeGlobalTAA:
+        remain locked
+
+    AfterGlobalTAA:
+        remain locked
+
+    PostTonemapPreUi:
+        remain unpromoted
+
+    WaterDomain:
+        remain unpromoted
+
+    AfterShadowProduction:
+        remain unpromoted
+
+    product HDR repair:
+        NOT JUSTIFIED
+
+    runtime field certification:
+        1.7.104 ONLY at present
+
+    next blueprint character:
+        closure/promotion, not repair
+
+    next unresolved late-stage target after closure:
+        PostTonemapPreUi
+
+RESEARCH PASS 2 COMPLETE.
+
+STOP HERE FOR OWNER REVIEW BEFORE BLUEPRINT / IMPLEMENTATION.
+
+END RESEARCH PASS 2
