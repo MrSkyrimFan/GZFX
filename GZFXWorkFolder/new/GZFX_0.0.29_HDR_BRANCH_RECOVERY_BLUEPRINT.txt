@@ -1,0 +1,399 @@
+GZFX 0.0.29 HDR BRANCH RECOVERY BLUEPRINT
+Blueprint date: October 25, 2026
+Status: APPROVED FOR IMPLEMENTATION BY OWNER DIRECTIVE
+Target runtime:
+    0.0.29-hdr-branch-recovery
+
+CONTROLLING AUTHORITY:
+    GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS.txt
+    GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS_PASS_2.txt
+    GZFX_RESEARCH_PASS_12_HDR_BRANCH_RECOVERY_PASS_1.txt
+    GZFX_RESEARCH_PASS_12_HDR_BRANCH_RECOVERY_PASS_2.txt
+
+======================================================================
+1. OBJECTIVE
+======================================================================
+
+Repair the one remaining field-proven late-stack semantic defect:
+
+    a plausible early HDR downsample can begin the current reduction state
+    before a later valid full-resolution HDR sibling branch appears;
+
+    current ancestry discovery then stops;
+
+    the real reduction root from that sibling cannot fresh-restart;
+
+    HDRReduction and BeforeTonemap are falsely absent.
+
+0.0.29 must recover that topology while preserving all existing fail-closed
+renderer contracts.
+
+======================================================================
+2. NON-GOALS
+======================================================================
+
+Do NOT:
+
+    add a new graphics feature;
+    change Wave 1-4 architecture;
+    change renderer front-door ownership;
+    change process lifecycle;
+    add engine offsets;
+    add SKSE/Address Library;
+    add ENB/ReShade coexistence;
+    promote WaterDomain;
+    promote PostTonemapPreUi;
+    promote AfterShadowProduction;
+    hardcode shader hashes;
+    hardcode draw ordinals;
+    hardcode process-local resource pointers;
+    broaden to arbitrary graph traversal.
+
+======================================================================
+3. LANE A — BOUNDED HDR SOURCE SET
+======================================================================
+
+In FrameState replace the single mutable ancestry state:
+
+    hdrReductionSourceIdentity
+    hdrFullResAncestryDepth
+
+with a fixed-capacity source collection.
+
+Conceptual form:
+
+    struct HdrFullResSource
+    {
+        uintptr_t identity;
+        uint32_t depth;
+    };
+
+    static/fixed array capacity 4;
+    source count.
+
+Canonical MAIN_HDR remains implicit depth 0.
+
+No heap allocation.
+
+No eviction.
+
+If capacity is full:
+    fail closed on additional source.
+
+Maximum ancestry depth remains:
+    3.
+
+======================================================================
+4. LANE B — FULL-RES SOURCE DISCOVERY
+======================================================================
+
+While:
+
+    lateStageEligible == true
+    hdrReductionComplete == false
+
+inspect every current RGBA16F Texture2D write.
+
+If output is full screen:
+
+    determine whether the pass reads:
+        canonical MAIN_HDR
+        OR a registered full-res source.
+
+If yes:
+
+    childDepth = parentDepth + 1;
+
+    require childDepth <= 3;
+
+    require output identity != parent identity;
+
+    register output if not already present and capacity remains.
+
+CRITICAL CHANGE:
+
+    perform this discovery regardless of hdrReductionStep.
+
+A full-res source observation does NOT automatically reset the active reduction
+chain.
+
+It only adds a verified possible root source.
+
+======================================================================
+5. LANE C — ROOT ELIGIBILITY
+======================================================================
+
+Create one bounded helper equivalent to:
+
+    ReadsVerifiedHdrSourceLocked(mainHdr)
+
+Return true when current pass reads:
+
+    canonical MAIN_HDR
+    OR any registered full-res HDR source.
+
+Use it for:
+
+    initial reduction root;
+    fresh-root recovery after an incompatible/non-descending pass.
+
+Do not use hashes or environment labels.
+
+======================================================================
+6. LANE D — REDUCTION CHAIN
+======================================================================
+
+Preserve the one active reduction candidate.
+
+Initial root:
+
+    RGBA16F Texture2D;
+    <= half screen width/height;
+    reads a verified HDR source.
+
+Continuation:
+
+    reads prior reduction identity;
+    width <= prior width;
+    height <= prior height;
+    area strictly decreases.
+
+If continuation fails:
+
+    if current downsample reads any verified source:
+        restart at step 1;
+    otherwise:
+        ignore.
+
+Do not maintain multiple parallel reduction chains in this wave.
+
+No evidence requires them.
+
+======================================================================
+7. LANE E — TERMINAL CONTRACT
+======================================================================
+
+UNCHANGED:
+
+    hdrReductionStep >= 4
+    width <= 2
+    height <= 2
+
+Only then:
+
+    hdrReductionComplete = true
+    hdrReductionFinalIdentity = output identity
+    signal HDRReduction AfterExecution.
+
+Do not regress to <=4x4 or 3x2.
+
+======================================================================
+8. LANE F — BEFORETONEMAP AND GLOBAL TAA
+======================================================================
+
+BeforeTonemap remains unchanged:
+
+    HDR reduction complete;
+    reads final terminal identity;
+    writes full-resolution R8G8B8A8_UNORM.
+
+Field DATA proved this fires whenever HDRReduction completes.
+
+Global TAA remains independent of HDR.
+
+Do not couple TAA to the repaired detector.
+
+======================================================================
+9. LANE G — EXACT FIELD-ORDER POSITIVE TEST
+======================================================================
+
+Extend wave3_pipeline_harness with a new test mode:
+
+    GZFX_TEST_HDR_LATE_DESCENDANT_ACTIVE=1
+
+Exact ordering:
+
+    MAIN_HDR
+    ->
+    false 640x360 root from MAIN_HDR
+    ->
+    later full-screen RGBA16F descendant from MAIN_HDR
+    ->
+    real reduction root from descendant
+    ->
+    160x90
+    ->
+    40x23
+    ->
+    10x6
+    ->
+    3x2
+    ->
+    2x2
+    ->
+    tonemap current
+    ->
+    TAA.
+
+New CTest:
+
+    hdr_late_descendant_recovery_contract
+
+Require stage output includes:
+
+    hdr_reduction
+    before_tonemap
+    before_global_taa
+    after_global_taa.
+
+This test must fail on 0.0.28 behavior and pass after repair.
+
+======================================================================
+10. LANE H — FAIL-CLOSED NEGATIVE TEST
+======================================================================
+
+Add a second harness mode:
+
+    GZFX_TEST_HDR_UNRELATED_FULLRES_ACTIVE=1
+
+Emit a full-resolution RGBA16F branch and full downsample-to-2x2 chain whose
+root does NOT descend from canonical MAIN_HDR or any verified source.
+
+New CTest:
+
+    hdr_unrelated_fullres_rejected
+
+Acceptance:
+
+    HDRReduction must NOT be signaled from the unrelated chain;
+    BeforeTonemap must NOT be signaled from that chain.
+
+The test may separately preserve TAA independence if the normal TAA structure is
+emitted.
+
+This prevents source-set expansion from becoming arbitrary 2x2-chain capture.
+
+======================================================================
+11. LANE I — EXISTING TESTS
+======================================================================
+
+Preserve all 30 current tests.
+
+Existing critical tests must remain green:
+
+    hdr_descendant_reduction_contract
+    global_taa_without_hdr_completion
+    late_stack_cartography
+    deferred_telemetry_outside_detail_gate
+    semantic_authority_foundation
+    natural_process_exit_completion
+    d3d11_primary_qualification
+    startup_trace_process_scope
+    all Wave 1-4 tests.
+
+Target suite:
+
+    32 tests.
+
+Do not weaken assertions to obtain green.
+
+======================================================================
+12. LANE J — VERSION / DOCUMENTATION
+======================================================================
+
+Advance:
+
+    CMake project version:
+        0.0.29
+
+    include/gzfx/version.hpp:
+        0.0.29-hdr-branch-recovery
+
+Update README/AGENT current frontier after implementation proof.
+
+Do not claim real-Skyrim field certification for the repair until the owner
+runs 0.0.29.
+
+Automated acceptance is pre-field proof only.
+
+======================================================================
+13. IMPLEMENTATION SURFACE
+======================================================================
+
+Expected product changes:
+
+    src/render/semantic_authority.cpp
+    tests/wave3_pipeline_harness.cpp
+    CMakeLists.txt
+    include/gzfx/version.hpp
+
+Documentation closure:
+
+    README.md
+    AGENT.md
+    GZFXWorkFolder/new/README.md
+    engineering-result / takeover records after merge.
+
+Avoid touching unrelated source.
+
+======================================================================
+14. CI / PR / MERGE / PACKAGE
+======================================================================
+
+Implementation lifecycle:
+
+1. branch from current main;
+2. implement complete blueprint;
+3. run/verify Windows x64 CI;
+4. repair real failures only;
+5. open PR;
+6. final PR 32/32 green;
+7. merge;
+8. verify merged-main 32/32 green;
+9. verify package refresh;
+10. verify package contains exactly:
+        GZFX.dll
+        d3d11.dll
+        dinput8.dll
+11. verify package-refresh commit changed only Lance ZIP;
+12. write final engineering result;
+13. archive completed DATA/research/blueprint;
+14. clear new/ for field test;
+15. hand owner exact 0.0.29 Skyrim instructions.
+
+======================================================================
+15. FIELD OBJECTIVE AFTER IMPLEMENTATION
+======================================================================
+
+One normal Skyrim 1.7.104 run should verify:
+
+    startup/lifecycle remains clean;
+    HDRReduction exterior = all active exterior frames;
+    HDRReduction interior = all active interior frames;
+    BeforeTonemap = all active scene frames;
+    true 2x2 remains universal;
+    Before/AfterGlobalTAA remains 1:1;
+    dropped=0;
+    clean shutdown.
+
+No other graphics feature is authorized before that field proof.
+
+======================================================================
+16. IMPLEMENTATION AUTHORITY
+======================================================================
+
+Owner explicitly ordered:
+
+    second full DATA pass
+    ->
+    two complete research passes
+    ->
+    blueprint
+    ->
+    implementation
+    ->
+    finish the engineering cycle.
+
+No additional checkpoint is required.
+
+END 0.0.29 BLUEPRINT
