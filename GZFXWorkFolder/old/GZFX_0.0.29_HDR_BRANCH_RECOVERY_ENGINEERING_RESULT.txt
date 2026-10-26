@@ -1,0 +1,401 @@
+GZFX 0.0.29 HDR BRANCH RECOVERY
+FINAL ENGINEERING RESULT
+Closure date: October 25-26, 2026
+
+STATUS:
+    DATA PASS 1 COMPLETE
+    DATA PASS 2 COMPLETE
+    RESEARCH PASS 1 COMPLETE
+    RESEARCH PASS 2 COMPLETE
+    BLUEPRINT COMPLETE
+    IMPLEMENTED
+    PR GREEN
+    MERGED
+    MERGED-MAIN GREEN
+    PACKAGED
+    PACKAGE REFRESH VERIFIED ZIP-ONLY
+    READY FOR REAL-SKYRIM FIELD VALIDATION
+
+RUNTIME:
+    0.0.29-hdr-branch-recovery
+
+======================================================================
+1. CONTROLLING INPUTS
+======================================================================
+
+Field archive:
+    GZFXtttredyellow.zip
+
+Archive SHA256:
+    43cff37522fe0cbdb0666cc2a71523270ff98d6fb4ae859aadd236b3bacfce8e
+
+Controlling authority records:
+    GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS.txt
+    GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS_PASS_2.txt
+    GZFX_RESEARCH_PASS_12_HDR_BRANCH_RECOVERY_PASS_1.txt
+    GZFX_RESEARCH_PASS_12_HDR_BRANCH_RECOVERY_PASS_2.txt
+    GZFX_0.0.29_HDR_BRANCH_RECOVERY_BLUEPRINT.txt
+
+The owner explicitly required:
+    one full deep DATA pass;
+    a second independent full DATA pass;
+    two complete RESEARCH passes;
+    then BLUEPRINT -> IMPLEMENTATION -> closure.
+
+That instruction was followed exactly.
+
+======================================================================
+2. FIELD DEFECT THAT AUTHORIZED 0.0.29
+======================================================================
+
+0.0.28 real-Skyrim session:
+    active scene frames 7,541
+    exterior 4,660
+    interior 2,881
+
+Physical late HDR / exposure / tonemap spine:
+    present on 7,541 / 7,541 active scene frames
+    true <=2x2 terminal on 7,541 / 7,541
+
+Global TAA:
+    BeforeGlobalTAA 7,541 / 7,541
+    AfterGlobalTAA  7,541 / 7,541
+
+Semantic HDRReduction:
+    exterior 4,660 / 4,660
+    interior   241 / 2,881
+
+Semantic BeforeTonemap:
+    same 4,901-frame population as HDRReduction.
+
+The 2,640 interior misses were NOT missing renderer structure.
+
+Every miss had exactly:
+    canonical MAIN_HDR
+    ->
+    early plausible 640x360 reduction root
+    ->
+    later full-resolution RGBA16F sibling descended from MAIN_HDR
+    ->
+    real 640x360 reduction root reading that sibling
+    ->
+    coherent descending reduction
+    ->
+    true 2x2 terminal.
+
+Second DATA pass independently replayed the 0.0.28 detector over all
+1,022,351 detailed pipeline rows and reproduced the source stage population
+exactly:
+    predicted HDRReduction hits 4,901
+    actual HDRReduction hits    4,901
+    mismatches                  0
+
+All 2,640 failures had the same ordering:
+    false root -> later full-res HDR = 26 draw ordinals
+    later full-res HDR -> real root  = 1 draw ordinal
+
+Those ordinals were diagnostic evidence only and were NOT made into product
+contracts.
+
+======================================================================
+3. DOUBLE RESEARCH VERDICT
+======================================================================
+
+Both research passes independently converged on the same architecture:
+
+    canonical MAIN_HDR remains implicit source depth 0;
+
+    retain a fixed bounded set of verified full-resolution RGBA16F sources
+    descended from MAIN_HDR;
+
+    source-set capacity:
+        4
+
+    maximum full-resolution ancestry depth:
+        3
+
+    discover those sources while HDRReduction remains incomplete, even after
+    an earlier plausible reduction root has already started;
+
+    keep ONE active conservative reduction chain;
+
+    initial root / fresh restart may read:
+        canonical MAIN_HDR
+        OR one verified bounded full-resolution source;
+
+    continuation must:
+        read previous reduction output;
+        monotonically descend in dimensions/area;
+
+    terminal remains:
+        step >= 4
+        width <= 2
+        height <= 2.
+
+No shader hash, draw ordinal, process-local pointer, engine offset, SKSE,
+Address Library dependency, or arbitrary graph traversal was added.
+
+The proposed algorithm was independently replayed across the complete raw field
+pipeline before implementation:
+    recovered HDR completion 7,541 / 7,541 active frames
+    missing 0
+
+Adversarial synthetic review:
+    real field order                         ACCEPT
+    old descendant-before-false-root order ACCEPT
+    unrelated full-resolution HDR chain    REJECT
+    ancestry deeper than depth cap         REJECT
+
+======================================================================
+4. IMPLEMENTATION
+======================================================================
+
+Implementation branch:
+    feature/0.0.29-hdr-branch-recovery
+
+Primary product change:
+    src/render/semantic_authority.cpp
+
+Implemented:
+    kHdrFullResSourceCapacity = 4
+    kHdrFullResMaxDepth = 3
+
+Frame state now holds a fixed array of:
+    HdrFullResSource
+        identity
+        depth
+
+Removed old greedy single-source state:
+    hdrReductionSourceIdentity
+    hdrFullResAncestryDepth
+
+Added bounded helpers equivalent to:
+    TryReadVerifiedHdrSourceDepthLocked
+    ReadsVerifiedHdrSourceLocked
+    ObserveFullResolutionHdrSourceLocked
+
+Full-resolution HDR ancestry discovery now remains active until HDRReduction
+completes, independent of hdrReductionStep.
+
+A new source candidate does NOT destroy the currently active reduction chain.
+
+If a later incompatible downsample reads canonical MAIN_HDR or any verified
+bounded source, existing fresh-root logic restarts the single chain.
+
+Terminal contract remains true <=2x2.
+
+BeforeTonemap logic was not weakened or redesigned.
+
+Global TAA remains structurally independent from HDR completion.
+
+======================================================================
+5. ACCEPTANCE EXPANSION
+======================================================================
+
+Test suite:
+    30 -> 32
+
+New test #31:
+    hdr_late_descendant_recovery_contract
+
+Exact topology:
+    MAIN_HDR
+    -> false root
+    -> later full-resolution HDR sibling
+    -> real reduction root from sibling
+    -> coherent chain
+    -> <=2x2
+    -> BeforeTonemap
+    -> TAA
+
+Requires:
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+New test #32:
+    hdr_unrelated_fullres_rejected
+
+It emits a full-resolution RGBA16F branch and complete downsample-to-2x2 chain
+that lacks verified MAIN_HDR ancestry.
+
+Requires:
+    NO HDRReduction from that branch
+    NO BeforeTonemap from that branch
+    TAA remains independently detectable.
+
+Existing:
+    hdr_descendant_reduction_contract
+
+remains and still passes.
+
+======================================================================
+6. PRESERVED FAILURE HISTORY
+======================================================================
+
+Initial PR run:
+    40248917861
+
+Result:
+    31 / 32 PASS
+
+The new HDR tests both passed on this FIRST implementation run:
+    #31 hdr_late_descendant_recovery_contract PASS
+    #32 hdr_unrelated_fullres_rejected PASS
+
+Only failure:
+    #3 d3d11_frontdoor_bootstrap
+
+Cause:
+    stale test assertion still required version string "0.0.28"
+    after the authorized runtime advanced to 0.0.29.
+
+Repair:
+    update only the stale expected version to "0.0.29".
+
+No renderer assertion was weakened.
+
+Corrected implementation run:
+    40249237032
+    32 / 32 PASS
+    0 failures
+    total CTest 26.51 sec
+
+Final documentation-complete PR head:
+    bd81ca451e2e52cfb9098a9fed6375f431b5874e
+
+Final PR run:
+    40249528847
+    32 / 32 PASS
+    0 failures
+    total CTest 35.84 sec
+
+Final PR artifact:
+    id 12620043393
+    artifact-container bytes 400,629
+    digest sha256:769b2d212349fefd70ce7c5fd9061020a942de7a14b3b345f6c8b6d0bc488253
+
+======================================================================
+7. MERGE / MERGED-MAIN PROOF
+======================================================================
+
+PR:
+    #32
+    0.0.29 HDR branch recovery
+
+Merge commit:
+    71a5a1e41152e7f1da19f169894f3a37c90a7057
+
+Merged-main Windows x64 workflow:
+    run 40249851770
+    job 121339157955
+    conclusion success
+
+Merged-main CTest:
+    32 / 32 PASS
+    0 failures
+    total CTest 28.78 sec
+
+Merged-main new contracts:
+    #31 hdr_late_descendant_recovery_contract PASS
+    #32 hdr_unrelated_fullres_rejected PASS
+
+Merged-main artifact:
+    id 12620178562
+    artifact-container bytes 400,617
+    digest sha256:7f37a4d94ded67a9ae830b9651a5a6ddb2583e6d07b9b8a52872eeb1bb85580b
+
+Package refresh commit:
+    f08774417d55f9718dfbe6e26d15bba74247b985
+
+Package-refresh commit changed ONLY:
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+======================================================================
+8. FINAL USER PACKAGE
+======================================================================
+
+Repository package:
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Git blob:
+    52ba3c63cdfa1b1c05240491c601d6a3ba6a7d81
+
+Repository ZIP bytes:
+    401,290
+
+Central-directory entries EXACTLY:
+    d3d11.dll
+        uncompressed 36,352
+        CRC32 fc9f5e5f
+
+    dinput8.dll
+        uncompressed 35,328
+        CRC32 5e5ddb4f
+
+    GZFX.dll
+        uncompressed 935,424
+        CRC32 0f400b15
+
+No additional file exists in the ZIP.
+
+The GitHub Actions artifact digest/size describes the Actions artifact container
+and is not asserted to equal the repository inner ZIP byte digest.
+
+======================================================================
+9. WHAT REMAINS LOCKED
+======================================================================
+
+Do NOT reopen without contradictory field evidence:
+
+    Waves 1-3 closure
+    Wave 4 renderer ownership architecture
+    D3D11 graphics front door
+    qualified primary selection
+    creation-time shader/resource identity
+    command-list ownership
+    physical Present epochs
+    natural ExitProcess telemetry closure
+    process-scoped startup evidence
+    global TAA structural contract
+    true <=2x2 HDR terminal
+    fail-closed optional engine profiles
+
+Still intentionally unpromoted:
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+======================================================================
+10. NEXT FIELD OBJECTIVE
+======================================================================
+
+0.0.29 has NOT yet been field-tested in real Skyrim.
+
+One fresh normal Skyrim 1.7.104 session must verify:
+
+    lifecycle/startup remains clean;
+    resource birth remains captured;
+    HDRReduction covers all active exterior frames;
+    HDRReduction covers all active interior frames;
+    BeforeTonemap covers all active scene frames;
+    true 2x2 remains universal;
+    BeforeGlobalTAA / AfterGlobalTAA remains 1:1;
+    ownership remains coherent;
+    dropped=0;
+    normal quit reaches complete session closure.
+
+No new graphics feature is authorized before this field DATA.
+
+CLOSURE VERDICT:
+
+    0.0.29 IMPLEMENTATION COMPLETE.
+    PR #32 MERGED.
+    FINAL PR 32/32 GREEN.
+    MERGED-MAIN 32/32 GREEN.
+    PACKAGE VERIFIED.
+    PACKAGE REFRESH ZIP-ONLY.
+    READY FOR REAL-SKYRIM FIELD VALIDATION.
+
+END ENGINEERING RESULT

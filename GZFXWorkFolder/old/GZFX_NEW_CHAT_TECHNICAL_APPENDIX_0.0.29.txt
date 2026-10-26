@@ -1,0 +1,201 @@
+GZFX 0.0.29 NEW CHAT TECHNICAL APPENDIX
+Date: October 25-26, 2026
+
+FIELD SOURCE:
+    GZFXtttredyellow.zip
+    SHA256 43cff37522fe0cbdb0666cc2a71523270ff98d6fb4ae859aadd236b3bacfce8e
+
+0.0.28 FIELD FACTS:
+    active scene frames 7,541
+    exterior 4,660
+    interior 2,881
+
+    physical true 2x2 terminal:
+        7,541 / 7,541
+
+    BeforeGlobalTAA:
+        7,541 / 7,541
+
+    AfterGlobalTAA:
+        7,541 / 7,541
+
+    semantic HDRReduction:
+        exterior 4,660
+        interior 241
+
+    semantic BeforeTonemap:
+        same population
+
+SECOND DATA PASS:
+    independently replayed current detector over all 1,022,351 detailed
+    pipeline rows.
+
+    replayed hits:
+        4,901
+
+    actual hits:
+        4,901
+
+    mismatches:
+        0
+
+    every one of 2,640 misses:
+        false root
+        -> 26 ordinals
+        -> later full-res HDR sibling
+        -> 1 ordinal
+        -> real reduction root
+
+    These ordinals are NOT product contracts.
+
+FIELD IDENTITIES FOR FORENSIC REFERENCE ONLY:
+    canonical MAIN_HDR:
+        0x251E9628C90
+
+    field interior derived HDR:
+        0x251E9627950
+
+    stable later full-res transform PS:
+        0x1066E41D475505A3
+
+    stable real reduction root PS:
+        0xF026B1E764F561A5
+
+These hashes/pointers are NOT hardcoded by 0.0.29.
+
+0.0.29 SOURCE MODEL:
+
+    constexpr source capacity:
+        4
+
+    constexpr max ancestry depth:
+        3
+
+    FrameState:
+        fixed array of HdrFullResSource
+            identity
+            depth
+
+        source count
+
+        one existing reduction-chain state
+
+Canonical MAIN_HDR:
+    implicit source depth 0
+
+FULL-RES SOURCE ADMISSION:
+    output must be:
+        Texture2D
+        RGBA16F
+        full screen
+        nonzero identity
+
+    current pass must read:
+        canonical MAIN_HDR
+        OR an already verified bounded full-res source
+
+    child depth:
+        parent depth + 1
+
+    require:
+        depth <= 3
+        identity not already registered
+        capacity available
+
+    no eviction
+    no dynamic graph search
+
+IMPORTANT:
+    source discovery remains active regardless of hdrReductionStep until
+    HDRReduction completes.
+
+REDUCTION ROOT / RESTART:
+    root may read:
+        canonical MAIN_HDR
+        OR any registered verified source.
+
+CONTINUATION:
+    must read previous reduction identity
+    dimensions cannot increase
+    area must strictly decrease
+
+TERMINAL:
+    step >= 4
+    width <= 2
+    height <= 2
+
+BEFORETONEMAP:
+    unchanged
+    requires completed HDR terminal identity and full-resolution RGBA8 output.
+
+GLOBAL TAA:
+    unchanged and independent.
+
+TEST #31:
+    hdr_late_descendant_recovery_contract
+
+    exact field order:
+        false root BEFORE later full-res HDR sibling
+
+    PASS final PR and merged main.
+
+TEST #32:
+    hdr_unrelated_fullres_rejected
+
+    complete unrelated float16 downsample chain to 2x2
+    but no verified MAIN_HDR ancestry
+
+    requires no HDRReduction / no BeforeTonemap
+
+    PASS final PR and merged main.
+
+FAILURE HISTORY:
+    initial PR run 40248917861:
+        31/32
+        both new HDR tests PASS
+        only d3d11_frontdoor_bootstrap failed because it expected version 0.0.28
+
+    stale version assertion corrected to 0.0.29.
+    renderer assertions were not weakened.
+
+FINAL PR:
+    head bd81ca451e2e52cfb9098a9fed6375f431b5874e
+    run 40249528847
+    32/32 PASS
+
+MERGE:
+    71a5a1e41152e7f1da19f169894f3a37c90a7057
+
+MERGED MAIN:
+    run 40249851770
+    32/32 PASS
+
+PACKAGE REFRESH:
+    f08774417d55f9718dfbe6e26d15bba74247b985
+    changed only Lance ZIP
+
+PACKAGE BLOB:
+    52ba3c63cdfa1b1c05240491c601d6a3ba6a7d81
+    401,290 bytes
+
+LOCKED:
+    Waves 1-3
+    Wave 4 ownership
+    graphics front door
+    creation-time identity
+    Present epochs
+    command-list ownership
+    global TAA
+    true <=2x2 terminal
+    lifecycle closure
+    fail-closed optional engine profiles
+
+OPEN:
+    field validation of 0.0.29 branch recovery
+
+Still intentionally unpromoted:
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+END TECHNICAL APPENDIX

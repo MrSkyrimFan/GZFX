@@ -1,0 +1,138 @@
+GZFX NEW CHAT TAKEOVER — 0.0.29
+Date: October 25-26, 2026
+Status: CONTROLLING CURRENT HANDOFF
+
+READ FIRST:
+    AGENT.md
+    GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.29.txt
+    GZFXWorkFolder/old/GZFX_0.0.29_HDR_BRANCH_RECOVERY_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.29.txt
+
+CURRENT RUNTIME:
+    0.0.29-hdr-branch-recovery
+
+CURRENT PHASE:
+    TEST / HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
+
+CRITICAL FRONTIER:
+    0.0.29 has NOT yet been tested by Lance in Skyrim.
+
+Do NOT start another graphics feature.
+Do NOT begin 0.0.30.
+Do NOT restart broad research.
+Do NOT modify product code before the 0.0.29 field session is reviewed.
+
+FINAL PRODUCT PROOF:
+
+    PR #32
+    final head:
+        bd81ca451e2e52cfb9098a9fed6375f431b5874e
+
+    final PR run:
+        40249528847
+        32/32 PASS
+
+    merge:
+        71a5a1e41152e7f1da19f169894f3a37c90a7057
+
+    merged-main run:
+        40249851770
+        32/32 PASS
+
+    package refresh:
+        f08774417d55f9718dfbe6e26d15bba74247b985
+
+PACKAGE:
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+    Git blob:
+        52ba3c63cdfa1b1c05240491c601d6a3ba6a7d81
+
+    bytes:
+        401,290
+
+    exact contents:
+        GZFX.dll
+        d3d11.dll
+        dinput8.dll
+
+WHY 0.0.29 EXISTS:
+
+    0.0.28 field DATA was analyzed twice.
+
+    Both passes proved the physical HDR spine and true 2x2 terminal existed on
+    all 7,541 active scene frames.
+
+    But HDRReduction / BeforeTonemap semantics missed 2,640 interior frames.
+
+    Exact failed topology:
+        MAIN_HDR
+        -> early false reduction root
+        -> later full-resolution HDR sibling
+        -> real reduction root from sibling
+        -> coherent reduction
+        -> 2x2
+        -> tonemap
+        -> TAA
+
+    The old detector stopped learning full-resolution HDR ancestry after the
+    early candidate root began.
+
+RESEARCH WAS ALSO DONE TWICE.
+
+Both passes independently selected:
+    bounded full-resolution HDR source set;
+    capacity 4;
+    max ancestry depth 3;
+    one conservative reduction chain;
+    restart only from canonical MAIN_HDR or a verified source;
+    true <=2x2 terminal unchanged.
+
+The proposed rule was replayed over all 1,022,351 detailed field rows before
+implementation and recovered 7,541/7,541 active frames.
+
+0.0.29 CI ADDS:
+
+    hdr_late_descendant_recovery_contract
+    hdr_unrelated_fullres_rejected
+
+The negative test ensures an unrelated full-resolution float16 branch plus a
+complete 2x2 chain is NOT enough to claim HDR semantics.
+
+STILL UNPROMOTED:
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+NEXT USER ACTION:
+
+    Install the newest three-DLL package.
+
+    Run one normal 2-3 minute Skyrim session:
+        exterior daylight
+        interior
+        exterior night
+        water/reflections if convenient
+        fire/particles if convenient
+        Modes 0 / 1 / 2 represented naturally
+
+    No manual capture hotkey.
+
+    Quit normally.
+    Wait until SkyrimSE.exe is fully gone.
+
+    Upload ONLY the newest:
+        Documents/My Games/Skyrim Special Edition/GZFX/Telemetry/session_*
+
+NEXT DATA QUESTIONS:
+
+    qualified primary still clean?
+    zero drops / complete shutdown?
+    HDRReduction exterior all active frames?
+    HDRReduction interior all active frames?
+    BeforeTonemap all active frames?
+    true 2x2 all active frames?
+    Before/AfterGlobalTAA still 1:1?
+    ownership still coherent?
+
+END TAKEOVER

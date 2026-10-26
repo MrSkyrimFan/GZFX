@@ -1,0 +1,161 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.29
+Created October 25-26, 2026 after the owner-required double DATA / double
+RESEARCH HDR branch-recovery cycle.
+
+THIS FILE IS A CONTROLLING INDEX, NOT A SUBSTITUTE FOR THE FULL RECORDS.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+READ IN THIS ORDER:
+
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.29.txt
+    5. GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.29.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.29_HDR_BRANCH_RECOVERY_ENGINEERING_RESULT.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS.txt
+    8. GZFXWorkFolder/old/GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS_PASS_2.txt
+    9. GZFXWorkFolder/old/GZFX_RESEARCH_PASS_12_HDR_BRANCH_RECOVERY_PASS_1.txt
+    10. GZFXWorkFolder/old/GZFX_RESEARCH_PASS_12_HDR_BRANCH_RECOVERY_PASS_2.txt
+    11. GZFXWorkFolder/old/GZFX_0.0.29_HDR_BRANCH_RECOVERY_BLUEPRINT.txt
+
+For deeper renderer history only as needed:
+    GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.28.txt
+    GZFX_0.0.28_PRE_FIELD_LIFECYCLE_HARDENING_ENGINEERING_RESULT.txt
+    GZFX_0.0.27_UNIVERSAL_RENDERER_FRONTDOOR_LATE_CONTRACT_ENGINEERING_RESULT.txt
+    GZFX_0.0.26_RENDERER_IDENTITY_ENGINE_EPOCH_FIELD_FINDINGS.txt
+
+LIVE FRONTIER:
+
+    runtime:
+        0.0.29-hdr-branch-recovery
+
+    phase:
+        TEST / HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
+
+    IMPORTANT:
+        Lance has NOT yet field-tested 0.0.29.
+
+    Do NOT begin another graphics wave before the next field DATA.
+
+PRODUCT BASELINE:
+
+    PR #32 final head:
+        bd81ca451e2e52cfb9098a9fed6375f431b5874e
+
+    final PR workflow:
+        40249528847
+        32/32 PASS
+
+    product merge:
+        71a5a1e41152e7f1da19f169894f3a37c90a7057
+
+    merged-main workflow:
+        40249851770
+        32/32 PASS
+
+    package refresh:
+        f08774417d55f9718dfbe6e26d15bba74247b985
+
+    Any later commits in this closure are documentation/archive-only and do
+    not modify product source or the package.
+
+PACKAGE:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+    Git blob:
+        52ba3c63cdfa1b1c05240491c601d6a3ba6a7d81
+
+    bytes:
+        401,290
+
+    exact entries:
+        GZFX.dll
+        d3d11.dll
+        dinput8.dll
+
+WHY THIS CYCLE WAS SPECIAL:
+
+    The owner required the DATA phase to be done twice and the RESEARCH phase
+    to be done twice.
+
+    Both DATA passes are retained as authority.
+
+    Both RESEARCH passes are retained as authority.
+
+    Pass 2 did not simply restate Pass 1:
+        it independently replayed the current detector over all 1,022,351
+        detailed pipeline rows and found zero replay mismatch;
+
+        it quantified one exact 2,640-frame failure topology;
+
+        Research Pass 2 independently tried to falsify the proposed bounded
+        source-set design and replayed it across the full field dataset.
+
+0.0.29 REPAIR:
+
+    bounded verified full-resolution HDR source set
+    capacity 4
+    ancestry depth <=3
+    canonical MAIN_HDR implicit source
+    one conservative reduction chain
+    restart only from canonical/verified source
+    coherent descent unchanged
+    true <=2x2 terminal unchanged
+    BeforeTonemap unchanged
+    TAA independent
+
+NEW ACCEPTANCE:
+    hdr_late_descendant_recovery_contract
+    hdr_unrelated_fullres_rejected
+
+Both PASS on final PR and merged main.
+
+FIELD TEST NEXT:
+
+    Install newest three-DLL package.
+
+    Normal 2-3 minute session:
+        exterior daylight
+        interior
+        exterior night
+        water/reflections if convenient
+        fire/particles if convenient
+        Modes 0 / 1 / 2 naturally represented
+
+    No manual capture hotkey.
+
+    Quit normally.
+    Wait for SkyrimSE.exe to disappear.
+
+    Upload only newest:
+        Documents/My Games/Skyrim Special Edition/GZFX/Telemetry/session_*
+
+NEXT DATA MUST FIRST ANSWER:
+
+    HDRReduction exterior all active frames?
+    HDRReduction interior all active frames?
+    BeforeTonemap all active frames?
+    true 2x2 all active frames?
+    Before/AfterGlobalTAA still 1:1?
+    primary/lifecycle clean?
+    ownership coherent?
+    dropped=0 and shutdown complete?
+
+WORKFLOW REMAINS:
+
+    DATA
+    -> FINDINGS
+    -> RESEARCH
+    -> BLUEPRINT
+    -> IMPLEMENT
+    -> CI / PR / MERGE / PACKAGE
+    -> ENGINEERING RESULT
+    -> ARCHIVE
+    -> FIELD TEST
+    -> repeat
+
+END CONTINUITY INDEX

@@ -3,32 +3,31 @@
 Current runtime:
 
 ```text
-0.0.28-pre-field-lifecycle-hardening
+0.0.29-hdr-branch-recovery
 ```
 
 Current phase:
 
 ```text
-RESEARCH / 0.0.28 REAL-SKYRIM FIELD DEFECT
+TEST / HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
 ```
 
-DATA is complete and recorded in:
+The complete 0.0.28 field DATA cycle, both independent DATA passes, both
+Research Pass 12 passes, the 0.0.29 blueprint, and the 0.0.29 engineering result
+are archived in `../old/`.
 
-```text
-GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS.txt
-```
+This directory is intentionally clear of active-cycle TXT authority.
 
-Field verdict:
+The next real-Skyrim telemetry upload starts the next cycle here.
 
-- 0.0.28 startup/front-door/lifecycle hardening passed in real Skyrim 1.7.104;
-- core renderer-resource creation provenance is now captured from startup;
-- global TAA remains 1:1 on every active scene frame;
-- the physical HDR reduction spine reaches a real 2x2 terminal on every active scene frame;
-- semantic `HDRReduction` / `BeforeTonemap` still miss 2,640 interior frames because the real interior HDR descendant appears after an earlier false reduction root has already started the current detector state machine.
+Primary field objective:
 
-Next authority file to create here:
+- confirm HDRReduction on every active exterior frame;
+- confirm HDRReduction on every active interior frame;
+- confirm BeforeTonemap on every active scene frame;
+- preserve true <=2x2 terminal and 1:1 global TAA;
+- preserve clean lifecycle, ownership, zero drops, and complete shutdown.
 
-1. targeted research TXT
-2. approved repair blueprint TXT
+Do not start another graphics feature before that field DATA is reviewed.
 
-Do not start another graphics feature or another field run before this targeted research/repair cycle is complete.
+Read root `AGENT.md` and the controlling 0.0.29 continuity index first.
