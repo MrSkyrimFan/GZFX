@@ -10,12 +10,20 @@ namespace gzfx::diagnostics::engine_epochs
         bool rendererCoreSupported = true;
         bool runtimeKnown = false;
         bool engineProfileAvailable = false;
+        bool discoverySupported = false;
+        bool discoveryOnly = false;
         bool postProcessingArmed = false;
         bool preUiArmed = false;
         std::uint64_t postProcessingTargetRva = 0;
         std::uint64_t preUiTargetRva = 0;
         std::uint64_t postProcessingEvents = 0;
         std::uint64_t preUiEvents = 0;
+        std::uint32_t postProcessingDiscoveryMatches = 0;
+        std::uint32_t preUiDiscoveryMatches = 0;
+        std::uint64_t postProcessingCandidateMatchRva = 0;
+        std::uint64_t postProcessingCandidateTargetRva = 0;
+        std::uint64_t preUiCandidateMatchRva = 0;
+        std::uint64_t preUiCandidateTargetRva = 0;
     };
 
     bool Arm() noexcept;
@@ -38,6 +46,14 @@ namespace gzfx::diagnostics::engine_epochs
             const std::uint8_t* bytes,
             std::uint64_t matchRva,
             std::uint64_t imageBaseRva = 0) noexcept;
+
+        CallFixtureResult ValidateAe17104PostProcessingDiscoveryFixture(
+            const std::uint8_t* bytes,
+            std::uint64_t matchRva) noexcept;
+
+        CallFixtureResult ValidateAe17104PreUiDiscoveryFixture(
+            const std::uint8_t* bytes,
+            std::uint64_t matchRva) noexcept;
 
         std::uint32_t ClassifyRuntime(
             std::uint16_t major,
