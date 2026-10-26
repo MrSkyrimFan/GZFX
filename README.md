@@ -21,8 +21,8 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.28-pre-field-lifecycle-hardening
-current phase: TEST / PRE-FIELD LIFECYCLE-HARDENED RENDERER VALIDATION
+current runtime: 0.0.29-hdr-branch-recovery
+current phase: TEST / HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: standalone GZFX d3d11.dll bootstrap + dinput8 input bridge
 stable shader/resource identity: observed at D3D11 creation time
@@ -32,18 +32,43 @@ universal renderer core: runtime-independent D3D11/DXGI architecture
 known runtime families: 1.5.97 / common 1.6.x / 1.7.99 / 1.7.104
 verified optional engine epoch profile: Steam AE 1.6.1170 only; other runtimes keep full D3D core and fail closed on engine hooks
 field-locked late contract: BeforeGlobalTAA / AfterGlobalTAA structural family
+HDR contract: bounded MAIN_HDR ancestry + bounded full-resolution sibling sources + true <=2x2 terminal
 field-validation candidates: HDRReduction / BeforeTonemap
 still unpromoted: WaterDomain / PostTonemapPreUi / AfterShadowProduction
 next graphics wave: NOT YET SELECTED
 ```
 
-Wave 3 remains field-closed. Wave 4 proved that GZFX can generate its own ambient-visibility signal and replace Skyrim's filtered SAO input before Skyrim's native Ambient Screen-Space Composite. Final artistic tuning remains intentionally deferred until the renderer architecture is sufficiently owned.
+Wave 3 remains field-closed. Wave 4 proved that GZFX can generate its own
+ambient-visibility signal and replace Skyrim's filtered SAO input before
+Skyrim's native Ambient Screen-Space Composite. Final artistic tuning remains
+intentionally deferred until the renderer architecture is sufficiently owned.
 
-The 0.0.26 real-Skyrim field campaign proved the renderer-identity architecture and exposed two narrow remaining issues: the live game is Skyrim 1.7.104 rather than 1.6.1170, and the lazy dinput8 bootstrap can allow long-lived renderer resources to exist before GZFX's creation observers arm. That same field session locked the global TAA family at 9,103 / 9,103 active scene frames and proved the remaining HDR misses are detector-ancestry/terminal logic, not missing renderer structure.
+The 0.0.28 real-Skyrim field session proved the standalone D3D11 front door,
+qualified primary selection, pre-resource creation attachment, core Skyrim
+resource provenance, physical Present timeline, command-list ownership, clean
+natural process exit, and zero-drop telemetry closure on Skyrim 1.7.104. Global
+TAA remained exactly 1:1 on all 7,541 active scene frames, and a true 2x2
+HDR/exposure terminal physically existed on all 7,541 frames.
 
-0.0.27 moves renderer ownership to the graphics front door with a tiny standalone `d3d11.dll` bootstrap while retaining `dinput8.dll` for input. The renderer core remains runtime-independent and engine executable hooks are optional profiles: 1.5.97, 1.6.1170 and 1.7.104 are recognized Skyrim runtime families, but only the already-validated 1.6.1170 engine-epoch profile is allowed to patch the executable. Missing engine profiles do not disable GZFX's D3D renderer core. The HDR detector now accepts bounded full-resolution HDR ancestry and commits the observed 2x2 terminal instead of stopping at 3x2.
+That session also isolated the remaining HDR semantic miss. On 2,640 interior
+frames, Skyrim emits an earlier plausible MAIN_HDR downsample, then a later
+full-resolution RGBA16F sibling descended from MAIN_HDR, then the real reduction
+root from that sibling. The old single-source ancestry state stopped learning
+new HDR sources after the early root started, so semantic HDRReduction and
+BeforeTonemap missed the otherwise-complete physical chain.
 
-**Important:** GZFX 0.0.28 is standalone. ENB and ReShade were architecture research references, not runtime dependencies or coexistence targets. The field package contains only GZFX's own `dinput8.dll`, `d3d11.dll`, and `GZFX.dll`. `WaterDomain`, `PostTonemapPreUi`, and `AfterShadowProduction` remain intentionally unclaimed pending real-Skyrim evidence.
+0.0.29 keeps a fixed-capacity, depth-bounded set of verified full-resolution HDR
+sources for the current frame. The existing single reduction chain may restart
+only from canonical MAIN_HDR or one of those verified sources. Coherent descent,
+the true <=2x2 terminal, BeforeTonemap dependency, and independent global TAA
+contract are preserved. The repair is pre-field until the next real-Skyrim run
+confirms full interior coverage.
+
+**Important:** GZFX remains standalone. ENB and ReShade are architecture
+research references, not runtime dependencies or coexistence targets. The field
+package contains only GZFX's own `dinput8.dll`, `d3d11.dll`, and `GZFX.dll`.
+`WaterDomain`, `PostTonemapPreUi`, and `AfterShadowProduction` remain
+intentionally unclaimed pending independent evidence.
 
 ## Permanent authority workflow
 
