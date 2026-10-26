@@ -1,0 +1,400 @@
+GZFX 0.0.30 POST-TONEMAP / PRE-UI CARTOGRAPHY BLUEPRINT
+Blueprint date: October 25, 2026
+Status: APPROVED FOR IMPLEMENTATION BY OWNER DIRECTIVE
+Target runtime:
+    0.0.30-post-tonemap-preui-cartography
+
+THIS BLUEPRINT CORRECTS THE PRIOR MISREAD OF "FINISH THE PIPELINE".
+
+The 0.0.29 HDR / tonemap / global-TAA spine is already field-closed.
+The implementation phase must now produce the next evidence-bearing engineering
+wave, not merely documentation closure.
+
+CONTROLLING AUTHORITY:
+    GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+    GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
+    GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_1.txt
+    GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_2.txt
+    GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+    historical Research Passes 7 and 9 for pre-UI anchor requirements
+
+======================================================================
+1. OBJECTIVE
+======================================================================
+
+Build the smallest truthful evidence wave needed to resolve the next missing
+late-stack semantic:
+
+    PostTonemapPreUi
+
+without prematurely promoting it.
+
+0.0.30 must answer two currently missing questions in the next real-Skyrim
+field run:
+
+1. What D3D11 work occurs after the now-locked global-TAA completion and before
+   the real DXGI Present boundary, including work currently hidden because
+   detailed telemetry stops at the internal UiPresent marker?
+
+2. On Skyrim 1.7.104, do the known public Skyrim post-processing and pre-UI
+   opcode skeletons produce unique fail-closed discovery candidates that can be
+   researched and verified into a future engine profile?
+
+======================================================================
+2. LOCKED INPUT CONTRACTS — DO NOT REOPEN
+======================================================================
+
+Preserve as field-locked on Skyrim 1.7.104:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+Preserve:
+
+    true <=2x2 terminal;
+    bounded HDR source set;
+    capacity 4;
+    max ancestry depth 3;
+    one coherent reduction chain;
+    TAA independence;
+    creation-time identity;
+    physical Present epochs;
+    command-list ownership;
+    lifecycle closure.
+
+Do NOT modify the HDR/TAA semantic detectors in this wave.
+
+======================================================================
+3. LANE A — EXTEND LATE DETAIL TO PHYSICAL PRESENT
+======================================================================
+
+Current telemetry behavior:
+
+    detailed pipeline starts:
+        AfterAmbientScreenSpaceComposite / AfterExecution
+
+    detailed pipeline stops:
+        UiPresent
+
+Historical field/research evidence proved UiPresent is an internal semantic
+marker and can precede additional GZFX callback work before the actual original
+DXGI Present.
+
+0.0.30 must change the late-detail cutoff to:
+
+    PresentPhase::BeforeOriginalPresent
+
+Exact behavior:
+
+    at UiPresent:
+        keep detailed pipeline active;
+        do NOT disable the detail gate.
+
+    at OnPresentTimeline(... BeforeOriginalPresent ...):
+        flush pending pipeline pass;
+        disable late detail when full-pipeline mode is not active;
+        then enqueue the PresentTimeline event.
+
+This guarantees all D3D work through Present callbacks is retained while still
+avoiding the full-frame 0.0.24 telemetry firehose.
+
+AfterOriginalPresent does not need detailed pipeline capture.
+
+======================================================================
+4. LANE B — 1.7.104 ENGINE-ANCHOR DISCOVERY ONLY
+======================================================================
+
+Current verified engine-hook profile:
+
+    Skyrim 1.6.1170 only.
+
+Do NOT weaken it.
+
+Do NOT arm new engine hooks on 1.7.104 in this wave.
+
+Instead add a discovery-only profile for:
+
+    Skyrim 1.7.104.0
+
+based on masked opcode skeletons derived from the already verified/publicly
+corroborated callsite shapes.
+
+The purpose is to discover candidate RVAs, not to claim semantic authority.
+
+Post-processing skeleton:
+
+    ?? 48 8B 0D ?? ?? ?? ??
+    E8 ?? ?? ?? ??
+    48 8B 05 ?? ?? ?? ??
+    48 8B 88 28
+
+Pre-UI skeleton:
+
+    ?? 48 8D 0D ?? ?? ?? ??
+    E8 ?? ?? ?? ??
+    48 8B 05 ?? ?? ?? ??
+    48 8B 48 10
+
+Rules:
+
+    - wildcard the leading byte and all relocation/call displacements;
+    - require all fixed opcode bytes;
+    - scan executable .text only;
+    - count every masked match;
+    - decode the direct CALL at match + 8;
+    - require target inside main image and executable;
+    - record a candidate only when exactly one valid match exists;
+    - never hook the discovered candidate in 0.0.30;
+    - never set engineProfileAvailable=true from discovery alone.
+
+This is intentionally fail-closed.
+
+======================================================================
+5. LANE C — DISCOVERY STATUS
+======================================================================
+
+Extend engine_epochs::Status with diagnostic-only fields:
+
+    bool discoverySupported
+    bool discoveryOnly
+
+    uint32_t postProcessingDiscoveryMatches
+    uint64_t postProcessingCandidateMatchRva
+    uint64_t postProcessingCandidateTargetRva
+
+    uint32_t preUiDiscoveryMatches
+    uint64_t preUiCandidateMatchRva
+    uint64_t preUiCandidateTargetRva
+
+For 1.6.1170:
+
+    verified hook profile behavior unchanged;
+    discovery fields may remain zero/false.
+
+For 1.7.104:
+
+    runtimeKnown=true;
+    engineProfileAvailable=false;
+    discoverySupported=true;
+    discoveryOnly=true;
+    candidate fields populated only by validated masked discovery.
+
+For other runtimes:
+
+    discoverySupported=false in this wave.
+
+======================================================================
+6. LANE D — UPLOADED SESSION EVIDENCE
+======================================================================
+
+Discovery evidence must be present inside the normal telemetry session the owner
+already uploads.
+
+Extend listener_status.txt with:
+
+    engine_discovery_supported
+    engine_discovery_only
+    engine_post_processing_discovery_matches
+    engine_post_processing_candidate_match_rva
+    engine_post_processing_candidate_target_rva
+    engine_pre_ui_discovery_matches
+    engine_pre_ui_candidate_match_rva
+    engine_pre_ui_candidate_target_rva
+
+Do NOT require a second Diagnostics-folder upload.
+
+The existing engine_epochs.txt diagnostics may also include the same fields.
+
+======================================================================
+7. LANE E — TESTING THE MASKED SCANNER
+======================================================================
+
+Extend engine-epoch test coverage.
+
+Required positive fixture:
+
+    use the known 1.6.1170 opcode skeleton;
+    mutate every wildcard displacement byte;
+    preserve fixed opcodes;
+    encode a valid direct-call target;
+    masked validator must still recognize the fixture.
+
+Required negative fixtures:
+
+    mutate one fixed opcode:
+        reject.
+
+    invalid/non-E8 call opcode:
+        reject.
+
+    decoded target outside image fixture bounds:
+        reject where test surface supports it.
+
+Expose test helpers only as needed.
+
+Do not convert discovery into hook authority.
+
+======================================================================
+8. LANE F — TESTING THE DETAIL-GATE CUTOVER
+======================================================================
+
+The telemetry test harness must prove:
+
+    late detail remains active after UiPresent;
+
+    a synthetic post-UiPresent pipeline operation is retained;
+
+    detail shuts off at BeforeOriginalPresent when full-pipeline mode is false.
+
+Preferred test:
+
+    extend existing wave3 / renderer-forensics harness using a dedicated
+    environment mode;
+
+    emit or observe:
+        AfterAmbientScreenSpaceComposite
+        ...
+        UiPresent
+        synthetic post-UiPresent D3D work
+        PresentTimeline BeforeOriginalPresent
+
+    require post-UiPresent work appears in pipeline_runs CSV.
+
+If a direct full physical Present fixture is already available in the existing
+harness, use it rather than inventing a test-only product callback.
+
+======================================================================
+9. VERSION
+======================================================================
+
+Advance runtime to:
+
+    0.0.30-post-tonemap-preui-cartography
+
+Update:
+
+    project version
+    include/gzfx/version.hpp
+
+This is a real product/telemetry engineering wave and must not ship under the
+same 0.0.29 runtime label.
+
+======================================================================
+10. IMPLEMENTATION SURFACE
+======================================================================
+
+Expected product changes:
+
+    src/diagnostics/engine_epochs.cpp
+    include/gzfx/diagnostics/engine_epochs.hpp
+    src/diagnostics/telemetry_listener.cpp
+    include/gzfx/version.hpp
+    CMakeLists.txt
+
+Expected tests:
+
+    engine epoch signature/catalog harness
+    wave3/telemetry harness as needed
+
+Expected docs:
+
+    AGENT.md
+    README.md
+    cycle engineering result / continuity after proof
+
+Do NOT modify:
+
+    src/render/semantic_authority.cpp
+    HDR/TAA algorithms
+    effects/shaders
+    WaterDomain semantics
+    PostTonemapPreUi stage signaling
+
+======================================================================
+11. ACCEPTANCE
+======================================================================
+
+All existing 37 tests must remain green.
+
+Add bounded new tests as required by lanes E/F.
+
+Target suite should increase, not replace old coverage.
+
+Expected target:
+    at least 39 tests
+
+No test may claim PostTonemapPreUi is proven.
+
+Automated acceptance proves only:
+
+    masked discovery mechanics;
+    fail-closed discovery status;
+    late detail survives UiPresent and reaches physical present cutoff.
+
+======================================================================
+12. FIELD OBJECTIVE AFTER IMPLEMENTATION
+======================================================================
+
+The next normal Skyrim 1.7.104 field session must provide:
+
+    full detailed late graph from AfterAmbientScreenSpaceComposite through
+    BeforeOriginalPresent;
+
+    1.7.104 post-processing masked candidate match count / RVAs;
+
+    1.7.104 pre-UI masked candidate match count / RVAs;
+
+    all existing field-locked HDR/TAA stages;
+
+    normal lifecycle/ownership/present health.
+
+Then DATA/RESEARCH decides whether:
+
+    a unique 1.7.104 PRE_UI profile can be independently verified and armed;
+
+    PostTonemapPreUi can be structurally bracketed and promoted.
+
+======================================================================
+13. NON-GOALS
+======================================================================
+
+Do NOT:
+
+    signal PostTonemapPreUi in 0.0.30;
+    hook unverified 1.7.104 engine targets;
+    bundle Address Library;
+    add SKSE dependency;
+    use Community Shaders implementation code;
+    hardcode current field shader hashes;
+    hardcode draw ordinals;
+    reopen HDR branch recovery;
+    promote WaterDomain or AfterShadowProduction.
+
+======================================================================
+14. AUTHORITY
+======================================================================
+
+Owner explicitly ordered:
+
+    finish the pipeline
+    =
+    BLUEPRINT
+    ->
+    real IMPLEMENTATION
+
+This blueprint is the corrected implementation authority.
+
+Proceed through:
+    source changes
+    -> tests
+    -> PR
+    -> CI
+    -> merge
+    -> merged-main/package proof
+    -> engineering result
+    -> archive
+    -> field-test handoff.
+
+END BLUEPRINT
