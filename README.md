@@ -21,8 +21,8 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.29-hdr-branch-recovery
-current phase: HDR / TONEMAP / GLOBAL-TAA IMAGE-SPACE SPINE FIELD-CLOSED; NEXT GRAPHICS WAVE NOT YET SELECTED
+current runtime: 0.0.30-post-tonemap-preui-cartography
+current phase: TEST / POST-TONEMAP PRE-UI CARTOGRAPHY FIELD VALIDATION
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: standalone GZFX d3d11.dll bootstrap + dinput8 input bridge
 stable shader/resource identity: observed at D3D11 creation time
@@ -36,7 +36,7 @@ HDRReduction contract: bounded MAIN_HDR ancestry + bounded full-resolution sibli
 BeforeTonemap contract: immediately before Skyrim HDR tonemap/blend/cinematic image-space pass
 field certification: Skyrim 1.7.104 proven; other runtime families architecture-supported but not yet field-certified
 still unpromoted: WaterDomain / PostTonemapPreUi / AfterShadowProduction
-next graphics wave: NOT YET SELECTED
+active wave: PostTonemapPreUi evidence/cartography only; no semantic promotion yet
 ```
 
 Wave 3 remains field-closed. Wave 4 proved that GZFX can generate its own
@@ -86,6 +86,15 @@ Accordingly, HDRReduction and BeforeTonemap are now field-locked structural
 contracts for Skyrim 1.7.104. BeforeGlobalTAA and AfterGlobalTAA remain locked.
 The architecture remains runtime-independent, but other runtime families are
 not claimed as real-field certified by this campaign.
+
+0.0.30 begins the next evidence wave without promoting a new semantic. Detailed
+late pipeline telemetry now remains active through physical
+BeforeOriginalPresent instead of stopping at the internal UiPresent marker.
+For Skyrim 1.7.104, GZFX also performs discovery-only masked scans for the
+publicly corroborated post-processing and pre-UI opcode skeletons and records
+candidate match/target RVAs in normal session evidence. Those candidates are
+never hooked by 0.0.30 and engineProfileAvailable remains false until later
+field DATA and research independently verify them.
 
 **Important:** GZFX remains standalone. ENB and ReShade are architecture
 research references, not runtime dependencies or coexistence targets. The field
