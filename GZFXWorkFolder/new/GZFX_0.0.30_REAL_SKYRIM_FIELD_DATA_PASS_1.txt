@@ -1,0 +1,587 @@
+GZFX 0.0.30 REAL-SKYRIM FIELD DATA — PASS 1
+Review date: October 25, 2026
+Status: DATA PASS 1 COMPLETE
+Runtime: 0.0.30-post-tonemap-preui-cartography
+
+======================================================================
+1. SOURCE ARCHIVE
+======================================================================
+
+Uploaded archive:
+    GZFXtedtalkyellowblue.zip
+
+Compressed bytes:
+    96,446,223
+
+SHA256:
+    ecc3c545a15896385500fdb724ed160c7164a04242cb2cc598b9bcb7413b76ae
+
+ZIP entries:
+    130
+
+Total uncompressed bytes:
+    1,052,094,767
+
+Telemetry session:
+    session_20261025_211643_164016
+
+PID:
+    164016
+
+Runtime:
+    0.0.30-post-tonemap-preui-cartography
+
+Archive/session structure:
+    PASS
+
+======================================================================
+2. EXECUTIVE DATA VERDICT
+======================================================================
+
+0.0.30 successfully produced the evidence it was built to collect.
+
+The session is healthy and trustworthy.
+
+The previously locked HDR / tonemap / global-TAA spine remains complete.
+
+The new 1.7.104 engine discovery lane behaved fail-closed.
+
+Most important new discovery:
+
+    PRE-UI masked discovery:
+        exactly 1 valid candidate
+
+        match RVA:
+            0x116ADF2
+
+        target RVA:
+            0x100A050
+
+    POST-PROCESSING masked discovery:
+        2 valid candidates
+
+        therefore ambiguous
+        no candidate RVA promoted
+
+No 1.7.104 engine hook was armed.
+
+PostTonemapPreUi is NOT yet proven.
+
+======================================================================
+3. TELEMETRY HEALTH
+======================================================================
+
+listener_status:
+
+    enqueued=2,143,274
+    written=2,143,274
+    dropped=0
+    queue_depth=0
+    queue_high_water=649
+    ring_capacity=65,536
+    bytes_written=992,002,935
+    pipeline_segment=14
+    detail_gate=late_to_before_original_present
+    detailed_pipeline_rows=1,491,438
+    present_epochs=25,363
+    status=healthy
+
+Final closure:
+
+    session_close_state:
+        complete
+        written=2,143,274
+        dropped=0
+        queue_depth=0
+        writer_alive=false
+
+    telemetry_session_complete:
+        complete
+        written=2,143,274
+        dropped=0
+
+DATA verdict:
+
+    ZERO DROPS
+    WRITER DRAIN CLEAN
+    NATURAL EXIT CLEAN
+    SESSION COMPLETE
+
+======================================================================
+4. STARTUP / FRONT DOOR
+======================================================================
+
+renderer_startup.csv contains one PID and exact sequence 1..13.
+
+Order:
+
+    d3d11_proxy_process_attach
+    first_d3d11_export_enter
+    exit_process_hook_armed
+    real_device_creation_complete
+    primary_candidate_accepted
+    gzfx_load_begin
+    real_device_creation_complete
+    gzfx_initialize_complete
+    primary_attach_complete
+    first_resource_creation_observed
+    first_shader_creation_observed
+    first_present
+    process_exit_intercepted
+
+After primary_attach_complete:
+
+    first resource:
+        +1.8961 ms
+
+    first shader:
+        +0.7874722 sec
+
+    first Present:
+        +2.4303858 sec
+
+Front-door / lifecycle:
+    PASS
+
+======================================================================
+5. ACTIVE FIELD COVERAGE
+======================================================================
+
+Physical Present frames:
+    25,363
+
+Active scene frames:
+    15,137
+
+Environment split:
+
+    environment 1 / exterior:
+        5,517
+
+    environment 2 / interior:
+        9,620
+
+Exterior identification is independently consistent with the exterior-only
+volumetric stage population:
+
+    before_volumetric_apply:
+        5,517
+
+    after_volumetric_apply:
+        5,517
+
+    publish_pre_water_depth:
+        5,517
+
+Active contiguous segments:
+
+    10142..12805
+        exterior
+        2,664 frames
+
+    12851..17514
+        interior
+        4,664 frames
+
+    17530..17708
+        exterior
+        179 frames
+
+    17720..22675
+        interior
+        4,956 frames
+
+    22690..25363
+        exterior
+        2,674 frames
+
+Development modes on active frames:
+
+    Mode 0:
+        7,885
+
+    Mode 1:
+        4,173
+
+    Mode 2:
+        2,620
+
+    Mode 3:
+        251
+
+    Mode 4:
+        208
+
+Modes 0 / 1 / 2 are strongly represented.
+
+======================================================================
+6. LOCKED LATE-STAGE REGRESSION CHECK
+======================================================================
+
+For every active frame:
+
+    HDRReduction:
+        15,137 / 15,137
+
+    BeforeTonemap:
+        15,137 / 15,137
+
+    BeforeGlobalTAA:
+        15,137 / 15,137
+
+    AfterGlobalTAA:
+        15,137 / 15,137
+
+Missing active frames:
+    0
+
+Extra non-active target frames:
+    0
+
+Duplicate target stages:
+    0
+
+Ordering violations:
+    0
+
+Environment split for every target stage:
+
+    exterior:
+        5,517 / 5,517
+
+    interior:
+        9,620 / 9,620
+
+The 0.0.29 field-locked spine remains intact.
+
+======================================================================
+7. PHYSICAL HDR TERMINAL
+======================================================================
+
+Raw pipeline/resource identity review confirms the physical float16 reduction
+family on every active frame.
+
+True 2x2 RGBA16F terminal:
+
+    15,137 / 15,137 active frames
+
+Also present on every active frame:
+
+    40x23
+    10x6
+    3x2
+
+and the expected larger reduction-family resolutions.
+
+DATA verdict:
+
+    TRUE <=2x2 TERMINAL REMAINS FIELD-CLEAN
+
+======================================================================
+8. 1.7.104 DISCOVERY-ONLY ENGINE STATUS
+======================================================================
+
+runtime_profile:
+
+    0x1000700680000
+
+engine_runtime_known:
+
+    true
+
+engine_profile_available:
+
+    false
+
+engine_discovery_supported:
+
+    true
+
+engine_discovery_only:
+
+    true
+
+No hooks:
+
+    engine_post_processing_anchor=unavailable
+    engine_pre_ui_anchor=unavailable
+
+No engine events:
+
+    post-processing events=0
+    pre-UI events=0
+    engine_events.csv contains header only
+
+This is exactly the intended fail-closed 0.0.30 behavior.
+
+======================================================================
+9. POST-PROCESSING DISCOVERY RESULT
+======================================================================
+
+Masked scanner result:
+
+    engine_post_processing_discovery_matches=2
+
+Unique match RVA:
+
+    0x0
+
+Unique target RVA:
+
+    0x0
+
+Interpretation:
+
+    the current masked post-processing skeleton is not unique on 1.7.104.
+
+    No engine profile may be promoted from this result.
+
+    No hook is justified.
+
+DATA status:
+
+    AMBIGUOUS / REQUIRES RESEARCH OR STRONGER DISAMBIGUATION
+
+======================================================================
+10. PRE-UI DISCOVERY RESULT
+======================================================================
+
+Masked scanner result:
+
+    engine_pre_ui_discovery_matches=1
+
+Unique candidate match RVA:
+
+    0x116ADF2
+
+Unique decoded target RVA:
+
+    0x100A050
+
+The same values appear independently in:
+
+    Diagnostics/engine_epochs.txt
+    Telemetry/listener_status.txt
+
+No hook was armed.
+
+This is the strongest new result in the 0.0.30 field session.
+
+DATA status:
+
+    UNIQUE DISCOVERY CANDIDATE
+    NOT YET VERIFIED ENGINE PROFILE
+
+The candidate now deserves targeted research / independent validation before
+any live hook is authorized.
+
+======================================================================
+11. NEW LATE-DETAIL INTERVAL
+======================================================================
+
+The detailed pipeline now contains:
+
+    1,491,438 rows
+
+across:
+
+    all 15,137 active frames.
+
+Raw interval:
+
+    AfterGlobalTAA
+    ->
+    physical BeforeOriginalPresent
+
+contains:
+
+    236,514 retained pipeline rows
+
+and is represented on:
+
+    15,137 / 15,137 active frames.
+
+Therefore the 0.0.30 telemetry blind spot is closed.
+
+======================================================================
+12. INTERNAL UIPRESENT -> PHYSICAL PRESENT OBSERVATION
+======================================================================
+
+Using the emitted UiPresent landmark and physical BeforeOriginalPresent QPCs:
+
+    15,178 retained pipeline rows
+
+fall in that flush-time interval across:
+
+    15,137 / 15,137 active frames.
+
+Minimum:
+    1 row per active frame
+
+41 frames:
+    2 rows
+
+One frame:
+    one compressed copy row only
+
+The final retained row before physical Present is extremely stable:
+
+    same VS hash on:
+        15,137 / 15,137
+
+    same PS hash on:
+        15,137 / 15,137
+
+    same full-resolution RTV identity on:
+        15,137 / 15,137
+
+    viewport:
+        2560x1440
+        15,137 / 15,137
+
+Stable PS:
+
+    0x2FB4F7E056B71926
+
+Stable VS:
+
+    0x47C556B456910989
+
+Both are creation-time-known SkyrimSE.exe shader objects in current diagnostics.
+
+IMPORTANT:
+
+    this is evidence of a stable final render family near Present;
+
+    it is NOT by itself proof of PostTonemapPreUi.
+
+Pass 2 must resolve the timing/flush interpretation before any semantic claim.
+
+======================================================================
+13. PRESENT TIMELINE
+======================================================================
+
+Physical Present epochs:
+
+    25,363
+
+Each epoch contains exactly:
+
+    hook_enter
+    callbacks_begin
+    callbacks_end
+    before_original_present
+    after_original_present
+
+Each phase:
+    25,363 rows
+
+Malformed epochs:
+    0
+
+Nonzero HRESULT:
+    0
+
+DATA verdict:
+
+    PHYSICAL PRESENT TIMELINE CLEAN
+
+======================================================================
+14. OWNERSHIP
+======================================================================
+
+ownership.csv:
+
+    37,385 rows
+
+owner=gzfx:
+
+    37,385
+
+external:
+
+    0
+
+restore_state=1:
+
+    37,385
+
+Owned-pass population:
+
+    pass 2:
+        15,137
+
+    pass 4:
+        6,794
+
+    pass 5:
+        6,794
+
+    pass 6 / VisiblePass:
+        8,615
+
+    pass 7:
+        3
+
+    pass 8:
+        42
+
+No mystery external command-list population returned.
+
+======================================================================
+15. STANDALONE SESSION
+======================================================================
+
+loaded_modules shows the intended standalone GZFX configuration.
+
+No active module identified as:
+
+    ENB
+    ReShade
+    SKSE
+    Community Shaders
+
+The field result is therefore not explained by another graphics framework
+supplying the renderer behavior.
+
+======================================================================
+16. PASS-1 VERDICT
+======================================================================
+
+0.0.30 engineering did what it was supposed to do.
+
+PASS:
+
+    telemetry health
+    startup
+    lifecycle
+    ownership
+    physical Present
+    locked HDRReduction
+    locked BeforeTonemap
+    locked global TAA
+    true <=2x2 terminal
+    late-detail extension
+    fail-closed discovery behavior
+
+NEW:
+
+    one unique 1.7.104 pre-UI discovery candidate:
+        0x116ADF2 -> 0x100A050
+
+NOT CLOSED:
+
+    PostTonemapPreUi
+
+BLOCKING REASON:
+
+    discovery candidate is not yet independently verified as the correct
+    engine pre-UI function;
+
+    post-processing discovery remains ambiguous at two candidates;
+
+    the UiPresent-relative raw-row timing needs adversarial interpretation.
+
+Proceed to complete independent DATA PASS 2 before research or implementation.
+
+END DATA PASS 1
