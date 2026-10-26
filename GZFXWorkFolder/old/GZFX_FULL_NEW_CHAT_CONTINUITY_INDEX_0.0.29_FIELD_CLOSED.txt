@@ -1,0 +1,215 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.29 HDR / TONEMAP FIELD-CLOSED
+Created October 25-26, 2026 after the successful 0.0.29 real-Skyrim field
+campaign, two complete DATA passes, two independent RESEARCH passes, and the
+final authority/promotion closure.
+
+THIS FILE IS THE CURRENT CONTROLLING INDEX.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+READ IN THIS ORDER:
+
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.29_FIELD_CLOSED.txt
+    5. GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.29_FIELD_CLOSED.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+    8. GZFXWorkFolder/old/GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
+    9. GZFXWorkFolder/old/GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_1.txt
+    10. GZFXWorkFolder/old/GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_2.txt
+    11. GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_BLUEPRINT.txt
+
+For the underlying 0.0.29 implementation and pre-field hardening:
+
+    12. GZFXWorkFolder/old/GZFX_0.0.29_HDR_BRANCH_RECOVERY_ENGINEERING_RESULT.txt
+    13. GZFXWorkFolder/old/GZFX_0.0.29_PREFIELD_NODRIFT_ACCEPTANCE_ENGINEERING_RESULT.txt
+    14. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.29_NODRIFT.txt
+
+For older renderer-history context only as needed:
+
+    GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS.txt
+    GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS_PASS_2.txt
+    GZFX_0.0.27_UNIVERSAL_RENDERER_FRONTDOOR_LATE_CONTRACT_ENGINEERING_RESULT.txt
+    GZFX_0.0.26_RENDERER_IDENTITY_ENGINE_EPOCH_FIELD_FINDINGS.txt
+
+LIVE FRONTIER:
+
+    runtime:
+        0.0.29-hdr-branch-recovery
+
+    phase:
+        HDR / TONEMAP / GLOBAL-TAA IMAGE-SPACE SPINE FIELD-CLOSED
+        NEXT GRAPHICS WAVE NOT YET SELECTED
+
+FIELD-CLOSED CONTRACTS:
+
+    HDRReduction
+        field-locked structural contract
+        Skyrim 1.7.104 real-field proven
+
+    BeforeTonemap
+        field-locked structural contract
+        immediately before Skyrim HDR tonemap/blend/cinematic
+        Skyrim 1.7.104 real-field proven
+
+    BeforeGlobalTAA
+        field-locked
+
+    AfterGlobalTAA
+        field-locked
+
+REAL-SKYRIM 0.0.29 PROOF:
+
+    active scene frames:
+        12,123
+
+    exterior:
+        8,882
+
+    interior:
+        3,241
+
+    HDRReduction:
+        12,123 / 12,123
+
+    BeforeTonemap:
+        12,123 / 12,123
+
+    BeforeGlobalTAA:
+        12,123 / 12,123
+
+    AfterGlobalTAA:
+        12,123 / 12,123
+
+    true <=2x2 terminal:
+        12,123 / 12,123
+
+    former derived-HDR sibling failure path:
+        2,884 / 2,884 successful
+
+    independent raw replay mismatch:
+        0
+
+    dropped:
+        0
+
+    shutdown:
+        complete
+
+RUNTIME CERTIFICATION:
+
+    architecture:
+        runtime-independent D3D11/DXGI contract
+
+    real-field certified:
+        Skyrim 1.7.104
+
+    not field-certified by this campaign:
+        1.5.97
+        other 1.6.x families
+        1.6.1179
+        1.7.99
+
+STILL UNPROMOTED:
+
+    PostTonemapPreUi
+    WaterDomain
+    AfterShadowProduction
+
+Do NOT infer any of those from the successful HDR/TAA campaign.
+
+CLOSURE PR:
+
+    PR #34
+    final head:
+        18b01b38db1bddb06b4810f99c8ffd030915754b
+
+    changed exactly:
+        AGENT.md
+        README.md
+
+    product source changes:
+        NONE
+
+    PR workflow:
+        40257000915
+
+    job:
+        121360884936
+
+    CTest:
+        37 / 37 PASS
+        0 failures
+
+MERGE:
+
+    c2a1478ce972d886954c294c0c69280ba361609f
+
+MERGED-MAIN CI NOTE:
+
+    no main push workflow was started for the merge because
+    .github/workflows/build-windows.yml intentionally paths-ignore:
+        README.md
+        AGENT.md
+        GZFXWorkFolder/**
+        LANCE YOUR FILE IS HERE/**
+
+    No fake non-doc commit was added to force a build.
+
+    Equivalent proof:
+        PR #34 tested unchanged product source 37/37;
+        merge diff is docs-only;
+        PR binaries normalize byte-identical to the field-tested baseline;
+        current package remains the exact already field-tested blob.
+
+PRODUCT BINARY NO-DRIFT:
+
+    after zeroing only:
+        IMAGE_FILE_HEADER.TimeDateStamp
+        IMAGE_DEBUG_DIRECTORY.TimeDateStamp
+
+    normalized SHA256 remains:
+
+        d3d11.dll
+            4319a80de2b1e4f8c73cfeeecc2ceae6ffde858c84839cd38d7b1b66819ed129
+
+        dinput8.dll
+            a00208da3d1247df46881d974d3537643772d3f7a1a28ad1a3cdc2736980d41a
+
+        GZFX.dll
+            c25c8934638de08cb05fd161c3dae6154c8367b57575f232419ce26354932b7a
+
+PACKAGE:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+    Git blob:
+        3c5d2473228e1a4d2d2a59fd19cc136a7671d791
+
+    bytes:
+        401,287
+
+    exact entries:
+        d3d11.dll
+        dinput8.dll
+        GZFX.dll
+
+This is the exact package used for the successful 0.0.29 field session.
+No new package is needed from the field-closure promotion wave.
+
+NEXT WAVE:
+
+    NOT YET SELECTED
+
+Research consensus says the highest-value unresolved late-stack target is:
+
+    PostTonemapPreUi
+
+but that is NOT authorized merely by this continuity record.
+
+A new target must begin through the normal evidence workflow.
+
+END FIELD-CLOSED CONTINUITY INDEX
