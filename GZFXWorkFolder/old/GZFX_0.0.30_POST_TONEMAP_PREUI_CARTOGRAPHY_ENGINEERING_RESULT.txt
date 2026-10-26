@@ -1,0 +1,550 @@
+GZFX 0.0.30 POST-TONEMAP / PRE-UI CARTOGRAPHY
+FINAL ENGINEERING RESULT
+Closure date: October 25-26, 2026
+
+STATUS:
+    CORRECTIVE BLUEPRINT COMPLETE
+    PRODUCT IMPLEMENTATION COMPLETE
+    PR #35 GREEN
+    MERGED
+    MERGED-MAIN 39/39 GREEN
+    PACKAGE REFRESH VERIFIED
+    READY FOR REAL-SKYRIM DATA
+
+RUNTIME:
+    0.0.30-post-tonemap-preui-cartography
+
+SEMANTIC STATUS:
+    PostTonemapPreUi remains UNPROMOTED.
+    This is an evidence/cartography build only.
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+The owner correctly clarified that "finish the pipeline" meant:
+
+    BLUEPRINT
+    ->
+    REAL PRODUCT IMPLEMENTATION
+
+not merely a documentation/promotion closure.
+
+0.0.30 therefore implements the next evidence-bearing renderer wave required
+by the two 0.0.29 DATA passes and two independent Research Pass 14 reviews.
+
+The target is the unresolved interval:
+
+    locked AfterGlobalTAA
+    ->
+    remaining late scene/image-space work
+    ->
+    true pre-UI boundary
+    ->
+    physical DXGI Present
+
+The wave does NOT claim PostTonemapPreUi yet.
+
+======================================================================
+2. CONTROLLING AUTHORITY
+======================================================================
+
+Locked prior field evidence:
+
+    GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+    GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
+
+Research:
+
+    GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_1.txt
+    GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_2.txt
+
+Prior closure:
+
+    GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+
+0.0.30 implementation authority:
+
+    GZFX_0.0.30_POST_TONEMAP_PREUI_CARTOGRAPHY_BLUEPRINT.txt
+
+======================================================================
+3. LOCKED SEMANTICS PRESERVED
+======================================================================
+
+0.0.30 does NOT modify:
+
+    src/render/semantic_authority.cpp
+
+The following remain field-locked on Skyrim 1.7.104:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+Existing bounded HDR source/reduction contracts are unchanged:
+
+    MAIN_HDR ancestry;
+    source capacity 4;
+    ancestry depth <=3;
+    one coherent reduction chain;
+    true <=2x2 terminal;
+    unrelated-chain rejection;
+    TAA independence.
+
+======================================================================
+4. LATE-DETAIL BLIND SPOT CLOSED
+======================================================================
+
+Previous late-detail behavior:
+
+    start:
+        AfterAmbientScreenSpaceComposite / AfterExecution
+
+    stop:
+        internal UiPresent stage
+
+Historical renderer evidence established that UiPresent is an internal semantic
+marker and can precede additional Present-callback D3D work before the original
+DXGI Present.
+
+0.0.30 changes the cutoff to:
+
+    PresentPhase::BeforeOriginalPresent
+
+Behavior now:
+
+    AfterAmbientScreenSpaceComposite / AfterExecution:
+        start detailed late pipeline capture
+
+    UiPresent:
+        DOES NOT stop capture
+
+    callbacks begin/end:
+        capture remains eligible
+
+    BeforeOriginalPresent:
+        flush pending pass
+        stop detail if not in full-pipeline mode
+
+    AfterOriginalPresent:
+        no second stop
+
+Telemetry detail-gate reporting now identifies:
+
+    late_to_before_original_present
+
+This retains the previously hidden late interval without returning to full-frame
+0.0.24 firehose logging.
+
+======================================================================
+5. 1.7.104 DISCOVERY-ONLY ENGINE ANCHORS
+======================================================================
+
+Current verified executable engine-hook profile remains:
+
+    Skyrim 1.6.1170 only.
+
+0.0.30 does NOT arm unverified 1.7.104 engine hooks.
+
+Instead 1.7.104 is explicitly classified as:
+
+    runtime known
+    engine discovery supported
+    discovery only
+    engine profile unavailable
+
+New runtime-class bit:
+
+    kEngineDiscovery
+
+1.7.104 discovery scans executable .text for masked opcode skeletons.
+
+POST-PROCESSING skeleton:
+
+    ?? 48 8B 0D ?? ?? ?? ??
+    E8 ?? ?? ?? ??
+    48 8B 05 ?? ?? ?? ??
+    48 8B 88 28
+
+PRE-UI skeleton:
+
+    ?? 48 8D 0D ?? ?? ?? ??
+    E8 ?? ?? ?? ??
+    48 8B 05 ?? ?? ?? ??
+    48 8B 48 10
+
+Wildcarded:
+
+    leading byte;
+    relocation displacement fields;
+    direct-call relative displacement.
+
+Required:
+
+    every fixed opcode byte;
+    E8 direct CALL at match + 8;
+    decoded target inside main image;
+    decoded target executable.
+
+Discovery records:
+
+    valid match count;
+    unique candidate match RVA when exactly one valid candidate exists;
+    unique candidate target RVA when exactly one valid candidate exists.
+
+CRITICAL FAIL-CLOSED RULE:
+
+    discovery NEVER sets engineProfileAvailable=true;
+    discovery NEVER creates MinHook hooks;
+    discovery NEVER signals engine epochs.
+
+Status reason on 1.7.104 discovery lane:
+
+    known_runtime_discovery_only_no_hooks
+
+======================================================================
+6. SESSION EVIDENCE EXPANDED
+======================================================================
+
+engine_epochs status now includes:
+
+    discovery_supported
+    discovery_only
+    post_processing_discovery_matches
+    post_processing_candidate_match_rva
+    post_processing_candidate_target_rva
+    pre_ui_discovery_matches
+    pre_ui_candidate_match_rva
+    pre_ui_candidate_target_rva
+
+Normal telemetry listener_status.txt now includes:
+
+    engine_discovery_supported
+    engine_discovery_only
+    engine_post_processing_discovery_matches
+    engine_post_processing_candidate_match_rva
+    engine_post_processing_candidate_target_rva
+    engine_pre_ui_discovery_matches
+    engine_pre_ui_candidate_match_rva
+    engine_pre_ui_candidate_target_rva
+
+Therefore the owner needs to upload only the normal newest telemetry session.
+
+No second Diagnostics upload is required.
+
+======================================================================
+7. VERSION
+======================================================================
+
+Project version:
+
+    0.0.30
+
+Runtime string:
+
+    0.0.30-post-tonemap-preui-cartography
+
+Front-door acceptance updated to require:
+
+    0.0.30
+
+======================================================================
+8. NEW AUTOMATED CONTRACTS
+======================================================================
+
+Suite expanded:
+
+    37 -> 39 tests
+
+New test:
+
+    engine_epoch_discovery_contract
+
+Proves:
+
+    wildcard displacement bytes may vary;
+    leading wildcard byte may vary;
+    fixed opcode bytes must remain exact;
+    valid E8 relative call resolves expected target;
+    fixed-opcode corruption is rejected;
+    non-E8 call corruption is rejected.
+
+New test:
+
+    telemetry_physical_present_detail_gate
+
+Proves:
+
+    AfterAmbientScreenSpaceComposite/AfterExecution:
+        starts detail;
+
+    UiPresent:
+        does not stop detail;
+
+    Present CallbacksBegin / CallbacksEnd:
+        do not stop detail;
+
+    BeforeOriginalPresent:
+        stops detail;
+
+    AfterOriginalPresent:
+        no duplicate stop.
+
+Existing runtime catalog / engine epoch tests also now prove:
+
+    1.7.104 =
+        known + discovery
+
+but NOT verified engine-profile authority.
+
+======================================================================
+9. IMPLEMENTATION SCOPE
+======================================================================
+
+Branch:
+
+    feature/0.0.30-post-tonemap-preui-cartography
+
+Final PR head:
+
+    0684f26c9e090c83e883a4b0a571e0ecd18a8cab
+
+Product/test/docs files changed:
+
+    AGENT.md
+    README.md
+    CMakeLists.txt
+    include/gzfx/diagnostics/engine_epochs.hpp
+    include/gzfx/version.hpp
+    src/diagnostics/engine_epochs.cpp
+    src/diagnostics/telemetry_listener.cpp
+    tests/d3d11_frontdoor_harness.cpp
+    tests/engine_epoch_discovery_harness.cpp
+    tests/engine_epoch_harness.cpp
+    tests/runtime_catalog_harness.cpp
+    tests/telemetry_detail_gate_harness.cpp
+
+Explicitly NOT changed:
+
+    src/render/semantic_authority.cpp
+    effects
+    shaders
+    WaterDomain semantics
+    PostTonemapPreUi stage signaling
+    locked HDR/TAA algorithms
+
+======================================================================
+10. PR PROOF
+======================================================================
+
+PR:
+
+    #35
+    0.0.30 PostTonemapPreUi cartography
+
+Final head:
+
+    0684f26c9e090c83e883a4b0a571e0ecd18a8cab
+
+Windows x64 workflow:
+
+    run 40259044927
+
+Job:
+
+    121367165814
+
+Result:
+
+    39 / 39 PASS
+    0 failures
+    total CTest time 45.31 sec
+
+New contracts:
+
+    #10 engine_epoch_discovery_contract
+        PASS
+
+    #11 telemetry_physical_present_detail_gate
+        PASS
+
+All prior HDR/TAA/no-drift contracts remain green.
+
+PR artifact:
+
+    id 12623842007
+    artifact-container bytes 403,376
+    digest:
+        sha256:2d1e400dccc3f12d4d4daf60767ecae8e75c6d072a7bd732b3c7471b3be5aaad
+
+======================================================================
+11. MERGE / MERGED-MAIN PROOF
+======================================================================
+
+Merge:
+
+    5348f762825c0156a029d8b057699920f2a8bb6e
+
+Merged-main Windows x64 workflow:
+
+    run 40259443213
+
+Job:
+
+    121368406485
+
+Result:
+
+    39 / 39 PASS
+    0 failures
+    total CTest time 35.33 sec
+
+New discovery/detail-gate contracts:
+    PASS
+
+All prior tests:
+    PASS
+
+Merged-main artifact:
+
+    id 12623616896
+    artifact-container bytes 403,373
+    digest:
+        sha256:d3207f06362d561751033555463df78039b1c9da4de20569e2dcace140d7a546
+
+======================================================================
+12. PACKAGE REFRESH PROOF
+======================================================================
+
+Package refresh commit:
+
+    9d53a4d8d5ed581286e47b223934999459cff916
+
+That commit changed ONLY:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Current package:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Git blob:
+
+    e72212028f2f01d4a899a759c519e983818f792e
+
+ZIP bytes:
+
+    403,999
+
+Exact entries:
+
+    d3d11.dll
+        uncompressed 36,352
+        CRC32 743ad633
+
+    dinput8.dll
+        uncompressed 35,328
+        CRC32 a863b914
+
+    GZFX.dll
+        uncompressed 941,056
+        CRC32 3471f80e
+
+The downloaded merged-main artifact's inner
+GZFX-SkyrimSE-x64.zip is also exactly:
+
+    403,999 bytes
+
+with the exact same three entry names, sizes and CRC32 values.
+
+Therefore:
+
+    repository package == merged-main workflow package.
+
+No extra file exists.
+
+======================================================================
+13. FIELD STATUS / NON-CLAIMS
+======================================================================
+
+0.0.30 automated engineering acceptance is COMPLETE.
+
+Real-Skyrim field validation has NOT yet occurred.
+
+Do NOT claim:
+
+    PostTonemapPreUi proven;
+    1.7.104 PRE_UI hook verified;
+    1.7.104 post-processing hook verified;
+    WaterDomain proven;
+    AfterShadowProduction proven.
+
+0.0.30 only makes those questions observable.
+
+======================================================================
+14. NEXT REAL-SKYRIM DATA QUESTIONS
+======================================================================
+
+The next 1.7.104 session must answer:
+
+A. DISCOVERY
+
+    engine_discovery_supported == true?
+    engine_discovery_only == true?
+    engine_profile_available == false?
+
+    post-processing discovery match count?
+    unique candidate match RVA?
+    unique candidate target RVA?
+
+    pre-UI discovery match count?
+    unique candidate match RVA?
+    unique candidate target RVA?
+
+B. LATE DETAIL
+
+    does pipeline_runs_* retain detailed rows after internal UiPresent?
+    does detail continue through callback work?
+    does capture stop at physical BeforeOriginalPresent?
+
+C. LOCKED REGRESSION
+
+    HDRReduction still all active frames?
+    BeforeTonemap still all active frames?
+    Before/AfterGlobalTAA still 1:1?
+    true <=2x2 still universal?
+
+D. HEALTH
+
+    primary/lifecycle clean?
+    ownership coherent?
+    physical Present complete?
+    dropped == 0?
+    shutdown complete?
+
+======================================================================
+15. CLOSURE VERDICT
+======================================================================
+
+0.0.30 POST-TONEMAP / PRE-UI CARTOGRAPHY ENGINEERING = COMPLETE.
+
+This time the requested pipeline genuinely reached:
+
+    BLUEPRINT
+    ->
+    PRODUCT IMPLEMENTATION
+    ->
+    TESTS
+    ->
+    PR
+    ->
+    MERGE
+    ->
+    MERGED-MAIN CI
+    ->
+    PACKAGE
+
+PostTonemapPreUi remains intentionally unpromoted pending field DATA.
+
+END ENGINEERING RESULT
