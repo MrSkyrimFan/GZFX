@@ -1,0 +1,435 @@
+GZFX 0.0.30 REAL-SKYRIM FIELD DATA — INDEPENDENT PASS 2
+Review date: October 25, 2026
+Status: DATA PASS 2 COMPLETE / PASS 1 CONFIRMED WITH IMPORTANT TIMING CORRECTION
+Runtime: 0.0.30-post-tonemap-preui-cartography
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+Pass 2 independently re-audits the 0.0.30 session.
+
+It does not trust the Pass-1 semantic conclusion.
+
+It independently:
+
+    rechecks archive/session integrity;
+    rechecks lifecycle / Present / ownership;
+    replays the current HDR source-set/reduction detector over raw pipeline
+    resource identities;
+    reconstructs the full raw AfterGlobalTAA -> physical Present interval;
+    tests the meaning of rows whose telemetry QPC occurs after UiPresent;
+    checks whether the new engine discovery evidence is internally consistent;
+    attempts to falsify a PostTonemapPreUi promotion.
+
+No research, blueprint or product change is performed here.
+
+======================================================================
+2. SOURCE RECHECK
+======================================================================
+
+Archive:
+
+    GZFXtedtalkyellowblue.zip
+
+SHA256:
+
+    ecc3c545a15896385500fdb724ed160c7164a04242cb2cc598b9bcb7413b76ae
+
+Compressed bytes:
+
+    96,446,223
+
+Entries:
+
+    130
+
+Uncompressed bytes:
+
+    1,052,094,767
+
+Session:
+
+    session_20261025_211643_164016
+
+Runtime:
+
+    0.0.30-post-tonemap-preui-cartography
+
+No archive/session contradiction found.
+
+======================================================================
+3. INDEPENDENT RAW HDR REPLAY
+======================================================================
+
+The current field-locked HDR detector was reconstructed independently from
+current semantic_authority.cpp and replayed across all detailed pipeline rows.
+
+Raw pipeline rows processed:
+
+    1,491,438
+
+Modeled:
+
+    canonical MAIN_HDR;
+    bounded full-resolution HDR source set;
+    capacity 4;
+    maximum ancestry depth 3;
+    coherent single reduction chain;
+    strict area descent;
+    true <=2x2 terminal;
+    full-resolution RGBA8 tonemap entry consuming terminal.
+
+Independent replay:
+
+    HDRReduction:
+        15,137 / 15,137
+
+    BeforeTonemap:
+        15,137 / 15,137
+
+Actual emitted frame sets:
+
+    HDRReduction:
+        15,137
+
+    BeforeTonemap:
+        15,137
+
+Replay mismatch:
+
+    HDRReduction:
+        0 frames
+
+    BeforeTonemap:
+        0 frames
+
+Pass-2 verdict:
+
+    LOCKED HDR/TONEMAP SEMANTICS REMAIN RAW-PIPELINE CONSISTENT
+
+======================================================================
+4. SOURCE-SET UTILIZATION
+======================================================================
+
+Independent replay found:
+
+    zero derived full-resolution HDR sources:
+        10,995 frames
+
+    exactly one derived source:
+        4,142 frames
+
+    two or more:
+        0
+
+Maximum field ancestry depth:
+    1
+
+All 4,142 derived-source frames are interior.
+
+Environment 2 / interior total:
+
+    9,620
+
+The sibling branch-recovery logic remains genuinely exercised by real Skyrim.
+
+======================================================================
+5. RAW PHYSICAL TERMINAL RECHECK
+======================================================================
+
+True RGBA16F 2x2 output:
+
+    15,137 / 15,137 active frames
+
+No physical HDR-terminal hole was found.
+
+This result is independent of stages.csv semantic labels.
+
+======================================================================
+6. RAW AFTER-GLOBAL-TAA -> PRESENT INTERVAL
+======================================================================
+
+Ignoring UiPresent initially, Pass 2 uses only:
+
+    AfterGlobalTAA QPC
+    and
+    physical BeforeOriginalPresent QPC.
+
+Raw retained pipeline rows in that interval:
+
+    236,514
+
+Active-frame coverage:
+
+    15,137 / 15,137
+
+Rows per active frame are nonzero throughout the session.
+
+Therefore 0.0.30 successfully retains the whole late interval required for
+cartography.
+
+======================================================================
+7. FINAL RETAINED PRE-PRESENT FAMILY
+======================================================================
+
+The final retained pipeline record before physical BeforeOriginalPresent is
+structurally identical at the shader/target-family level on every active frame:
+
+    frames:
+        15,137 / 15,137
+
+    VS:
+        0x47C556B456910989
+
+    PS:
+        0x2FB4F7E056B71926
+
+    output:
+        same 2560x1440 RTV identity
+
+    viewport:
+        2560x1440
+
+The shaders are registered as creation-time-known SkyrimSE.exe shader objects.
+
+This is a strong stable landmark near the end of Skyrim's frame.
+
+It is not yet a semantic pre-UI proof.
+
+======================================================================
+8. ADVERSARIAL UIPRESENT TIMING CHECK
+======================================================================
+
+Pass 1 observed at least one pipeline row whose TELEMETRY QPC is after
+UiPresent on every active frame.
+
+Pass 2 checked whether that means Skyrim actually executes the draw after the
+UiPresent semantic.
+
+It does NOT prove that.
+
+Critical evidence:
+
+A. Current source defines UiPresent in:
+
+       semantic_authority::OnPresent
+
+   and signals it with reason:
+
+       "frame_present"
+
+   during the Present hook callback.
+
+B. UiPresent is therefore a PRESENT-TIME landmark, not an engine pre-UI hook.
+
+C. The final retained pipeline row's ordinal equals frames.csv draw_ordinal on
+   sampled and generalized active frames.
+
+   That ordinal is the final Skyrim immediate-context draw ordinal already
+   accumulated before Present callbacks.
+
+D. Pipeline cartography can flush a pending pass record later than the pass's
+   original execution.
+
+Therefore:
+
+    pipeline-row QPC > UiPresent QPC
+
+cannot be interpreted as:
+
+    Skyrim executed that draw after UiPresent.
+
+This is the important Pass-2 correction.
+
+DATA conclusion:
+
+    UiPresent must NOT be used as proof of the real UI-start boundary.
+
+The 0.0.30 extension is still useful because it prevents the final pending
+late record from being discarded and retains callback/present evidence, but it
+does not magically convert UiPresent into a true engine pre-UI marker.
+
+======================================================================
+9. GZFX CALLBACK OWNERSHIP CROSS-CHECK
+======================================================================
+
+Post-Present-callback GZFX ownership remains separately visible.
+
+VisiblePass owned-pass events:
+
+    8,615 total session rows
+
+A large active-frame subset contains VisiblePass execution during the Present
+callback interval.
+
+These owned command-list events are not evidence of vanilla Skyrim UI timing.
+
+This further supports keeping:
+
+    GZFX callback work
+    and
+    Skyrim engine UI start
+
+as separate concepts.
+
+======================================================================
+10. PRE-UI DISCOVERY INDEPENDENT FILE AGREEMENT
+======================================================================
+
+Two independent emitted evidence surfaces agree exactly.
+
+Diagnostics/engine_epochs.txt:
+
+    discovery_supported=true
+    discovery_only=true
+    pre_ui_discovery_matches=1
+    pre_ui_candidate_match_rva=0x116ADF2
+    pre_ui_candidate_target_rva=0x100A050
+    pre_ui_armed=false
+
+Telemetry/listener_status.txt:
+
+    engine_discovery_supported=true
+    engine_discovery_only=true
+    engine_pre_ui_discovery_matches=1
+    engine_pre_ui_candidate_match_rva=0x116ADF2
+    engine_pre_ui_candidate_target_rva=0x100A050
+    engine_pre_ui_anchor=unavailable
+
+engine_events.csv:
+
+    zero events
+
+Pass-2 verdict:
+
+    discovery result is internally consistent and fail-closed.
+
+It is a real candidate, not a live hook.
+
+======================================================================
+11. POST-PROCESSING DISCOVERY RECHECK
+======================================================================
+
+Both evidence surfaces agree:
+
+    post_processing_discovery_matches=2
+
+Candidate match RVA:
+    0
+
+Candidate target RVA:
+    0
+
+No post-processing hook/event.
+
+Pass-2 verdict:
+
+    CURRENT MASK IS AMBIGUOUS ON 1.7.104.
+
+This does not break the already field-locked BeforeTonemap structural contract.
+
+It only means the executable engine function is not yet uniquely identified by
+the current masked skeleton.
+
+======================================================================
+12. PRESENT / OWNERSHIP / CLOSURE RECHECK
+======================================================================
+
+Physical Present:
+
+    25,363 epochs
+
+Every epoch:
+    exact ordered five phases
+
+Malformed:
+    0
+
+Nonzero HRESULT:
+    0
+
+Ownership:
+
+    37,385 rows
+    all GZFX-owned
+    external=0
+    restore_state=1 for all
+
+Telemetry:
+
+    enqueued=written=2,143,274
+    dropped=0
+    queue_depth=0
+    final writer_alive=false
+    complete=true
+
+Pass-2 health verdict:
+
+    PASS
+
+======================================================================
+13. WHAT 0.0.30 DATA NOW PROVES
+======================================================================
+
+PROVEN:
+
+    the full late D3D evidence window is retained through physical Present;
+
+    the locked HDR / tonemap / TAA spine remains correct;
+
+    1.7.104 discovery-only machinery is functioning safely;
+
+    a unique PRE-UI executable candidate exists:
+        0x116ADF2 -> 0x100A050;
+
+    current post-processing masked discovery is ambiguous at 2 candidates;
+
+    the internal UiPresent landmark is not equivalent to engine UI start.
+
+NOT PROVEN:
+
+    PostTonemapPreUi semantic boundary;
+
+    1.7.104 PRE_UI hook ABI/signature correctness;
+
+    1.7.104 post-processing hook identity;
+
+    WaterDomain;
+
+    AfterShadowProduction.
+
+======================================================================
+14. PASS-2 VERDICT
+======================================================================
+
+Pass 2 confirms the session is GOOD DATA.
+
+It also prevents an overclaim that Pass 1 could otherwise invite.
+
+The useful new frontier is now extremely specific:
+
+    VERIFY THE UNIQUE 1.7.104 PRE-UI CANDIDATE.
+
+The project no longer needs broad late-stack guessing.
+
+It needs targeted independent research around:
+
+    candidate match RVA 0x116ADF2
+    candidate target RVA 0x100A050
+
+including:
+
+    function identity;
+    ABI/calling convention;
+    surrounding control-flow;
+    relationship to Skyrim menu/interface render start;
+    uniqueness/stability;
+    safe fail-closed hook design.
+
+Post-processing discovery can be handled separately because the structural
+BeforeTonemap contract is already field-locked.
+
+DATA PHASE COMPLETE.
+
+END DATA PASS 2
