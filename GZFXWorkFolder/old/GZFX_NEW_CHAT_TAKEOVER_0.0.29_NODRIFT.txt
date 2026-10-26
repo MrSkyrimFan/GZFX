@@ -1,0 +1,133 @@
+GZFX NEW CHAT TAKEOVER — 0.0.29 NO-DRIFT CLOSED
+Date: October 25-26, 2026
+Status: CONTROLLING CURRENT HANDOFF
+
+READ FIRST:
+    AGENT.md
+    GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.29_NODRIFT.txt
+    GZFXWorkFolder/old/GZFX_0.0.29_PREFIELD_NODRIFT_ACCEPTANCE_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.29_NODRIFT.txt
+
+CURRENT RUNTIME:
+    0.0.29-hdr-branch-recovery
+
+CURRENT PHASE:
+    TEST / NO-DRIFT-CLOSED HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
+
+CRITICAL FRONTIER:
+    Lance has NOT yet field-tested 0.0.29.
+
+Do NOT start 0.0.30.
+Do NOT start another graphics feature.
+Do NOT modify product code before reviewing 0.0.29 field DATA.
+
+OWNER-REQUIRED EXTRA PIPELINE WAS COMPLETED:
+
+    DATA
+    -> RESEARCH
+    -> NEW FINDINGS
+    -> BLUEPRINT
+    -> IMPLEMENT
+    -> PR / CI
+    -> MERGE / merged-main CI
+    -> PACKAGE
+    -> independent binary no-drift proof
+
+DATA PASS 3:
+
+    replayed current 0.0.29 algorithm over all 1,022,351 detailed rows from the
+    prior real-Skyrim field archive.
+
+    result:
+        7,541 / 7,541 active frames.
+
+    no product-semantic contradiction.
+
+It did find proof weaknesses:
+    equal-size competing roots not exact in old test;
+    no delayed same-frame filler;
+    stage oracle presence-only;
+    capacity/depth/frame-local bounds not CI-locked.
+
+RESEARCH:
+
+    product algorithm should remain unchanged.
+
+NEW FINDINGS / BLUEPRINT:
+
+    test-only acceptance hardening.
+
+PR #33:
+
+    final head:
+        6c8f3084bcbde2cb3b9c0b15035c473d4d2dab3d
+
+    changed exactly:
+        CMakeLists.txt
+        tests/wave3_pipeline_harness.cpp
+
+    product source:
+        unchanged
+
+    PR run:
+        40251607208
+        37/37 PASS
+
+MERGE:
+    f923e21ee8d477fe34cf6df0ba70f715c2db8231
+
+MERGED MAIN:
+    run 40251939073
+    job 121345555216
+    37/37 PASS
+
+PACKAGE REFRESH:
+    8f35e2e6b95f96b7b231240d6cd7d9580d41aa8b
+
+PACKAGE:
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    blob 3c5d2473228e1a4d2d2a59fd19cc136a7671d791
+    401,287 bytes
+
+    exactly:
+        GZFX.dll
+        d3d11.dll
+        dinput8.dll
+
+BINARY NO-DRIFT:
+
+    raw CRC changed because linker timestamps changed.
+
+    exact byte diff:
+        four bytes per DLL only
+
+    fields:
+        PE/COFF timestamp
+        debug-directory timestamp
+
+    after normalizing only those timestamp fields:
+        all three DLLs are byte-for-byte identical to the original 0.0.29
+        merged product build.
+
+    code/data drift:
+        ZERO
+
+NEW TESTS / STRENGTHENING:
+
+    #31 field-faithful equal-size delayed sibling recovery
+    #32 exact unrelated branch rejection
+    #33 capacity fourth accepted
+    #34 capacity fifth rejected
+    #35 depth three accepted
+    #36 depth four rejected
+    #37 frame isolation
+
+    exact per-active-frame stage population is now required.
+
+NEXT USER ACTION:
+    real-Skyrim 0.0.29 field test only.
+
+Do not perform another implementation cycle unless new field evidence requires
+one.
+
+END TAKEOVER
