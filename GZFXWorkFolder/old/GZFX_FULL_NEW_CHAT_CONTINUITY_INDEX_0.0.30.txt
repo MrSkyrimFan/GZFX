@@ -1,0 +1,177 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.30
+POST-TONEMAP / PRE-UI CARTOGRAPHY
+Created October 25-26, 2026 after the owner-required real BLUEPRINT ->
+IMPLEMENTATION correction.
+
+THIS FILE IS THE CURRENT CONTROLLING INDEX.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+READ IN THIS ORDER:
+
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.30.txt
+    5. GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.30.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.30_POST_TONEMAP_PREUI_CARTOGRAPHY_ENGINEERING_RESULT.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.30_POST_TONEMAP_PREUI_CARTOGRAPHY_BLUEPRINT.txt
+
+For the field-locked input spine:
+
+    8. GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+    9. GZFXWorkFolder/old/GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+    10. GZFXWorkFolder/old/GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
+    11. GZFXWorkFolder/old/GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_1.txt
+    12. GZFXWorkFolder/old/GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_2.txt
+
+LIVE FRONTIER:
+
+    runtime:
+        0.0.30-post-tonemap-preui-cartography
+
+    phase:
+        TEST / POST-TONEMAP PRE-UI CARTOGRAPHY FIELD VALIDATION
+
+    PostTonemapPreUi:
+        NOT PROMOTED
+        evidence-only wave
+
+LOCKED — DO NOT REOPEN WITHOUT CONTRADICTORY DATA:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+    Skyrim 1.7.104 field proof:
+        12,123 / 12,123 active frames for each
+        true <=2x2 12,123 / 12,123
+        derived HDR sibling path 2,884 / 2,884
+
+0.0.30 IMPLEMENTATION:
+
+A. late detail now spans:
+       AfterAmbientScreenSpaceComposite
+       ->
+       physical BeforeOriginalPresent
+
+   UiPresent no longer stops detail.
+
+B. Skyrim 1.7.104 is:
+       runtimeKnown=true
+       discoverySupported=true
+       discoveryOnly=true
+       engineProfileAvailable=false
+
+C. discovery-only masked scans look for:
+       post-processing callsite skeleton
+       pre-UI callsite skeleton
+
+   They:
+       scan executable .text
+       require fixed opcodes
+       wildcard relocation fields
+       decode E8 target
+       require executable in-image target
+       count candidates
+       record unique candidate RVAs
+
+   They NEVER:
+       install hooks
+       set engineProfileAvailable
+       signal engine epochs
+
+D. discovery evidence is written into normal listener_status.txt and
+   engine_epochs diagnostics. User only uploads the normal telemetry session.
+
+TEST PROOF:
+
+    PR #35
+        head 0684f26c9e090c83e883a4b0a571e0ecd18a8cab
+        run 40259044927
+        job 121367165814
+        39/39 PASS
+
+    new:
+        engine_epoch_discovery_contract
+        telemetry_physical_present_detail_gate
+
+MERGE:
+
+    5348f762825c0156a029d8b057699920f2a8bb6e
+
+MERGED MAIN:
+
+    run 40259443213
+    job 121368406485
+    39/39 PASS
+
+PACKAGE REFRESH:
+
+    commit 9d53a4d8d5ed581286e47b223934999459cff916
+    changed only Lance ZIP
+
+CURRENT PACKAGE:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+    blob:
+        e72212028f2f01d4a899a759c519e983818f792e
+
+    bytes:
+        403,999
+
+    exact:
+        d3d11.dll
+        dinput8.dll
+        GZFX.dll
+
+    CRC32:
+        d3d11.dll 743ad633
+        dinput8.dll a863b914
+        GZFX.dll 3471f80e
+
+NEXT USER ACTION:
+
+    real-Skyrim 1.7.104 field run.
+
+Normal session:
+    exterior daylight
+    interior
+    exterior night
+    Modes 0 / 1 / 2 naturally represented
+    water/reflections and particles if convenient
+    no capture hotkey
+    quit normally
+    wait for SkyrimSE.exe to disappear
+
+Upload ONLY newest:
+    Documents/My Games/Skyrim Special Edition/GZFX/Telemetry/session_*
+
+NEXT DATA MUST FIRST CHECK:
+
+    engine_discovery_supported=true?
+    engine_discovery_only=true?
+    engine_profile_available=false?
+
+    post-processing match count and candidate RVAs?
+    pre-UI match count and candidate RVAs?
+
+    detailed pipeline rows after internal UiPresent?
+    coverage up to physical BeforeOriginalPresent?
+
+    locked HDR/TAA stages still 1:1?
+    drops=0?
+    shutdown complete?
+    ownership/present clean?
+
+DO NOT:
+    signal PostTonemapPreUi yet;
+    arm 1.7.104 engine hooks;
+    start WaterDomain;
+    start AfterShadowProduction;
+    reopen HDR branch recovery.
+
+END 0.0.30 CONTINUITY INDEX
