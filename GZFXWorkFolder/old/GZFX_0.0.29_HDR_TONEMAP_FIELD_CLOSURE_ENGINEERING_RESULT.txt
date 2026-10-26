@@ -1,0 +1,643 @@
+GZFX 0.0.29 HDR / TONEMAP FIELD-CLOSURE
+FINAL ENGINEERING RESULT
+Closure date: October 25-26, 2026
+
+STATUS:
+    TWO COMPLETE DATA PASSES COMPLETE
+    TWO INDEPENDENT RESEARCH PASSES COMPLETE
+    BLUEPRINT COMPLETE
+    AUTHORITY/PROMOTION IMPLEMENTATION COMPLETE
+    PR GREEN
+    MERGED
+    PRODUCT NO-DRIFT VERIFIED
+    PACKAGE UNCHANGED
+    HDR / TONEMAP / GLOBAL-TAA IMAGE-SPACE SPINE FIELD-CLOSED ON SKYRIM 1.7.104
+
+RUNTIME:
+    0.0.29-hdr-branch-recovery
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+The owner required the full GZFX/XForge-style pipeline after the successful
+0.0.29 field session:
+
+    DATA PASS 1
+    -> DATA PASS 2
+    -> RESEARCH PASS 1
+    -> RESEARCH PASS 2
+    -> BLUEPRINT
+    -> IMPLEMENT
+    -> PR / CI
+    -> MERGE
+    -> PRODUCT / PACKAGE NO-DRIFT PROOF
+    -> ARCHIVE / CONTINUITY
+
+The field campaign was not allowed to close on one analysis pass or one research
+interpretation.
+
+The implementation wave was intentionally a PROMOTION / AUTHORITY closure wave,
+not another renderer repair.
+
+======================================================================
+2. CONTROLLING AUTHORITY
+======================================================================
+
+DATA:
+    GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+    GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
+
+RESEARCH:
+    GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_1.txt
+    GZFX_RESEARCH_PASS_14_0.0.29_FIELD_CLOSURE_PASS_2.txt
+
+BLUEPRINT:
+    GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_BLUEPRINT.txt
+
+Underlying implementation / pre-field authority:
+    GZFX_0.0.29_HDR_BRANCH_RECOVERY_ENGINEERING_RESULT.txt
+    GZFX_0.0.29_PREFIELD_NODRIFT_ACCEPTANCE_ENGINEERING_RESULT.txt
+    GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.29_NODRIFT.txt
+
+======================================================================
+3. REAL-SKYRIM FIELD RESULT
+======================================================================
+
+Uploaded field archive:
+    GZFX343swd.zip
+
+SHA256:
+    1a1067d904601110acd84734921a494d90285f2715e0dc001f78e4dba32453dd
+
+Session:
+    session_20261025_192740_168836
+
+Runtime under test:
+    0.0.29-hdr-branch-recovery
+
+Skyrim runtime:
+    1.7.104.0
+
+Active scene frames:
+    12,123
+
+Exterior:
+    8,882
+
+Interior:
+    3,241
+
+Target semantic coverage:
+
+    HDRReduction:
+        12,123 / 12,123
+
+    BeforeTonemap:
+        12,123 / 12,123
+
+    BeforeGlobalTAA:
+        12,123 / 12,123
+
+    AfterGlobalTAA:
+        12,123 / 12,123
+
+Physical true <=2x2 terminal:
+    12,123 / 12,123
+
+Exact former 0.0.28 derived-HDR sibling failure path:
+
+    physically exercised on:
+        2,884 interior frames
+
+    HDRReduction success:
+        2,884 / 2,884
+
+    BeforeTonemap success:
+        2,884 / 2,884
+
+Telemetry:
+
+    enqueued:
+        2,270,373
+
+    written:
+        2,270,373
+
+    dropped:
+        0
+
+    shutdown:
+        complete
+
+Lifecycle, primary attachment, resource provenance, command-list ownership and
+physical Present timeline all remained clean.
+
+======================================================================
+4. SECOND DATA PASS — INDEPENDENT RAW REPLAY
+======================================================================
+
+The second DATA pass independently reconstructed the current merged 0.0.29
+source-set / reduction algorithm and replayed it over the raw detailed pipeline.
+
+Relevant late pipeline rows:
+    1,608,255
+
+Independent replay result:
+
+    HDRReduction:
+        12,123 / 12,123
+
+    BeforeTonemap:
+        12,123 / 12,123
+
+Replay vs emitted semantic frame-set mismatch:
+    0
+
+Independently discovered source-set utilization:
+
+    zero derived full-resolution HDR sources:
+        9,239 frames
+
+    exactly one derived source:
+        2,884 frames
+
+    two or more:
+        0
+
+Maximum field ancestry depth:
+    1
+
+The replay therefore independently rediscovered the exact physical sibling-path
+population without using the semantic verdict to decide success.
+
+======================================================================
+5. DOUBLE RESEARCH VERDICT
+======================================================================
+
+Both complete research passes independently concluded:
+
+    HDRReduction:
+        PROMOTE / FIELD-LOCK
+
+    BeforeTonemap:
+        PROMOTE / FIELD-LOCK
+
+    BeforeGlobalTAA:
+        REMAIN LOCKED
+
+    AfterGlobalTAA:
+        REMAIN LOCKED
+
+    PostTonemapPreUi:
+        REMAIN UNPROMOTED
+
+    WaterDomain:
+        REMAIN UNPROMOTED
+
+    AfterShadowProduction:
+        REMAIN UNPROMOTED
+
+    further HDR product repair:
+        NOT JUSTIFIED
+
+Pass 2 was adversarial and attempted to falsify Pass 1.
+
+It rejected the alternative explanations that:
+
+    any tiny RGBA16F chain could be mistaken for HDR;
+    the <=2x2 terminal was unrelated to adaptation;
+    BeforeTonemap was misordered or materially misnamed;
+    shader hashes alone were driving the semantic result;
+    external ENB/ReShade/Community Shaders/SKSE contamination caused the pass;
+    the successful HDR result automatically proved PostTonemapPreUi or
+    WaterDomain.
+
+======================================================================
+6. FINAL FIELD-LOCKED DEFINITIONS
+======================================================================
+
+HDRReduction:
+
+    FIELD-LOCKED STRUCTURAL CONTRACT
+
+Definition:
+
+    completion of the verified MAIN_HDR-descended HDR reduction/adaptation
+    spine at its true <=2x2 terminal for the current active scene frame.
+
+Preserved structural requirements:
+
+    canonical MAIN_HDR ancestry;
+    bounded verified full-resolution HDR sibling sources;
+    source capacity 4;
+    ancestry depth <=3;
+    one coherent descending chain;
+    unrelated chains fail closed;
+    true <=2x2 terminal.
+
+
+BeforeTonemap:
+
+    FIELD-LOCKED STRUCTURAL CONTRACT
+
+Definition:
+
+    immediately before Skyrim's HDR tonemap/blend/cinematic image-space pass
+    that consumes the completed reduction/adaptation result and produces the
+    full-resolution pre-TAA image.
+
+The event name is intentionally shorthand for the compound Skyrim
+HDRTonemapBlendCinematic image-space family.
+
+It does NOT mean:
+    before every color transform;
+    before all post-processing;
+    before every future mod/framework display pass.
+
+======================================================================
+7. INDEPENDENT PUBLIC SKYRIM CORROBORATION
+======================================================================
+
+Current public Community Shaders source independently exposes:
+
+    Main_HDRTonemapBlendCinematic_Render
+
+and documents Post Processing tonemap-time entry through that hook.
+
+Its current ISHDR.hlsl DOWNSAMPLE family includes luminance/adaptation behavior.
+
+Its BLEND family samples the adaptation average and performs:
+
+    exposure behavior;
+    Reinhard or Hejl-Burgess-Dawson tonemapping;
+    bloom;
+    saturation;
+    tint;
+    contrast;
+    cinematic intensity;
+    fade.
+
+This independently agrees with the GZFX field map:
+
+    MAIN_HDR-descended reduction/adaptation
+    ->
+    true <=2x2 terminal
+    ->
+    HDR tonemap/blend/cinematic
+    ->
+    global TAA.
+
+No Community Shaders implementation code was copied into GZFX.
+
+======================================================================
+8. RUNTIME CERTIFICATION SCOPE
+======================================================================
+
+Architecture:
+
+    runtime-independent D3D11/DXGI structural contract
+    LOCKED
+
+Real-field certification from this campaign:
+
+    Skyrim 1.7.104:
+        PROVEN
+
+Not claimed as field-certified by this campaign:
+
+    1.5.97
+    other 1.6.x families
+    1.6.1179
+    1.7.99
+
+This distinction is deliberate.
+
+Architecture support is not the same as field certification.
+
+======================================================================
+9. BLUEPRINT IMPLEMENTATION
+======================================================================
+
+Blueprint commit:
+    418535e5a422f950b196b487adc35f20004a2852
+
+Implementation branch:
+    feature/0.0.29-hdr-tonemap-field-closure
+
+Implementation changed EXACTLY:
+
+    AGENT.md
+    README.md
+
+Product source changes:
+    NONE
+
+Runtime-version changes:
+    NONE
+
+Test-definition changes:
+    NONE
+
+Renderer detector changes:
+    NONE
+
+Shader changes:
+    NONE
+
+Telemetry changes:
+    NONE
+
+The implementation removed stale "field-validation candidate" language and
+promoted HDRReduction / BeforeTonemap to field-locked authority while preserving
+the explicit 1.7.104 certification boundary.
+
+======================================================================
+10. PR PROOF
+======================================================================
+
+PR:
+    #34
+    0.0.29 HDR tonemap field closure
+
+Final head:
+    18b01b38db1bddb06b4810f99c8ffd030915754b
+
+Changed files:
+    AGENT.md
+    README.md
+
+Windows x64 workflow:
+    run 40257000915
+    job 121360884936
+
+CTest:
+    37 / 37 PASS
+    0 failures
+    total test time 44.83 sec
+
+Critical no-drift tests #30-#37:
+    all PASS
+
+PR artifact:
+    id 12623007315
+    artifact-container bytes 400,627
+    digest:
+        sha256:e2796cb86a0e2597a57cb25326170c962fbedd38f49a41ea8f901fc23369d23a
+
+======================================================================
+11. PR BINARY NO-DRIFT PROOF
+======================================================================
+
+Baseline authority artifact:
+
+    merged-main 0.0.29 no-drift run:
+        40251939073
+
+    artifact:
+        12621407062
+
+Baseline package inner DLL raw CRC32:
+
+    d3d11.dll:
+        28a92d6a
+
+    dinput8.dll:
+        93c85def
+
+    GZFX.dll:
+        fde6d50b
+
+PR #34 raw rebuilt CRC32:
+
+    d3d11.dll:
+        c166076e
+
+    dinput8.dll:
+        46fa6189
+
+    GZFX.dll:
+        f73925b6
+
+Raw CRC changed because each rebuild receives new PE timestamp metadata.
+
+Exact byte comparison:
+
+    d3d11.dll:
+        exactly 4 differing bytes
+        offsets 272, 273, 25220, 25221
+
+    dinput8.dll:
+        exactly 4 differing bytes
+        offsets 288, 289, 24436, 24437
+
+    GZFX.dll:
+        exactly 4 differing bytes
+        offsets 288, 289, 762452, 762453
+
+Those bytes are only:
+
+    IMAGE_FILE_HEADER.TimeDateStamp
+    IMAGE_DEBUG_DIRECTORY.TimeDateStamp
+
+After zeroing ONLY those timestamp fields:
+
+    every remaining byte is identical.
+
+Normalized SHA256:
+
+    d3d11.dll
+        4319a80de2b1e4f8c73cfeeecc2ceae6ffde858c84839cd38d7b1b66819ed129
+
+    dinput8.dll
+        a00208da3d1247df46881d974d3537643772d3f7a1a28ad1a3cdc2736980d41a
+
+    GZFX.dll
+        c25c8934638de08cb05fd161c3dae6154c8367b57575f232419ce26354932b7a
+
+PRODUCT EXECUTABLE CODE/DATA DRIFT:
+    ZERO
+
+======================================================================
+12. MERGE PROOF
+======================================================================
+
+Merge commit:
+
+    c2a1478ce972d886954c294c0c69280ba361609f
+
+Merge-base-to-merge changed EXACTLY:
+
+    AGENT.md
+    README.md
+
+No product source changed.
+
+======================================================================
+13. MERGED-MAIN CI POLICY NOTE
+======================================================================
+
+The blueprint requested a fresh merged-main 37/37 workflow.
+
+The repository workflow is intentionally configured:
+
+    push to main
+    paths-ignore:
+        LANCE YOUR FILE IS HERE/**
+        GZFXWorkFolder/**
+        README.md
+        AGENT.md
+
+Because PR #34 merged ONLY:
+
+    README.md
+    AGENT.md
+
+GitHub correctly did NOT start a main push workflow for merge commit:
+
+    c2a1478ce972d886954c294c0c69280ba361609f
+
+This is not a test failure.
+
+No fake CI trigger was introduced.
+
+Specifically, closure did NOT:
+
+    touch CMake;
+    touch product code;
+    add meaningless source whitespace;
+    alter workflow configuration;
+    create a non-ignored file merely to manufacture a main-build badge.
+
+Equivalent no-drift proof is:
+
+    PR #34 tested the exact unchanged product source:
+        37/37 PASS;
+
+    merge diff is documentation-only;
+
+    PR artifact normalizes byte-identical to the field-tested product baseline;
+
+    current main package remains the exact previously field-tested package blob.
+
+This policy exception is recorded explicitly rather than silently claiming a
+merged-main run that did not occur.
+
+======================================================================
+14. PACKAGE PROOF
+======================================================================
+
+Because the docs-only merge is ignored by the push workflow, no package-refresh
+build was triggered.
+
+That is desirable for this authority-only wave.
+
+Current main package remains:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Git blob:
+
+    3c5d2473228e1a4d2d2a59fd19cc136a7671d791
+
+This is the exact package that was already:
+
+    built from the 37-test no-drift product baseline;
+    installed for the successful 0.0.29 real-Skyrim field session;
+    validated by the two DATA passes described above.
+
+Package contents remain exactly:
+
+    d3d11.dll
+    dinput8.dll
+    GZFX.dll
+
+No new user package is necessary for this closure wave because product bytes
+did not change.
+
+======================================================================
+15. FINAL CLOSED SPINE
+======================================================================
+
+The following image-space spine is now formally FIELD-CLOSED on Skyrim 1.7.104:
+
+    MAIN_HDR-descended HDR reduction/adaptation
+    ->
+    HDRReduction
+    ->
+    BeforeTonemap
+    ->
+    Skyrim HDR tonemap/blend/cinematic
+    ->
+    BeforeGlobalTAA
+    ->
+    global TAA
+    ->
+    AfterGlobalTAA
+
+Do NOT reinterpret this as the entire renderer being closed.
+
+Still unpromoted:
+
+    PostTonemapPreUi
+    WaterDomain
+    AfterShadowProduction
+
+======================================================================
+16. NEXT FRONTIER
+======================================================================
+
+No further HDR branch-recovery work is justified by current evidence.
+
+No additional field test is required for HDRReduction / BeforeTonemap closure.
+
+Next graphics wave:
+
+    NOT YET SELECTED
+
+Research consensus identifies the highest-value unresolved late-stack target as:
+
+    PostTonemapPreUi
+
+but that must begin through a fresh evidence cycle.
+
+Do NOT implement a speculative PostTonemapPreUi detector from this closure
+record.
+
+======================================================================
+17. CLOSURE VERDICT
+======================================================================
+
+0.0.29 HDR / TONEMAP FIELD-CLOSURE = COMPLETE.
+
+Two DATA passes:
+    AGREE.
+
+Two independent RESEARCH passes:
+    AGREE.
+
+HDRReduction:
+    FIELD-LOCKED.
+
+BeforeTonemap:
+    FIELD-LOCKED.
+
+BeforeGlobalTAA / AfterGlobalTAA:
+    REMAIN FIELD-LOCKED.
+
+Skyrim 1.7.104:
+    REAL-FIELD PROVEN.
+
+PR #34:
+    37/37 GREEN.
+
+Product source:
+    UNCHANGED.
+
+Product executable code/data:
+    NO DRIFT.
+
+Current successful field-tested package:
+    UNCHANGED.
+
+END ENGINEERING RESULT
