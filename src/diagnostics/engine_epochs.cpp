@@ -29,6 +29,7 @@ namespace gzfx::diagnostics::engine_epochs
 
         constexpr std::uint32_t kRuntimeKnown = 1u << 0;
         constexpr std::uint32_t kEngineProfile = 1u << 1;
+        constexpr std::uint32_t kEngineDiscovery = 1u << 2;
         constexpr std::uint64_t kPostProcessingExpectedRva = 0x1481B80ull;
         constexpr std::uint64_t kPreUiExpectedRva = 0xE44850ull;
 
@@ -141,11 +142,20 @@ namespace gzfx::diagnostics::engine_epochs
                 minor == 6 &&
                 patch == 1170;
 
+            const bool engineDiscovery =
+                minor == 7 &&
+                patch == 104;
+
             return
                 kRuntimeKnown |
                 (
                     engineProfile
                         ? kEngineProfile
+                        : 0u
+                ) |
+                (
+                    engineDiscovery
+                        ? kEngineDiscovery
                         : 0u
                 );
         }
@@ -717,13 +727,20 @@ namespace gzfx::diagnostics::engine_epochs
                 (runtimeClass &
                  kEngineProfile) != 0;
 
+            g_status.discoverySupported =
+                (runtimeClass &
+                 kEngineDiscovery) != 0;
+
+            g_status.discoveryOnly =
+                g_status.discoverySupported &&
+                !g_status.engineProfileAvailable;
+
             if (!g_status.engineProfileAvailable)
             {
-                if (g_status.runtimeProfile ==
-                    kAe17104Profile)
+                if (g_status.discoverySupported &&
+                    g_status.runtimeProfile ==
+                        kAe17104Profile)
                 {
-                    g_status.discoverySupported = true;
-                    g_status.discoveryOnly = true;
 
                     const ImageInfo image =
                         MainImage();
@@ -996,11 +1013,21 @@ namespace gzfx::diagnostics::engine_epochs
                 bytes + 9,
                 sizeof(displacement));
 
-            result.targetRva =
-                matchRva +
+            const auto target =
+                static_cast<std::int64_t>(
+                    matchRva) +
                 13 +
                 static_cast<std::int64_t>(
                     displacement);
+
+            if (target < 0)
+            {
+                return result;
+            }
+
+            result.targetRva =
+                static_cast<std::uint64_t>(
+                    target);
 
             result.matched = true;
             return result;
