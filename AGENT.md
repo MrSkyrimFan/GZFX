@@ -209,7 +209,8 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-TEST / NO-DRIFT-CLOSED HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
+HDR / TONEMAP / GLOBAL-TAA IMAGE-SPACE SPINE FIELD-CLOSED
+next graphics wave NOT YET SELECTED
 
 graphics bootstrap:
 standalone GZFX d3d11.dll + dinput8.dll
@@ -235,12 +236,23 @@ explicit primary-swapchain present epochs
 
 global TAA:
 field-locked structural contract
-1:1 on every 0.0.28 active scene frame
+BeforeGlobalTAA / AfterGlobalTAA
+1:1 on all 12,123 active 0.0.29 field frames
 
-HDR:
-bounded full-resolution source ancestry
-bounded sibling-branch recovery
+HDRReduction:
+field-locked structural contract
+Skyrim 1.7.104 real-field proven
+bounded MAIN_HDR ancestry
+bounded full-resolution sibling sources
+source capacity 4
+ancestry depth <=3
+one coherent reduction chain
 true <=2x2 terminal
+
+BeforeTonemap:
+field-locked structural contract
+Skyrim 1.7.104 real-field proven
+immediately before Skyrim's HDR tonemap/blend/cinematic image-space pass
 
 process lifecycle:
 qualified primary renderer
@@ -253,9 +265,12 @@ AfterShadowProduction
 WaterDomain
 PostTonemapPreUi
 
+runtime field certification:
+1.7.104 PROVEN
+other catalog runtimes architecture-supported but not field-certified by this campaign
+
 next graphics wave:
 NOT YET SELECTED
-wait for 0.0.29 real-Skyrim field DATA
 ```
 
 0.0.28 real-Skyrim DATA proved the lifecycle/front-door hardening in live Skyrim
@@ -285,11 +300,23 @@ frame-local source isolation. Final PR and merged-main CI are 37/37. Product
 source remained unchanged, and binary comparison proved zero executable
 code/data drift after normalizing PE linker/debug timestamps.
 
-The current priority is field-proof of the 0.0.29 repair. Do not start another
-graphics-quality wave until real-Skyrim DATA confirms interior HDRReduction and
-BeforeTonemap coverage without regressing TAA, ownership, lifecycle, or the
-locked renderer foundation. Do not invent WaterDomain or PostTonemapPreUi from
-names, hashes, or draw ordinals alone.
+The 0.0.29 real-Skyrim field session closed that validation requirement on
+Skyrim 1.7.104. Across 12,123 active scene frames, HDRReduction, BeforeTonemap,
+BeforeGlobalTAA, and AfterGlobalTAA each occurred exactly once per active frame;
+the true <=2x2 terminal was present on every active frame; and the former
+derived-HDR sibling failure topology was exercised successfully on 2,884
+interior frames. A second independent raw replay of the current 0.0.29 detector
+matched the emitted HDRReduction and BeforeTonemap frame sets with zero
+mismatch.
+
+HDRReduction and BeforeTonemap are therefore field-locked structural contracts
+for the currently field-proven 1.7.104 runtime. The D3D architecture remains
+runtime-independent, but this campaign does not claim real-field certification
+for 1.5.97, other 1.6.x families, 1.6.1179, or 1.7.99.
+
+Do not invent WaterDomain, PostTonemapPreUi, or AfterShadowProduction from
+names, hashes, draw ordinals, TAA completion, or proximity to Present. Those
+remain separate future evidence problems.
 
 ## 11. Repository lifecycle proof
 
