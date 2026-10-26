@@ -1,0 +1,515 @@
+GZFX RESEARCH PASS 12 — INDEPENDENT PASS 2
+ADVERSARIAL REVIEW OF BOUNDED HDR SOURCE-SET DESIGN
+Research date: October 25, 2026
+Status: RESEARCH PASS 2 COMPLETE / PASS-1 DESIGN SURVIVES FALSIFICATION
+Controlling inputs:
+    both 0.0.28 field DATA passes
+    current main source
+    Research Pass 12 Pass 1
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+The owner required the entire research phase to be performed twice.
+
+Pass 2 therefore treated Pass 1's recommendation as an untrusted proposal.
+
+Goals:
+
+    reproduce the source problem independently;
+    test alternative repairs;
+    replay the proposed repair over all raw field pipeline rows;
+    attack it with negative/adversarial graphs;
+    inspect external renderer-tool architecture again;
+    decide whether the blueprint should retain or reject Pass 1.
+
+======================================================================
+2. INDEPENDENT CURRENT-SOURCE RECHECK
+======================================================================
+
+Re-reading current semantic_authority.cpp confirms:
+
+    full-resolution HDR ancestry is discovered only inside:
+        if (hdrReductionStep == 0)
+
+    once step becomes nonzero:
+        the detector can only:
+            continue the selected chain;
+            or fresh-restart from the one stored source.
+
+No later sibling source can become eligible.
+
+This matches the DATA Pass-2 exact detector replay.
+
+No hidden second ancestry path exists elsewhere in current source.
+
+BeforeTonemap still depends only on:
+
+    hdrReductionComplete;
+    hdrReductionFinalIdentity;
+    a pass reading that identity;
+    full-resolution R8G8B8A8 output.
+
+Therefore the 2,640 BeforeTonemap misses remain downstream fallout from
+HDRReduction state failure, not an independent detector.
+
+======================================================================
+3. COMPLETE FIELD-DATA REPLAY OF THE PROPOSED PASS-1 RULE
+======================================================================
+
+Pass 2 implemented the proposed bounded-source-set algorithm independently in
+analysis and streamed all ten raw pipeline_runs_*.csv files again.
+
+Inputs:
+
+    all 1,022,351 detailed pipeline rows;
+    resources.csv for resource shape/format;
+    canonical MAIN_HDR identity from semantic evidence;
+    no shader-hash matching;
+    no draw-ordinal matching.
+
+Rules replayed:
+
+    canonical MAIN_HDR implicit depth 0;
+
+    remember full-resolution RGBA16F outputs that read MAIN_HDR or an already
+    remembered candidate;
+
+    ancestry depth <= 3;
+
+    fixed candidate capacity 4;
+
+    one active reduction chain;
+
+    start/restart root may read MAIN_HDR or any remembered source;
+
+    continuation must consume prior output and monotonically reduce area;
+
+    terminal requires step >= 4 and <=2x2.
+
+Result:
+
+    active scene frames:
+        7,541
+
+    proposed detector completions:
+        7,541
+
+    missing active frames:
+        0
+
+    frames with zero derived source candidates:
+        4,901
+
+    frames with exactly one derived source candidate:
+        2,640
+
+    frames needing more than one:
+        0
+
+The proposal repairs every real field miss without using a field-specific hash
+or ordinal.
+
+======================================================================
+4. WHY THIS RESULT IS STRONGER THAN SIMPLY CHANGING ONE CONDITION
+======================================================================
+
+A trivial patch such as:
+
+    allow ancestry when step != 0
+
+is underspecified.
+
+It does not define:
+
+    whether the active reduction chain should reset;
+    whether the previous source should be forgotten;
+    how sibling branches coexist;
+    how many candidates are legal;
+    what ancestry depth remains legal.
+
+The source-set model answers each question explicitly:
+
+    full-res ancestry remains observable while HDR is incomplete;
+
+    observing a new candidate does NOT destroy the current reduction chain;
+
+    only a later incompatible downsample that reads a verified source causes
+    normal fresh-root restart;
+
+    old verified source branches remain available;
+
+    candidate count and depth are bounded.
+
+That is materially safer than a single boolean-condition change.
+
+======================================================================
+5. ALTERNATIVE REPAIR RE-EVALUATION
+======================================================================
+
+A. ALWAYS RESET THE CHAIN WHEN A NEW FULL-RES HDR DESCENDANT APPEARS
+
+This would fix the field data.
+
+Rejected after second review because:
+
+    it may discard a valid reduction chain merely because another legitimate
+    full-resolution post-processing branch exists.
+
+The field data does not require destructive reset.
+
+
+B. REPLACE SOURCE WITH THE LATEST FULL-RES DESCENDANT
+
+Also fixes the observed field.
+
+Rejected because:
+
+    it preserves the original greedy single-source architecture.
+
+It can simply fail in the opposite direction if multiple sibling branches are
+valid.
+
+
+C. KEEP A BOUNDED SOURCE SET; ONE REDUCTION CHAIN
+
+Still preferred.
+
+It adds only the missing memory of verified sibling sources while preserving
+all current terminal/restart logic.
+
+
+D. MULTIPLE FULL REDUCTION CHAINS IN PARALLEL
+
+Not currently necessary.
+
+The real field topology needs multiple source hypotheses but only one active
+descending chain at a time.
+
+Parallel reduction-chain state would add complexity without evidence.
+
+Do not build it until contradictory field evidence requires it.
+
+======================================================================
+6. ADVERSARIAL SYNTHETIC FALSIFICATION
+======================================================================
+
+Pass 2 independently modeled negative graphs against the proposed rules.
+
+CASE 1 — REAL FIELD FAILURE ORDER
+
+    MAIN_HDR
+    -> false 640x360 root
+    -> full-res HDR descendant
+    -> real root
+    -> descending chain
+    -> 2x2
+
+Result:
+    ACCEPT / complete
+
+Expected:
+    ACCEPT
+
+
+CASE 2 — EXISTING 0.0.27 TEST ORDER
+
+    MAIN_HDR
+    -> full-res HDR descendant
+    -> false root
+    -> real root
+    -> descending chain
+    -> 2x2
+
+Result:
+    ACCEPT / complete
+
+Expected:
+    ACCEPT
+
+
+CASE 3 — UNRELATED FULL-RES HDR
+
+    unrelated resource
+    -> full-res RGBA16F
+    -> complete downsample chain
+    -> 2x2
+
+No canonical MAIN_HDR ancestry.
+
+Result:
+    REJECT
+
+Expected:
+    REJECT
+
+
+CASE 4 — ANCESTRY DEEPER THAN CAP
+
+    MAIN_HDR
+    -> full-res depth 1
+    -> full-res depth 2
+    -> full-res depth 3
+    -> full-res depth 4
+    -> reduction chain
+
+Result:
+    depth-4 source is not admitted;
+    chain rooted only in that source does not complete semantically.
+
+Expected:
+    REJECT / fail closed
+
+The proposed design therefore survives both required positive orders and the
+most important negative cases.
+
+======================================================================
+7. CAPACITY REVIEW
+======================================================================
+
+Real field requirement:
+
+    maximum derived source candidates per active frame:
+        1
+
+Pass-1 proposal:
+
+    fixed capacity:
+        4
+
+Pass-2 verdict:
+
+    4 is conservative and acceptable.
+
+It is not justified to make this dynamic/unbounded.
+
+Capacity-full behavior must be:
+
+    do not evict an older verified source merely to admit a new one;
+    fail closed on the additional source.
+
+Why no eviction:
+
+    eviction would introduce a new heuristic choice about which branch matters.
+
+A fixed set preserves deterministic behavior.
+
+======================================================================
+8. DEPTH REVIEW
+======================================================================
+
+Current architecture already caps full-resolution ancestry depth at:
+
+    3
+
+No field evidence requires changing it.
+
+Pass 2 explicitly tested a fourth-level source and confirmed the intended
+negative policy.
+
+Keep:
+
+    max depth = 3.
+
+Do not use the repair as an excuse to broaden arbitrary graph traversal.
+
+======================================================================
+9. ROOT ELIGIBILITY SHOULD BE IDENTITY-STRUCTURAL
+======================================================================
+
+Root admission must ask:
+
+    does this downsample read canonical MAIN_HDR
+    OR one of the bounded verified full-res HDR source identities?
+
+It must NOT ask:
+
+    is pixel shader hash F026...?
+    is this draw exactly 27 ordinals after some earlier draw?
+    is this resource pointer 0x251E...?
+    are we in an interior?
+
+Those field values prove the defect.
+
+They are not the contract.
+
+This distinction is critical for runtime portability.
+
+======================================================================
+10. D3D11 REFERENCE RECHECK
+======================================================================
+
+Microsoft's D3D11 binding semantics again support exact resource lineage:
+
+    PSSetShaderResources binds concrete resource views for reading;
+
+    OMSetRenderTargets binds concrete output views;
+
+    overlapping read/write subresources are nulled rather than silently
+    remaining simultaneously bound.
+
+Therefore using the observed read/write resource identities as graph edges is
+sound for this bounded purpose.
+
+No additional engine hook is required to know that a full-resolution HDR output
+was derived from MAIN_HDR.
+
+======================================================================
+11. RESHADE / RENDERDOC / 3DMIGOTO CROSS-CHECK
+======================================================================
+
+Second-pass architecture comparison:
+
+ReShade generic depth tracking:
+    keeps a per-frame collection of candidate depth resources and accumulated
+    evidence instead of treating the first plausible resource as final.
+
+ReShade API:
+    exposes resource/view lifecycle and render-target/shader-resource binding
+    as first-class events.
+
+RenderDoc D3D11 replay:
+    maintains ResourceId-based resource descriptions and event usage rather
+    than reducing renderer identity to shader hashes.
+
+3Dmigoto:
+    tracks render targets/resources and explicitly documents limitations and
+    contamination concerns around hash-only identity.
+
+Independent lesson:
+
+    bounded identity/state tracking is the mature pattern;
+    first-match shader/hash inference is not.
+
+The GZFX proposal follows that architectural direction while remaining
+independently implemented.
+
+======================================================================
+12. SKYRIM COMMUNITY SHADERS CROSS-CHECK
+======================================================================
+
+Current Community Shaders HDR Display source explicitly intercepts Skyrim's
+ImageSpaceManager post-processing path and manipulates float16 HDR targets.
+
+This again supports the possibility of multiple same-frame full-resolution HDR
+branches inside Skyrim post-processing.
+
+The correct GZFX detector therefore needs branch tolerance.
+
+It should not assume the first MAIN_HDR-descended image-space branch is the only
+one.
+
+======================================================================
+13. TEST STRATEGY AFTER SECOND REVIEW
+======================================================================
+
+Required new positive test:
+
+    hdr_late_descendant_recovery_contract
+
+Exact topology:
+    false root BEFORE full-res descendant.
+
+Required new negative test:
+
+    hdr_unrelated_fullres_rejected
+
+The negative test must prove the candidate set did not broaden into arbitrary
+RGBA16F graph acceptance.
+
+Existing tests that must remain:
+
+    hdr_descendant_reduction_contract
+    global_taa_without_hdr_completion
+    late_stack_cartography
+    semantic authority foundation
+    all Waves 1-4 tests.
+
+No test assertion should be weakened.
+
+======================================================================
+14. IMPLEMENTATION SURFACE
+======================================================================
+
+The expected product-code change should remain narrow:
+
+    src/render/semantic_authority.cpp
+
+Test changes:
+
+    tests/wave3_pipeline_harness.cpp
+    CMakeLists.txt
+
+Version/docs as required for the new runtime wave:
+
+    include/gzfx/version.hpp
+    CMakeLists project version
+    README.md
+    AGENT.md / cycle authority records at closure
+
+No renderer-front-door/lifecycle rewrite is justified.
+
+No telemetry format expansion is required to fix this defect.
+
+======================================================================
+15. PASS-2 ATTEMPT TO FIND A REASON FOR ANOTHER FIELD PROBE
+======================================================================
+
+None found.
+
+A new probe would merely observe information already present in the existing
+1,022,351-row dataset.
+
+We already possess:
+
+    both branch identities;
+    execution order;
+    dimensions;
+    formats;
+    reads;
+    writes;
+    terminal path;
+    downstream tonemap candidate;
+    TAA landmark.
+
+The missing behavior is in current source state, not missing telemetry.
+
+Do not consume another field session before repair.
+
+======================================================================
+16. RESEARCH PASS-2 VERDICT
+======================================================================
+
+Research Pass 1 is CONFIRMED.
+
+Recommended blueprint architecture:
+
+    bounded full-resolution HDR source set
+        capacity 4
+        ancestry depth <=3
+        canonical MAIN_HDR implicit root
+
+    full-res source discovery remains active until HDRReduction completes
+
+    one existing reduction chain remains
+
+    root/restart accepts canonical MAIN_HDR or any verified source
+
+    coherent descent unchanged
+
+    true <=2x2 terminal unchanged
+
+    BeforeTonemap unchanged
+
+    global TAA remains independent
+
+    add exact late-descendant positive acceptance
+
+    add unrelated-branch negative acceptance
+
+Research is complete.
+
+Proceed directly to BLUEPRINT and implementation as authorized by owner.
+
+END RESEARCH PASS 2
