@@ -1,0 +1,122 @@
+GZFX 0.0.30 TECHNICAL APPENDIX
+POST-TONEMAP / PRE-UI CARTOGRAPHY
+
+RUNTIME:
+    0.0.30-post-tonemap-preui-cartography
+
+MERGE:
+    5348f762825c0156a029d8b057699920f2a8bb6e
+
+PACKAGE:
+    refresh 9d53a4d8d5ed581286e47b223934999459cff916
+    blob e72212028f2f01d4a899a759c519e983818f792e
+    bytes 403,999
+
+INNER DLL:
+    d3d11.dll
+        36,352
+        CRC32 743ad633
+
+    dinput8.dll
+        35,328
+        CRC32 a863b914
+
+    GZFX.dll
+        941,056
+        CRC32 3471f80e
+
+PR CI:
+    run 40259044927
+    job 121367165814
+    39/39 PASS
+
+MERGED MAIN CI:
+    run 40259443213
+    job 121368406485
+    39/39 PASS
+
+LATE DETAIL POLICY:
+
+    Start:
+        AfterAmbientScreenSpaceComposite / AfterExecution
+
+    UiPresent:
+        no action
+
+    Present callbacks:
+        detail remains active
+
+    BeforeOriginalPresent:
+        flush + stop late detail
+
+    AfterOriginalPresent:
+        no duplicate stop
+
+Reported detail gate:
+    late_to_before_original_present
+
+ENGINE RUNTIME CLASS:
+
+    1.6.1170:
+        known
+        verified engine profile
+        hooks allowed after exact validation
+
+    1.7.104:
+        known
+        discovery supported
+        discovery only
+        engine profile unavailable
+        NO hooks
+
+DISCOVERY MASKS:
+
+post-processing:
+    ?? 48 8B 0D ?? ?? ?? ??
+    E8 ?? ?? ?? ??
+    48 8B 05 ?? ?? ?? ??
+    48 8B 88 28
+
+pre-UI:
+    ?? 48 8D 0D ?? ?? ?? ??
+    E8 ?? ?? ?? ??
+    48 8B 05 ?? ?? ?? ??
+    48 8B 48 10
+
+Discovery validates:
+    fixed opcode bytes
+    E8 at +8
+    in-image decoded target
+    executable target
+
+Status fields:
+    discoverySupported
+    discoveryOnly
+    postProcessingDiscoveryMatches
+    postProcessingCandidateMatchRva
+    postProcessingCandidateTargetRva
+    preUiDiscoveryMatches
+    preUiCandidateMatchRva
+    preUiCandidateTargetRva
+
+listener_status fields:
+    engine_discovery_supported
+    engine_discovery_only
+    engine_post_processing_discovery_matches
+    engine_post_processing_candidate_match_rva
+    engine_post_processing_candidate_target_rva
+    engine_pre_ui_discovery_matches
+    engine_pre_ui_candidate_match_rva
+    engine_pre_ui_candidate_target_rva
+
+TESTS ADDED:
+    engine_epoch_discovery_contract
+    telemetry_physical_present_detail_gate
+
+SEMANTIC STATUS:
+    PostTonemapPreUi UNPROMOTED
+    WaterDomain UNPROMOTED
+    AfterShadowProduction UNPROMOTED
+
+FIELD TEST NEXT.
+END TECHNICAL APPENDIX
