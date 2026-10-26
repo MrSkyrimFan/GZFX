@@ -1,0 +1,178 @@
+GZFX 0.0.29 NO-DRIFT TECHNICAL APPENDIX
+Date: October 25-26, 2026
+
+RUNTIME:
+    0.0.29-hdr-branch-recovery
+
+PRODUCT ALGORITHM:
+    unchanged by no-drift closure
+
+PR #33:
+    test/build-only
+
+    changed:
+        CMakeLists.txt
+        tests/wave3_pipeline_harness.cpp
+
+    head:
+        6c8f3084bcbde2cb3b9c0b15035c473d4d2dab3d
+
+    run:
+        40251607208
+
+    artifact:
+        12620647674
+        sha256:68fd3c1d967071c6ffd50a066c5813cba77786b1f48bd7571334838685fdc4e2
+
+    CTest:
+        37/37 PASS
+        0 failures
+
+MERGE:
+    f923e21ee8d477fe34cf6df0ba70f715c2db8231
+
+MERGED MAIN:
+    run:
+        40251939073
+
+    job:
+        121345555216
+
+    artifact:
+        12621407062
+        sha256:fb195fd02ddf64bdda27d41013a042e26a0174f22cf5e3713c6c652fcbe72f6f
+
+    CTest:
+        37/37 PASS
+        0 failures
+
+FIELD-FAITHFUL TEST #31:
+
+    distinct false root and real root;
+    equal dimensions;
+    unrelated same-frame filler between false root and later HDR sibling;
+    no ordinal constant in product or acceptance.
+
+STAGE ORACLE:
+
+    parses stages.csv.
+
+    active frame vector:
+        after_opaque_world_mrt
+
+    positive requires exact vector equality:
+        HDRReduction
+        BeforeTonemap
+        BeforeGlobalTAA
+        AfterGlobalTAA
+
+    negative HDR requires:
+        HDRReduction empty
+        BeforeTonemap empty
+
+    TAA still exact active-frame vector.
+
+BOUNDARY TESTS:
+
+    #33 capacity fourth accepted
+    #34 capacity fifth rejected
+    #35 ancestry depth three accepted
+    #36 ancestry depth four rejected
+    #37 source frame isolation
+
+SOURCE-SET CONTRACT:
+
+    capacity:
+        4
+
+    maximum full-resolution ancestry depth:
+        3
+
+    no eviction
+
+    source state:
+        FrameState-local
+
+    canonical MAIN_HDR:
+        implicit depth 0
+
+    reduction:
+        one active chain
+
+    terminal:
+        coherent descent
+        step >= 4
+        width <= 2
+        height <= 2
+
+BINARY NO-DRIFT INVESTIGATION:
+
+Baseline original merged 0.0.29 artifact:
+    run 40249851770
+    artifact 12620178562
+
+PR #33 and merged-main builds changed raw DLL CRCs.
+
+Exact binary diff proved:
+
+    d3d11.dll:
+        exactly 4 differing bytes
+
+    dinput8.dll:
+        exactly 4 differing bytes
+
+    GZFX.dll:
+        exactly 4 differing bytes
+
+The differing bytes are only:
+    IMAGE_FILE_HEADER.TimeDateStamp
+    IMAGE_DEBUG_DIRECTORY.TimeDateStamp
+
+No other byte differs.
+
+Normalized SHA256 after zeroing ONLY those timestamp fields:
+
+    d3d11.dll
+        4319a80de2b1e4f8c73cfeeecc2ceae6ffde858c84839cd38d7b1b66819ed129
+
+    dinput8.dll
+        a00208da3d1247df46881d974d3537643772d3f7a1a28ad1a3cdc2736980d41a
+
+    GZFX.dll
+        c25c8934638de08cb05fd161c3dae6154c8367b57575f232419ce26354932b7a
+
+Normalized identities match across:
+    old merged 0.0.29
+    PR #33
+    new merged main
+
+Conclusion:
+    product executable code/data drift = ZERO
+
+PACKAGE REFRESH:
+    8f35e2e6b95f96b7b231240d6cd7d9580d41aa8b
+
+    changed only Lance ZIP
+
+Current package:
+    blob 3c5d2473228e1a4d2d2a59fd19cc136a7671d791
+    bytes 401,287
+
+    d3d11.dll
+        36,352 bytes
+        raw CRC 28a92d6a
+
+    dinput8.dll
+        35,328 bytes
+        raw CRC 93c85def
+
+    GZFX.dll
+        935,424 bytes
+        raw CRC fde6d50b
+
+These raw CRCs match the new merged-main artifact.
+
+NEXT:
+    field validation only.
+
+END TECHNICAL APPENDIX
