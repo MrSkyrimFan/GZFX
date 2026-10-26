@@ -1,0 +1,612 @@
+GZFX RESEARCH PASS 12 — PASS 1
+BOUNDED HDR BRANCH RECOVERY AFTER EARLY FALSE ROOT
+Research date: October 25, 2026
+Status: RESEARCH PASS 1 COMPLETE
+Controlling DATA:
+    GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS.txt
+    GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS_PASS_2.txt
+
+======================================================================
+1. EXECUTIVE VERDICT
+======================================================================
+
+The 0.0.28 field evidence is sufficient to design a deterministic repair.
+
+The defect is not HDR discovery in general.
+
+It is a greedy single-source state problem:
+
+    current code stores one hdrReductionSourceIdentity;
+
+    full-resolution ancestry discovery runs only while hdrReductionStep == 0;
+
+    an early plausible downsample can therefore freeze the source state before
+    a later valid full-resolution HDR sibling branch appears.
+
+The recommended repair is:
+
+    retain a very small bounded per-frame set of VERIFIED FULL-RESOLUTION HDR
+    SOURCE IDENTITIES descended from canonical MAIN_HDR;
+
+    allow the one active reduction candidate to start/restart from any member
+    of that bounded set;
+
+    keep the existing coherent descending-chain and true <=2x2 terminal rules.
+
+This preserves fail-closed behavior while covering the real field topology.
+
+No shader hash, draw ordinal, resource pointer, executable offset, or engine
+profile is required.
+
+======================================================================
+2. FIELD TOPOLOGY THAT THE DESIGN MUST SUPPORT
+======================================================================
+
+The exact 2,640-frame field failure is:
+
+    canonical MAIN_HDR
+    ->
+    early plausible 640x360 downsample
+        current detector step becomes 1
+    ->
+    later 2560x1440 RGBA16F transform reading canonical MAIN_HDR
+    ->
+    real 640x360 reduction root reading that new HDR output
+    ->
+    160x90
+    ->
+    40x23
+    ->
+    10x6
+    ->
+    3x2
+    ->
+    2x2
+    ->
+    downstream exposure / reconstruction
+    ->
+    full-resolution RGBA8 transition
+    ->
+    global TAA
+
+Every field failure shares this topology.
+
+The later full-resolution transform is a sibling branch from canonical MAIN_HDR,
+not a descendant of the already-selected false 640x360 reduction candidate.
+
+That distinction is the core design requirement.
+
+======================================================================
+3. CURRENT SOURCE MODEL
+======================================================================
+
+Current FrameState stores:
+
+    hdrReductionStep
+    hdrReductionSourceIdentity
+    hdrFullResAncestryDepth
+    hdrReductionLastIdentity
+    hdrReductionLastWidth
+    hdrReductionLastHeight
+    hdrReductionComplete
+    hdrReductionFinalIdentity
+
+Current source logic:
+
+    when step == 0:
+        source = stored source or MAIN_HDR
+
+        full-res RGBA16F output reading source:
+            replace stored source
+            increment ancestry depth
+
+        <= half-resolution output reading source:
+            begin reduction step 1
+
+    when step != 0:
+        if output consumes prior reduction node and descends:
+            continue chain
+
+        otherwise:
+            fresh root may restart ONLY if it reads the single stored source
+
+This works for:
+
+    MAIN_HDR
+    -> full-res descendant
+    -> false root
+    -> real root
+
+but not:
+
+    MAIN_HDR
+    -> false root
+    -> later full-res descendant
+    -> real root
+
+because ancestry observation has been disabled by the time the sibling appears.
+
+======================================================================
+4. DIRECT3D 11 RESOURCE-LINEAGE BASIS
+======================================================================
+
+Microsoft D3D11 documentation confirms that shader-resource bindings and output
+bindings are real resource-view state, and overlapping read/write views are
+automatically nulled to prevent simultaneous conflicting access.
+
+Relevant Microsoft documentation:
+
+    ID3D11DeviceContext::PSSetShaderResources
+    ID3D11DeviceContext::OMSetRenderTargets
+
+Implication for GZFX:
+
+    a recorded pass that reads resource A and writes resource B is a legitimate
+    same-frame lineage edge;
+
+    GZFX does not need shader names to establish that B is downstream of A.
+
+The field archive already records:
+
+    resource identity;
+    resource shape;
+    format;
+    pass reads;
+    pass writes;
+    execution order.
+
+That is enough for bounded structural ancestry.
+
+======================================================================
+5. MATURE FRAMEWORK ARCHITECTURE LESSONS
+======================================================================
+
+ReShade's current public add-on API exposes lifecycle/state events for:
+
+    init/create/destroy resource;
+    init/create/destroy resource view;
+    bind render targets and depth-stencil;
+    bind descriptors;
+    draw;
+    dispatch;
+    copy/resolve;
+    present.
+
+It also exposes mapping from resource views back to underlying resources.
+
+This reinforces the GZFX strategy:
+
+    resource identity + binding + execution structure is a valid renderer
+    authority layer independent of shader names.
+
+ReShade's generic depth add-on also demonstrates an important architectural
+lesson:
+
+    do not greedily commit to the first plausible resource;
+
+    keep bounded per-frame candidate state and select/commit only after stronger
+    evidence accumulates.
+
+GZFX does not need to copy ReShade's heuristic.
+
+The relevant lesson is candidate-state architecture rather than first-match
+greediness.
+
+3Dmigoto's frame-analysis/resource infrastructure similarly tracks actual
+resources/render targets and documents that hashes can change or be
+contaminated.
+
+That supports GZFX's existing rule:
+
+    hashes are evidence labels;
+    structural resource lineage is the contract.
+
+======================================================================
+6. SKYRIM-SPECIFIC PUBLIC EVIDENCE
+======================================================================
+
+Current Skyrim Community Shaders source contains an HDR Display feature that:
+
+    hooks Skyrim ImageSpaceManager post-processing;
+    redirects HDR framebuffer behavior;
+    explicitly enables Skyrim's
+        bUse64bitsHDRRenderTarget:Display
+    path so required HDR targets use R16G16B16A16_FLOAT.
+
+This independently supports the field observation that Skyrim's late
+post-processing can contain multiple full-resolution HDR intermediates.
+
+It would be incorrect for GZFX to assume:
+
+    canonical MAIN_HDR must be followed immediately by one unique reduction
+    branch.
+
+The field data already proves that assumption false.
+
+======================================================================
+7. DESIGN OPTIONS EVALUATED
+======================================================================
+
+OPTION A
+    Hardcode the stable field shader:
+        0x1066E41D475505A3
+
+REJECT.
+
+Reason:
+    hash-specific;
+    version/content fragile;
+    unnecessary;
+    violates structural-contract policy.
+
+
+OPTION B
+    Hardcode the 26-ordinal gap.
+
+REJECT.
+
+Reason:
+    field ordinal is diagnostic evidence, not renderer semantics.
+
+
+OPTION C
+    Whenever any later full-resolution HDR descendant appears, immediately
+    discard/reset the active reduction chain and make that resource the one
+    source.
+
+BETTER, BUT NOT PREFERRED.
+
+It fixes the observed case but simply replaces one greedy single-source decision
+with another.
+
+If a valid reduction chain and an unrelated valid full-resolution HDR branch
+coexist, this would unnecessarily throw away the active chain.
+
+
+OPTION D
+    Track every arbitrary HDR graph node and search the graph for a 2x2 path.
+
+REJECT.
+
+Reason:
+    too broad;
+    risks accidental semantic capture;
+    violates current bounded/fail-closed architecture.
+
+
+OPTION E — RECOMMENDED
+    Maintain a small bounded set of verified full-resolution HDR source
+    candidates.
+
+    Canonical MAIN_HDR is implicit depth 0.
+
+    A full-resolution RGBA16F output becomes a candidate only when it reads:
+        canonical MAIN_HDR;
+        or an already verified full-resolution candidate.
+
+    Store each candidate with ancestry depth.
+
+    Depth remains capped at 3.
+
+    Candidate count is finite and small.
+
+    A downsample may start/restart the ONE active reduction chain if it reads
+    canonical MAIN_HDR OR any verified candidate.
+
+    The chain still must:
+        coherently consume the previous reduction output;
+        monotonically descend in area;
+        reach step >= 4;
+        reach <=2x2.
+
+    Only then commit HDRReduction.
+
+RECOMMEND OPTION E.
+
+======================================================================
+8. WHY A SOURCE SET IS THE SMALLEST TRUTHFUL REPAIR
+======================================================================
+
+The current detector already knows how to:
+
+    reject non-RGBA16F output;
+    validate resource dimensions;
+    validate direct resource reads;
+    cap ancestry depth;
+    restart a poisoned reduction candidate;
+    validate a coherent decreasing chain;
+    require true <=2x2 terminal.
+
+The missing capability is only:
+
+    remembering more than one verified full-resolution HDR source branch in the
+    same frame.
+
+A bounded source set adds exactly that missing state.
+
+It does not require a second simultaneous reduction chain.
+
+The current single reduction candidate can remain.
+
+When a new full-resolution source appears:
+
+    record it;
+    do NOT destroy the current reduction candidate.
+
+If a later downsample reads that source and does not continue the current chain:
+
+    existing fresh-root logic restarts the chain from the newly remembered
+    source.
+
+This directly models the real field behavior.
+
+======================================================================
+9. PROPOSED STATE MODEL
+======================================================================
+
+Replace:
+
+    hdrReductionSourceIdentity
+    hdrFullResAncestryDepth
+
+with a bounded structure conceptually equivalent to:
+
+    struct HdrSourceCandidate
+    {
+        uintptr_t identity;
+        uint32_t depth;
+    };
+
+    array<HdrSourceCandidate, N>
+    hdrFullResSources;
+
+    uint32_t hdrFullResSourceCount;
+
+Canonical MAIN_HDR need not consume a slot.
+
+Suggested N:
+
+    4
+
+Rationale:
+
+    field case requires one derived source;
+    maximum depth remains 3;
+    four slots leave room for a small sibling set while remaining trivially
+    bounded.
+
+Implementation-time source audit may choose another equally small fixed
+capacity if justified.
+
+No dynamic allocation is necessary.
+
+======================================================================
+10. SOURCE-CANDIDATE RULE
+======================================================================
+
+For every full-resolution RGBA16F output while late-stage detection is active
+and HDRReduction is not complete:
+
+1. reject identity zero;
+
+2. reject canonical source self-write as ancestry;
+
+3. determine whether the pass reads:
+
+       canonical MAIN_HDR
+       depth 0
+
+   OR one existing source candidate:
+       depth D
+
+4. candidate depth = D + 1;
+
+5. require candidate depth <= 3;
+
+6. if identity is not already registered and capacity remains:
+       register it;
+
+7. if capacity is full:
+       fail closed;
+       do not broaden the set.
+
+IMPORTANT:
+
+    this observation must run regardless of hdrReductionStep.
+
+That is the field repair.
+
+======================================================================
+11. ROOT / RESTART RULE
+======================================================================
+
+For a <= half-resolution RGBA16F output:
+
+    rootEligible =
+        pass reads canonical MAIN_HDR
+        OR pass reads any verified full-resolution HDR candidate.
+
+If hdrReductionStep == 0 and rootEligible:
+
+    start step 1.
+
+If hdrReductionStep != 0:
+
+    first attempt existing coherent continuation.
+
+If it does not consume/descend from the current reduction output:
+
+    and rootEligible:
+
+        restart at step 1 from this output.
+
+This preserves current false-root recovery while adding sibling-branch
+recovery.
+
+======================================================================
+12. TERMINAL AND TONEMAP RULES SHOULD NOT CHANGE
+======================================================================
+
+Do not weaken the proven terminal contract.
+
+Retain:
+
+    coherent descending chain;
+    step >= 4;
+    width <= 2;
+    height <= 2.
+
+The field proves a physical <=2x2 terminal on all active scene frames.
+
+BeforeTonemap should remain dependent on:
+
+    completed HDR reduction;
+    read of hdrReductionFinalIdentity;
+    full-resolution R8G8B8A8_UNORM write.
+
+The 0.0.28 field shows BeforeTonemap already works whenever HDRReduction
+completes.
+
+Therefore no separate BeforeTonemap redesign is justified yet.
+
+Fix root recovery first.
+
+======================================================================
+13. REQUIRED TEST EXPANSION
+======================================================================
+
+The existing test must remain:
+
+    hdr_descendant_reduction_contract
+
+It covers:
+
+    MAIN_HDR
+    -> descendant
+    -> false root
+    -> real root.
+
+
+Add a new exact field-order acceptance:
+
+    hdr_late_descendant_recovery_contract
+
+Topology:
+
+    MAIN_HDR
+    ->
+    false 640x360 root
+    ->
+    later full-resolution RGBA16F descendant of MAIN_HDR
+    ->
+    real 640x360 root from descendant
+    ->
+    descending chain
+    ->
+    true 2x2
+    ->
+    BeforeTonemap
+    ->
+    TAA.
+
+Require:
+
+    HDRReduction present;
+    BeforeTonemap present;
+    BeforeGlobalTAA present;
+    AfterGlobalTAA present.
+
+
+Add negative fail-closed coverage:
+
+    unrelated_fullres_hdr_not_accepted
+
+Topology:
+
+    unrelated full-resolution RGBA16F resource
+    ->
+    downsample chain
+    ->
+    2x2
+
+without canonical MAIN_HDR ancestry.
+
+Require:
+
+    no HDRReduction;
+    no BeforeTonemap.
+
+TAA may remain independently detectable if its structural inputs are present.
+
+This protects against accidentally turning the detector into arbitrary
+"find any 2x2 chain".
+
+======================================================================
+14. VERSION / PHASE RECOMMENDATION
+======================================================================
+
+The next implementation is a post-field repair wave and may truthfully advance
+runtime to:
+
+    0.0.29-hdr-branch-recovery
+
+This is now justified because 0.0.28 real-Skyrim DATA exists.
+
+0.0.29 must remain narrow.
+
+No unrelated graphics feature belongs in this wave.
+
+======================================================================
+15. PUBLIC SOURCES REVIEWED
+======================================================================
+
+Microsoft Learn:
+    ID3D11DeviceContext::PSSetShaderResources
+    ID3D11DeviceContext::OMSetRenderTargets
+    ID3D11DeviceContext interface documentation
+
+ReShade current source:
+    include/reshade_events.hpp
+    include/reshade_api_device.hpp
+    source/addon_manager.cpp
+    examples/09-depth/generic_depth_addon.cpp
+
+3Dmigoto current/public source:
+    DirectX11/ResourceHash.cpp
+    DirectX11/FrameAnalysis.cpp
+    DirectX11/HackerContext.cpp
+
+Skyrim Community Shaders current source:
+    src/Features/HDRDisplay.cpp
+    current 1.9.x release history
+
+These are architectural/reference sources only.
+
+No proprietary implementation is copied.
+
+======================================================================
+16. PASS-1 RESEARCH VERDICT
+======================================================================
+
+RESEARCH PASS 1 COMPLETE.
+
+Recommended repair:
+
+    bounded per-frame full-resolution HDR source set
+    +
+    existing single coherent reduction chain
+    +
+    restart from any verified source
+    +
+    unchanged true <=2x2 terminal
+    +
+    unchanged BeforeTonemap rule
+    +
+    new exact field-order acceptance
+    +
+    negative arbitrary-branch rejection test.
+
+Before blueprinting, perform the owner-requested independent RESEARCH PASS 2
+from scratch and attempt to falsify this design.
+
+END RESEARCH PASS 1
