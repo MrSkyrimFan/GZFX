@@ -9,55 +9,42 @@ Current runtime:
 Current phase:
 
 ```text
-TEST / POST-TONEMAP PRE-UI CARTOGRAPHY FIELD VALIDATION
+DATA COMPLETE / TWO INDEPENDENT 0.0.30 REAL-SKYRIM PASSES
 ```
 
-The complete 0.0.30 implementation cycle is archived in `../old/`.
-
-Controlling continuity:
+Active authority:
 
 ```text
-GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.30.txt
-GZFX_NEW_CHAT_TAKEOVER_0.0.30.txt
-GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.30.txt
-GZFX_0.0.30_POST_TONEMAP_PREUI_CARTOGRAPHY_ENGINEERING_RESULT.txt
+GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
 ```
 
-0.0.30 is an evidence build.
+Double-DATA consensus:
 
-It does **not** promote `PostTonemapPreUi`.
+- telemetry session is healthy and complete;
+- 15,137 active scene frames;
+- HDRReduction 15,137 / 15,137;
+- BeforeTonemap 15,137 / 15,137;
+- BeforeGlobalTAA 15,137 / 15,137;
+- AfterGlobalTAA 15,137 / 15,137;
+- true physical 2x2 HDR terminal 15,137 / 15,137;
+- independent raw HDR/tonemap replay mismatch = 0;
+- 4,142 active interior frames exercise one derived full-resolution HDR source;
+- late detail spans the full AfterGlobalTAA -> physical BeforeOriginalPresent interval on all active frames;
+- 1.7.104 discovery-only mode is functioning fail-closed;
+- PRE-UI discovery returns exactly one candidate:
+  - match RVA 0x116ADF2;
+  - target RVA 0x100A050;
+- post-processing discovery returns two candidates and remains ambiguous;
+- engineProfileAvailable remains false;
+- no 1.7.104 engine hook is armed;
+- UiPresent is confirmed to be a Present-time internal landmark, not proof of Skyrim engine UI start;
+- PostTonemapPreUi remains unpromoted;
+- dropped=0 and shutdown complete.
 
-New field evidence expected:
+No product code has been modified during this DATA cycle.
 
-- detailed late pipeline remains active after internal `UiPresent`;
-- detailed late pipeline reaches physical `BeforeOriginalPresent`;
-- Skyrim 1.7.104 reports discovery-only post-processing candidate counts/RVAs;
-- Skyrim 1.7.104 reports discovery-only pre-UI candidate counts/RVAs;
-- `engine_profile_available` remains false on 1.7.104;
-- no unverified 1.7.104 engine hook is installed.
+The next phase, if authorized, should be targeted research of the unique
+1.7.104 PRE-UI candidate and its ABI/control-flow identity.
 
-Locked semantics that must remain 1:1:
-
-- HDRReduction;
-- BeforeTonemap;
-- BeforeGlobalTAA;
-- AfterGlobalTAA.
-
-Still unpromoted:
-
-- PostTonemapPreUi;
-- WaterDomain;
-- AfterShadowProduction.
-
-Engineering proof:
-
-- PR #35: 39/39 PASS;
-- merged main: 39/39 PASS;
-- package refresh changed only the Lance ZIP;
-- current package exactly matches the merged-main workflow package.
-
-This directory is intentionally clear of active-cycle TXT authority.
-
-The next real-Skyrim telemetry upload starts the next DATA cycle here.
-
-Do not modify product code again before that DATA is reviewed.
+Do not begin implementation from the candidate RVAs alone.
