@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.29
+    VERSION 0.0.30
     DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -230,6 +230,21 @@ add_executable(GZFXEngineEpochHarness
 )
 gzfx_apply_common(GZFXEngineEpochHarness)
 
+add_executable(GZFXEngineEpochDiscoveryHarness
+    tests/engine_epoch_discovery_harness.cpp
+)
+gzfx_apply_common(GZFXEngineEpochDiscoveryHarness)
+
+add_executable(GZFXTelemetryDetailGateHarness
+    tests/telemetry_detail_gate_harness.cpp
+)
+target_include_directories(
+    GZFXTelemetryDetailGateHarness
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+gzfx_apply_common(GZFXTelemetryDetailGateHarness)
+
 add_executable(GZFXRendererForensicsHarness
     tests/renderer_forensics_harness.cpp
 )
@@ -422,6 +437,20 @@ add_test(
     NAME engine_epoch_signatures
     COMMAND
         "$<TARGET_FILE:GZFXEngineEpochHarness>"
+        "$<TARGET_FILE:GZFX>"
+)
+
+add_test(
+    NAME engine_epoch_discovery_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXEngineEpochDiscoveryHarness>"
+        "$<TARGET_FILE:GZFX>"
+)
+
+add_test(
+    NAME telemetry_physical_present_detail_gate
+    COMMAND
+        "$<TARGET_FILE:GZFXTelemetryDetailGateHarness>"
         "$<TARGET_FILE:GZFX>"
 )
 
