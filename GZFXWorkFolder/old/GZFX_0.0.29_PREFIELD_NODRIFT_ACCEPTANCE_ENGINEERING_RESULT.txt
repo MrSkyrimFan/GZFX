@@ -1,0 +1,682 @@
+GZFX 0.0.29 PRE-FIELD NO-DRIFT ACCEPTANCE HARDENING
+FINAL ENGINEERING RESULT
+Closure date: October 25-26, 2026
+
+STATUS:
+    DATA PASS COMPLETE
+    RESEARCH COMPLETE
+    NEW FINDINGS COMPLETE
+    BLUEPRINT COMPLETE
+    TEST-ONLY IMPLEMENTATION COMPLETE
+    PR GREEN
+    MERGED
+    MERGED-MAIN GREEN
+    PACKAGE REFRESH VERIFIED
+    PRODUCT-CODE NO-DRIFT VERIFIED
+    READY FOR REAL-SKYRIM 0.0.29 FIELD VALIDATION
+
+RUNTIME:
+    0.0.29-hdr-branch-recovery
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+The owner explicitly required one additional XForge-style full pipeline before
+spending another real-Skyrim field run:
+
+    DATA
+    -> RESEARCH
+    -> NEW FINDINGS
+    -> BLUEPRINT
+    -> IMPLEMENT
+    -> CI / PR / MERGE / PACKAGE
+    -> INDEPENDENT NO-DRIFT VERIFICATION
+
+This cycle treated the already-merged 0.0.29 product algorithm and its 32-test
+acceptance as untrusted until independently re-audited.
+
+The objective was not to invent another renderer feature.
+
+The objective was to find any remaining drift, weak proof, stale assumption,
+or untested boundary before the next field session.
+
+======================================================================
+2. CONTROLLING AUTHORITY
+======================================================================
+
+DATA:
+    GZFX_0.0.29_PREFIELD_NODRIFT_DATA_PASS_3.txt
+
+RESEARCH:
+    GZFX_RESEARCH_PASS_13_NODRIFT_ACCEPTANCE_HARDENING.txt
+
+NEW FINDINGS:
+    GZFX_0.0.29_PREFIELD_NODRIFT_NEW_FINDINGS.txt
+
+BLUEPRINT:
+    GZFX_0.0.29_PREFIELD_NODRIFT_ACCEPTANCE_BLUEPRINT.txt
+
+Underlying real-Skyrim authority remains:
+    GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS.txt
+    GZFX_0.0.28_REAL_SKYRIM_FIELD_FINDINGS_PASS_2.txt
+    GZFX_RESEARCH_PASS_12_HDR_BRANCH_RECOVERY_PASS_1.txt
+    GZFX_RESEARCH_PASS_12_HDR_BRANCH_RECOVERY_PASS_2.txt
+    GZFX_0.0.29_HDR_BRANCH_RECOVERY_BLUEPRINT.txt
+    GZFX_0.0.29_HDR_BRANCH_RECOVERY_ENGINEERING_RESULT.txt
+
+======================================================================
+3. DATA PASS 3 RESULT
+======================================================================
+
+Raw field archive re-opened again:
+
+    GZFXtttredyellow.zip
+
+SHA256:
+    43cff37522fe0cbdb0666cc2a71523270ff98d6fb4ae859aadd236b3bacfce8e
+
+Detailed pipeline rows:
+    1,022,351
+
+Active scene frames:
+    7,541
+
+The current merged 0.0.29 algorithm was independently reconstructed from
+source and replayed across the complete raw field pipeline.
+
+Replay result:
+
+    7,541 / 7,541 active frames complete the HDR reduction contract.
+
+Missing active frames:
+    0
+
+Field source-set demand:
+
+    zero derived full-res HDR sources:
+        4,901 frames
+
+    exactly one derived full-res HDR source:
+        2,640 frames
+
+    two or more:
+        0 frames
+
+Maximum field ancestry depth required:
+    1
+
+PRODUCT ALGORITHM VERDICT:
+    PASS AGAINST COMPLETE EXISTING FIELD DATA
+
+No product-semantic contradiction was found.
+
+======================================================================
+4. NEW PROOF GAPS FOUND
+======================================================================
+
+The extra cycle did find real acceptance weaknesses.
+
+A. FIELD ROOT GEOMETRY
+
+Real 2,640-frame failure:
+    false root 640x360
+    real root  640x360
+
+Old test #31:
+    false root 40x22
+    real root  80x45
+
+The repair logic handled both, but exact equal-size competing roots were not
+locked by CI.
+
+
+B. DELAYED SAME-FRAME RECOVERY
+
+Real field:
+    false root
+    -> substantial same-frame unrelated work
+    -> later full-res HDR sibling
+    -> real root
+
+Old synthetic test placed the sibling immediately after the false root.
+
+
+C. PRESENCE-ONLY STAGE ORACLE
+
+Old harness accepted a stage name appearing anywhere in the synthetic session.
+
+That was weaker than the real field requirement:
+    one target semantic per active frame.
+
+
+D. CAPACITY / DEPTH / FRAME-LOCAL SAFETY
+
+Source intended:
+    source capacity 4
+    no eviction
+    max ancestry depth 3
+    source state frame-local
+
+Those were source-review facts, not explicit CI contracts.
+
+======================================================================
+5. RESEARCH VERDICT
+======================================================================
+
+Research found NO reason to change the working 0.0.29 renderer algorithm.
+
+Public D3D11 resource-binding semantics and current ReShade/RenderDoc/3Dmigoto
+architecture references remained consistent with the resource-identity,
+frame-local bounded-candidate model.
+
+The correct repair was therefore:
+
+    TEST-ONLY ACCEPTANCE HARDENING
+
+Authorized product source changes:
+    NONE
+
+Authorized implementation files:
+    tests/wave3_pipeline_harness.cpp
+    CMakeLists.txt
+
+Runtime version:
+    unchanged
+
+======================================================================
+6. IMPLEMENTED ACCEPTANCE HARDENING
+======================================================================
+
+Existing tests #31 and #32 were strengthened.
+
+Test #31 now uses:
+    a distinct false-root resource with the SAME dimensions as the real
+    synthetic reduction root;
+
+    unrelated non-HDR same-frame filler work before the later verified
+    full-resolution sibling;
+
+    no product or acceptance dependency on a magic ordinal count.
+
+The filler count mirrors field scale only for test realism.
+
+
+Late-stage acceptance now parses stages.csv and compares exact ordered frame
+vectors.
+
+Synthetic active-frame authority:
+    after_opaque_world_mrt
+
+Positive modes require exact frame-vector equality for:
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+Negative HDR modes require:
+    HDRReduction empty
+    BeforeTonemap empty
+
+while:
+    BeforeGlobalTAA == active frames
+    AfterGlobalTAA  == active frames
+
+This rejects:
+    one-frame-only accidental success;
+    missing frames;
+    duplicate target semantics;
+    extra target rows;
+    wrong frame population.
+
+
+New test #33:
+    hdr_source_capacity_fourth_accepted
+
+Proves:
+    four verified full-resolution siblings can be registered;
+    reduction rooted in the fourth remains valid.
+
+
+New test #34:
+    hdr_source_capacity_fifth_rejected
+
+Proves:
+    fifth source is not silently admitted when fixed capacity is full;
+    no eviction/replacement makes the fifth semantic;
+    TAA remains independent.
+
+
+New test #35:
+    hdr_source_depth_three_accepted
+
+Proves:
+    ancestry depth 3 remains valid.
+
+
+New test #36:
+    hdr_source_depth_four_rejected
+
+Proves:
+    depth 4 fails closed;
+    TAA remains independent.
+
+
+New test #37:
+    hdr_source_frame_isolation
+
+Proves:
+    a full-resolution HDR resource identity admitted in frame A does not remain
+    semantically authorized in frame B unless ancestry is re-established.
+
+======================================================================
+7. PRODUCT-SOURCE SCOPE PROOF
+======================================================================
+
+Implementation branch:
+
+    feature/0.0.29-nodrift-acceptance-hardening
+
+Branch base:
+    ec4179a05c81eae17fdaf5d75fb43174391bb54c
+
+PR head:
+    6c8f3084bcbde2cb3b9c0b15035c473d4d2dab3d
+
+Changed files EXACTLY:
+
+    CMakeLists.txt
+    tests/wave3_pipeline_harness.cpp
+
+Changed product renderer/runtime source files:
+    0
+
+semantic_authority.cpp:
+    unchanged
+
+bootstrap:
+    unchanged
+
+telemetry implementation:
+    unchanged
+
+effects:
+    unchanged
+
+version:
+    unchanged
+
+======================================================================
+8. PR PROOF
+======================================================================
+
+PR:
+    #33
+    0.0.29 pre-field no-drift acceptance hardening
+
+Final PR head:
+    6c8f3084bcbde2cb3b9c0b15035c473d4d2dab3d
+
+Windows x64 run:
+    40251607208
+
+Job:
+    121344539076
+
+Result:
+    37 / 37 PASS
+    0 failures
+    total CTest time 29.81 sec
+
+New/strengthened HDR contracts:
+
+    #31 hdr_late_descendant_recovery_contract
+        PASS
+
+    #32 hdr_unrelated_fullres_rejected
+        PASS
+
+    #33 hdr_source_capacity_fourth_accepted
+        PASS
+
+    #34 hdr_source_capacity_fifth_rejected
+        PASS
+
+    #35 hdr_source_depth_three_accepted
+        PASS
+
+    #36 hdr_source_depth_four_rejected
+        PASS
+
+    #37 hdr_source_frame_isolation
+        PASS
+
+PR artifact:
+    id 12620647674
+    artifact-container bytes 400,629
+    digest:
+        sha256:68fd3c1d967071c6ffd50a066c5813cba77786b1f48bd7571334838685fdc4e2
+
+======================================================================
+9. STRICT BINARY NO-DRIFT CHECK — INITIAL ALARM
+======================================================================
+
+The blueprint deliberately required an independent product-binary identity
+check because this was a test-only wave.
+
+Baseline merged 0.0.29 artifact:
+    run 40249851770
+    artifact id 12620178562
+
+Raw baseline inner DLL CRC32:
+
+    d3d11.dll
+        fc9f5e5f
+
+    dinput8.dll
+        5e5ddb4f
+
+    GZFX.dll
+        0f400b15
+
+PR #33 rebuilt DLL raw CRC32:
+
+    d3d11.dll
+        84257869
+
+    dinput8.dll
+        f9f64292
+
+    GZFX.dll
+        7078f4d4
+
+Therefore the strict raw CRC check FAILED initially.
+
+This was treated as a BLOCKER and investigated.
+
+It was NOT dismissed as harmless build noise.
+
+======================================================================
+10. BINARY DRIFT ROOT CAUSE
+======================================================================
+
+A byte-for-byte diff was performed for every DLL between:
+
+    prior merged 0.0.29 artifact
+    and
+    PR #33 artifact.
+
+Every DLL:
+
+    same file size;
+    exactly 4 bytes differ;
+    all other bytes identical.
+
+d3d11.dll differing byte offsets:
+    272, 273, 25220, 25221
+
+dinput8.dll:
+    288, 289, 24436, 24437
+
+GZFX.dll:
+    288, 289, 762452, 762453
+
+PE parsing proved those bytes belong only to:
+
+    PE/COFF FileHeader.TimeDateStamp
+    and
+    matching IMAGE_DEBUG_DIRECTORY.TimeDateStamp
+
+No .text / executable logic difference.
+No semantic data difference.
+No resource algorithm difference.
+
+The raw CRC drift was therefore linker/build timestamp nondeterminism.
+
+======================================================================
+11. NORMALIZED PRODUCT IDENTITY
+======================================================================
+
+For independent no-drift proof:
+
+    zero only:
+        PE/COFF TimeDateStamp
+        debug-directory TimeDateStamp
+
+then compare every remaining byte.
+
+Result:
+
+    all three DLLs are byte-for-byte identical after timestamp normalization.
+
+Normalized SHA256:
+
+    d3d11.dll
+        4319a80de2b1e4f8c73cfeeecc2ceae6ffde858c84839cd38d7b1b66819ed129
+
+    dinput8.dll
+        a00208da3d1247df46881d974d3537643772d3f7a1a28ad1a3cdc2736980d41a
+
+    GZFX.dll
+        c25c8934638de08cb05fd161c3dae6154c8367b57575f232419ce26354932b7a
+
+These normalized hashes match between:
+    baseline merged 0.0.29 artifact;
+    PR #33 artifact;
+    merged-main PR #33 artifact.
+
+PRODUCT CODE/DATA DRIFT:
+    ZERO
+
+The strict CRC alarm was retained as evidence because it successfully exposed
+the nondeterministic PE metadata.
+
+======================================================================
+12. MERGE / MERGED-MAIN PROOF
+======================================================================
+
+PR #33 merge commit:
+
+    f923e21ee8d477fe34cf6df0ba70f715c2db8231
+
+Merged-main Windows x64 run:
+
+    40251939073
+
+Job:
+    121345555216
+
+Conclusion:
+    success
+
+CTest:
+    37 / 37 PASS
+    0 failures
+    total CTest time 47.89 sec
+
+Merged-main tests #31-#37:
+    all PASS
+
+Merged-main artifact:
+
+    id 12621407062
+    artifact-container bytes 400,628
+    digest:
+        sha256:fb195fd02ddf64bdda27d41013a042e26a0174f22cf5e3713c6c652fcbe72f6f
+
+Merged-main DLL normalized identity:
+    identical to original merged 0.0.29 baseline for all three product DLLs.
+
+======================================================================
+13. PACKAGE REFRESH PROOF
+======================================================================
+
+Package refresh commit:
+
+    8f35e2e6b95f96b7b231240d6cd7d9580d41aa8b
+
+Commit changed ONLY:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Current repository package:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Git blob:
+
+    3c5d2473228e1a4d2d2a59fd19cc136a7671d791
+
+Bytes:
+
+    401,287
+
+Central directory entries EXACTLY:
+
+    d3d11.dll
+        uncompressed 36,352
+        CRC32 28a92d6a
+
+    dinput8.dll
+        uncompressed 35,328
+        CRC32 93c85def
+
+    GZFX.dll
+        uncompressed 935,424
+        CRC32 fde6d50b
+
+Those raw CRC values exactly match the merged-main workflow artifact built from
+merge commit f923e21e....
+
+After PE timestamp normalization, all three DLLs match the pre-wave 0.0.29
+product baseline byte-for-byte.
+
+No extra package file exists.
+
+======================================================================
+14. NO-DRIFT VERDICT
+======================================================================
+
+The owner-required extra pipeline succeeded.
+
+DATA:
+    complete
+
+RESEARCH:
+    complete
+
+NEW FINDINGS:
+    complete
+
+BLUEPRINT:
+    complete
+
+IMPLEMENTATION:
+    complete
+
+PR:
+    37/37 green
+
+MERGED MAIN:
+    37/37 green
+
+PACKAGE:
+    exact three-DLL package
+
+PRODUCT SOURCE:
+    unchanged
+
+PRODUCT EXECUTABLE CODE/DATA:
+    normalized byte-for-byte identical to pre-wave 0.0.29
+
+The extra cycle found meaningful weaknesses and closed them before another
+Skyrim run.
+
+This is precisely the intended no-drift behavior.
+
+======================================================================
+15. LOCKED PRE-FIELD CONTRACTS
+======================================================================
+
+Do not reopen without contradictory evidence:
+
+    Waves 1-3 closure
+    Wave 4 renderer ownership architecture
+    standalone D3D11 graphics front door
+    qualified primary selection
+    creation-time shader/resource identity
+    command-list ownership
+    physical Present epochs
+    process-scoped startup evidence
+    natural ExitProcess telemetry closure
+    global TAA structural contract
+    true <=2x2 HDR terminal
+    bounded full-resolution HDR source set
+    source capacity = 4
+    source max ancestry depth = 3
+    source state frame-local
+    one conservative HDR reduction chain
+    BeforeTonemap dependency
+    TAA independence
+    fail-closed optional engine profiles
+
+Still intentionally unpromoted:
+
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+======================================================================
+16. NEXT FRONTIER
+======================================================================
+
+0.0.29 has still NOT been field-tested by the owner.
+
+After this no-drift closure, another pre-field implementation cycle is NOT
+justified by current evidence.
+
+The exact next action is:
+
+    real-Skyrim 0.0.29 field validation.
+
+Primary field questions:
+
+    HDRReduction exterior:
+        every active exterior frame?
+
+    HDRReduction interior:
+        every active interior frame?
+
+    BeforeTonemap:
+        every active scene frame?
+
+    true <=2x2:
+        every active scene frame?
+
+    BeforeGlobalTAA / AfterGlobalTAA:
+        remain 1:1?
+
+    primary/lifecycle:
+        clean?
+
+    ownership:
+        coherent?
+
+    telemetry:
+        dropped=0?
+        complete shutdown?
+
+No new graphics feature is authorized before that DATA.
+
+CLOSURE VERDICT:
+
+    0.0.29 PRE-FIELD NO-DRIFT ACCEPTANCE HARDENING COMPLETE.
+    PR #33 MERGED.
+    FINAL PR 37/37 GREEN.
+    MERGED-MAIN 37/37 GREEN.
+    PRODUCT SOURCE UNCHANGED.
+    PRODUCT EXECUTABLE CODE/DATA NO-DRIFT VERIFIED.
+    PACKAGE VERIFIED.
+    READY FOR REAL-SKYRIM FIELD VALIDATION.
+
+END ENGINEERING RESULT
