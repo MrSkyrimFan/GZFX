@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.29.txt` first, then `GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.29.txt`, `GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.29.txt`, and `GZFXWorkFolder/old/GZFX_0.0.29_HDR_BRANCH_RECOVERY_ENGINEERING_RESULT.txt` in full. For the controlling field evidence, read BOTH 0.0.28 real-Skyrim DATA passes and BOTH Research Pass 12 records referenced by the continuity index. Use 0.0.28 pre-field records only for deeper lifecycle history.
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.29_NODRIFT.txt` first, then `GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.29_NODRIFT.txt`, `GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.29_NODRIFT.txt`, and `GZFXWorkFolder/old/GZFX_0.0.29_PREFIELD_NODRIFT_ACCEPTANCE_ENGINEERING_RESULT.txt` in full. Follow the older 0.0.29 and 0.0.28 records referenced by that index for the underlying field and implementation history.
 
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
@@ -181,8 +181,9 @@ Never make hue discrimination necessary for acceptance.
 
 ## 10. GZFX current locked foundation
 
-Current state after the 0.0.28 real-Skyrim DATA cycle and the 0.0.29 HDR
-branch-recovery engineering wave:
+Current state after the 0.0.28 real-Skyrim DATA cycle, the 0.0.29 HDR
+branch-recovery engineering wave, and the owner-required 0.0.29 pre-field
+no-drift acceptance-hardening cycle:
 
 ```text
 foundation baseline:
@@ -208,7 +209,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-TEST / HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
+TEST / NO-DRIFT-CLOSED HDR BRANCH-RECOVERY REAL-SKYRIM FIELD VALIDATION
 
 graphics bootstrap:
 standalone GZFX d3d11.dll + dinput8.dll
@@ -273,8 +274,16 @@ later verified sibling.
 verified full-resolution HDR sources descended from canonical MAIN_HDR. One
 conservative reduction chain remains; it may restart only from canonical
 MAIN_HDR or a verified bounded source. The field-locked coherent descent and true
-<=2x2 terminal remain unchanged. Automated acceptance includes the exact
-real-field ordering plus an unrelated-full-resolution negative rejection case.
+<=2x2 terminal remain unchanged.
+
+Before field testing, the owner required another complete XForge-style no-drift
+pipeline. The product algorithm was replayed independently over all 1,022,351
+detailed field rows and recovered 7,541/7,541 active frames. PR #33 then
+strengthened acceptance only: equal-size delayed sibling recovery, exact
+per-active-frame stage populations, capacity 4/5, ancestry depth 3/4, and
+frame-local source isolation. Final PR and merged-main CI are 37/37. Product
+source remained unchanged, and binary comparison proved zero executable
+code/data drift after normalizing PE linker/debug timestamps.
 
 The current priority is field-proof of the 0.0.29 repair. Do not start another
 graphics-quality wave until real-Skyrim DATA confirms interior HDRReduction and
