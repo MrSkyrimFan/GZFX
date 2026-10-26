@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.29_FIELD_CLOSED.txt` first, then `GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.29_FIELD_CLOSED.txt`, `GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.29_FIELD_CLOSED.txt`, and `GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt` in full. Follow the older 0.0.29 no-drift and 0.0.28 records referenced by that index only for underlying implementation/history context.
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.30.txt` first, then `GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.30.txt`, `GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.30.txt`, and `GZFXWorkFolder/old/GZFX_0.0.30_POST_TONEMAP_PREUI_CARTOGRAPHY_ENGINEERING_RESULT.txt` in full. Follow the 0.0.29 field-closed records referenced by that index for the locked HDR/tonemap/TAA evidence.
 
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
