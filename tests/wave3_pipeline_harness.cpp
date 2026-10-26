@@ -11,6 +11,7 @@
 #include <iterator>
 #include <limits>
 #include <string>
+#include <sstream>
 #include <unordered_map>
 #include <vector>
 
@@ -122,6 +123,65 @@ namespace
         return
             std::numeric_limits<
                 std::size_t>::max();
+    }
+
+    std::vector<std::uint64_t> CsvFramesForValue(
+        const std::string& csv,
+        const std::string& columnName,
+        const std::string& expectedValue)
+    {
+        std::istringstream input(csv);
+        std::string line;
+
+        if (!std::getline(input, line))
+        {
+            return {};
+        }
+
+        const auto header =
+            SplitCsv(line);
+
+        const auto frameColumn =
+            CsvColumn(header, "frame");
+
+        const auto valueColumn =
+            CsvColumn(header, columnName);
+
+        const auto invalid =
+            std::numeric_limits<
+                std::size_t>::max();
+
+        if (frameColumn == invalid ||
+            valueColumn == invalid)
+        {
+            return {};
+        }
+
+        std::vector<std::uint64_t> frames;
+
+        while (std::getline(input, line))
+        {
+            if (line.empty())
+            {
+                continue;
+            }
+
+            const auto row =
+                SplitCsv(line);
+
+            if (frameColumn >= row.size() ||
+                valueColumn >= row.size() ||
+                row[valueColumn] != expectedValue)
+            {
+                continue;
+            }
+
+            frames.push_back(
+                std::stoull(
+                    row[frameColumn]));
+        }
+
+        return frames;
     }
 
     std::uint64_t CanonicalIdentity(
@@ -362,6 +422,46 @@ int wmain(int argc, wchar_t** argv)
             static_cast<DWORD>(
                 std::size(hdrUnrelatedFullResValue))) > 0;
 
+    wchar_t hdrCapacityFourthValue[8]{};
+    const bool hdrCapacityFourthActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_CAPACITY_FOURTH_ACTIVE",
+            hdrCapacityFourthValue,
+            static_cast<DWORD>(
+                std::size(hdrCapacityFourthValue))) > 0;
+
+    wchar_t hdrCapacityFifthValue[8]{};
+    const bool hdrCapacityFifthActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_CAPACITY_FIFTH_ACTIVE",
+            hdrCapacityFifthValue,
+            static_cast<DWORD>(
+                std::size(hdrCapacityFifthValue))) > 0;
+
+    wchar_t hdrDepthThreeValue[8]{};
+    const bool hdrDepthThreeActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_DEPTH_THREE_ACTIVE",
+            hdrDepthThreeValue,
+            static_cast<DWORD>(
+                std::size(hdrDepthThreeValue))) > 0;
+
+    wchar_t hdrDepthFourValue[8]{};
+    const bool hdrDepthFourActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_DEPTH_FOUR_ACTIVE",
+            hdrDepthFourValue,
+            static_cast<DWORD>(
+                std::size(hdrDepthFourValue))) > 0;
+
+    wchar_t hdrFrameIsolationValue[8]{};
+    const bool hdrFrameIsolationActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_FRAME_ISOLATION_ACTIVE",
+            hdrFrameIsolationValue,
+            static_cast<DWORD>(
+                std::size(hdrFrameIsolationValue))) > 0;
+
     wchar_t deferredOutsideDetailValue[8]{};
     const bool deferredOutsideDetailActive =
         GetEnvironmentVariableW(
@@ -477,10 +577,25 @@ int wmain(int argc, wchar_t** argv)
         device, width, height,
         DXGI_FORMAT_R16G16B16A16_FLOAT);
 
+    std::array<Target, 5> hdrSourceCandidates{};
+
+    for (auto& target : hdrSourceCandidates)
+    {
+        target = CreateTarget(
+            device,
+            width,
+            height,
+            DXGI_FORMAT_R16G16B16A16_FLOAT);
+    }
+
     // A deliberately plausible but wrong early MAIN_HDR reduction root.
     // 0.0.25 latched onto this kind of pass and never recovered.
     Target hdrFalseRoot = CreateTarget(
         device, width / 8, height / 8,
+        DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+    Target hdrFieldFalseRoot = CreateTarget(
+        device, width / 4, height / 4,
         DXGI_FORMAT_R16G16B16A16_FLOAT);
 
     Target hdrReduceA = CreateTarget(
@@ -525,7 +640,13 @@ int wmain(int argc, wchar_t** argv)
         !aoA.texture || !aoB.texture || !aoTemp.texture ||
         !aoFinal.texture || !rawIndirect.texture ||
         !hdrDerived.texture ||
+        !hdrSourceCandidates[0].texture ||
+        !hdrSourceCandidates[1].texture ||
+        !hdrSourceCandidates[2].texture ||
+        !hdrSourceCandidates[3].texture ||
+        !hdrSourceCandidates[4].texture ||
         !hdrFalseRoot.texture ||
+        !hdrFieldFalseRoot.texture ||
         !hdrReduceA.texture || !hdrReduceB.texture ||
         !hdrReduceC.texture || !hdrReduceD.texture ||
         !tonemapCurrent.texture || !taaHistory.texture ||
