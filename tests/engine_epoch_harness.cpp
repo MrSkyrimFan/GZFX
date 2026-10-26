@@ -88,6 +88,9 @@ int wmain(int argc, wchar_t** argv)
     constexpr std::uint32_t engineProfile =
         1u << 1;
 
+    constexpr std::uint32_t engineDiscovery =
+        1u << 2;
+
     const std::array<std::uint16_t, 9> ae16Known =
     {
         318, 323, 342, 353, 629,
@@ -98,7 +101,8 @@ int wmain(int argc, wchar_t** argv)
         classifyRuntime(1, 6, 1170, 0) !=
             (knownRuntime | engineProfile) ||
         classifyRuntime(1, 7, 99, 0) != knownRuntime ||
-        classifyRuntime(1, 7, 104, 0) != knownRuntime ||
+        classifyRuntime(1, 7, 104, 0) !=
+            (knownRuntime | engineDiscovery) ||
         classifyRuntime(1, 9, 999, 0) != 0)
     {
         FreeLibrary(module);
