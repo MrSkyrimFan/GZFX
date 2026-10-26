@@ -1,0 +1,59 @@
+GZFX NEW CHAT TAKEOVER — 0.0.30
+POST-TONEMAP / PRE-UI CARTOGRAPHY
+Status: CONTROLLING CURRENT HANDOFF
+
+READ:
+    AGENT.md
+    GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.30.txt
+    GZFXWorkFolder/old/GZFX_0.0.30_POST_TONEMAP_PREUI_CARTOGRAPHY_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.30.txt
+
+CURRENT RUNTIME:
+    0.0.30-post-tonemap-preui-cartography
+
+CURRENT PHASE:
+    TEST / POST-TONEMAP PRE-UI CARTOGRAPHY FIELD VALIDATION
+
+CRITICAL:
+    PostTonemapPreUi is NOT promoted.
+    0.0.30 exists to collect the missing proof.
+
+FIELD-LOCKED INPUT:
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+0.0.30 CHANGES:
+
+    detailed late pipeline does not stop at UiPresent anymore;
+    it stops at physical BeforeOriginalPresent.
+
+    1.7.104 has discovery-only masked engine-anchor scanning for:
+        post processing
+        pre UI
+
+    discovery logs candidate counts and RVAs;
+    discovery never hooks;
+    engineProfileAvailable remains false.
+
+PR #35:
+    39/39 PASS
+
+MERGED MAIN:
+    39/39 PASS
+
+PACKAGE:
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    blob e72212028f2f01d4a899a759c519e983818f792e
+    403,999 bytes
+
+NEXT:
+    one normal Skyrim field run and upload newest telemetry session.
+
+DATA must decide whether 1.7.104 candidate anchors are unique/credible and
+whether the real post-TAA -> pre-UI interval can now be mapped.
+
+No new code before that DATA.
+
+END TAKEOVER
