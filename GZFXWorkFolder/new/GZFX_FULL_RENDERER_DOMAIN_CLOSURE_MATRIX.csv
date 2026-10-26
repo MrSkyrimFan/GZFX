@@ -1,0 +1,18 @@
+domain,current_evidence,status,exact_remaining_work,major_engineering_gate
+core_d3d_ownership,"qualified primary; creation-time resources/shaders; command-list ownership; physical Present; clean shutdown",LOCKED,"multi-runtime field certification only",PASS
+core_scene_inputs,"MAIN_HDR; MAIN_DEPTH; MOTION; NORMAL; CameraZ; AO; RAW_INDIRECT; semantic freshness",LOCKED,"production performance/polish",PASS
+temporal_core,"native motion; history lifecycle; rejection architecture; global TAA before/after",LOCKED_ON_1.7.104,"representative runtime certification",PASS
+hdr_tonemap,"MAIN_HDR-descended reduction; true 2x2; BeforeTonemap; global TAA",LOCKED_ON_1.7.104,"other runtime certification; production algorithms",PASS
+water_predepth,"PublishPreWaterDepth; PRE_WATER_DEPTH_CURRENT",LOCKED,"none for existing boundary",PASS
+water_reflection_cluster,"dynamic 512 cubemap; 1280x720 float16 chain; exterior apply; named water anchors",PARTIAL,"correlate Main_RenderWaterEffects / ISTemporalAA_Water / ISWaterBlend / ISApplyReflections; refraction; underwater; entry/exit",BLOCKED
+shadow_production,"4096 array2; 512 array2; 4096 array8 depth families; fullres SHADOW_MASK; Main_RenderShadowmasks signpost",PARTIAL,"directional sun/moon cascades; local-light maps; cloud shadows; filter constants; exact AfterShadowProduction",BLOCKED
+volumetric_core,"320x192x90 density pair; temporal apply; R16 history; day/night exterior; later MAIN_HDR apply",STRONGLY_MAPPED,"separate sun/moon shafts; cloud interaction; weather constants; replacement controls",PARTIAL
+sky_cloud_celestial,"day/night captures; sky background evidence; exterior reflection capture; Sky shader signposts",OPEN,"sky dome; clouds; cloud shadows; sun; moon; stars; aurora; celestial transition",BLOCKED
+fire_emissive_particles,"repeated inn/fire captures; 59 interior-only late families; broad transparency/material domain",OPEN,"isolate flame/emissive/smoke/local-light/local-shadow/bloom families",BLOCKED
+weather,"exterior/interior classification; day/night exterior architecture",OPEN,"weather identity; transitions; cloud/fog/precipitation/wetness ownership",BLOCKED
+post_tonemap_preui,"full late interval; unique 1.7.104 pre-UI candidate 0x116ADF2 -> 0x100A050",PARTIAL,"verify function identity/ABI/control-flow; arm fail-closed profile; correlate scene-to-UI boundary",BLOCKED
+post_color_bloom_lut,"BeforeTonemap + global TAA + late graph",ARCHITECTURALLY_READY,"select final world-only injection boundary for UI-safe operations; build production algorithms",PARTIAL
+menu_presets_editor,"existing menu/config/preset foundation",ARCHITECTURALLY_READY,"production UX and persistence",PASS
+gpu_budget_quality_tiers,"timings; mode system; telemetry; owned passes",ARCHITECTURALLY_READY,"production instrumentation off-path; actual quality/performance design",PASS
+compatibility,"standalone proxy; fail-closed engine hooks; ownership/provenance",PARTIAL,"known graphics framework collision policy; old-runtime certification; mod compatibility matrix",BLOCKED
+full_better_than_enb_reshade_campaign,"strong foundation but incomplete world-domain semantic ownership",NOT_READY,"close all BLOCKED domains before broad whole-product green",BLOCKED
