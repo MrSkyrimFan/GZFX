@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.28-pre-field-lifecycle-hardening";
+        "0.0.29-hdr-branch-recovery";
 }
 
 extern "C" __declspec(dllexport)
