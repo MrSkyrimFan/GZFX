@@ -661,3 +661,74 @@ set_tests_properties(
     PROPERTIES
         ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_UNRELATED_FULLRES_ACTIVE=1"
 )
+
+
+add_test(
+    NAME hdr_source_capacity_fourth_accepted
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/hdr-source-capacity-fourth-output"
+)
+
+set_tests_properties(
+    hdr_source_capacity_fourth_accepted
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_CAPACITY_FOURTH_ACTIVE=1"
+)
+
+add_test(
+    NAME hdr_source_capacity_fifth_rejected
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/hdr-source-capacity-fifth-output"
+)
+
+set_tests_properties(
+    hdr_source_capacity_fifth_rejected
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_CAPACITY_FIFTH_ACTIVE=1"
+)
+
+add_test(
+    NAME hdr_source_depth_three_accepted
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/hdr-source-depth-three-output"
+)
+
+set_tests_properties(
+    hdr_source_depth_three_accepted
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_DEPTH_THREE_ACTIVE=1"
+)
+
+add_test(
+    NAME hdr_source_depth_four_rejected
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/hdr-source-depth-four-output"
+)
+
+set_tests_properties(
+    hdr_source_depth_four_rejected
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_DEPTH_FOUR_ACTIVE=1"
+)
+
+add_test(
+    NAME hdr_source_frame_isolation
+    COMMAND
+        "$<TARGET_FILE:GZFXWave3PipelineHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/hdr-source-frame-isolation-output"
+)
+
+set_tests_properties(
+    hdr_source_frame_isolation
+    PROPERTIES
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_HDR_FRAME_ISOLATION_ACTIVE=1"
+)

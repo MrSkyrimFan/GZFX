@@ -11,6 +11,7 @@
 #include <iterator>
 #include <limits>
 #include <string>
+#include <sstream>
 #include <unordered_map>
 #include <vector>
 
@@ -122,6 +123,65 @@ namespace
         return
             std::numeric_limits<
                 std::size_t>::max();
+    }
+
+    std::vector<std::uint64_t> CsvFramesForValue(
+        const std::string& csv,
+        const std::string& columnName,
+        const std::string& expectedValue)
+    {
+        std::istringstream input(csv);
+        std::string line;
+
+        if (!std::getline(input, line))
+        {
+            return {};
+        }
+
+        const auto header =
+            SplitCsv(line);
+
+        const auto frameColumn =
+            CsvColumn(header, "frame");
+
+        const auto valueColumn =
+            CsvColumn(header, columnName);
+
+        const auto invalid =
+            std::numeric_limits<
+                std::size_t>::max();
+
+        if (frameColumn == invalid ||
+            valueColumn == invalid)
+        {
+            return {};
+        }
+
+        std::vector<std::uint64_t> frames;
+
+        while (std::getline(input, line))
+        {
+            if (line.empty())
+            {
+                continue;
+            }
+
+            const auto row =
+                SplitCsv(line);
+
+            if (frameColumn >= row.size() ||
+                valueColumn >= row.size() ||
+                row[valueColumn] != expectedValue)
+            {
+                continue;
+            }
+
+            frames.push_back(
+                std::stoull(
+                    row[frameColumn]));
+        }
+
+        return frames;
     }
 
     std::uint64_t CanonicalIdentity(
@@ -362,6 +422,46 @@ int wmain(int argc, wchar_t** argv)
             static_cast<DWORD>(
                 std::size(hdrUnrelatedFullResValue))) > 0;
 
+    wchar_t hdrCapacityFourthValue[8]{};
+    const bool hdrCapacityFourthActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_CAPACITY_FOURTH_ACTIVE",
+            hdrCapacityFourthValue,
+            static_cast<DWORD>(
+                std::size(hdrCapacityFourthValue))) > 0;
+
+    wchar_t hdrCapacityFifthValue[8]{};
+    const bool hdrCapacityFifthActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_CAPACITY_FIFTH_ACTIVE",
+            hdrCapacityFifthValue,
+            static_cast<DWORD>(
+                std::size(hdrCapacityFifthValue))) > 0;
+
+    wchar_t hdrDepthThreeValue[8]{};
+    const bool hdrDepthThreeActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_DEPTH_THREE_ACTIVE",
+            hdrDepthThreeValue,
+            static_cast<DWORD>(
+                std::size(hdrDepthThreeValue))) > 0;
+
+    wchar_t hdrDepthFourValue[8]{};
+    const bool hdrDepthFourActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_DEPTH_FOUR_ACTIVE",
+            hdrDepthFourValue,
+            static_cast<DWORD>(
+                std::size(hdrDepthFourValue))) > 0;
+
+    wchar_t hdrFrameIsolationValue[8]{};
+    const bool hdrFrameIsolationActive =
+        GetEnvironmentVariableW(
+            L"GZFX_TEST_HDR_FRAME_ISOLATION_ACTIVE",
+            hdrFrameIsolationValue,
+            static_cast<DWORD>(
+                std::size(hdrFrameIsolationValue))) > 0;
+
     wchar_t deferredOutsideDetailValue[8]{};
     const bool deferredOutsideDetailActive =
         GetEnvironmentVariableW(
@@ -477,10 +577,25 @@ int wmain(int argc, wchar_t** argv)
         device, width, height,
         DXGI_FORMAT_R16G16B16A16_FLOAT);
 
+    std::array<Target, 5> hdrSourceCandidates{};
+
+    for (auto& target : hdrSourceCandidates)
+    {
+        target = CreateTarget(
+            device,
+            width,
+            height,
+            DXGI_FORMAT_R16G16B16A16_FLOAT);
+    }
+
     // A deliberately plausible but wrong early MAIN_HDR reduction root.
     // 0.0.25 latched onto this kind of pass and never recovered.
     Target hdrFalseRoot = CreateTarget(
         device, width / 8, height / 8,
+        DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+    Target hdrFieldFalseRoot = CreateTarget(
+        device, width / 4, height / 4,
         DXGI_FORMAT_R16G16B16A16_FLOAT);
 
     Target hdrReduceA = CreateTarget(
@@ -525,7 +640,13 @@ int wmain(int argc, wchar_t** argv)
         !aoA.texture || !aoB.texture || !aoTemp.texture ||
         !aoFinal.texture || !rawIndirect.texture ||
         !hdrDerived.texture ||
+        !hdrSourceCandidates[0].texture ||
+        !hdrSourceCandidates[1].texture ||
+        !hdrSourceCandidates[2].texture ||
+        !hdrSourceCandidates[3].texture ||
+        !hdrSourceCandidates[4].texture ||
         !hdrFalseRoot.texture ||
+        !hdrFieldFalseRoot.texture ||
         !hdrReduceA.texture || !hdrReduceB.texture ||
         !hdrReduceC.texture || !hdrReduceD.texture ||
         !tonemapCurrent.texture || !taaHistory.texture ||
@@ -720,8 +841,11 @@ int wmain(int argc, wchar_t** argv)
                 context->Draw(3, 0);
             }
 
+            const std::uint64_t syntheticFrameIndex =
+                syntheticFrameCounter++;
+
             const bool even =
-                (syntheticFrameCounter++ & 1u) == 0u;
+                (syntheticFrameIndex & 1u) == 0u;
 
             Target& previousAo =
                 even ? aoA : aoB;
@@ -861,104 +985,152 @@ int wmain(int argc, wchar_t** argv)
             {
                 if (!taaWithoutHdrActive)
                 {
+                    auto drawTargetFrom =
+                        [&](Target& output,
+                            ID3D11ShaderResourceView* input)
+                        {
+                            context->OMSetRenderTargets(
+                                1,
+                                &output.rtv,
+                                nullptr);
+
+                            context->PSSetShaderResources(
+                                0,
+                                1,
+                                &input);
+
+                            context->Draw(3, 0);
+
+                            context->PSSetShaderResources(
+                                0,
+                                1,
+                                nullSrvs);
+                        };
+
                     ID3D11ShaderResourceView* hdrReductionSource =
                         hdr.srv;
 
                     if (hdrDescendantActive)
                     {
-                        // Existing 0.0.27 acceptance order:
+                        // Historical 0.0.27 acceptance order:
                         // MAIN_HDR -> full-resolution HDR descendant ->
                         // false root -> real reduction spine.
-                        context->OMSetRenderTargets(
-                            1,
-                            &hdrDerived.rtv,
-                            nullptr);
-
-                        context->PSSetShaderResources(
-                            0,
-                            1,
-                            &hdr.srv);
-
-                        context->Draw(3, 0);
-
-                        context->PSSetShaderResources(
-                            0,
-                            1,
-                            nullSrvs);
+                        drawTargetFrom(
+                            hdrDerived,
+                            hdr.srv);
 
                         hdrReductionSource =
                             hdrDerived.srv;
                     }
 
-                    // Emit the deliberately plausible early root first.
-                    // The new field-order test deliberately keeps this rooted
-                    // in canonical MAIN_HDR, then introduces a later sibling
-                    // full-resolution HDR source.
-                    context->OMSetRenderTargets(
-                        1,
-                        &hdrFalseRoot.rtv,
-                        nullptr);
+                    Target& falseRoot =
+                        hdrLateDescendantActive
+                            ? hdrFieldFalseRoot
+                            : hdrFalseRoot;
 
-                    context->PSSetShaderResources(
-                        0,
-                        1,
-                        &hdrReductionSource);
-
-                    context->Draw(3, 0);
-
-                    context->PSSetShaderResources(
-                        0,
-                        1,
-                        nullSrvs);
+                    // The late-descendant mode uses a distinct false-root
+                    // resource with the same dimensions as hdrReduceA. This
+                    // matches the real 0.0.28 640x360 -> 640x360 competing
+                    // root geometry instead of relying on size increase.
+                    drawTargetFrom(
+                        falseRoot,
+                        hdrReductionSource);
 
                     if (hdrLateDescendantActive)
                     {
-                        // Exact 0.0.28 real-Skyrim failure topology:
-                        // MAIN_HDR -> false root -> later full-resolution HDR
-                        // sibling -> real reduction root from that sibling.
-                        context->OMSetRenderTargets(
-                            1,
-                            &hdrDerived.rtv,
-                            nullptr);
+                        // Mirror the field's substantial same-frame delay
+                        // between candidate roots. The filler count is test
+                        // realism only; no ordinal value is a product contract.
+                        constexpr std::size_t fillerDraws = 25;
 
-                        context->PSSetShaderResources(
-                            0,
-                            1,
-                            &hdr.srv);
+                        for (std::size_t i = 0;
+                             i < fillerDraws;
+                             ++i)
+                        {
+                            drawTargetFrom(
+                                lateExtraTargets[
+                                    i %
+                                    lateExtraTargets.size()],
+                                normalTarget.srv);
+                        }
 
-                        context->Draw(3, 0);
-
-                        context->PSSetShaderResources(
-                            0,
-                            1,
-                            nullSrvs);
+                        drawTargetFrom(
+                            hdrDerived,
+                            hdr.srv);
 
                         hdrReductionSource =
                             hdrDerived.srv;
                     }
                     else if (hdrUnrelatedFullResActive)
                     {
-                        // Negative contract: the same full-resolution RGBA16F
-                        // shape must NOT become an HDR source merely because
-                        // it can lead to a complete 2x2 chain. Its input has no
-                        // verified MAIN_HDR/full-resolution-HDR ancestry.
-                        context->OMSetRenderTargets(
-                            1,
-                            &hdrDerived.rtv,
-                            nullptr);
+                        // A full-resolution float16 resource with no verified
+                        // MAIN_HDR ancestry must not authorize a reduction.
+                        drawTargetFrom(
+                            hdrDerived,
+                            normal.srv);
 
-                        context->PSSetShaderResources(
-                            0,
-                            1,
-                            &normal.srv);
+                        hdrReductionSource =
+                            hdrDerived.srv;
+                    }
+                    else if (hdrCapacityFourthActive ||
+                             hdrCapacityFifthActive)
+                    {
+                        const std::size_t count =
+                            hdrCapacityFifthActive
+                                ? 5u
+                                : 4u;
 
-                        context->Draw(3, 0);
+                        for (std::size_t i = 0;
+                             i < count;
+                             ++i)
+                        {
+                            drawTargetFrom(
+                                hdrSourceCandidates[i],
+                                hdr.srv);
+                        }
 
-                        context->PSSetShaderResources(
-                            0,
-                            1,
-                            nullSrvs);
+                        hdrReductionSource =
+                            hdrSourceCandidates[
+                                count - 1].srv;
+                    }
+                    else if (hdrDepthThreeActive ||
+                             hdrDepthFourActive)
+                    {
+                        const std::size_t count =
+                            hdrDepthFourActive
+                                ? 4u
+                                : 3u;
 
+                        ID3D11ShaderResourceView* parent =
+                            hdr.srv;
+
+                        for (std::size_t i = 0;
+                             i < count;
+                             ++i)
+                        {
+                            drawTargetFrom(
+                                hdrSourceCandidates[i],
+                                parent);
+
+                            parent =
+                                hdrSourceCandidates[i].srv;
+                        }
+
+                        hdrReductionSource =
+                            parent;
+                    }
+                    else if (hdrFrameIsolationActive)
+                    {
+                        if (syntheticFrameIndex == 0)
+                        {
+                            drawTargetFrom(
+                                hdrDerived,
+                                hdr.srv);
+                        }
+
+                        // The resource identity persists across frames, but
+                        // verified ancestry must not. Only frame zero
+                        // re-establishes MAIN_HDR -> hdrDerived.
                         hdrReductionSource =
                             hdrDerived.srv;
                     }
@@ -977,43 +1149,17 @@ int wmain(int argc, wchar_t** argv)
                     for (Target* reduction :
                          reductions)
                     {
-                        context->OMSetRenderTargets(
-                            1,
-                            &reduction->rtv,
-                            nullptr);
-
-                        context->PSSetShaderResources(
-                            0,
-                            1,
-                            &reduceInput);
-
-                        context->Draw(3, 0);
-
-                        context->PSSetShaderResources(
-                            0,
-                            1,
-                            nullSrvs);
+                        drawTargetFrom(
+                            *reduction,
+                            reduceInput);
 
                         reduceInput =
                             reduction->srv;
                     }
 
-                    context->OMSetRenderTargets(
-                        1,
-                        &tonemapCurrent.rtv,
-                        nullptr);
-
-                    context->PSSetShaderResources(
-                        0,
-                        1,
-                        &hdrReduceD.srv);
-
-                    context->Draw(3, 0);
-
-                    context->PSSetShaderResources(
-                        0,
-                        1,
-                        nullSrvs);
+                    drawTargetFrom(
+                        tonemapCurrent,
+                        hdrReduceD.srv);
                 }
 
                 // Global temporal recognition must not depend on HDR completion.
@@ -1558,36 +1704,79 @@ int wmain(int argc, wchar_t** argv)
                 "at_ambient_screen_space_composite") !=
                     std::string::npos;
 
-        const bool temporalStageCoverage =
-            stages.find(
-                "before_global_taa") !=
-                    std::string::npos &&
-            stages.find(
-                "after_global_taa") !=
-                    std::string::npos;
+        const auto activeStageFrames =
+            CsvFramesForValue(
+                stages,
+                "boundary",
+                "after_opaque_world_mrt");
 
-        const bool hdrStageCoverage =
-            taaWithoutHdrActive
-                ? true
-                : (
-                    hdrUnrelatedFullResActive
-                        ? (
-                            stages.find(
-                                "hdr_reduction") ==
-                                    std::string::npos &&
-                            stages.find(
-                                "before_tonemap") ==
-                                    std::string::npos
-                        )
-                        : (
-                            stages.find(
-                                "hdr_reduction") !=
-                                    std::string::npos &&
-                            stages.find(
-                                "before_tonemap") !=
-                                    std::string::npos
-                        )
-                );
+        const auto hdrStageFrames =
+            CsvFramesForValue(
+                stages,
+                "boundary",
+                "hdr_reduction");
+
+        const auto tonemapStageFrames =
+            CsvFramesForValue(
+                stages,
+                "boundary",
+                "before_tonemap");
+
+        const auto beforeTaaStageFrames =
+            CsvFramesForValue(
+                stages,
+                "boundary",
+                "before_global_taa");
+
+        const auto afterTaaStageFrames =
+            CsvFramesForValue(
+                stages,
+                "boundary",
+                "after_global_taa");
+
+        const bool temporalStageCoverage =
+            !activeStageFrames.empty() &&
+            beforeTaaStageFrames ==
+                activeStageFrames &&
+            afterTaaStageFrames ==
+                activeStageFrames;
+
+        const bool hdrNegativeMode =
+            hdrUnrelatedFullResActive ||
+            hdrCapacityFifthActive ||
+            hdrDepthFourActive;
+
+        bool hdrStageCoverage = true;
+
+        if (!taaWithoutHdrActive)
+        {
+            if (hdrFrameIsolationActive)
+            {
+                hdrStageCoverage =
+                    activeStageFrames.size() > 1 &&
+                    hdrStageFrames.size() == 1 &&
+                    tonemapStageFrames.size() == 1 &&
+                    hdrStageFrames.front() ==
+                        activeStageFrames.front() &&
+                    tonemapStageFrames.front() ==
+                        activeStageFrames.front();
+            }
+            else if (hdrNegativeMode)
+            {
+                hdrStageCoverage =
+                    hdrStageFrames.empty() &&
+                    tonemapStageFrames.empty();
+            }
+            else
+            {
+                hdrStageCoverage =
+                    !activeStageFrames.empty() &&
+                    hdrStageFrames ==
+                        activeStageFrames &&
+                    tonemapStageFrames ==
+                        activeStageFrames;
+            }
+        }
 
         const bool lateStageCoverage =
             !lateStackActive ||
@@ -2059,7 +2248,14 @@ int wmain(int argc, wchar_t** argv)
     Release(hdrReduceC);
     Release(hdrReduceB);
     Release(hdrReduceA);
+    Release(hdrFieldFalseRoot);
     Release(hdrFalseRoot);
+
+    for (auto& target : hdrSourceCandidates)
+    {
+        Release(target);
+    }
+
     Release(hdrDerived);
     Release(rawIndirect);
     Release(aoFinal);
