@@ -10,26 +10,20 @@ $buildPath = Join-Path $repoRoot $BuildDir
 $outputPath = Join-Path $repoRoot $OutputDir
 $stagePath = Join-Path $outputPath "stage"
 $runtimePath = Join-Path $buildPath "bin\GZFX.dll"
-$bootstrapPath = Join-Path $buildPath "bin\dinput8.dll"
-$graphicsBootstrapPath = Join-Path $buildPath "bin\d3d11.dll"
+$pluginPath = Join-Path $stagePath "Data\SKSE\Plugins"
 $zipPath = Join-Path $outputPath "GZFX-SkyrimSE-x64.zip"
 
-foreach ($required in @($runtimePath, $bootstrapPath, $graphicsBootstrapPath)) {
-    if (-not (Test-Path $required)) {
-        throw "Required package input was not found: $required"
-    }
+if (-not (Test-Path $runtimePath)) {
+    throw "Required package input was not found: $runtimePath"
 }
 
 if (Test-Path $outputPath) {
     Remove-Item $outputPath -Recurse -Force
 }
 
-New-Item -ItemType Directory -Path $stagePath -Force | Out-Null
-
-Copy-Item $runtimePath (Join-Path $stagePath "GZFX.dll")
-Copy-Item $bootstrapPath (Join-Path $stagePath "dinput8.dll")
-Copy-Item $graphicsBootstrapPath (Join-Path $stagePath "d3d11.dll")
+New-Item -ItemType Directory -Path $pluginPath -Force | Out-Null
+Copy-Item $runtimePath (Join-Path $pluginPath "GZFX.dll")
 
 Compress-Archive -Path (Join-Path $stagePath "*") -DestinationPath $zipPath -CompressionLevel Optimal
 
-Write-Host "Created package: $zipPath"
+Write-Host "Created one-DLL SKSE package: $zipPath"
