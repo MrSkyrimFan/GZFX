@@ -9,7 +9,7 @@ Current runtime:
 Current phase:
 
 ```text
-0.0.33 SKSE LOADER RESCUE ACTIVE / REAL-SKYRIM 0.0.32 LOAD FAILURE UNDER REPAIR / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
+0.0.33 LOADER RESCUE CLOSED / REAL-SKYRIM LOADER REVALIDATION NEXT / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
 ```
 
 Active authority:
@@ -20,9 +20,6 @@ GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_1.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
-GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
-GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
-GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
 ```
 
 Corrected project verdict:
@@ -111,26 +108,28 @@ remain active authority for later feature engineering.
 
 ## 0.0.33 SKSE loader rescue
 
-The first real-Skyrim 0.0.32 integration test failed before healthy GZFX runtime
-output: no GZFX runtime folder and no functional GZFX controls.
+The bounded loader rescue is COMPLETE and archived under
+`GZFXWorkFolder/old/`.
 
-The field result overrides the previous automated-only loader acceptance.
-
-Active repair authority:
+Current controlling 0.0.33 records:
 
 ```text
+GZFX_0.0.33_SKSE_LOADER_RESCUE_ENGINEERING_RESULT.txt
+GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.33.txt
 GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
 GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
 GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
 ```
 
-Bounded repair only:
+Final automated state:
 
-- make SKSEPlugin_Preload non-invasive;
-- arm D3D observation in normal SKSEPlugin_Load;
-- initialize CommonLib through SKSE::Init;
-- eliminate dynamic Microsoft VC runtime dependencies from GZFX.dll;
-- add PE import/export CI proof;
-- preserve all locked renderer semantics.
+- PR #38 merged;
+- merged-main workflow `42118168990` passed 38/38;
+- PE import/export contract passed;
+- packaged GZFX.dll has no dynamic MSVC runtime dependency;
+- package remains exactly `Data/SKSE/Plugins/GZFX.dll`;
+- Lance ZIP refresh is byte-identical to the validated merged-main package.
 
-No broad graphics feature work is authorized until the loader is field-proven.
+Next action is a tiny real-Skyrim 1.7.104 loader revalidation. Broad graphics
+feature work remains blocked until the loader is field-proven and until the
+renderer-domain closure matrix permits the corresponding domain.
