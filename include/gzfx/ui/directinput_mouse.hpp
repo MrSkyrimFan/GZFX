@@ -7,6 +7,7 @@
 #include <Windows.h>
 #include <dinput.h>
 
+#include <cstddef>
 #include <cstdint>
 
 namespace gzfx::ui::directinput_mouse
