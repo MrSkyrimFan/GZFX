@@ -6,6 +6,7 @@
 #include "gzfx/diagnostics/startup_trace.hpp"
 #include "gzfx/diagnostics/telemetry_listener.hpp"
 #include "gzfx/paths.hpp"
+#include "gzfx/process_lifecycle.hpp"
 #include "gzfx/version.hpp"
 #include "gzfx/render/wave3_pipeline.hpp"
 #include "gzfx/render/ambient_visibility_v2.hpp"
@@ -32,6 +33,7 @@ namespace
 
     // 0 = not started, 1 = initializing, 2 = ready, 3 = failed.
     std::atomic<std::uint32_t> g_initializationState{0};
+    std::atomic<bool> g_shutdownStarted{false};
 
     std::string CurrentTimestamp()
     {
@@ -71,10 +73,12 @@ namespace
             return;
         }
 
-        const bool lifecycleProbeArmed =
-            gzfx::diagnostics::ArmD3D11LifecycleProbe();
+        // Renderer hooks must exist before the real Skyrim device is accepted.
+        // The lifecycle probe may already be armed by SKSEPlugin_Preload.
         const bool rendererForensicsArmed =
             gzfx::diagnostics::ArmRendererForensics();
+        const bool lifecycleProbeArmed =
+            gzfx::diagnostics::ArmD3D11LifecycleProbe();
 
         const bool engineEpochsArmed =
             gzfx::diagnostics::engine_epochs::Arm();
@@ -89,6 +93,9 @@ namespace
         const bool telemetryInitialized =
             gzfx::diagnostics::telemetry_listener::
                 Initialize();
+
+        const bool processLifecycleArmed =
+            gzfx::process_lifecycle::Arm();
 
         const fs::path logPath = runtimeRoot / L"GZFX.log";
         std::ofstream log(logPath, std::ios::out | std::ios::app);
@@ -129,11 +136,31 @@ namespace
         log << "telemetry_listener="
             << (telemetryInitialized ? "initialized" : "disabled_or_failed")
             << "\n";
+        log << "process_lifecycle="
+            << (processLifecycleArmed ? "armed" : "failed")
+            << "\n";
         log << "status=initialized\n";
         log << "===============================\n";
         log.flush();
 
         g_initializeResult = static_cast<bool>(log);
+    }
+}
+
+namespace gzfx::runtime
+{
+    bool ArmEarlyGraphicsBootstrap() noexcept
+    {
+        try
+        {
+            return
+                diagnostics::
+                    ArmD3D11LifecycleProbe();
+        }
+        catch (...)
+        {
+            return false;
+        }
     }
 }
 
@@ -192,7 +219,13 @@ std::uint32_t GZFX_GetInitializationState() noexcept
 
 extern "C" __declspec(dllexport) void GZFX_Shutdown() noexcept
 {
-    gzfx::diagnostics::telemetry_listener::Shutdown();
+    if (!g_shutdownStarted.exchange(
+            true,
+            std::memory_order_acq_rel))
+    {
+        gzfx::diagnostics::
+            telemetry_listener::Shutdown();
+    }
 }
 
 
