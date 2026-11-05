@@ -41,6 +41,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(commonlibsse)
 
+# CommonLibSSE-GG uses /MP in its own MSVC preset. Preserve that supported
+# parallel compile mode when it is embedded under the GZFX build.
+if(MSVC)
+    target_compile_options(CommonLibSSE PRIVATE /MP)
+endif()
+
 function(gzfx_apply_common target)
     target_compile_features(${target} PRIVATE cxx_std_23)
 
