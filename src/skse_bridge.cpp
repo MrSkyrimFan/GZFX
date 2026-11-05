@@ -1,6 +1,7 @@
 #include "gzfx/skse_bridge.hpp"
 
 #include "gzfx/diagnostics/startup_trace.hpp"
+#include "gzfx/engine/commonlib_bridge.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/process_lifecycle.hpp"
 #include "gzfx/runtime.hpp"
@@ -138,6 +139,22 @@ namespace
         AppendStatus(
             std::string("message=") +
             MessageName(message->type));
+
+        if (message->type ==
+            gzfx::skse::
+                MessagingInterface::DataLoaded)
+        {
+            const bool commonLibBound =
+                gzfx::engine::commonlib::
+                    BindAfterDataLoaded();
+
+            AppendStatus(
+                std::string(
+                    "commonlib_data_loaded_bound=") +
+                (commonLibBound
+                    ? "true"
+                    : "false"));
+        }
     }
 }
 
@@ -148,7 +165,7 @@ extern "C"
         SKSEPlugin_Version =
     {
         gzfx::skse::PluginVersionData::kVersion,
-        31,
+        32,
         "GZFX",
         "Greenezone Software LLC",
         "",
@@ -243,6 +260,10 @@ extern "C"
             const bool initialized =
                 GZFX_Initialize();
 
+            const bool commonLibModuleReady =
+                gzfx::engine::commonlib::
+                    InitializeModule();
+
             const bool processLifecycleArmed =
                 gzfx::process_lifecycle::Arm();
 
@@ -285,6 +306,12 @@ extern "C"
                 std::string(
                     "runtime_initialized=") +
                 (initialized
+                    ? "true"
+                    : "false"));
+            AppendStatus(
+                std::string(
+                    "commonlib_module_ready=") +
+                (commonLibModuleReady
                     ? "true"
                     : "false"));
             AppendStatus(
