@@ -1,33 +1,35 @@
-GZFX - D3D11 LIFECYCLE PROBE
-============================
+GZFX 0.0.31 - SKSE SINGLE-DLL FRONT DOOR
+==============================================
 
-STATUS
+TARGET
 ------
-This build adds the first passive Direct3D 11 lifecycle diagnostic.
+Skyrim Special Edition / Anniversary Edition (Steam) 1.7.104
+SKSE 2.3.1
 
-It does NOT modify Skyrim rendering.
+SKSE is a required runtime dependency and is NOT bundled with GZFX.
+Install the official SKSE build that matches Skyrim 1.7.104 separately.
 
 PACKAGE CONTENTS
 ----------------
-  GZFX.dll      - the actual GZFX native runtime
-  dinput8.dll   - a thin SKSE-free bootstrap/proxy
+Exactly one GZFX binary:
+
+  Data\SKSE\Plugins\GZFX.dll
+
+There is no GZFX d3d11.dll.
+There is no GZFX dinput8.dll.
+There is no SKSE binary inside the GZFX archive.
 
 INSTALLATION
 ------------
-1. Open the Skyrim Special Edition game root, the folder containing SkyrimSE.exe.
+1. Install Skyrim Steam 1.7.104.
 
-2. Check whether a file named dinput8.dll ALREADY exists there.
+2. Install official SKSE 2.3.1 for Skyrim 1.7.104.
 
-   - If NO existing dinput8.dll exists:
-       Extract this ZIP directly into the Skyrim root.
+3. Extract the GZFX archive into the Skyrim game folder so the plugin lands at:
 
-   - If an existing dinput8.dll DOES exist:
-       DO NOT overwrite it.
-       Rename the existing file to:
-         dinput8_gzfx_chain.dll
-       Then extract this ZIP into the Skyrim root.
+     Data\SKSE\Plugins\GZFX.dll
 
-3. Launch Skyrim normally and load into the game.
+4. Launch Skyrim through SKSE.
 
 EXPECTED EVIDENCE
 -----------------
@@ -35,19 +37,23 @@ GZFX writes:
 
   Documents\My Games\Skyrim Special Edition\GZFX\GZFX.log
 
-and:
+and diagnostics including:
 
-  Documents\My Games\Skyrim Special Edition\GZFX\Diagnostics\d3d11_lifecycle.txt
+  Diagnostics\skse_bridge.txt
+  Diagnostics\d3d11_lifecycle.txt
+  Diagnostics\renderer_startup.csv
 
-The lifecycle file records which D3D11/DXGI creation imports exist in
-SkyrimSE.exe and captures any device, context, swap-chain, or factory creation
-that happens after GZFX initializes.
+The first field test must prove:
+- SKSE preload/load reaches GZFX;
+- the internal D3D11 lifecycle front door arms before Skyrim renderer creation;
+- the qualified primary device/context/swapchain attaches;
+- the locked renderer semantics remain intact;
+- clean process-exit telemetry closure still completes.
 
 UNINSTALL
 ---------
 Remove:
-  GZFX.dll
-  dinput8.dll
 
-If you renamed a previous loader to dinput8_gzfx_chain.dll, rename it back to:
-  dinput8.dll
+  Data\SKSE\Plugins\GZFX.dll
+
+No Windows-system-name proxy DLL restoration is required.
