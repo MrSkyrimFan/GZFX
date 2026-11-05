@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.31-skse-single-dll-frontdoor";
+        "0.0.32-commonlib-mit-engine-access";
 }
 
 extern "C" __declspec(dllexport)

@@ -3,13 +3,13 @@
 Current runtime:
 
 ```text
-0.0.31-skse-single-dll-frontdoor
+0.0.32-commonlib-mit-engine-access
 ```
 
 Current phase:
 
 ```text
-SKSE SINGLE-DLL FRONT DOOR MERGED / REAL-SKYRIM FIELD VALIDATION NEXT / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
+COMMONLIB MIT ENGINE ACCESS INTEGRATION ACTIVE / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
 ```
 
 Active authority:
@@ -20,6 +20,9 @@ GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_1.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
+GZFX_0.0.32_COMMONLIB_FINDINGS.txt
+GZFX_0.0.32_COMMONLIB_RESEARCH.txt
+GZFX_0.0.32_COMMONLIB_BLUEPRINT.txt
 ```
 
 Corrected project verdict:
@@ -64,3 +67,20 @@ GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.31.txt
 Next integration action is a real-Skyrim 1.7.104 + SKSE 2.3.1 field validation.
 The renderer-domain re-audit files listed above remain active authority for later
 feature engineering and are intentionally still in `new/`.
+
+
+## 0.0.32 CommonLib integration
+
+Owner-authorized engine-access migration is active on:
+
+`feature/0.0.32-commonlib-mit-engine-access`
+
+Selected dependency:
+
+`eddoursul/CommonLibSSE-GG@2053e94fd1c147b36eae2b4338118552fba407e2`
+
+License: MIT.
+
+The wave adds typed read-only access to Skyrim renderer, Sky/weather and
+TESDataHandler state while preserving GZFX's field-proven D3D/semantic
+contracts. No blocked renderer domain is promoted by this integration.
