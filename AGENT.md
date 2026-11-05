@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.32.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.32_COMMONLIB_ENGINE_ACCESS_ENGINEERING_RESULT.txt`. Follow the 0.0.31 / 0.0.30 / 0.0.29 records referenced by that index for SKSE migration, renderer-domain, and locked HDR/tonemap/TAA evidence.
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.33.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_ENGINEERING_RESULT.txt`. Follow the 0.0.32 / 0.0.31 / 0.0.30 / 0.0.29 records referenced by that index for CommonLib integration, SKSE migration, renderer-domain, and locked HDR/tonemap/TAA evidence.
 
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
@@ -209,7 +209,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-0.0.33 SKSE LOADER RESCUE ACTIVE / REAL-SKYRIM 0.0.32 LOAD FAILURE UNDER REPAIR
+0.0.33 LOADER RESCUE CLOSED / MINIMAL REAL-SKYRIM LOAD REVALIDATION NEXT
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
@@ -375,18 +375,25 @@ The first real-Skyrim test of the 0.0.32 SKSE + CommonLib integration failed
 before healthy GZFX runtime output. The owner observed no generated GZFX runtime
 folder and no working GZFX hotkeys/menu.
 
-This field evidence supersedes the automated-only loader acceptance.
+This field evidence superseded the automated-only loader acceptance.
 
-Active bounded repair authority lives in:
+The bounded 0.0.33 repair is now merged and automated acceptance is closed.
+Controlling records:
 
 ```text
-GZFXWorkFolder/new/GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
-GZFXWorkFolder/new/GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
-GZFXWorkFolder/new/GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
+GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.33.txt
+GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_ENGINEERING_RESULT.txt
+GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
+GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
+GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
 ```
 
-0.0.33 must remain loader/integration-only. Do not use this failure to reopen
-HDR/TAA contracts or broad renderer semantics.
+PR #38 is merged. PE load-contract verification and all 38 tests are green; the
+main package refresh completed. The next required action is minimal real-Skyrim
+loader revalidation.
+
+Do not use the loader failure to reopen HDR/TAA contracts or broad renderer
+semantics.
 
 ## 11. Repository lifecycle proof
 
