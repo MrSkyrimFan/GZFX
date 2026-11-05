@@ -523,7 +523,7 @@ namespace gzfx::ui::directinput_mouse
 
             if (now - lastState > 8)
             {
-                ui::SubmitDirectInputMouse(
+                gzfx::ui::SubmitDirectInputMouse(
                     packet.x,
                     packet.y,
                     packet.wheel,
