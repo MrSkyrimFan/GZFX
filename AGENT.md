@@ -190,7 +190,7 @@ foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.33-skse-loader-rescue
+0.0.34-directinput-menu-capture
 
 Wave 1:
 CLOSED
@@ -209,7 +209,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-0.0.33 LOADER RESCUE CLOSED / REAL-SKYRIM LOADER REVALIDATION NEXT
+0.0.34 DIRECTINPUT MENU OWNERSHIP ENGINEERING / 0.0.33 LOADER FIELD-CLOSED
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
@@ -372,25 +372,56 @@ required action before broad graphics-feature engineering.
 ## 10C. 0.0.33 real-field loader rescue
 
 The first real-Skyrim test of the 0.0.32 SKSE + CommonLib integration failed
-before healthy GZFX runtime output. The owner observed no generated GZFX runtime
-folder and no working GZFX hotkeys/menu.
+before healthy GZFX runtime output. The bounded 0.0.33 rescue corrected that
+loader boundary.
 
-That field evidence superseded the automated-only 0.0.32 loader acceptance.
+GZFX1 field evidence on 2026-11-05 now closes 0.0.33 as REAL-SKYRIM PASS:
 
-The bounded 0.0.33 rescue is now complete:
-- SKSE Preload is non-invasive;
-- D3D observation arms in normal SKSE Load;
-- CommonLib initializes through SKSE::Init;
-- the MSVC runtime is statically linked;
-- CI proves the PE load contract;
-- PR #38 and merged-main are 38/38 green;
-- the one-DLL package refresh is byte-verified.
+- SKSE 2.3.1 Load reached and messaging registered;
+- CommonLib SKSE::Init succeeded;
+- Address Library v5 was present;
+- DataLoaded Renderer/Sky/TESDataHandler binding succeeded;
+- GZFX/CommonLib renderer correlation succeeded without fallback attach;
+- primary renderer attached before tracked resource/shader birth;
+- telemetry completed with zero drops;
+- natural process exit completed;
+- HDRReduction / BeforeTonemap / BeforeGlobalTAA / AfterGlobalTAA remained 1:1
+  on all 911 world-active frames in the long session.
 
-Controlling records are archived under `GZFXWorkFolder/old/` and indexed by
-`GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.33.txt`.
+The remaining field defect is not loader-related: the GZFX menu opens, but the
+DirectInput producer/suppression layer retired with the old dinput8 proxy was
+never migrated into the one-DLL architecture. 0.0.34 repairs only that input
+ownership regression.
 
-Real-Skyrim loader revalidation is next. Do not use the prior loader failure to
-reopen HDR/TAA contracts or broad renderer semantics.
+Do not use the former loader failure to reopen HDR/TAA contracts or broad
+renderer semantics.
+
+## 10D. Owner field-upload intake — permanent workflow
+
+The owner now uploads GZFX field ZIPs directly to this GitHub repository.
+
+Permanent intake folder:
+
+```text
+GZFXWorkFolder/field_uploads/
+```
+
+Permanent rules:
+
+- the owner may upload a sequential raw field ZIP such as `GZFX1.zip`,
+  `GZFX2.zip`, etc. directly to the repository;
+- if the owner uploads it at repository root, the agent moves it into
+  `GZFXWorkFolder/field_uploads/`;
+- preserve the raw ZIP bytes/blob exactly when moving it;
+- never overwrite a prior raw field ZIP;
+- process it through `.github/workflows/field-upload-intake.yml` or another
+  repo-native mechanism;
+- write findings/research/blueprint from that evidence into
+  `GZFXWorkFolder/new/` under the normal project workflow;
+- never ask the owner to upload the same field ZIP into ChatGPT after it is
+  already in the repository.
+
+This repo-native intake replaces chat attachment round-trips for GZFX field data.
 
 ## 11. Repository lifecycle proof
 
