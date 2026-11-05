@@ -2,13 +2,18 @@
 
 > **EVERY AGENT: READ `AGENT.md` BEFORE DOING ANYTHING ELSE.**
 
-GZFX is a standalone, SKSE-free Direct3D 11 graphics framework for Skyrim SE/AE.
+GZFX is an SKSE-hosted native Direct3D 11 graphics framework for Skyrim SE/AE.
 
 ```text
 SkyrimSE.exe
-  -> d3d11.dll -> GZFX.dll -> D3D11 / DXGI -> HLSL / GPU
-  -> dinput8.dll -> GZFX.dll -> input bridge
+  -> official SKSE
+     -> Data/SKSE/Plugins/GZFX.dll
+        -> D3D11 / DXGI -> HLSL / GPU
 ```
+
+The first SKSE migration target is the current released Steam pair: Skyrim
+1.7.104 + SKSE 2.3.1. SKSE is installed separately and is not redistributed by
+GZFX.
 
 The long-term product target is a native graphics framework capable of replacing the graphics role of ENB + ReShade with integrated lighting, ambient visibility, indirect radiance, shadows, atmosphere, volumetrics, materials, water, reflections, HDR/post, presets, a live editor, compatibility systems, and a public renderer API.
 
@@ -21,10 +26,10 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.30-post-tonemap-preui-cartography
-current phase: TEST / POST-TONEMAP PRE-UI CARTOGRAPHY FIELD VALIDATION
+current runtime: 0.0.31-skse-single-dll-frontdoor
+current phase: SKSE SINGLE-DLL FRONT-DOOR MIGRATION / CI + FIELD VALIDATION
 primary discovery authority: Continuous Renderer Telemetry Listener
-graphics front door: standalone GZFX d3d11.dll bootstrap + dinput8 input bridge
+graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 stable shader/resource identity: observed at D3D11 creation time
 physical DXGI present timeline: explicit present epochs
 deferred command lists: owner-tagged with late-detail-independent retained evidence
@@ -96,11 +101,13 @@ candidate match/target RVAs in normal session evidence. Those candidates are
 never hooked by 0.0.30 and engineProfileAvailable remains false until later
 field DATA and research independently verify them.
 
-**Important:** GZFX remains standalone. ENB and ReShade are architecture
-research references, not runtime dependencies or coexistence targets. The field
-package contains only GZFX's own `dinput8.dll`, `d3d11.dll`, and `GZFX.dll`.
-`WaterDomain`, `PostTonemapPreUi`, and `AfterShadowProduction` remain
-intentionally unclaimed pending independent evidence.
+**Important:** GZFX now uses official SKSE as its loader/lifecycle host while
+retaining its own D3D11/DXGI renderer. ENB and ReShade remain architecture
+research references, not runtime dependencies or coexistence targets. The GZFX
+package contains exactly one binary at `Data/SKSE/Plugins/GZFX.dll`; SKSE is
+installed separately. `WaterDomain`, `PostTonemapPreUi`, and
+`AfterShadowProduction` remain intentionally unclaimed pending independent
+evidence.
 
 ## Permanent authority workflow
 
@@ -168,11 +175,11 @@ GitHub Actions builds and tests Windows x64. A successful push to `main` refresh
 LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
 ```
 
-The test package contains the root-ready DLLs.
+The test package contains exactly `Data/SKSE/Plugins/GZFX.dll`.
 
 ## Hard project rules
 
-- No SKSE dependency.
+- Official SKSE is the loader/lifecycle dependency; never bundle SKSE runtime binaries in the GZFX package.
 - Do not copy proprietary ENB implementation.
 - Do not restart broad renderer cartography unless a real feature blocker requires a targeted investigation.
 - Do not resurrect retired `OPAQUE_FINAL_DEPTH` or retired generic stage names.

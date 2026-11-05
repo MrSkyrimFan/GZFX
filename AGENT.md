@@ -190,7 +190,7 @@ foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.30-post-tonemap-preui-cartography
+0.0.31-skse-single-dll-frontdoor
 
 Wave 1:
 CLOSED
@@ -209,10 +209,10 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-TEST / POST-TONEMAP PRE-UI CARTOGRAPHY FIELD VALIDATION
+SKSE SINGLE-DLL FRONT-DOOR MIGRATION / CI + FIELD VALIDATION
 
 graphics bootstrap:
-standalone GZFX d3d11.dll + dinput8.dll
+official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
 
 universal renderer core:
 D3D11/DXGI-first
@@ -254,9 +254,10 @@ Skyrim 1.7.104 real-field proven
 immediately before Skyrim's HDR tonemap/blend/cinematic image-space pass
 
 process lifecycle:
-qualified primary renderer
-pre-resource / pre-Present attach
-ExitProcess-driven telemetry closure
+SKSE-hosted plugin lifetime
+qualified primary renderer via internal D3D11/DXGI capture
+pre-resource / pre-Present attach target
+core ExitProcess-driven telemetry closure
 process-scoped startup evidence
 
 still intentionally unpromoted:
@@ -325,6 +326,20 @@ does NOT set engineProfileAvailable and does NOT install hooks. The next field
 DATA must decide whether those candidates are unique/credible and where the
 post-TAA scene-to-UI interval actually lies before PostTonemapPreUi can ever be
 promoted.
+
+## 10A. Owner-authorized 0.0.31 integration migration
+
+The owner explicitly reversed the historical SKSE-free requirement on
+2026-11-04. The current authorized architecture uses released SKSE 2.3.1 for
+Steam Skyrim 1.7.104 as the loader/lifecycle host and ships exactly one GZFX
+binary at `Data/SKSE/Plugins/GZFX.dll`.
+
+This authorization is bounded to integration, lifecycle, packaging, and the
+minimum code movement required to preserve the existing renderer. It does not
+promote blocked renderer semantics or authorize invention of missing domains.
+
+CommonLibSSE-NG is not linked in 0.0.31 because current 15.x licensing is
+GPL-3.0-or-later and no owner license conversion has been authorized.
 
 ## 11. Repository lifecycle proof
 

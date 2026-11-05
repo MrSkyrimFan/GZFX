@@ -20,3 +20,18 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED. IN NO EVENT SHALL THE
 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DAMAGES ARISING IN ANY WAY
 OUT OF THE USE OF THIS SOFTWARE.
+
+
+## Skyrim Script Extender (SKSE)
+
+GZFX 0.0.31+ is a native SKSE plugin and targets the public SKSE plugin ABI.
+SKSE is installed separately by the user and is not redistributed in the GZFX
+package. GZFX does not link or bundle CommonLibSSE-NG in the 0.0.31 migration.
+
+Initial compatibility target:
+
+- SKSE 2.3.1
+- Skyrim Steam runtime 1.7.104
+
+See the official SKSE distribution and source project for SKSE's own license
+and redistribution terms.

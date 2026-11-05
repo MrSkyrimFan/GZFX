@@ -32,6 +32,7 @@ namespace
 
     // 0 = not started, 1 = initializing, 2 = ready, 3 = failed.
     std::atomic<std::uint32_t> g_initializationState{0};
+    std::atomic<bool> g_shutdownStarted{false};
 
     std::string CurrentTimestamp()
     {
@@ -71,10 +72,12 @@ namespace
             return;
         }
 
-        const bool lifecycleProbeArmed =
-            gzfx::diagnostics::ArmD3D11LifecycleProbe();
+        // Renderer hooks must exist before the real Skyrim device is accepted.
+        // The lifecycle probe may already be armed by SKSEPlugin_Preload.
         const bool rendererForensicsArmed =
             gzfx::diagnostics::ArmRendererForensics();
+        const bool lifecycleProbeArmed =
+            gzfx::diagnostics::ArmD3D11LifecycleProbe();
 
         const bool engineEpochsArmed =
             gzfx::diagnostics::engine_epochs::Arm();
@@ -137,6 +140,23 @@ namespace
     }
 }
 
+namespace gzfx::runtime
+{
+    bool ArmEarlyGraphicsBootstrap() noexcept
+    {
+        try
+        {
+            return
+                diagnostics::
+                    ArmD3D11LifecycleProbe();
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+}
+
 extern "C" __declspec(dllexport) bool GZFX_Initialize() noexcept
 {
     try
@@ -192,7 +212,13 @@ std::uint32_t GZFX_GetInitializationState() noexcept
 
 extern "C" __declspec(dllexport) void GZFX_Shutdown() noexcept
 {
-    gzfx::diagnostics::telemetry_listener::Shutdown();
+    if (!g_shutdownStarted.exchange(
+            true,
+            std::memory_order_acq_rel))
+    {
+        gzfx::diagnostics::
+            telemetry_listener::Shutdown();
+    }
 }
 
 

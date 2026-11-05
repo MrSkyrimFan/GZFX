@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.30
-    DESCRIPTION "Standalone native graphics framework for Skyrim SE/AE"
+    VERSION 0.0.31
+    DESCRIPTION "SKSE-hosted native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
 
@@ -57,10 +57,12 @@ endfunction()
 
 add_library(GZFX SHARED
     src/dllmain.cpp
-    src/input_bridge.cpp
+    src/process_lifecycle.cpp
+    src/skse_bridge.cpp
     src/paths.cpp
     src/runtime.cpp
     src/settings.cpp
+    src/ui/input_api.cpp
     src/ui/settings_menu.cpp
     src/version.cpp
     src/diagnostics/d3d11_lifecycle.cpp
@@ -105,30 +107,6 @@ target_link_libraries(
 set_target_properties(GZFX PROPERTIES OUTPUT_NAME "GZFX")
 gzfx_apply_common(GZFX)
 
-add_library(GZFXBootstrap SHARED
-    bootstrap/dinput8_proxy.cpp
-    bootstrap/dinput8.def
-)
-target_link_libraries(
-    GZFXBootstrap
-    PRIVATE
-        minhook
-        dxguid
-)
-set_target_properties(GZFXBootstrap PROPERTIES OUTPUT_NAME "dinput8")
-gzfx_apply_common(GZFXBootstrap)
-
-add_library(GZFXD3D11Bootstrap SHARED
-    bootstrap/d3d11_proxy.cpp
-    bootstrap/d3d11.def
-)
-target_link_libraries(
-    GZFXD3D11Bootstrap
-    PRIVATE
-        minhook
-)
-set_target_properties(GZFXD3D11Bootstrap PROPERTIES OUTPUT_NAME "d3d11")
-gzfx_apply_common(GZFXD3D11Bootstrap)
 
 add_executable(GZFXSmokeHost
     tests/smoke_host.cpp
@@ -141,40 +119,37 @@ add_executable(GZFXD3D11ProbeHarness
 target_link_libraries(GZFXD3D11ProbeHarness PRIVATE d3d11)
 gzfx_apply_common(GZFXD3D11ProbeHarness)
 
-add_executable(GZFXD3D11FrontDoorHarness
-    tests/d3d11_frontdoor_harness.cpp
+
+add_executable(GZFXSKSEFrontDoorHarness
+    tests/skse_frontdoor_harness.cpp
+)
+target_include_directories(
+    GZFXSKSEFrontDoorHarness
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 target_link_libraries(
-    GZFXD3D11FrontDoorHarness
+    GZFXSKSEFrontDoorHarness
     PRIVATE
         d3d11
         dxgi
         user32
 )
 add_dependencies(
-    GZFXD3D11FrontDoorHarness
+    GZFXSKSEFrontDoorHarness
     GZFX
-    GZFXD3D11Bootstrap
 )
-gzfx_apply_common(GZFXD3D11FrontDoorHarness)
+gzfx_apply_common(GZFXSKSEFrontDoorHarness)
 
-add_executable(GZFXD3D11PrimaryQualificationHarness
-    tests/d3d11_primary_qualification_harness.cpp
-)
-target_link_libraries(
-    GZFXD3D11PrimaryQualificationHarness
-    PRIVATE
-        d3d11
-)
-add_dependencies(
-    GZFXD3D11PrimaryQualificationHarness
-    GZFXD3D11Bootstrap
-)
-gzfx_apply_common(GZFXD3D11PrimaryQualificationHarness)
 
 add_executable(GZFXNaturalExitChild
     tests/natural_exit_child.cpp
 )
+target_include_directories(
+    GZFXNaturalExitChild
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
 target_link_libraries(
     GZFXNaturalExitChild
     PRIVATE
@@ -185,7 +160,6 @@ target_link_libraries(
 add_dependencies(
     GZFXNaturalExitChild
     GZFX
-    GZFXD3D11Bootstrap
 )
 gzfx_apply_common(GZFXNaturalExitChild)
 
@@ -198,14 +172,6 @@ add_dependencies(
 )
 gzfx_apply_common(GZFXNaturalExitHarness)
 
-add_executable(GZFXD3D11ExportContractHarness
-    tests/d3d11_export_contract_harness.cpp
-)
-add_dependencies(
-    GZFXD3D11ExportContractHarness
-    GZFXD3D11Bootstrap
-)
-gzfx_apply_common(GZFXD3D11ExportContractHarness)
 
 add_executable(GZFXStartupTraceHarness
     tests/startup_trace_harness.cpp
@@ -371,30 +337,19 @@ add_test(
         "${CMAKE_BINARY_DIR}/probe-test-output"
 )
 
+
 add_test(
-    NAME d3d11_frontdoor_bootstrap
+    NAME skse_single_dll_frontdoor
     COMMAND
-        "$<TARGET_FILE:GZFXD3D11FrontDoorHarness>"
-        "${CMAKE_BINARY_DIR}/frontdoor-test-output"
+        "$<TARGET_FILE:GZFXSKSEFrontDoorHarness>"
+        "$<TARGET_FILE:GZFX>"
+        "${CMAKE_BINARY_DIR}/skse-frontdoor-output"
 )
 
 set_tests_properties(
-    d3d11_frontdoor_bootstrap
+    skse_single_dll_frontdoor
     PROPERTIES
-        TIMEOUT 30
-)
-
-add_test(
-    NAME d3d11_primary_qualification
-    COMMAND
-        "$<TARGET_FILE:GZFXD3D11PrimaryQualificationHarness>"
-        "${CMAKE_BINARY_DIR}/primary-qualification-output"
-)
-
-set_tests_properties(
-    d3d11_primary_qualification
-    PROPERTIES
-        TIMEOUT 30
+        TIMEOUT 45
 )
 
 add_test(
@@ -402,6 +357,7 @@ add_test(
     COMMAND
         "$<TARGET_FILE:GZFXNaturalExitHarness>"
         "$<TARGET_FILE:GZFXNaturalExitChild>"
+        "$<TARGET_FILE:GZFX>"
         "${CMAKE_BINARY_DIR}/natural-exit-output"
 )
 
@@ -411,12 +367,6 @@ set_tests_properties(
         TIMEOUT 45
 )
 
-add_test(
-    NAME d3d11_public_export_contract
-    COMMAND
-        "$<TARGET_FILE:GZFXD3D11ExportContractHarness>"
-        "$<TARGET_FILE:GZFXD3D11Bootstrap>"
-)
 
 add_test(
     NAME startup_trace_process_scope

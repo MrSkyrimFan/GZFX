@@ -1,3 +1,5 @@
+#include "gzfx/skse_api.hpp"
+
 #include <Windows.h>
 #include <d3d11.h>
 #include <dxgi.h>
@@ -24,13 +26,16 @@ int wmain(
     int argc,
     wchar_t** argv)
 {
-    if (argc != 2)
+    if (argc != 3)
     {
         return 2;
     }
 
-    const std::filesystem::path outputRoot =
+    const std::filesystem::path dllPath =
         argv[1];
+
+    const std::filesystem::path outputRoot =
+        argv[2];
 
     if (!SetEnvironmentVariableW(
             L"GZFX_TEST_OUTPUT_ROOT",
@@ -43,6 +48,39 @@ int wmain(
             L"1"))
     {
         return 3;
+    }
+
+    const HMODULE gzfx =
+        LoadLibraryW(
+            dllPath.c_str());
+
+    if (gzfx == nullptr)
+    {
+        return 4;
+    }
+
+    using LoadFn =
+        bool(*)(
+            const gzfx::skse::Interface*);
+
+    const auto load =
+        reinterpret_cast<LoadFn>(
+            GetProcAddress(
+                gzfx,
+                "SKSEPlugin_Load"));
+
+    gzfx::skse::Interface skse{};
+    skse.skseVersion =
+        gzfx::skse::kSkse_2_3_1;
+    skse.runtimeVersion =
+        gzfx::skse::kRuntime_1_7_104;
+    skse.editorVersion = 0;
+    skse.isEditor = 0;
+
+    if (load == nullptr ||
+        !load(&skse))
+    {
+        return 5;
     }
 
     const wchar_t* className =
@@ -78,7 +116,7 @@ int wmain(
 
     if (window == nullptr)
     {
-        return 4;
+        return 6;
     }
 
     DXGI_SWAP_CHAIN_DESC desc{};
@@ -121,7 +159,7 @@ int wmain(
         context == nullptr)
     {
         DestroyWindow(window);
-        return 5;
+        return 7;
     }
 
     D3D11_TEXTURE2D_DESC textureDesc{};
@@ -150,7 +188,7 @@ int wmain(
         device->Release();
         swap->Release();
         DestroyWindow(window);
-        return 6;
+        return 8;
     }
 
     swap->Present(
@@ -164,7 +202,7 @@ int wmain(
     DestroyWindow(window);
 
     // Intentionally no GZFX_Shutdown call.
-    // Returning from main must be enough for the d3d11 ExitProcess lifecycle
-    // hook to close telemetry before Windows process teardown.
+    // Returning from main must be enough for the core GZFX ExitProcess
+    // lifecycle hook to close telemetry before Windows process teardown.
     return 0;
 }
