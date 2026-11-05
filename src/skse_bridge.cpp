@@ -48,6 +48,8 @@ namespace
         return
             skse != nullptr &&
             skse->isEditor == 0 &&
+            skse->skseVersion >=
+                gzfx::skse::kSkse_2_3_1 &&
             skse->runtimeVersion ==
                 gzfx::skse::kRuntime_1_7_104;
     }
@@ -156,7 +158,7 @@ extern "C"
             gzfx::skse::kRuntime_1_7_104,
             0
         },
-        0
+        gzfx::skse::kSkse_2_3_1
     };
 
     __declspec(dllexport)
