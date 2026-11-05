@@ -1,0 +1,169 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.34
+DIRECTINPUT MENU MOUSE OWNERSHIP
+Created 2026-11-05 after GZFX1 field ingestion, 0.0.33 field closure, PR #39,
+merged-main 39/39 validation, package publication, and repo-native intake
+migration.
+
+THIS FILE IS THE CURRENT CONTROLLING TAKEOVER INDEX.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+Visibility:
+    PUBLIC
+
+READ FIRST:
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_0.0.34_DIRECTINPUT_MENU_ENGINEERING_RESULT.txt
+    5. GZFXWorkFolder/old/GZFX_0.0.34_REAL_SKYRIM_FIELD_FINDINGS.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.34_DIRECTINPUT_MENU_RESEARCH.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.34_DIRECTINPUT_MENU_BLUEPRINT.txt
+    8. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.33.txt
+
+For locked renderer semantics:
+    GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.30.txt
+    GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+
+CURRENT RUNTIME:
+    0.0.34-directinput-menu-capture
+
+CURRENT PHASE:
+    0.0.34 AUTOMATED ENGINEERING CLOSED
+    REAL-SKYRIM MENU MOUSE OWNERSHIP REVALIDATION NEXT
+    FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT GREEN
+
+GZFX1 RAW FIELD SOURCE:
+    GZFXWorkFolder/field_uploads/GZFX1.zip
+    bytes 15,711,856
+    sha256 bfceeca445c5c40f0f52de02bc1f8438c7b4c7e40f137d7cef0b8a7cb582fce6
+
+GZFX1 PROVED:
+    0.0.33 loads in real Skyrim 1.7.104
+    SKSE 2.3.1 integration PASS
+    CommonLib SKSE::Init PASS
+    Address Library PASS
+    DataLoaded engine binding PASS
+    renderer correlation PASS
+    primary attach before resource/shader birth PASS
+    telemetry natural close PASS
+    dropped=0
+    HDRReduction 911/911 world-active frames
+    BeforeTonemap 911/911
+    BeforeGlobalTAA 911/911
+    AfterGlobalTAA 911/911
+
+GZFX1 MENU FAILURE:
+    overlay opens
+    directinput_seen=false
+    directinput_packets=0
+    cursor remained centered
+    physical mouse continued moving Skyrim camera/world
+
+ROOT CAUSE:
+    the field-working DirectInput producer/suppression layer lived in the retired
+    dinput8 proxy and was not migrated when 0.0.31 moved to one SKSE-loaded DLL.
+
+0.0.34 FIX:
+    internal DirectInput ownership subsystem inside GZFX.dll
+    normal SKSE Load arm
+    hook real system DirectInput8Create
+    hook real IDirectInput8::CreateDevice
+    identify GUID_SysMouse
+    hook real mouse GetDeviceState/GetDeviceData
+    forward physical mouse to GZFX menu
+    suppress same physical mouse from Skyrim only while GZFX menu open
+    exact mouse-only/device/buffer guards
+    menu closed = passthrough
+
+SKSE COEXISTENCE:
+    SKSE 2.3.1 commits its own DirectInput IAT wrapper after plugin Load.
+    GZFX operates underneath it on the real DirectInput implementation.
+    Do not replace or fight SKSE's wrapper.
+
+PR #39:
+    final head 77e39f9b0b2c6b59c13d6f15f0fc8ce6ba11394c
+    product-green run 42124517566
+    job 127585151806
+    39/39 PASS
+    PE load contract PASS
+
+MERGE:
+    53ee7ba91f669dec814d2de4a213b9253d91dede
+
+MERGED-MAIN:
+    run 42127092035
+    job 127593925816
+
+Merged-main product gates:
+    Build PASS
+    PE load contract PASS
+    39/39 PASS
+    package verification PASS
+    artifact upload PASS
+
+Merged-main artifact:
+    id 13462476109
+    artifact-container bytes 772,872
+    digest sha256:743b1a5b6a8c807a732a1c32692db05290cc05be84da9858d07abf1c3a950555
+
+VALIDATED PACKAGE:
+    bytes 773,940
+    SHA-256 3b394987fdead62f35756b49d2a260d0e7d28d4b866aa4c8133c3c2bc20aba20
+    Git blob a5ffc1a428a36fc158460959029091508a02b424
+
+GZFX.dll:
+    bytes 1,777,152
+    SHA-256 4012c93f49af17ce55bfe0b9d548e186f15c3a99a0fe015e732d1c5ce5ea15c7
+
+MAIN LANCE PACKAGE:
+    publication commit e08a228e1e18674080f369fb9a38a0e2f14da3c7
+    changed only LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    blob a5ffc1a428a36fc158460959029091508a02b424
+    exact match to validated merged-main package
+
+PACKAGE PIPELINE:
+    Actions bot can no longer commit directly to main under public-repo rules.
+    Validated packages stage on branch:
+        lance-package
+    Agent syncs the exact validated blob into main during closeout.
+    Do not restore direct bot pushes to main unless repository rules change.
+
+RAW FIELD-UPLOAD PIPELINE:
+    owner uploads GZFXn.zip directly to repository
+    agent moves it to GZFXWorkFolder/field_uploads/
+    raw bytes are preserved
+    repo intake workflow unpacks it for analysis
+    do not ask owner to re-upload it into chat
+
+LOCKED — DO NOT REOPEN WITHOUT CONTRADICTORY FIELD DATA:
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+STILL UNPROMOTED:
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+NEXT HUMAN TEST:
+    install current 0.0.34 Lance package
+    launch skse64_loader.exe
+    load playable world
+    Shift+Numpad1
+    move mouse
+    verify GZFX cursor moves
+    verify Skyrim camera does NOT move while menu open
+    drag one slider
+    close menu
+    verify normal mouse look resumes
+    quit normally
+
+NEXT DATA:
+    zip complete generated GZFX folder as GZFX2.zip
+    upload it directly to repository
+    agent will move/process it; no chat ZIP upload required
+
+END 0.0.34 CONTINUITY INDEX
