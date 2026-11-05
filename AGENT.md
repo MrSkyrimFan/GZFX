@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.32.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.32_COMMONLIB_ENGINE_ACCESS_ENGINEERING_RESULT.txt`. Follow the 0.0.31 / 0.0.30 / 0.0.29 records referenced by that index for SKSE migration, renderer-domain, and locked HDR/tonemap/TAA evidence.
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.33.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_ENGINEERING_RESULT.txt`. Follow the 0.0.32 / 0.0.31 / 0.0.30 / 0.0.29 records referenced by that index for CommonLib integration, SKSE migration, renderer-domain evidence, and locked HDR/tonemap/TAA contracts.
 
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
@@ -209,7 +209,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-0.0.33 SKSE LOADER RESCUE ACTIVE / REAL-SKYRIM 0.0.32 LOAD FAILURE UNDER REPAIR
+0.0.33 LOADER RESCUE CLOSED / MINIMAL REAL-SKYRIM LOAD REVALIDATION NEXT
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
@@ -371,22 +371,25 @@ required action before broad graphics-feature engineering.
 
 ## 10C. 0.0.33 real-field loader rescue
 
-The first real-Skyrim test of the 0.0.32 SKSE + CommonLib integration failed
-before healthy GZFX runtime output. The owner observed no generated GZFX runtime
-folder and no working GZFX hotkeys/menu.
+The first real-Skyrim test of 0.0.32 failed before healthy GZFX runtime output:
+no generated GZFX runtime folder and no working GZFX hotkeys/menu.
 
-This field evidence supersedes the automated-only loader acceptance.
+0.0.33 is now merged and automated-acceptance CLOSED. It:
 
-Active bounded repair authority lives in:
+- keeps SKSE Preload non-invasive;
+- moves D3D observation to normal SKSE Load;
+- initializes CommonLib through `SKSE::Init`;
+- statically links the MSVC runtime;
+- adds a real PE import/export CI gate;
+- preserves the one-DLL package;
+- preserves all locked renderer semantics.
 
-```text
-GZFXWorkFolder/new/GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
-GZFXWorkFolder/new/GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
-GZFXWorkFolder/new/GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
-```
+PR #38 and merged-main workflow `42118168990` pass 38/38. The current Lance
+ZIP is byte-correlated to that merged-main package.
 
-0.0.33 must remain loader/integration-only. Do not use this failure to reopen
-HDR/TAA contracts or broad renderer semantics.
+The next required action is minimal real-Skyrim load revalidation. Do not use
+the 0.0.32 loader failure to reopen HDR/TAA contracts or broad renderer
+semantics.
 
 ## 11. Repository lifecycle proof
 
