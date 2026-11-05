@@ -1,3 +1,5 @@
+#include "gzfx/skse_api.hpp"
+
 #include <Windows.h>
 #include <d3d11.h>
 #include <dxgi.h>
@@ -57,17 +59,26 @@ int wmain(
         return 4;
     }
 
-    using InitializeFn =
-        bool(*)() noexcept;
+    using LoadFn =
+        bool(*)(
+            const gzfx::skse::Interface*);
 
-    const auto initialize =
-        reinterpret_cast<InitializeFn>(
+    const auto load =
+        reinterpret_cast<LoadFn>(
             GetProcAddress(
                 gzfx,
-                "GZFX_Initialize"));
+                "SKSEPlugin_Load"));
 
-    if (initialize == nullptr ||
-        !initialize())
+    gzfx::skse::Interface skse{};
+    skse.skseVersion =
+        gzfx::skse::kSkse_2_3_1;
+    skse.runtimeVersion =
+        gzfx::skse::kRuntime_1_7_104;
+    skse.editorVersion = 0;
+    skse.isEditor = 0;
+
+    if (load == nullptr ||
+        !load(&skse))
     {
         return 5;
     }
