@@ -1,14 +1,12 @@
-#include "gzfx/engine/commonlib_bridge.hpp"
+// CommonLib's public headers rely on the environment established by
+// RE/Skyrim.h and require that Windows API headers have not been included yet.
+// Keep this umbrella include first in this translation unit.
+#include <RE/Skyrim.h>
 
+#include "gzfx/engine/commonlib_bridge.hpp"
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/render/renderer_execution_service.hpp"
-
-#include <REL/Module.h>
-#include <RE/R/Renderer.h>
-#include <RE/S/Sky.h>
-#include <RE/T/TESDataHandler.h>
-#include <SKSE/Version.h>
 
 #include <Windows.h>
 #include <d3d11.h>
