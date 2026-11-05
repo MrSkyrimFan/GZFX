@@ -62,6 +62,7 @@ add_library(GZFX SHARED
     src/paths.cpp
     src/runtime.cpp
     src/settings.cpp
+    src/ui/input_api.cpp
     src/ui/settings_menu.cpp
     src/version.cpp
     src/diagnostics/d3d11_lifecycle.cpp
