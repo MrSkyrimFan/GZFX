@@ -2,6 +2,7 @@
 
 #include "gzfx/diagnostics/startup_trace.hpp"
 #include "gzfx/paths.hpp"
+#include "gzfx/process_lifecycle.hpp"
 #include "gzfx/runtime.hpp"
 
 #include <Windows.h>
@@ -240,6 +241,9 @@ extern "C"
             const bool initialized =
                 GZFX_Initialize();
 
+            const bool processLifecycleArmed =
+                gzfx::process_lifecycle::Arm();
+
             gzfx::diagnostics::
                 startup_trace::Record(
                     "skse_plugin_load",
@@ -279,6 +283,12 @@ extern "C"
                 std::string(
                     "runtime_initialized=") +
                 (initialized
+                    ? "true"
+                    : "false"));
+            AppendStatus(
+                std::string(
+                    "process_lifecycle_armed=") +
+                (processLifecycleArmed
                     ? "true"
                     : "false"));
 
