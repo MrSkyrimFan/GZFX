@@ -1,8 +1,6 @@
-#include <REL/Version.h>
-#include <RE/R/Renderer.h>
-#include <RE/S/Sky.h>
-#include <RE/T/TESDataHandler.h>
-#include <SKSE/Version.h>
+// CommonLib consumer code enters through the umbrella header so the
+// standard-library, literals, REX and runtime environment are established.
+#include <RE/Skyrim.h>
 
 #include <cstdint>
 #include <iostream>
