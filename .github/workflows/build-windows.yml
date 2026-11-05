@@ -85,7 +85,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish Lance test ZIP on main
+      - name: Stage Lance test ZIP on package branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
         run: |
@@ -94,12 +94,14 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git switch -C lance-package
           git add "LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip"
 
           if (git diff --cached --quiet) {
-            Write-Host "Lance ZIP is already current."
+            Write-Host "Lance package branch already has the validated ZIP."
             exit 0
           }
 
-          git commit -m "chore: refresh Lance Skyrim test package"
-          git push origin HEAD:main
+          git commit -m "chore: stage validated Lance Skyrim test package"
+          git push origin HEAD:refs/heads/lance-package --force
