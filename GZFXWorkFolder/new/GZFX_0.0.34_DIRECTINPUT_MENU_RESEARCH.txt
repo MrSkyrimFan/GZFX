@@ -1,0 +1,336 @@
+GZFX 0.0.34 MENU MOUSE OWNERSHIP — TARGETED RESEARCH
+Date: 2026-11-05
+
+PURPOSE
+Determine the minimum correct repair for the real-Skyrim GZFX menu mouse
+regression without restoring the retired dinput8 proxy or disturbing field-locked
+renderer semantics.
+
+======================================================================
+1. AUTHORITATIVE LOCAL EVIDENCE
+======================================================================
+
+The current field return is controlling evidence:
+
+    GZFXWorkFolder/field_uploads/GZFX1.zip
+
+It proves:
+    0.0.33 loader rescue succeeds in real Skyrim.
+    GZFX menu opens.
+    DirectInput menu packets are zero.
+    Skyrim still consumes physical mouse movement.
+
+The current menu receiver still exists:
+
+    gzfx::ui::SubmitDirectInputMouse(...)
+    GZFX_SubmitMouseInput(...)
+
+The current visible-pass harness still drives the menu through that receiver.
+
+The producer/capture side was previously implemented in the retired
+bootstrap/dinput8_proxy.cpp and was removed from the runtime architecture during
+the 0.0.31 one-DLL migration.
+
+Historical field-working behavior is preserved in repository history, especially:
+
+    0d2939e76c02f25770b1ff0e28b02c149fa7ff36
+    feat: capture and suppress Skyrim DirectInput mouse while GZFX menu is open
+
+That implementation intercepted the actual DirectInput mouse device reads and:
+    forwarded deltas/buttons to the GZFX menu;
+    zeroed immediate mouse state while the menu was open;
+    returned zero buffered event count while the menu was open.
+
+This directly matches the behavior now missing.
+
+======================================================================
+2. MICROSOFT DIRECTINPUT CONTRACT
+======================================================================
+
+Microsoft DirectInput documentation confirms the same architecture used by the
+historical GZFX implementation.
+
+Reference:
+    IDirectInput8::CreateDevice Method
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee417803(v=vs.85)
+
+Key contract:
+    IDirectInput8::CreateDevice creates a device interface for a supplied GUID.
+    GUID_SysMouse identifies the default system mouse.
+
+Reference:
+    IDirectInputDevice8::GetDeviceState Method
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee417897(v=vs.85)
+
+Key contract:
+    GetDeviceState returns immediate device state.
+    c_dfDIMouse maps to DIMOUSESTATE.
+    c_dfDIMouse2 maps to DIMOUSESTATE2.
+    Mouse relative axes are available as lX / lY / lZ.
+
+Reference:
+    DIDEVICEOBJECTDATA Structure
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416611(v=vs.85)
+
+Key contract:
+    buffered DirectInput events report object offsets and data.
+    relative axis motion is represented in dwData.
+    button state uses the high bit of the low byte.
+
+Reference:
+    Using DirectInput
+    https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416845(v=vs.85)
+
+Key contract:
+    DirectInput8Create obtains the IDirectInput8 object.
+    GUID_SysMouse may be passed to CreateDevice for the standard system mouse.
+
+The historical GZFX hook chain is therefore aligned with the documented API.
+
+======================================================================
+3. WHY WIN32-ONLY INPUT IS NOT ENOUGH
+======================================================================
+
+Microsoft documents WM_INPUT / WM_MOUSEMOVE as valid mouse-input mechanisms,
+but that does not imply they suppress another consumer's DirectInput stream.
+
+Current GZFX WindowProc handles:
+    WM_MOUSEMOVE
+    WM_LBUTTONDOWN / UP
+    WM_INPUT
+
+The real field session proves this does not establish exclusive ownership of the
+mouse for the overlay:
+    Skyrim camera still moves.
+    GZFX DirectInput packet count remains zero.
+
+The correct repair must intercept the stream Skyrim itself consumes.
+
+======================================================================
+4. ARCHITECTURE OPTIONS
+======================================================================
+
+OPTION A — restore root dinput8.dll proxy
+    REJECTED.
+
+Reason:
+    violates the owner-approved one-DLL SKSE architecture;
+    reintroduces the retired distribution/AV-sensitive proxy design;
+    package would no longer be exactly Data/SKSE/Plugins/GZFX.dll.
+
+OPTION B — rely only on WindowProc raw/legacy mouse messages
+    REJECTED.
+
+Reason:
+    already field-failed to own the mouse;
+    does not stop Skyrim's DirectInput camera stream.
+
+OPTION C — use CommonLib input events only
+    NOT SELECTED FOR THIS REPAIR.
+
+Reason:
+    CommonLib gives useful typed engine access, but an event sink does not by
+    itself guarantee that the same mouse motion cannot also reach Skyrim's look
+    controls. The current defect is source ownership/suppression, not lack of an
+    engine event observer.
+
+OPTION D — migrate the proven DirectInput interception into GZFX.dll
+    SELECTED.
+
+This preserves:
+    official SKSE loading;
+    one GZFX DLL;
+    system dinput8.dll;
+    existing menu receiver;
+    proven DirectInput semantics.
+
+======================================================================
+5. SELECTED INTERNAL ONE-DLL DIRECTINPUT CHAIN
+======================================================================
+
+Arm during normal SKSEPlugin_Load, never Preload.
+
+Runtime chain:
+
+    GZFX.dll
+      -> load/locate system dinput8.dll
+      -> MinHook dinput8!DirectInput8Create
+      -> call original DirectInput8Create
+      -> hook returned IDirectInput8::CreateDevice
+      -> when GUID_SysMouse is created:
+           remember the system mouse interface pointer
+           hook IDirectInputDevice8::GetDeviceState
+           hook IDirectInputDevice8::GetDeviceData
+      -> menu closed:
+           exact passthrough
+      -> menu open:
+           parse mouse deltas/buttons
+           call gzfx::ui::SubmitDirectInputMouse
+           suppress the same mouse data from Skyrim
+
+No new proxy DLL is required.
+
+======================================================================
+6. SAFETY / SCOPE RULES
+======================================================================
+
+The runtime hook must be mouse-specific.
+
+Unlike the historical proxy implementation, the new hook should not blindly
+zero arbitrary GetDeviceState buffers merely because the hooked function target
+might be shared.
+
+Required guards:
+    remember the actual GUID_SysMouse device interface pointer;
+    only alter reads whose self pointer matches the recorded mouse device;
+    accept immediate mouse state only for exact known mouse structure sizes:
+        sizeof(DIMOUSESTATE)
+        sizeof(DIMOUSESTATE2)
+    leave every non-mouse device and unknown buffer untouched.
+
+For GetDeviceData:
+    only alter data for the recorded system mouse device;
+    preserve DIGDD_PEEK behavior;
+    only suppress consumed non-peek data while the menu is open;
+    preserve original HRESULT.
+
+When the menu is closed:
+    no data mutation;
+    no input suppression.
+
+======================================================================
+7. MINHOOK COEXISTENCE
+======================================================================
+
+GZFX already uses MinHook for:
+    renderer forensics;
+    process ExitProcess lifecycle hook.
+
+Existing production code accepts:
+    MH_OK
+    MH_ERROR_ALREADY_INITIALIZED
+
+The DirectInput subsystem should follow the same process-wide MinHook discipline.
+
+The DirectInput hooks are process-lifetime, matching GZFX.dll's existing
+process-lifetime hook ownership.
+
+======================================================================
+8. MODULE TIMING
+======================================================================
+
+The 0.0.33 field module inventory contains:
+    C:\WINDOWS\SYSTEM32\DINPUT8.dll
+
+SKSEPlugin_Load occurs long before first tracked D3D resource creation and first
+Present in the same field session.
+
+The selected repair arms the DirectInput8Create hook from normal SKSE Load,
+which is the same post-Preload phase already field-proven safe for GZFX's D3D
+capture.
+
+If dinput8.dll is not yet loaded at arm time:
+    load the system copy using an explicit system-library path/search policy;
+    resolve DirectInput8Create;
+    install the hook before Skyrim constructs its input device.
+
+This does not create a proxy or replace the system DLL.
+
+======================================================================
+9. DIAGNOSTIC CONTRACT
+======================================================================
+
+Add deterministic:
+    Diagnostics/directinput_mouse.txt
+
+Minimum state:
+    status
+    dinput8_module
+    directinput8_create_target
+    directinput8_create_hooked
+    directinput8_create_calls
+    create_device_hooked
+    create_device_calls
+    system_mouse_seen
+    mouse_device
+    get_device_state_hooked
+    get_device_data_hooked
+    state_reads
+    data_reads
+    menu_packets_forwarded
+    state_reads_suppressed
+    data_reads_suppressed
+    last_delta_x
+    last_delta_y
+    last_wheel
+    last_button_mask
+    last_error
+
+This makes the next field result self-diagnosing.
+
+Also update settings_menu.txt after the first DirectInput packet so it no longer
+remains frozen at the pre-mouse "opened" snapshot.
+
+======================================================================
+10. TEST STRATEGY
+======================================================================
+
+Retain all existing 38 tests.
+
+Existing visible_pass harness already proves:
+    GZFX menu can open;
+    GZFX_SubmitMouseInput can drive a live slider.
+
+Add/strengthen contract coverage for the new runtime subsystem:
+
+A. build/compile contract
+    DirectInput runtime hook source is part of GZFX.dll;
+    dinput headers / GUID symbols resolve under current toolchain.
+
+B. SKSE front-door integration
+    DirectInput arm is invoked from SKSEPlugin_Load, not Preload.
+    Under test override, diagnostic reports the input subsystem reached its
+    bounded arm/test state.
+
+C. pure mouse packet contract
+    immediate DIMOUSESTATE / DIMOUSESTATE2 parsing:
+        relative x/y/wheel
+        button mask
+    unknown state size:
+        passthrough / no suppression
+    buffered DIDEVICEOBJECTDATA parsing:
+        x/y/z accumulation
+        button transitions
+    non-mouse self pointer:
+        passthrough
+    menu closed:
+        passthrough
+    menu open:
+        forwarding + suppression
+
+The production runtime must not depend on an interactive CI desktop to pass.
+
+======================================================================
+11. VERSION / FIELD GATE
+======================================================================
+
+Next runtime:
+    0.0.34-directinput-menu-capture
+
+Automated acceptance is not final proof.
+
+Real-Skyrim acceptance requires:
+    GZFX output still generated;
+    directinput_mouse.txt status armed;
+    system_mouse_seen=true;
+    state/data hooks installed;
+    settings_menu directinput_seen=true after physical mouse movement;
+    directinput_packets > 0;
+    GZFX cursor visibly moves;
+    slider changes with mouse;
+    Skyrim camera does NOT rotate from the same mouse movement while menu open;
+    menu closes and normal Skyrim mouse look resumes;
+    zero telemetry drops;
+    locked HDR/TAA remains coherent.
+
+END RESEARCH
