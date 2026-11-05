@@ -1,0 +1,514 @@
+GZFX 0.0.33 SKSE LOADER RESCUE
+FINAL ENGINEERING RESULT
+Closure date: 2026-11-05
+
+STATUS:
+    REAL-SKYRIM 0.0.32 LOAD FAILURE ACKNOWLEDGED
+    BOUNDED LOADER RESCUE COMPLETE
+    PR #38 GREEN
+    MERGED
+    MERGED-MAIN GREEN
+    SELF-CONTAINED PE LOAD CONTRACT GREEN
+    38 / 38 TESTS GREEN
+    ONE-DLL PACKAGE REFRESH VERIFIED
+    READY FOR MINIMAL REAL-SKYRIM REVALIDATION
+
+RUNTIME:
+    0.0.33-skse-loader-rescue
+
+TARGET:
+    Skyrim Special Edition / Anniversary Edition Steam 1.7.104
+    SKSE 2.3.1
+    Address Library for SKSE Plugins format 5
+    expected database Data/SKSE/Plugins/versionlib-1-7-104-0.bin
+
+======================================================================
+1. FIELD FAILURE THAT OPENED THIS WAVE
+======================================================================
+
+The owner performed the first real-Skyrim field test of the combined 0.0.32
+SKSE + CommonLib architecture.
+
+Observed:
+    no functional GZFX menu/hotkeys
+    no generated GZFX runtime/output folder under the normal Windows
+        Documents/My Games/Skyrim Special Edition path
+    SKSE, Address Library, and GZFX were installed/enabled by the owner
+
+This is classified as an early loader/integration failure.
+
+It is NOT evidence that the field-locked renderer semantics failed.
+
+The prior automated-only loader acceptance was therefore insufficient and was
+superseded by the real field result.
+
+======================================================================
+2. 0.0.32 POST-FAILURE FORENSICS
+======================================================================
+
+The exact previously validated 0.0.32 DLL was inspected.
+
+Verified exports:
+    SKSEPlugin_Version
+    SKSEPlugin_Preload
+    SKSEPlugin_Load
+    GZFX_Initialize
+    GZFX_Shutdown
+
+The custom GZFX SKSE ABI was independently rechecked against official
+ianpatt/skse64 2.3.1 source.
+
+Verified:
+    SKSEInterface layout
+    Messaging v2 layout
+    Trampoline v1 layout
+    SKSEPluginVersionData layout/size
+    runtime 1.7.104 packed value
+    SKSE 2.3.1 release index 75
+    explicit 1.7.104 compatibility acceptance
+
+Therefore the field failure was not explained by missing exports or an obvious
+SKSE ABI/version declaration mismatch.
+
+Three real integration weaknesses remained.
+
+A. PRELOAD-PHASE EXECUTABLE MUTATION
+
+0.0.31/0.0.32 SKSEPlugin_Preload called:
+
+    ArmEarlyGraphicsBootstrap
+      -> ArmD3D11LifecycleProbe
+         -> parse SkyrimSE.exe PE imports
+         -> VirtualProtect D3D11/DXGI IAT slots
+         -> replace imports
+
+This happened during SKSE's capability-limited Preload phase, before Skyrim
+global initializers.
+
+The previous CI harness tested this against a synthetic harness executable, not
+against the real SkyrimSE.exe 1.7.104 image.
+
+B. DYNAMIC MICROSOFT VC++ RUNTIME DEPENDENCY
+
+The 0.0.32 shipped DLL dynamically imported:
+
+    MSVCP140.dll
+    VCRUNTIME140.dll
+    VCRUNTIME140_1.dll
+    api-ms-win-crt-* runtime DLLs
+
+A missing/incompatible runtime can make Windows LoadLibrary fail before GZFX
+executes any logging code.
+
+The GitHub Windows runner already contains the Visual Studio runtime, so the old
+CI did not prove clean-machine loading.
+
+C. COMMONLIB SKSE INITIALIZATION CONTRACT
+
+0.0.32 linked CommonLibSSE-GG but did not call its supported:
+
+    SKSE::Init(const SKSE::LoadInterface*, bool)
+
+The pinned CommonLib implementation uses this entry point to initialize:
+
+    REL::Module
+    REL::IDDatabase
+    CommonLib SKSE API storage/interfaces
+
+0.0.32 instead touched selected REL state manually.
+
+Without the failed user's old SKSE logs, no single one of A/B/C is claimed as
+the sole proven root cause.
+
+0.0.33 removes all three known loader/integration defects/risks coherently.
+
+======================================================================
+3. SKSE PRELOAD / LOAD REPAIR
+======================================================================
+
+SKSEPlugin_Preload remains exported for the official SKSE two-phase plugin
+contract.
+
+0.0.33 Preload now does ONLY:
+
+    exact runtime/SKSE compatibility check
+    mark preload entered
+    record no graphics arm
+    return true
+
+Preload no longer:
+
+    parses SkyrimSE.exe imports
+    calls VirtualProtect on D3D/DXGI IAT slots
+    installs renderer observation
+    initializes CommonLib
+    initializes runtime subsystems
+    performs runtime filesystem setup
+
+Renderer observation now arms in normal:
+
+    SKSEPlugin_Load
+
+before GZFX_Initialize.
+
+GZFX_Initialize retains coherent subsystem ownership and its existing call_once
+behavior.
+
+New bridge evidence includes:
+
+    preload_entered=true
+    graphics_arm_phase=load
+    early_graphics_armed=<true/false>
+
+The CI front-door harness now explicitly asserts that Preload leaves the GZFX
+runtime initialization state at zero and creates no D3D lifecycle diagnostics.
+
+======================================================================
+4. COMMONLIB SKSE INITIALIZATION REPAIR
+======================================================================
+
+Pinned dependency remains:
+
+    eddoursul/CommonLibSSE-GG
+    2053e94fd1c147b36eae2b4338118552fba407e2
+    MIT
+
+0.0.33 adds supported initialization through:
+
+    SKSE::Init(
+        reinterpret_cast<const SKSE::LoadInterface*>(skse),
+        false)
+
+The GZFX raw SKSE interface layout is compile-time checked against CommonLib's
+SKSE interface representation.
+
+New CommonLib state:
+
+    skseApiReady
+
+DataLoaded engine singleton binding now requires:
+
+    module ready
+    Address Library present
+    CommonLib SKSE API ready
+
+before binding:
+
+    RE::BSGraphics::Renderer
+    RE::Sky
+    RE::TESDataHandler
+
+CI harness processes retain a safe test-bypass path and do not open the real
+Skyrim Address Library database.
+
+======================================================================
+5. SELF-CONTAINED WINDOWS RUNTIME REPAIR
+======================================================================
+
+0.0.33 changes the MSVC/vcpkg build model from:
+
+    x64-windows-static-md
+    dynamic MSVC runtime (/MD)
+
+to:
+
+    x64-windows-static
+    static MSVC runtime (/MT family)
+
+CMake locks CMP0091 before project() and selects:
+
+    MultiThreaded$<$<CONFIG:Debug>:Debug>
+
+A new PE verification gate inspects the actual built GZFX.dll with dumpbin.
+
+CI fails if GZFX.dll imports dynamic:
+
+    MSVCP*.dll
+    VCRUNTIME*.dll
+    api-ms-win-crt-*.dll
+
+The same gate proves required exports remain present.
+
+======================================================================
+6. FIRST 0.0.33 CI FAILURE / REPAIR
+======================================================================
+
+First rescue workflow:
+
+    42114147032
+
+Job:
+
+    127549174317
+
+Static dependency install:
+    PASS
+
+Configure:
+    PASS
+
+Production CommonLib/GZFX compilation had progressed successfully, but the new
+CommonLib ABI contract harness failed because the test referenced CommonLib
+SKSE ABI declarations without including the required SKSE API declarations.
+
+This was a test-harness include defect, not a product loader/runtime failure.
+
+Repair:
+    include the CommonLib SKSE API/ABI declarations in the contract harness
+
+No product algorithm or loader behavior was weakened to make CI pass.
+
+======================================================================
+7. FINAL PR PROOF
+======================================================================
+
+PR:
+    #38
+    0.0.33: rescue real-Skyrim SKSE loader path
+
+Merged PR content head:
+    85bc8afe8523afce744a8feea2403e486ef34ea5
+
+Green PR workflow:
+    42116202971
+
+Green PR job:
+    127556394001
+
+The green run reports head:
+    95b330afb651157331517777499e25bc71cd39c3
+
+That head is one empty/no-file commit beyond the merged content head.
+
+Git compare proves:
+    85bc8afe... -> 95b330af...
+    files = []
+    identical file tree
+
+Therefore the green workflow validated the exact file tree later merged.
+
+PR result:
+
+    Build PASS
+    PE load contract PASS
+    Runtime smoke test PASS
+    38 / 38 PASS
+    package PASS
+    package contents PASS
+    artifact upload PASS
+
+PR CTest:
+    100% tests passed, 0 tests failed out of 38
+
+PR artifact:
+    id 13456363393
+    artifact-container bytes 767,439
+    digest:
+        sha256:6696d2d0aca50e43e40d9c1deec69d4ef8631b30f0aca5730adba621ab656ceb
+
+Independent PR inner package:
+    bytes 768,500
+    SHA-256:
+        10eff4de75dff506992dea0fc3926d471c0ae85ae4ab82c3b2cd477c0ba4caee
+
+Independent PR GZFX.dll:
+    bytes 1,766,400
+    SHA-256:
+        ba52c8f562eae1995ae53056643f5b068dc7a38a9a48ae65fb98c5a7351168a4
+
+Independent DLL imports:
+    SHELL32.dll
+    ole32.dll
+    USER32.dll
+    GDI32.dll
+    VERSION.dll
+    D3DCOMPILER_47.dll
+    KERNEL32.dll
+
+Absent:
+    MSVCP140.dll
+    VCRUNTIME140.dll
+    VCRUNTIME140_1.dll
+    api-ms-win-crt-* dynamic CRT dependencies
+
+Required exports independently present:
+    SKSEPlugin_Version
+    SKSEPlugin_Preload
+    SKSEPlugin_Load
+    GZFX_Initialize
+    GZFX_Shutdown
+
+======================================================================
+8. MERGE / MERGED-MAIN PROOF
+======================================================================
+
+Merge commit:
+    1e5983c139a8c5345ccf803eb6e56ddb3285abfc
+
+Compare:
+    85bc8afe... -> merge 1e5983c1...
+    files = []
+
+Thus the merged tree equals the green PR content tree.
+
+Merged-main workflow:
+    42118168990
+
+Run number:
+    262
+
+Merged-main job:
+    127563236457
+
+Merged-main result:
+
+    static dependency install PASS
+    configure PASS
+    build PASS
+    PE load contract PASS
+    runtime smoke test PASS
+    38 / 38 PASS
+    package PASS
+    package-content verification PASS
+    artifact upload PASS
+    Lance package publish PASS
+
+Merged-main CTest:
+    100% tests passed, 0 tests failed out of 38
+
+Merged-main artifact:
+    id 13457543592
+    artifact-container bytes 767,413
+    digest:
+        sha256:64e80d694fd14904d625f5586752010f27323917b6013b0b6641d6e134c5799b
+
+Independent merged-main inner package:
+    bytes 768,500
+    SHA-256:
+        db890928369b97fe2303cb9ee5162649112038cacd6a0e47a8336290679bb888
+
+    Git blob SHA-1:
+        d297dc979ccd52bfdc2ae29526b263c5debbfca3
+
+Independent merged-main GZFX.dll:
+    bytes 1,766,400
+    SHA-256:
+        71aaae010c6796b11833fc51c56746a5cccc3971d9a0859523c1e4ba1112aac6
+
+The DLL import set remains only normal Windows/D3D system libraries listed in
+section 7 and contains no dynamic MSVC/UCRT dependency family rejected by the
+new PE gate.
+
+The differing PR/main DLL hashes are normal independent-build byte variation.
+The acceptance contract is structural/import/export/test/package identity, not
+reproducible-build identity.
+
+======================================================================
+9. PACKAGE REFRESH PROOF
+======================================================================
+
+Automatic refresh commit:
+    df24f3eafa9ab6dec018ccb04aca706ec82426bf
+
+Commit message:
+    chore: refresh Lance Skyrim test package
+
+That commit changed ONLY:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Current repository ZIP blob:
+    d297dc979ccd52bfdc2ae29526b263c5debbfca3
+
+Independent Git-blob calculation over the merged-main validated inner package:
+    d297dc979ccd52bfdc2ae29526b263c5debbfca3
+
+Therefore the current committed Lance ZIP is byte-identical to the package
+validated by merged-main workflow 42118168990.
+
+Package file payload remains exactly:
+
+    Data/SKSE/Plugins/GZFX.dll
+
+No GZFX d3d11.dll.
+No GZFX dinput8.dll.
+No bundled SKSE.
+No bundled Address Library.
+No CommonLib DLL.
+No VC runtime DLL.
+
+======================================================================
+10. RENDERER / SEMANTIC NON-DRIFT
+======================================================================
+
+This rescue wave does NOT promote or modify the meaning of:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+It does NOT promote:
+
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+The loader failure is not authority to reopen proven renderer semantics.
+
+The 0.0.29 real-field contracts remain locked unless later contradictory
+real-Skyrim evidence appears.
+
+======================================================================
+11. FIELD STATUS
+======================================================================
+
+0.0.33 automated loader/integration acceptance is COMPLETE.
+
+Real-Skyrim validation of 0.0.33 has NOT yet occurred.
+
+Do NOT claim yet that:
+    the 0.0.33 DLL loads in the owner's Skyrim installation
+    GZFX runtime output is generated in real Skyrim
+    CommonLib SKSE::Init succeeds in the owner's runtime
+    Renderer/Sky/TESDataHandler bind successfully in real Skyrim
+    Shift+Numpad1 menu works in real Skyrim
+    renderer semantics remain coherent after the 0.0.33 loader repair
+
+The next field test is intentionally minimal.
+
+======================================================================
+12. NEXT FIELD TEST
+======================================================================
+
+Keep installed:
+    Skyrim Steam 1.7.104
+    SKSE 2.3.1
+    Address Library for SKSE Plugins for 1.7.104
+
+Replace only the GZFX package with the current repo ZIP.
+
+Launch:
+    skse64_loader.exe
+
+First acceptance:
+    reach main menu
+    verify GZFX runtime folder now exists under the Windows Documents
+        My Games/Skyrim Special Edition/GZFX path
+
+If the folder exists:
+    load into a save
+    press Shift+Numpad1 once
+    verify menu appears
+    exit Skyrim normally
+    return the entire generated GZFX folder
+
+If the folder still does NOT exist:
+    stop immediately
+    return:
+        Documents/My Games/Skyrim Special Edition/SKSE/skse64.log
+        Documents/My Games/Skyrim Special Edition/SKSE/skse64_loader.log
+
+Do not spend time testing graphics until loader proof exists.
+
+END ENGINEERING RESULT
