@@ -29,7 +29,7 @@ Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
 current runtime: 0.0.32-commonlib-mit-engine-access
-current phase: COMMONLIB MIT ENGINE ACCESS INTEGRATION / CI
+current phase: 0.0.32 COMMONLIB INTEGRATION CLOSED / REAL-SKYRIM FIELD VALIDATION NEXT
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
@@ -103,6 +103,13 @@ publicly corroborated post-processing and pre-UI opcode skeletons and records
 candidate match/target RVAs in normal session evidence. Those candidates are
 never hooked by 0.0.30 and engineProfileAvailable remains false until later
 field DATA and research independently verify them.
+
+0.0.32 completes the owner-authorized MIT CommonLib engine-access integration.
+PR #37 and merged-main CI are green at 38/38. CommonLib is statically linked into
+the single GZFX DLL; Address Library remains external; the validated package still
+contains only `Data/SKSE/Plugins/GZFX.dll`. The next required action is a compact
+real-Skyrim 1.7.104 field validation of the combined SKSE + CommonLib path before
+broad graphics-feature engineering resumes.
 
 **Important:** GZFX uses official SKSE as its loader/lifecycle host, the
 MIT-licensed CommonLibSSE-GG line as a typed read-only Skyrim engine-access
