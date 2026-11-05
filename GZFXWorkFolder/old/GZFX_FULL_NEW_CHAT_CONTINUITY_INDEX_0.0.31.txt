@@ -1,0 +1,95 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.31
+SKSE SINGLE-DLL FRONT DOOR
+Created 2026-11-05 after PR #36 merge and merged-main validation.
+
+THIS FILE IS THE CURRENT CONTROLLING TAKEOVER INDEX.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+READ FIRST:
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_0.0.31_SKSE_SINGLE_DLL_ENGINEERING_RESULT.txt
+    5. GZFXWorkFolder/old/GZFX_0.0.31_SKSE_MIGRATION_FINDINGS.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.31_SKSE_MIGRATION_RESEARCH.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.31_SKSE_MIGRATION_BLUEPRINT.txt
+
+For locked renderer semantics:
+    8. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.30.txt
+    9. GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+    10. GZFXWorkFolder/old/GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+    11. GZFXWorkFolder/old/GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
+
+CURRENT RUNTIME:
+    0.0.31-skse-single-dll-frontdoor
+
+CURRENT PRODUCT FRONT DOOR:
+    official SKSE 2.3.1
+      ->
+    Data/SKSE/Plugins/GZFX.dll
+
+TARGET FIELD RUNTIME:
+    Skyrim Steam 1.7.104
+
+PACKAGE:
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    Git blob 1a325055897ba785a2dedd136e264bf7e25396e9
+    367,849 bytes
+
+PACKAGE FILE PAYLOAD:
+    Data/SKSE/Plugins/GZFX.dll
+
+RETIRED:
+    GZFX-owned d3d11.dll
+    GZFX-owned dinput8.dll
+    proxy forwarding/chaining architecture
+
+SKSE INTEGRATION:
+    SKSEPlugin_Version
+    SKSEPlugin_Preload
+    SKSEPlugin_Load
+    Messaging acquired
+    Trampoline acquired
+    lifecycle listener registered
+    process lifetime owned by SKSE path
+
+COMMONLIB:
+    NOT linked
+    current 15.x GPL-3.0-or-later licensing not owner-authorized for GZFX
+
+LOCKED — DO NOT REOPEN WITHOUT CONTRADICTORY FIELD DATA:
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+STILL UNPROMOTED:
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+PR #36:
+    final head 3ddc5640638f6409c2c1b8e8faab865727154877
+    run 41972707811
+    37/37 PASS
+
+MERGE:
+    df6d6dbf5a303eb530ad0708b965782f680eb310
+
+MERGED MAIN:
+    run 41973194715
+    37/37 PASS
+
+PACKAGE REFRESH:
+    42929ee53fa32dc6d1a19dbc8595af00dca9da34
+    changed only Lance ZIP
+
+CURRENT PHASE:
+    REAL-SKYRIM SKSE FRONT-DOOR FIELD VALIDATION NEXT
+
+Do not start broad graphics-feature implementation until the existing renderer
+closure matrix says the corresponding domain is closed.
+
+END 0.0.31 CONTINUITY INDEX
