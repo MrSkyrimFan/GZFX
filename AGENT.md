@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.33.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_ENGINEERING_RESULT.txt`. Follow the 0.0.32 / 0.0.31 / 0.0.30 / 0.0.29 records referenced by that index for CommonLib, SKSE migration, renderer-domain, and locked HDR/tonemap/TAA evidence.
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.34.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.34_DIRECTINPUT_MENU_ENGINEERING_RESULT.txt`. Follow the 0.0.33 / 0.0.32 / 0.0.31 / 0.0.30 / 0.0.29 records referenced by that index for loader, CommonLib, SKSE migration, renderer-domain, and locked HDR/tonemap/TAA evidence.
 
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
@@ -209,7 +209,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-0.0.34 DIRECTINPUT MENU OWNERSHIP ENGINEERING / 0.0.33 LOADER FIELD-CLOSED
+0.0.34 ENGINEERING CLOSED / REAL-SKYRIM MENU MOUSE REVALIDATION NEXT
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
@@ -423,6 +423,46 @@ Permanent rules:
 
 This repo-native intake replaces chat attachment round-trips for GZFX field data.
 
+## 10E. 0.0.34 DirectInput menu ownership
+
+GZFX1 field evidence proved the 0.0.33 loader rescue in real Skyrim and exposed
+the remaining menu regression:
+
+- GZFX menu opened;
+- DirectInput menu packets remained zero;
+- the physical mouse continued moving Skyrim camera/world.
+
+Root cause: the previously field-working DirectInput producer/suppression layer
+was retired with the old dinput8 proxy and was not migrated into the one-DLL
+SKSE architecture.
+
+0.0.34 is now automated-engineering CLOSED:
+
+- DirectInput mouse capture/suppression lives inside GZFX.dll;
+- it arms from normal SKSEPlugin_Load, never Preload;
+- it hooks the real system DirectInput implementation beneath SKSE's wrapper;
+- only the exact GUID_SysMouse device is eligible for suppression;
+- menu closed = passthrough;
+- menu open = GZFX receives the physical mouse and Skyrim receives suppressed
+  physical mouse state/events;
+- no dinput8 proxy was restored;
+- PR #39 merged;
+- merged-main product validation passed PE + 39/39 tests;
+- validated package is published to main.
+
+Controlling records:
+
+```text
+GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.34.txt
+GZFXWorkFolder/old/GZFX_0.0.34_DIRECTINPUT_MENU_ENGINEERING_RESULT.txt
+GZFXWorkFolder/old/GZFX_0.0.34_REAL_SKYRIM_FIELD_FINDINGS.txt
+GZFXWorkFolder/old/GZFX_0.0.34_DIRECTINPUT_MENU_RESEARCH.txt
+GZFXWorkFolder/old/GZFX_0.0.34_DIRECTINPUT_MENU_BLUEPRINT.txt
+```
+
+Next required action is the compact real-Skyrim menu mouse validation. Do not
+start broad graphics feature work before that field result.
+
 ## 11. Repository lifecycle proof
 
 For implementation waves:
@@ -435,10 +475,12 @@ For implementation waves:
 6. fix real failures;
 7. merge;
 8. verify merged-main CI;
-9. verify the Lance ZIP auto-refresh;
-10. prove the package-refresh commit changed only the ZIP;
-11. record the result in the repo authority history;
-12. hand the user concise in-game instructions.
+9. verify the validated ZIP staged on the `lance-package` branch;
+10. prove that staged ZIP matches the merged-main artifact;
+11. sync the exact validated ZIP blob into main with the connected GitHub authority;
+12. prove the main package-sync commit changed only the ZIP;
+13. record the result in the repo authority history;
+14. hand the user concise in-game instructions.
 
 ## 12. Absolute continuity rule
 
