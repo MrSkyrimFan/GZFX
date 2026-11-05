@@ -582,8 +582,9 @@ namespace gzfx::engine::commonlib
                 return false;
             }
 
-            std::scoped_lock lock(
-                g_mutex);
+            {
+                std::scoped_lock lock(
+                    g_mutex);
 
             g_snapshot.dataLoaded = true;
 
