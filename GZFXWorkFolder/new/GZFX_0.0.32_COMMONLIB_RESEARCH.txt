@@ -1,0 +1,75 @@
+GZFX 0.0.32 COMMONLIB MIT ENGINE ACCESS — RESEARCH
+Date: 2026-11-05
+
+SELECTED DEPENDENCY
+Repository:
+    eddoursul/CommonLibSSE-GG
+
+Pinned commit:
+    2053e94fd1c147b36eae2b4338118552fba407e2
+
+License:
+    MIT
+
+Why selected:
+- current 1.7.104 support;
+- Address Library format 5 support;
+- 1.7.99/1.7.104 structure-layout corrections;
+- permissive MIT license;
+- no need to copy GPL CommonLibSSE-NG code into GZFX.
+
+BUILD MODEL
+GZFX will FetchContent the pinned CommonLibSSE-GG source and statically link it into GZFX.dll.
+Build will be AE-only for this product phase:
+    ENABLE_SKYRIM_AE=ON
+    ENABLE_SKYRIM_SE=OFF
+    ENABLE_SKYRIM_VR=OFF
+    BUILD_TESTS=OFF
+    COMMONLIB_ENABLE_IPO=OFF
+
+CommonLib currently requires build packages including:
+    spdlog
+    rapidcsv
+    DirectXTK
+with DirectXMath transitively.
+GZFX CI will use vcpkg x64-windows-static-md so these do not create additional distributed DLLs.
+
+END-USER DEPENDENCY
+Address Library for SKSE Plugins becomes required for the CommonLib engine-access plane.
+For runtime 1.7.104 CommonLib uses Address Library format 5 and the versioned database:
+    Data/SKSE/Plugins/versionlib-1-7-104-0.bin
+
+GZFX does NOT redistribute Address Library.
+
+INITIAL PRODUCTION USE
+1. CommonLib module/version validation.
+2. DataLoaded engine binding:
+   - RE::BSGraphics::Renderer
+   - RE::Sky
+   - RE::TESDataHandler
+3. Renderer pointer corroboration:
+   - D3D device
+   - immediate context
+   - current render-window swap chain
+4. If GZFX's existing D3D front door has not attached a primary renderer by DataLoaded, CommonLib may provide a validated fallback attach path.
+5. Per-frame read-only engine snapshot:
+   - current/last weather identity
+   - sky mode
+   - game hour
+   - weather blend percentage
+   - wind speed / wind angle
+   - fog near/far/power/clamp
+   - sun/cloud/moon/precipitation object identities
+   - renderer/device/context/swap-chain identities
+
+SAFETY
+- No engine write/modification in this wave.
+- No weather mutation.
+- No renderer mutation through CommonLib.
+- No CommonLib engine call is made in CI harness processes that are not SkyrimSE.exe.
+- Existing GZFX D3D and semantic ownership remains primary authority until field validation proves the CommonLib correlation path.
+
+LICENSE NOTICE
+MIT notice must remain in repository third-party notices. The complete CommonLib MIT notice will also be embedded in GZFX.dll so the one-binary distribution retains the required notice.
+
+END RESEARCH
