@@ -391,9 +391,18 @@ namespace gzfx::engine::commonlib
                 lease);
         }
 
-        bool TryFallbackAttachLocked() noexcept
+        bool TryFallbackAttach() noexcept
         {
-            if (g_renderer == nullptr)
+            RE::BSGraphics::Renderer*
+                renderer = nullptr;
+
+            {
+                std::scoped_lock lock(
+                    g_mutex);
+                renderer = g_renderer;
+            }
+
+            if (renderer == nullptr)
             {
                 return false;
             }
@@ -418,7 +427,7 @@ namespace gzfx::engine::commonlib
                         GetDevice());
 
             auto& rendererData =
-                g_renderer->GetRuntimeData();
+                renderer->GetRuntimeData();
 
             auto* context =
                 reinterpret_cast<
@@ -442,18 +451,32 @@ namespace gzfx::engine::commonlib
                 return false;
             }
 
-            g_snapshot.fallbackAttachAttempted =
-                true;
+            {
+                std::scoped_lock lock(
+                    g_mutex);
+                g_snapshot.fallbackAttachAttempted =
+                    true;
+            }
 
-            g_snapshot.fallbackAttachSucceeded =
+            // Do not hold the CommonLib state mutex while entering
+            // renderer-forensics. Present takes the renderer lock before
+            // the CommonLib lock, so doing the reverse here would create
+            // an ABBA deadlock.
+            const bool attached =
                 diagnostics::
                     AttachPrimaryRendererObjects(
                         swapChain,
                         device,
                         context);
 
-            return
-                g_snapshot.fallbackAttachSucceeded;
+            {
+                std::scoped_lock lock(
+                    g_mutex);
+                g_snapshot.fallbackAttachSucceeded =
+                    attached;
+            }
+
+            return attached;
         }
     }
 
@@ -636,18 +659,27 @@ namespace gzfx::engine::commonlib
 
             UpdateRendererPointersLocked();
 
-            TryFallbackAttachLocked();
-
-            UpdateRendererPointersLocked();
-            CorrelateRendererLocked();
-
             g_snapshot.status =
                 Status::Bound;
 
             WriteDiagnostic(
-                "engine_bound");
+                "engine_bound_pre_correlation");
+        }
 
-            return true;
+        TryFallbackAttach();
+
+        {
+            std::scoped_lock lock(
+                g_mutex);
+
+            UpdateRendererPointersLocked();
+            CorrelateRendererLocked();
+
+            WriteDiagnostic(
+                "engine_bound");
+        }
+
+        return true;
         }
         catch (...)
         {
