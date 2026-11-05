@@ -1,0 +1,144 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.33
+SKSE LOADER RESCUE
+Created 2026-11-05 after the first 0.0.32 real-Skyrim load failure, bounded loader repair, PR #38 merge, and main package refresh.
+
+THIS FILE IS THE CURRENT CONTROLLING TAKEOVER INDEX.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+READ FIRST:
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_ENGINEERING_RESULT.txt
+    5. GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
+
+For CommonLib integration history:
+    8. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.32.txt
+    9. GZFXWorkFolder/old/GZFX_0.0.32_COMMONLIB_ENGINE_ACCESS_ENGINEERING_RESULT.txt
+
+For SKSE migration history:
+    10. GZFXWorkFolder/old/GZFX_0.0.31_SKSE_SINGLE_DLL_ENGINEERING_RESULT.txt
+
+For locked renderer semantics:
+    11. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.30.txt
+    12. GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+
+CURRENT RUNTIME:
+    0.0.33-skse-loader-rescue
+
+CURRENT PHASE:
+    AUTOMATED 0.0.33 LOADER RESCUE CLOSED
+    MINIMAL REAL-SKYRIM LOAD REVALIDATION NEXT
+    FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT GREEN
+
+FIELD FACT THAT MUST NOT BE LOST:
+    0.0.32 DID NOT WORK IN THE FIRST REAL-SKYRIM TEST.
+    No generated GZFX runtime folder.
+    No functional GZFX hotkeys/menu.
+    This evidence superseded automated-only loader acceptance.
+
+CURRENT FRONT DOOR:
+    SkyrimSE.exe 1.7.104
+      -> official SKSE 2.3.1
+         -> SKSEPlugin_Preload
+              compatibility only; NO invasive graphics work
+         -> SKSEPlugin_Load
+              D3D lifecycle arm
+              GZFX runtime init
+              CommonLib SKSE::Init
+              process-lifetime telemetry
+         -> DataLoaded
+              typed Renderer/Sky/TESDataHandler binding
+         -> primary Present
+              CommonLib read-only snapshot
+              existing GZFX renderer
+
+COMMONLIB:
+    eddoursul/CommonLibSSE-GG
+    2053e94fd1c147b36eae2b4338118552fba407e2
+    MIT
+    statically linked
+
+ADDRESS LIBRARY:
+    external
+    format 5 for Skyrim 1.7.104
+    Data/SKSE/Plugins/versionlib-1-7-104-0.bin
+
+MSVC RUNTIME:
+    static in 0.0.33
+    PE gate rejects dynamic MSVCP/VCRUNTIME/api-ms-win-crt imports
+
+PR #38:
+    final merged content head:
+        85bc8afe8523afce744a8feea2403e486ef34ea5
+
+    final successful workflow:
+        42116202971
+
+    job:
+        127556394001
+
+    result:
+        PE load contract PASS
+        38/38 PASS
+
+    artifact:
+        13456363393
+        sha256:6696d2d0aca50e43e40d9c1deec69d4ef8631b30f0aca5730adba621ab656ceb
+
+MERGE:
+    1e5983c139a8c5345ccf803eb6e56ddb3285abfc
+
+MAIN PACKAGE REFRESH:
+    df24f3eafa9ab6dec018ccb04aca706ec82426bf
+    changed only LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+CURRENT LANCE ZIP:
+    Git blob:
+        d297dc979ccd52bfdc2ae29526b263c5debbfca3
+
+    bytes:
+        768,500
+
+    file payload:
+        Data/SKSE/Plugins/GZFX.dll
+
+LOCKED — DO NOT REOPEN WITHOUT CONTRADICTORY FIELD DATA:
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+STILL UNPROMOTED:
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+ACTIVE RENDERER-DOMAIN AUTHORITY REMAINS IN new/:
+    GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+    GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
+    GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_1.txt
+    GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
+    GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
+
+NEXT HUMAN ACTION:
+    replace old GZFX DLL/package with current 0.0.33 package
+    launch through skse64_loader.exe
+    reach main menu and load game
+    verify GZFX runtime folder now exists
+    press Shift+Numpad1 once
+    quit normally
+
+IF GZFX OUTPUT EXISTS:
+    return the whole generated GZFX folder plus SKSE logs
+
+IF NO GZFX OUTPUT EXISTS:
+    stop testing and return skse64.log + skse64_loader.log
+
+Do not start broad graphics feature engineering until the loader rescue is proven in real Skyrim.
+
+END 0.0.33 CONTINUITY INDEX
