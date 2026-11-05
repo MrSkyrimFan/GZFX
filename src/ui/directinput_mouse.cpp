@@ -607,9 +607,6 @@ namespace gzfx::ui::directinput_mouse
                             FunctionAddress(
                                 &HookGetDeviceState),
                             &original) ==
-                            MH_OK &&
-                        MH_EnableHook(
-                            stateTarget) ==
                             MH_OK)
                     {
                         g_originalGetDeviceState =
@@ -617,12 +614,17 @@ namespace gzfx::ui::directinput_mouse
                                 DirectInputGetDeviceStateFn>(
                                     original);
 
-                        g_getDeviceStateTarget =
-                            stateTarget;
+                        if (MH_EnableHook(
+                                stateTarget) ==
+                                MH_OK)
+                        {
+                            g_getDeviceStateTarget =
+                                stateTarget;
 
-                        g_getDeviceStateHooked.store(
-                            true,
-                            std::memory_order_release);
+                            g_getDeviceStateHooked.store(
+                                true,
+                                std::memory_order_release);
+                        }
                     }
                 }
 
@@ -636,9 +638,6 @@ namespace gzfx::ui::directinput_mouse
                             FunctionAddress(
                                 &HookGetDeviceData),
                             &original) ==
-                            MH_OK &&
-                        MH_EnableHook(
-                            dataTarget) ==
                             MH_OK)
                     {
                         g_originalGetDeviceData =
@@ -646,12 +645,17 @@ namespace gzfx::ui::directinput_mouse
                                 DirectInputGetDeviceDataFn>(
                                     original);
 
-                        g_getDeviceDataTarget =
-                            dataTarget;
+                        if (MH_EnableHook(
+                                dataTarget) ==
+                                MH_OK)
+                        {
+                            g_getDeviceDataTarget =
+                                dataTarget;
 
-                        g_getDeviceDataHooked.store(
-                            true,
-                            std::memory_order_release);
+                            g_getDeviceDataHooked.store(
+                                true,
+                                std::memory_order_release);
+                        }
                     }
                 }
 
@@ -769,9 +773,6 @@ namespace gzfx::ui::directinput_mouse
                         FunctionAddress(
                             &HookCreateDevice),
                         &original) ==
-                        MH_OK &&
-                    MH_EnableHook(
-                        target) ==
                         MH_OK)
                 {
                     g_originalCreateDevice =
@@ -779,14 +780,19 @@ namespace gzfx::ui::directinput_mouse
                             DirectInputCreateDeviceFn>(
                                 original);
 
-                    g_createDeviceTarget =
-                        target;
+                    if (MH_EnableHook(
+                            target) ==
+                            MH_OK)
+                    {
+                        g_createDeviceTarget =
+                            target;
 
-                    g_createDeviceHooked.store(
-                        true,
-                        std::memory_order_release);
+                        g_createDeviceHooked.store(
+                            true,
+                            std::memory_order_release);
 
-                    hooked = true;
+                        hooked = true;
+                    }
                 }
             }
 
@@ -929,9 +935,6 @@ namespace gzfx::ui::directinput_mouse
             if (MH_EnableHook(
                     target) != MH_OK)
             {
-                g_originalDirectInput8Create =
-                    nullptr;
-
                 SetError(
                     "directinput8_create_enable_failed");
                 WriteDiagnostic(
