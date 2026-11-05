@@ -29,7 +29,7 @@ Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
 current runtime: 0.0.34-directinput-menu-capture
-current phase: 0.0.34 DIRECTINPUT MENU OWNERSHIP ENGINEERING
+current phase: 0.0.34 ENGINEERING CLOSED / REAL-SKYRIM MENU MOUSE REVALIDATION NEXT
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
@@ -108,16 +108,16 @@ The first real-Skyrim 0.0.32 validation failed before healthy GZFX runtime
 output. 0.0.33 repaired that loader boundary. GZFX1 field evidence now closes
 0.0.33 in real Skyrim: SKSE 2.3.1, CommonLib SKSE::Init, Address Library,
 DataLoaded binding, renderer correlation, telemetry, natural exit, and the
-locked HDR/TAA contracts all pass. The current 0.0.34 wave repairs the remaining
-menu regression: DirectInput mouse capture/suppression is being migrated from
-the retired dinput8 proxy into the single SKSE-loaded GZFX.dll.
+locked HDR/TAA contracts all pass. 0.0.34 completes the remaining bounded menu
+repair by migrating the previously field-working DirectInput mouse
+capture/suppression path from the retired proxy into the single SKSE-loaded
+GZFX.dll. PR #39 is merged and merged-main product validation passes 39/39 plus
+the PE load contract. Real-Skyrim menu mouse ownership revalidation is next.
 
-0.0.32 completes the owner-authorized MIT CommonLib engine-access integration.
-PR #37 and merged-main CI are green at 38/38. CommonLib is statically linked into
-the single GZFX DLL; Address Library remains external; the validated package still
-contains only `Data/SKSE/Plugins/GZFX.dll`. The next required action is a compact
-real-Skyrim 1.7.104 field validation of the combined SKSE + CommonLib path before
-broad graphics-feature engineering resumes.
+0.0.32 completed the owner-authorized MIT CommonLib engine-access integration.
+Its loader path was subsequently repaired by 0.0.33 and field-proven by GZFX1.
+CommonLib remains statically linked into the single GZFX DLL and Address Library
+remains external.
 
 **Important:** GZFX uses official SKSE as its loader/lifecycle host, the
 MIT-licensed CommonLibSSE-GG line as a typed read-only Skyrim engine-access
@@ -188,7 +188,11 @@ Newer verified field evidence supersedes older assumptions.
 
 ## Build / user package
 
-GitHub Actions builds and tests Windows x64. A successful push to `main` refreshes:
+GitHub Actions builds and tests Windows x64. A successful main build stages the
+validated package on the unprotected `lance-package` branch because repository
+rules reject Actions-bot writes directly to `main`. During closeout, the agent
+verifies that staged blob against the validated artifact and syncs the exact ZIP
+into:
 
 ```text
 LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
