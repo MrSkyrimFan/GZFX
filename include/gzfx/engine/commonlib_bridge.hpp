@@ -2,6 +2,11 @@
 
 #include <cstdint>
 
+namespace gzfx::skse
+{
+    struct Interface;
+}
+
 namespace gzfx::engine::commonlib
 {
     enum class Status : std::uint32_t
@@ -23,6 +28,7 @@ namespace gzfx::engine::commonlib
 
         bool moduleReady = false;
         bool addressLibraryPresent = false;
+        bool skseApiReady = false;
         bool dataLoaded = false;
         bool rendererBound = false;
         bool rendererCorrelated = false;
@@ -58,6 +64,8 @@ namespace gzfx::engine::commonlib
     };
 
     bool InitializeModule() noexcept;
+    bool InitializeSkseInterface(
+        const gzfx::skse::Interface* skse) noexcept;
     bool BindAfterDataLoaded() noexcept;
     void OnPresent(std::uint64_t frame) noexcept;
 
