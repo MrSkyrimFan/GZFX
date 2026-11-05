@@ -1,5 +1,7 @@
-// CommonLib consumer code enters through the umbrella header so the
-// standard-library, literals, REX and runtime environment are established.
+// CommonLib's own consumer contract requires its PCH plus global
+// std::literals before public RE headers.
+#include <SKSE/Impl/PCH.h>
+using namespace std::literals;
 #include <RE/Skyrim.h>
 
 #include <cstdint>
