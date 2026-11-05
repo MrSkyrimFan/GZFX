@@ -1,0 +1,148 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.32
+COMMONLIB MIT ENGINE ACCESS
+Created 2026-11-05 after PR #37 merge, merged-main validation, and package refresh proof.
+
+THIS FILE IS THE CURRENT CONTROLLING TAKEOVER INDEX.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+READ FIRST:
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_0.0.32_COMMONLIB_ENGINE_ACCESS_ENGINEERING_RESULT.txt
+    5. GZFXWorkFolder/old/GZFX_0.0.32_COMMONLIB_FINDINGS.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.32_COMMONLIB_RESEARCH.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.32_COMMONLIB_BLUEPRINT.txt
+
+For the completed SKSE single-DLL migration:
+    8. GZFXWorkFolder/old/GZFX_0.0.31_SKSE_SINGLE_DLL_ENGINEERING_RESULT.txt
+    9. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.31.txt
+
+For locked renderer semantics:
+    10. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.30.txt
+    11. GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+    12. GZFXWorkFolder/old/GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+    13. GZFXWorkFolder/old/GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
+
+Active renderer-domain authority intentionally remains in GZFXWorkFolder/new/:
+
+    GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+    GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
+    GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_1.txt
+    GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
+    GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
+
+CURRENT RUNTIME:
+    0.0.32-commonlib-mit-engine-access
+
+CURRENT PRODUCT FRONT DOOR:
+    SkyrimSE.exe 1.7.104
+      -> official SKSE 2.3.1
+         -> Data/SKSE/Plugins/GZFX.dll
+            -> statically linked MIT CommonLibSSE-GG
+            -> external Address Library v5 database
+            -> GZFX-owned D3D11/DXGI renderer
+
+COMMONLIB:
+    repository:
+        eddoursul/CommonLibSSE-GG
+
+    pinned:
+        2053e94fd1c147b36eae2b4338118552fba407e2
+
+    license:
+        MIT
+
+ADDRESS LIBRARY:
+    external runtime dependency
+    expected 1.7.104 file:
+        Data/SKSE/Plugins/versionlib-1-7-104-0.bin
+
+PACKAGE:
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+PACKAGE GIT BLOB:
+    ea830b3a9be658415ef9a9f842694ef46c01ec5f
+
+PACKAGE BYTES:
+    582,286
+
+PACKAGE SHA-256:
+    88bf1ee7b33864bc0461805d69f21abcebe16c4ac964c0ffc08e4fb0d9f99384
+
+PACKAGE FILE PAYLOAD:
+    Data/SKSE/Plugins/GZFX.dll
+
+GZFX.dll BYTES:
+    1,413,120
+
+RETIRED / NEVER RESURRECT:
+    GZFX-owned d3d11.dll
+    GZFX-owned dinput8.dll
+    proxy forwarding/chaining architecture
+    requirement that GZFX be SKSE-free
+
+PR #37:
+    final head 5299194764a5da24915e2a234172c185f7d5b4fd
+    workflow 42098296551
+    job 127494050948
+    38/38 PASS
+
+MERGE:
+    7c20bf289134820c4f8bb27457d02b42dfac8724
+
+MERGED MAIN:
+    workflow 42102969205
+    job 127510296230
+    38/38 PASS
+
+MERGED-MAIN ARTIFACT:
+    id 13451806919
+    bytes 581,184
+    digest sha256:774ea6a016739fe53324d256740d62f617155e794be87fd65a762145baf81c44
+
+PACKAGE REFRESH:
+    1d46ca113db3a73aea72e5470c439506b6c252fd
+    changed only LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    committed ZIP blob exactly matches validated merged-main package bytes
+
+LOCKED — DO NOT REOPEN WITHOUT CONTRADICTORY FIELD DATA:
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+COMMONLIB AUTHORITY RULE:
+    CommonLib augments typed engine knowledge and renderer correlation.
+    It does not silently replace field-proven GZFX D3D/semantic evidence.
+    0.0.32 engine access is read-only.
+    No weather or renderer-state writes are authorized by this wave.
+
+STILL UNPROMOTED:
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+FULL BETTER-THAN-ENB+RESHADE CAMPAIGN:
+    NOT READY
+    close BLOCKED domains in GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv first
+
+CURRENT PHASE:
+    0.0.32 AUTOMATED INTEGRATION CLOSED
+    REAL-SKYRIM SKSE + COMMONLIB FIELD VALIDATION NEXT
+
+NEXT HUMAN ACTION:
+    reinstall/confirm Skyrim 1.7.104
+    install official SKSE 2.3.1
+    install Address Library for SKSE Plugins for 1.7.104
+    install current GZFX ZIP
+    launch through SKSE
+    perform the compact validation defined in the 0.0.32 engineering result
+    return the newest GZFX/SKSE diagnostics
+
+Do not start broad graphics-feature implementation before this integration is
+validated in real Skyrim.
+
+END 0.0.32 CONTINUITY INDEX
