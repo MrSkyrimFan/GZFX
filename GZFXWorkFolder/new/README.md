@@ -3,13 +3,13 @@
 Current runtime:
 
 ```text
-0.0.30-post-tonemap-preui-cartography
+0.0.31-skse-single-dll-frontdoor
 ```
 
 Current phase:
 
 ```text
-FULL RENDERER-DOMAIN RE-AUDIT COMPLETE / FULL-PRODUCT MAJOR-ENGINEERING GATE NOT YET GREEN
+SKSE SINGLE-DLL FRONT DOOR MERGED / REAL-SKYRIM FIELD VALIDATION NEXT / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
 ```
 
 Active authority:
@@ -49,15 +49,18 @@ Broad whole-product engineering is not authorized by the current evidence state.
 Closed subsystems may continue under bounded authority, but the complete better-than-ENB + ReShade campaign must wait for the blocked domains in `GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv` to close.
 
 
-## Owner-authorized 0.0.31 integration migration
+## 0.0.31 integration status
 
-A bounded SKSE single-DLL front-door migration is now active on `feature/0.0.31-skse-single-dll-frontdoor`.
-This supersedes the prior "no product code" hold only for loader/integration/packaging work. It does **not** authorize broad renderer-feature engineering or promotion of blocked renderer domains.
+The bounded SKSE single-DLL migration is COMPLETE and archived under
+`GZFXWorkFolder/old/`.
 
-Migration authority:
+Current controlling integration records:
 
 ```text
-GZFX_0.0.31_SKSE_MIGRATION_FINDINGS.txt
-GZFX_0.0.31_SKSE_MIGRATION_RESEARCH.txt
-GZFX_0.0.31_SKSE_MIGRATION_BLUEPRINT.txt
+GZFX_0.0.31_SKSE_SINGLE_DLL_ENGINEERING_RESULT.txt
+GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.31.txt
 ```
+
+Next integration action is a real-Skyrim 1.7.104 + SKSE 2.3.1 field validation.
+The renderer-domain re-audit files listed above remain active authority for later
+feature engineering and are intentionally still in `new/`.
