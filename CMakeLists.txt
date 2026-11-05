@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     GZFX
-    VERSION 0.0.31
+    VERSION 0.0.32
     DESCRIPTION "SKSE-hosted native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -22,8 +22,27 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(minhook)
 
+# GZFX uses the current MIT CommonLib continuation as a typed Skyrim engine
+# access plane. Pin the exact audited revision; do not float to a branch head.
+set(ENABLE_SKYRIM_SE OFF CACHE BOOL "CommonLib: disable pre-AE SE" FORCE)
+set(ENABLE_SKYRIM_AE ON CACHE BOOL "CommonLib: enable AE" FORCE)
+set(ENABLE_SKYRIM_VR OFF CACHE BOOL "CommonLib: disable VR" FORCE)
+set(BUILD_TESTS OFF CACHE BOOL "CommonLib: disable dependency tests" FORCE)
+set(COMMONLIB_ENABLE_IPO OFF CACHE BOOL "CommonLib: avoid dependency LTCG" FORCE)
+set(REX_OPTION_INI OFF CACHE BOOL "CommonLib: no INI helpers" FORCE)
+set(REX_OPTION_JSON OFF CACHE BOOL "CommonLib: no JSON helpers" FORCE)
+set(REX_OPTION_TOML OFF CACHE BOOL "CommonLib: no TOML helpers" FORCE)
+set(SKSE_SUPPORT_XBYAK OFF CACHE BOOL "CommonLib: no Xbyak trampoline helper" FORCE)
+
+FetchContent_Declare(
+    commonlibsse
+    GIT_REPOSITORY https://github.com/eddoursul/CommonLibSSE-GG.git
+    GIT_TAG 2053e94fd1c147b36eae2b4338118552fba407e2
+)
+FetchContent_MakeAvailable(commonlibsse)
+
 function(gzfx_apply_common target)
-    target_compile_features(${target} PRIVATE cxx_std_20)
+    target_compile_features(${target} PRIVATE cxx_std_23)
 
     target_compile_definitions(${target}
         PRIVATE
@@ -57,6 +76,7 @@ endfunction()
 
 add_library(GZFX SHARED
     src/dllmain.cpp
+    src/engine/commonlib_bridge.cpp
     src/process_lifecycle.cpp
     src/skse_bridge.cpp
     src/paths.cpp
@@ -103,10 +123,21 @@ target_link_libraries(
         d3dcompiler
         dxguid
         minhook
+        CommonLibSSE::CommonLibSSE
 )
 set_target_properties(GZFX PROPERTIES OUTPUT_NAME "GZFX")
 gzfx_apply_common(GZFX)
 
+
+add_executable(GZFXCommonLibContractHarness
+    tests/commonlib_contract_harness.cpp
+)
+target_link_libraries(
+    GZFXCommonLibContractHarness
+    PRIVATE
+        CommonLibSSE::CommonLibSSE
+)
+gzfx_apply_common(GZFXCommonLibContractHarness)
 
 add_executable(GZFXSmokeHost
     tests/smoke_host.cpp
@@ -320,6 +351,12 @@ target_link_libraries(
 gzfx_apply_common(GZFXWave3PipelineHarness)
 
 enable_testing()
+
+add_test(
+    NAME commonlib_engine_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXCommonLibContractHarness>"
+)
 
 add_test(
     NAME runtime_smoke
