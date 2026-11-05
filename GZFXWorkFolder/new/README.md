@@ -47,3 +47,17 @@ No product code has been modified during this re-audit.
 Broad whole-product engineering is not authorized by the current evidence state.
 
 Closed subsystems may continue under bounded authority, but the complete better-than-ENB + ReShade campaign must wait for the blocked domains in `GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv` to close.
+
+
+## Owner-authorized 0.0.31 integration migration
+
+A bounded SKSE single-DLL front-door migration is now active on `feature/0.0.31-skse-single-dll-frontdoor`.
+This supersedes the prior "no product code" hold only for loader/integration/packaging work. It does **not** authorize broad renderer-feature engineering or promotion of blocked renderer domains.
+
+Migration authority:
+
+```text
+GZFX_0.0.31_SKSE_MIGRATION_FINDINGS.txt
+GZFX_0.0.31_SKSE_MIGRATION_RESEARCH.txt
+GZFX_0.0.31_SKSE_MIGRATION_BLUEPRINT.txt
+```
