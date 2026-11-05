@@ -36,7 +36,7 @@ int wmain(
     int argc,
     wchar_t** argv)
 {
-    if (argc != 3)
+    if (argc != 4)
     {
         return 2;
     }
@@ -44,8 +44,11 @@ int wmain(
     const fs::path child =
         argv[1];
 
-    const fs::path outputRoot =
+    const fs::path dllPath =
         argv[2];
+
+    const fs::path outputRoot =
+        argv[3];
 
     std::error_code error;
 
@@ -64,6 +67,8 @@ int wmain(
 
     std::wstring command =
         Quote(child) +
+        L" " +
+        Quote(dllPath) +
         L" " +
         Quote(outputRoot);
 
