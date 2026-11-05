@@ -34,7 +34,7 @@ jobs:
       - name: Runtime smoke test
         run: ctest --test-dir build -C Release --output-on-failure
 
-      - name: Package root-ready archive
+      - name: Package SKSE plugin archive
         shell: pwsh
         run: ./scripts/package.ps1 -BuildDir build -OutputDir dist
 
@@ -44,8 +44,8 @@ jobs:
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $zip = [System.IO.Compression.ZipFile]::OpenRead("dist/GZFX-SkyrimSE-x64.zip")
           try {
-            $actual = @($zip.Entries | ForEach-Object { $_.FullName } | Sort-Object)
-            $expected = @("GZFX.dll", "d3d11.dll", "dinput8.dll") | Sort-Object
+            $actual = @($zip.Entries | ForEach-Object { $_.FullName -replace '\\', '/' } | Sort-Object)
+            $expected = @("Data/SKSE/Plugins/GZFX.dll")
 
             $actual | ForEach-Object { Write-Host $_ }
 
@@ -58,7 +58,7 @@ jobs:
             $zip.Dispose()
           }
 
-      - name: Upload Skyrim root package
+      - name: Upload GZFX SKSE package
         uses: actions/upload-artifact@v7
         with:
           name: GZFX-SkyrimSE-x64
