@@ -28,8 +28,8 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.33-skse-loader-rescue
-current phase: 0.0.33 LOADER RESCUE CLOSED / REAL-SKYRIM LOADER REVALIDATION NEXT
+current runtime: 0.0.34-directinput-menu-capture
+current phase: 0.0.34 DIRECTINPUT MENU OWNERSHIP ENGINEERING
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
@@ -105,12 +105,12 @@ never hooked by 0.0.30 and engineProfileAvailable remains false until later
 field DATA and research independently verify them.
 
 The first real-Skyrim 0.0.32 validation failed before healthy GZFX runtime
-output: no GZFX runtime folder and no functional GZFX controls. 0.0.33 closes a
-bounded loader rescue: SKSE Preload is non-invasive, renderer arming occurs in
-normal SKSE Load, CommonLib initializes through SKSE::Init, and the shipped DLL
-has no dynamic Microsoft VC runtime dependency. PR #38 and merged-main CI pass
-38/38 plus the PE load contract. Real-Skyrim loader revalidation is next. No
-locked renderer semantic was reopened.
+output. 0.0.33 repaired that loader boundary. GZFX1 field evidence now closes
+0.0.33 in real Skyrim: SKSE 2.3.1, CommonLib SKSE::Init, Address Library,
+DataLoaded binding, renderer correlation, telemetry, natural exit, and the
+locked HDR/TAA contracts all pass. The current 0.0.34 wave repairs the remaining
+menu regression: DirectInput mouse capture/suppression is being migrated from
+the retired dinput8 proxy into the single SKSE-loaded GZFX.dll.
 
 0.0.32 completes the owner-authorized MIT CommonLib engine-access integration.
 PR #37 and merged-main CI are green at 38/38. CommonLib is statically linked into
