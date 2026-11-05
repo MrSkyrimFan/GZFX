@@ -1,0 +1,121 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.33
+SKSE LOADER RESCUE
+Created 2026-11-05 after PR #38 merge, merged-main CI, PE proof, and package refresh.
+
+THIS FILE IS THE CURRENT CONTROLLING TAKEOVER INDEX.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+VISIBILITY:
+    PUBLIC
+
+READ FIRST:
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_ENGINEERING_RESULT.txt
+    5. GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
+    8. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.32.txt
+
+For locked renderer semantics:
+    GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.30.txt
+    GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/old/GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
+    GZFXWorkFolder/old/GZFX_0.0.29_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
+
+CURRENT RUNTIME:
+    0.0.33-skse-loader-rescue
+
+CURRENT PHASE:
+    0.0.33 AUTOMATED LOADER RESCUE CLOSED
+    REAL-SKYRIM LOADER REVALIDATION NEXT
+
+FIELD FACT:
+    0.0.32 failed real Skyrim before healthy GZFX runtime output.
+    No GZFX runtime folder and no working GZFX controls were observed.
+    Do not treat 0.0.32 loader acceptance as field-proven.
+
+CURRENT FRONT DOOR:
+    SkyrimSE.exe 1.7.104
+      -> official SKSE 2.3.1
+         -> inert/non-invasive GZFX SKSEPlugin_Preload
+         -> normal GZFX SKSEPlugin_Load
+            -> arm D3D observation
+            -> GZFX runtime initialize
+            -> CommonLib SKSE::Init
+            -> DataLoaded typed engine binding
+
+COMMONLIB:
+    eddoursul/CommonLibSSE-GG
+    2053e94fd1c147b36eae2b4338118552fba407e2
+    MIT
+    statically linked
+
+ADDRESS LIBRARY:
+    external
+    Data/SKSE/Plugins/versionlib-1-7-104-0.bin
+
+MSVC RUNTIME:
+    statically linked
+    packaged GZFX.dll has no MSVCP/VCRUNTIME/api-ms-win-crt dynamic dependency
+
+PR #38:
+    final head 85bc8afe8523afce744a8feea2403e486ef34ea5
+    run 42116193461
+    job 127556358326
+    38/38 PASS
+    PE load contract PASS
+
+MERGE:
+    1e5983c139a8c5345ccf803eb6e56ddb3285abfc
+
+MERGED MAIN:
+    run 42118168990
+    job 127563236457
+    38/38 PASS
+    PE load contract PASS
+
+MERGED-MAIN ARTIFACT:
+    id 13457543592
+    bytes 767,413
+    digest sha256:64e80d694fd14904d625f5586752010f27323917b6013b0b6641d6e134c5799b
+
+VALIDATED INNER PACKAGE:
+    bytes 768,500
+    SHA-256 db890928369b97fe2303cb9ee5162649112038cacd6a0e47a8336290679bb888
+    Git blob d297dc979ccd52bfdc2ae29526b263c5debbfca3
+
+GZFX.dll:
+    bytes 1,766,400
+    SHA-256 71aaae010c6796b11833fc51c56746a5cccc3971d9a0859523c1e4ba1112aac6
+
+PACKAGE REFRESH:
+    df24f3eafa9ab6dec018ccb04aca706ec82426bf
+    changed only LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    repository ZIP blob d297dc979ccd52bfdc2ae29526b263c5debbfca3
+    exact byte match to merged-main validated package
+
+LOCKED:
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+STILL UNPROMOTED:
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+NEXT HUMAN ACTION:
+    install current Lance ZIP over old GZFX.dll
+    keep SKSE 2.3.1 + Address Library installed
+    launch through skse64_loader.exe
+    verify GZFX output exists first
+    then test Shift+Numpad1 and one slider
+    return entire generated GZFX folder if successful
+    if no GZFX output exists, return skse64.log + skse64_loader.log
+
+END 0.0.33 CONTINUITY INDEX
