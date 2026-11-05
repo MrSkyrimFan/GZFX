@@ -1,0 +1,363 @@
+GZFX 0.0.31 SKSE SINGLE-DLL FRONT DOOR
+FINAL ENGINEERING RESULT
+Closure date: 2026-11-05
+
+STATUS:
+    OWNER-AUTHORIZED MIGRATION COMPLETE
+    PR #36 GREEN
+    MERGED
+    MERGED-MAIN GREEN
+    ONE-DLL PACKAGE REFRESH VERIFIED
+    READY FOR REAL-SKYRIM 1.7.104 + SKSE 2.3.1 FIELD VALIDATION
+
+RUNTIME:
+    0.0.31-skse-single-dll-frontdoor
+
+TARGET:
+    Skyrim Special Edition / Anniversary Edition Steam 1.7.104
+    SKSE 2.3.1
+    SKSE release index 75
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+Replace the standalone three-DLL front door:
+
+    d3d11.dll
+    dinput8.dll
+    GZFX.dll
+
+with:
+
+    official SKSE
+      ->
+    Data/SKSE/Plugins/GZFX.dll
+
+while preserving the existing GZFX D3D11/DXGI renderer and all locked semantic
+contracts.
+
+This migration does NOT promote:
+
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+and does NOT alter the field-locked:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+======================================================================
+2. SKSE INTEGRATION
+======================================================================
+
+GZFX now exports:
+
+    SKSEPlugin_Version
+    SKSEPlugin_Preload
+    SKSEPlugin_Load
+
+SKSEPlugin_Version:
+
+    plugin version 31
+    exact Skyrim runtime compatibility 1.7.104
+    minimum SKSE 2.3.1
+
+SKSEPlugin_Preload:
+
+    rejects editor / wrong runtime / too-old SKSE
+    arms the existing GZFX D3D11/DXGI import lifecycle probe
+    keeps the plugin resident on the supported runtime after hook attempt
+
+SKSEPlugin_Load:
+
+    acquires plugin handle
+    acquires Messaging interface
+    acquires Trampoline interface
+    registers an SKSE lifecycle listener
+    initializes the existing GZFX runtime
+    arms process-lifetime ExitProcess telemetry closure
+    records deterministic bridge evidence
+
+Current SKSE startup source was independently checked:
+
+    Preload runs before global initializers
+    Load runs immediately after global initializers
+    Load occurs before normal WinMain execution continues
+
+This gives GZFX an early observation point without a local system-name proxy DLL.
+
+======================================================================
+3. DEPENDENCY / LICENSE BOUNDARY
+======================================================================
+
+GZFX does NOT redistribute SKSE runtime binaries.
+
+The repo pins the required public ABI/runtime contract and implements only the
+small SKSE interface surface GZFX consumes.
+
+Current CommonLibSSE-NG 15.x was NOT linked because it is GPL-3.0-or-later and
+the owner has not authorized converting GZFX to a GPL-compatible licensing
+model.
+
+GZFX therefore remains:
+
+    SKSE-hosted for loading/lifecycle
+    GZFX-owned for renderer/D3D11/DXGI/signature machinery
+
+======================================================================
+4. RETIRED PROXY SURFACE
+======================================================================
+
+Removed:
+
+    bootstrap/d3d11.def
+    bootstrap/d3d11_proxy.cpp
+    bootstrap/dinput8.def
+    bootstrap/dinput8_proxy.cpp
+
+Retired proxy-only tests:
+
+    d3d11_frontdoor_harness
+    d3d11_primary_qualification_harness
+    d3d11_export_contract_harness
+
+No GZFX-owned d3d11.dll is built.
+No GZFX-owned dinput8.dll is built.
+
+The small menu/input compatibility API remains inside GZFX.dll as:
+
+    src/ui/input_api.cpp
+
+It is not a loader DLL and does not recreate the old proxy architecture.
+
+======================================================================
+5. PROCESS LIFECYCLE
+======================================================================
+
+The proven ExitProcess-driven telemetry closure moved out of d3d11.dll and into
+GZFX.dll.
+
+A first implementation armed that process-lifetime hook from generic
+GZFX_Initialize. CI exposed the flaw immediately: unit harnesses legitimately
+FreeLibrary(GZFX.dll), leaving ExitProcess pointed into an unloaded module.
+
+Repair:
+
+    process-lifetime hook ownership moved to SKSEPlugin_Load only
+
+This matches real deployment, where SKSE owns the plugin for process lifetime.
+
+GZFX_Shutdown is idempotent.
+
+======================================================================
+6. INPUT
+======================================================================
+
+The dinput8.dll proxy is gone.
+
+The existing settings UI still has its internal Win32/raw-input path:
+
+    WndProc subclass
+    WM_INPUT
+    mouse window messages
+    GetAsyncKeyState
+
+The existing exported relative mouse helper remains inside the single GZFX.dll
+for compatibility/testing. It no longer exists to service a separate dinput8
+proxy.
+
+SKSE InputLoaded is observed as lifecycle evidence.
+
+======================================================================
+7. TEST FAILURE / REPAIR HISTORY
+======================================================================
+
+Initial PR run:
+    run 41971007131
+    build GREEN
+    runtime suite FAILED
+    29 / 37 failures
+
+Root cause:
+    core ExitProcess hook survived after unit harnesses unloaded GZFX.dll
+
+Repair:
+    scope process-lifetime hook to SKSEPlugin_Load
+
+Second relevant run:
+    run 41971828412
+    build GREEN
+    36 / 37 PASS
+    only visible_pass failed
+
+Root cause:
+    integration/test drift around the retired DirectInput bridge surface
+
+Final correction:
+    preserve the tiny input API inside GZFX.dll
+    no separate dinput8.dll
+    keep one-DLL UI behavior/test contract
+
+Final PR run:
+    run 41972707811
+    job 127064387287
+    37 / 37 PASS
+    0 failures
+
+Critical new/retained gates:
+    skse_single_dll_frontdoor PASS
+    natural_process_exit_completion PASS
+    renderer_forensics PASS
+    visible_pass PASS
+    resource_intelligence PASS
+    semantic authority PASS
+    Wave 3 / Wave 4 tests PASS
+    telemetry tests PASS
+    all locked HDR/TAA tests PASS
+
+======================================================================
+8. PR / MERGE PROOF
+======================================================================
+
+PR:
+    #36
+    0.0.31: migrate GZFX to SKSE single-DLL front door
+
+Final PR head:
+    3ddc5640638f6409c2c1b8e8faab865727154877
+
+Final PR workflow:
+    run 41972707811
+    37 / 37 PASS
+
+PR artifact:
+    id 13390956181
+    artifact-container bytes 367,194
+    digest:
+        sha256:9f196a3c8e278e073d2bce57f5eeb3b659b2e1d2dd83ff819559eb5dfe13294c
+
+Merge:
+    df6d6dbf5a303eb530ad0708b965782f680eb310
+
+Merged-main workflow:
+    run 41973194715
+    job 127065929663
+    37 / 37 PASS
+    0 failures
+
+Merged-main artifact:
+    id 13390807587
+    artifact-container bytes 367,195
+    digest:
+        sha256:60dc161b956bdd1925d202fc8d878774a051c6d18fc72e7156fdc8d43cae0d98
+
+Artifact digests above are GitHub artifact-container digests and are not claimed
+to be inner-ZIP byte digests.
+
+======================================================================
+9. PACKAGE PROOF
+======================================================================
+
+Package refresh commit:
+    42929ee53fa32dc6d1a19dbc8595af00dca9da34
+
+That commit changed ONLY:
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Current repository ZIP:
+    path:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+    Git blob:
+        1a325055897ba785a2dedd136e264bf7e25396e9
+
+    bytes:
+        367,849
+
+CI asserts the only file payload in the archive is:
+
+    Data/SKSE/Plugins/GZFX.dll
+
+Directory entries may also appear in the ZIP container:
+
+    Data/
+    Data/SKSE/
+    Data/SKSE/Plugins/
+
+There is no GZFX d3d11.dll.
+There is no GZFX dinput8.dll.
+There is no bundled SKSE binary.
+There is no CommonLib binary.
+
+======================================================================
+10. FIELD STATUS / NON-CLAIMS
+======================================================================
+
+Automated engineering acceptance is COMPLETE.
+
+Real-Skyrim field validation of the SKSE front door has NOT yet occurred.
+
+Do NOT claim yet:
+
+    real Skyrim 1.7.104 confirms SKSEPlugin_Preload executes successfully
+    real Skyrim confirms primary renderer attaches before tracked resource birth
+    real Skyrim confirms menu/raw input behavior after proxy removal
+    real Skyrim confirms natural exit telemetry closure after SKSE migration
+    PostTonemapPreUi proven
+    WaterDomain proven
+    AfterShadowProduction proven
+
+The old 0.0.29 field-locked renderer semantics remain authoritative unless new
+real-Skyrim evidence contradicts them.
+
+======================================================================
+11. NEXT FIELD TEST
+======================================================================
+
+Required installation:
+
+    Skyrim Steam 1.7.104
+    official SKSE 2.3.1
+    current repo ZIP
+
+Install the ZIP so the only GZFX binary is:
+
+    Data/SKSE/Plugins/GZFX.dll
+
+Launch through SKSE.
+
+First field validation should be intentionally small:
+
+    reach main menu
+    load a save or start into playable world
+    exterior daylight for ~30-60 seconds
+    open/close the GZFX menu once
+    make one slider adjustment with the mouse
+    enter one interior if convenient
+    return exterior if convenient
+    quit normally
+    wait until SkyrimSE.exe fully exits
+
+Then inspect/upload the newest GZFX telemetry session and the SKSE/GZFX logs.
+
+Primary acceptance questions:
+
+    SKSE bridge target 2.3.1 / 1.7.104 correct?
+    early_graphics_armed=true?
+    messaging_registered=true?
+    trampoline_available=true?
+    runtime_initialized=true?
+    process_lifecycle_armed=true?
+    qualified primary renderer attached?
+    primary attach before tracked resource birth?
+    locked HDR/TAA semantics still coherent?
+    menu/input works without dinput8 proxy?
+    telemetry dropped=0?
+    session close state complete?
+    natural process exit clean?
+
+END ENGINEERING RESULT
