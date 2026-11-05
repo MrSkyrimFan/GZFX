@@ -9,19 +9,26 @@ if (-not (Test-Path $DllPath)) {
     throw "DLL not found: $DllPath"
 }
 
-$vswhere = Join-Path \${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+$vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
 
 if (-not (Test-Path $vswhere)) {
     throw "vswhere.exe was not found."
 }
 
-$installRoot = (& $vswhere `n    -latest `n    -products * `n    -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `n    -property installationPath).Trim()
+$installRoot = (& $vswhere `
+    -latest `
+    -products * `
+    -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+    -property installationPath).Trim()
 
 if ([string]::IsNullOrWhiteSpace($installRoot)) {
     throw "Visual Studio C++ toolchain was not found."
 }
 
-$dumpbin = Get-ChildItem `n    -Path (Join-Path $installRoot "VC\Tools\MSVC") `n    -Filter "dumpbin.exe" `n    -Recurse |
+$dumpbin = Get-ChildItem `
+    -Path (Join-Path $installRoot "VC\Tools\MSVC") `
+    -Filter "dumpbin.exe" `
+    -Recurse |
     Where-Object {
         $_.FullName -match "Hostx64\\x64\\dumpbin\.exe$"
     } |
@@ -32,8 +39,8 @@ if ($null -eq $dumpbin) {
     throw "dumpbin.exe was not found in the Visual Studio toolchain."
 }
 
-$dependents = (& $dumpbin.FullName /DEPENDENTS $DllPath 2>&1) -join "\`n"
-$exports = (& $dumpbin.FullName /EXPORTS $DllPath 2>&1) -join "\`n"
+$dependents = (& $dumpbin.FullName /DEPENDENTS $DllPath 2>&1) -join "`n"
+$exports = (& $dumpbin.FullName /EXPORTS $DllPath 2>&1) -join "`n"
 
 Write-Host "=== GZFX DLL dependencies ==="
 Write-Host $dependents
