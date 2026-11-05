@@ -3,6 +3,7 @@
 #include <SKSE/Impl/PCH.h>
 using namespace std::literals;
 #include <RE/Skyrim.h>
+#include <SKSE/SKSE.h>
 
 #include "gzfx/skse_api.hpp"
 
