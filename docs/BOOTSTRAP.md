@@ -1,60 +1,81 @@
-# Skyrim bootstrap: first in-game proof
+# SKSE bootstrap: single-DLL front door
 
 ## Goal
 
-Load `GZFX.dll` into `SkyrimSE.exe` without SKSE and prove that the native runtime can initialize and write a deterministic log before any renderer hooks are introduced.
+Load GZFX as a normal SKSE native plugin while preserving the existing D3D11/DXGI renderer and removing GZFX-owned `d3d11.dll` and `dinput8.dll` proxy files from the Skyrim root.
 
-## First bootstrap lane
-
-The first test package uses a thin `dinput8.dll` proxy because Skyrim Special Edition imports DirectInput8 during normal startup.
-
-The proxy is intentionally not the GZFX runtime. Its responsibilities are limited to:
-
-1. forward DirectInput8 exports to the real Windows implementation;
-2. load `GZFX.dll` from the Skyrim game root;
-3. call the exported `GZFX_Initialize` entry point once.
-
-No D3D11 or DXGI interception is performed in this stage.
-
-## Existing dinput8 compatibility
-
-If no `dinput8.dll` exists beside `SkyrimSE.exe`, the root-ready package can be extracted directly.
-
-If another root `dinput8.dll` already exists, **do not overwrite it**. Rename the existing file to:
+Target for the first migration field cycle:
 
 ```text
-dinput8_gzfx_chain.dll
+Skyrim Steam runtime: 1.7.104
+SKSE:                 2.3.1
+GZFX:                 0.0.31-skse-single-dll-frontdoor
 ```
 
-and then place GZFX's `dinput8.dll` in the root. The GZFX proxy checks for that chain file first and forwards to it; otherwise it forwards to the Windows system `dinput8.dll`.
-
-This chaining path will be validated empirically before being considered public-release behavior.
-
-## Runtime evidence
-
-On successful initialization, GZFX creates:
+## Runtime shape
 
 ```text
-Documents\My Games\Skyrim Special Edition\GZFX\GZFX.log
+SkyrimSE.exe
+  -> official SKSE
+     -> Data/SKSE/Plugins/GZFX.dll
+        -> SKSEPlugin_Preload
+        -> SKSEPlugin_Load
+        -> existing GZFX D3D11/DXGI renderer
 ```
 
-Windows-known-folder resolution is used, so redirected Documents locations such as OneDrive are followed automatically.
+GZFX does not redistribute SKSE binaries.
 
-The first log records:
+## Preload
 
-- GZFX version;
-- process and thread IDs;
-- executable path;
-- resolved runtime-data directory;
-- whether `d3d11.dll` was already loaded at initialization;
-- whether `dxgi.dll` was already loaded at initialization;
-- initialization success.
+`SKSEPlugin_Preload` performs exact runtime gating and arms GZFX's existing executable D3D11/DXGI import lifecycle probe.
 
-The D3D11/DXGI observations tell us whether this bootstrap fires early enough for the next renderer-observation phase.
+The plugin remains resident on the supported runtime after the early front-door attempt. Native import hooks must never point into an unloaded plugin.
 
-## Fail-soft rules
+## Load
 
-- The proxy continues forwarding DirectInput8 even if `GZFX.dll` cannot be loaded.
-- GZFX refuses normal initialization outside `SkyrimSE.exe`.
-- Test builds may override the output root through `GZFX_TEST_OUTPUT_ROOT` for CI smoke testing.
-- Heavy initialization is never performed from `DllMain`.
+`SKSEPlugin_Load`:
+
+1. acquires the SKSE plugin handle;
+2. acquires Messaging;
+3. acquires Trampoline;
+4. registers for SKSE lifecycle messages;
+5. initializes the existing GZFX renderer/framework;
+6. records deterministic bridge status.
+
+SKSE lifecycle events supplement GZFX state. They do not replace physical D3D11/DXGI frame-stage evidence.
+
+## Renderer attachment
+
+The old local `d3d11.dll` proxy is retired.
+
+Primary renderer capture now uses the D3D11 lifecycle logic already present inside GZFX.dll. Renderer-forensics hooks remain GZFX-owned and are armed before the real Skyrim device is accepted.
+
+No locked renderer semantic is changed by this bootstrap migration.
+
+## Input
+
+The old `dinput8.dll` proxy is retired.
+
+The GZFX settings UI retains its existing Win32/raw-input path:
+- window procedure subclass;
+- `WM_INPUT`;
+- mouse window messages;
+- keyboard polling.
+
+SKSE `InputLoaded` is observed as lifecycle evidence, but the first migration does not rewrite the menu around SKSE input internals.
+
+## Process exit
+
+The proven ExitProcess-driven telemetry shutdown formerly owned by the D3D11 proxy now lives inside GZFX.dll.
+
+Shutdown remains outside `DllMain` and is idempotent.
+
+## Package
+
+The public/test archive contains exactly:
+
+```text
+Data/SKSE/Plugins/GZFX.dll
+```
+
+Nothing else is required from GZFX.
