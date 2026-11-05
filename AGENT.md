@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.31.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.31_SKSE_SINGLE_DLL_ENGINEERING_RESULT.txt`. Follow the 0.0.30 / 0.0.29 records referenced by that index for renderer-domain and locked HDR/tonemap/TAA evidence.
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.32.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.32_COMMONLIB_ENGINE_ACCESS_ENGINEERING_RESULT.txt`. Follow the 0.0.31 / 0.0.30 / 0.0.29 records referenced by that index for SKSE migration, renderer-domain, and locked HDR/tonemap/TAA evidence.
 
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
@@ -190,7 +190,7 @@ foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.31-skse-single-dll-frontdoor
+0.0.32-commonlib-mit-engine-access
 
 Wave 1:
 CLOSED
@@ -209,10 +209,13 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-SKSE SINGLE-DLL FRONT DOOR MERGED / REAL-SKYRIM FIELD VALIDATION NEXT
+0.0.32 COMMONLIB INTEGRATION CLOSED / REAL-SKYRIM SKSE + COMMONLIB FIELD VALIDATION NEXT
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
+
+engine access:
+pinned MIT CommonLibSSE-GG + external Address Library v5 on Skyrim 1.7.104
 
 universal renderer core:
 D3D11/DXGI-first
@@ -340,6 +343,30 @@ promote blocked renderer semantics or authorize invention of missing domains.
 
 CommonLibSSE-NG is not linked in 0.0.31 because current 15.x licensing is
 GPL-3.0-or-later and no owner license conversion has been authorized.
+
+## 10B. Owner-authorized 0.0.32 CommonLib integration
+
+The owner authorized the current MIT CommonLib engine-access plane on
+2026-11-05. PR #37 is merged and merged-main workflow 42102969205 passed 38/38.
+The package remains exactly one product binary at
+`Data/SKSE/Plugins/GZFX.dll`.
+
+Selected dependency:
+
+`eddoursul/CommonLibSSE-GG@2053e94fd1c147b36eae2b4338118552fba407e2`
+
+License: MIT.
+
+Address Library for SKSE Plugins is now an external runtime dependency. For the
+current 1.7.104 target, the expected database is
+`Data/SKSE/Plugins/versionlib-1-7-104-0.bin`.
+
+CommonLib is a typed, read-only engine evidence/access plane in 0.0.32. It does
+not replace GZFX's field-proven D3D11/DXGI renderer or locked HDR/TAA semantic
+contracts, and this wave authorizes no weather or renderer-state writes.
+
+Real-Skyrim field validation of the combined SKSE + CommonLib path is the next
+required action before broad graphics-feature engineering.
 
 ## 11. Repository lifecycle proof
 
