@@ -1,8 +1,20 @@
 cmake_minimum_required(VERSION 3.25)
+cmake_policy(SET CMP0091 NEW)
+
+# Ship GZFX as a self-contained plugin with respect to the MSVC CRT.
+# This removes clean-machine LoadLibrary failures caused by a missing
+# separately installed VC++ redistributable.
+set(
+    CMAKE_MSVC_RUNTIME_LIBRARY
+    "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    CACHE STRING
+    "Use the statically linked MSVC runtime"
+    FORCE
+)
 
 project(
     GZFX
-    VERSION 0.0.32
+    VERSION 0.0.33
     DESCRIPTION "SKSE-hosted native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
