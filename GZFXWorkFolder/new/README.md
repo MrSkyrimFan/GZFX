@@ -9,7 +9,7 @@ Current runtime:
 Current phase:
 
 ```text
-0.0.34 DIRECTINPUT MENU OWNERSHIP ENGINEERING / 0.0.33 LOADER FIELD-CLOSED / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
+0.0.34 DIRECTINPUT MENU ENGINEERING CLOSED / REAL-SKYRIM MENU MOUSE REVALIDATION NEXT / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
 ```
 
 Active authority:
@@ -20,9 +20,6 @@ GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_1.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
-GZFX_0.0.34_REAL_SKYRIM_FIELD_FINDINGS.txt
-GZFX_0.0.34_DIRECTINPUT_MENU_RESEARCH.txt
-GZFX_0.0.34_DIRECTINPUT_MENU_BLUEPRINT.txt
 ```
 
 Corrected project verdict:
@@ -133,6 +130,31 @@ Final automated state:
 GZFX1 real-Skyrim field evidence closes the 0.0.33 loader rescue as PASS:
 SKSE, CommonLib SKSE::Init, Address Library, DataLoaded binding, renderer
 correlation, telemetry, natural exit, and the locked HDR/TAA contracts all
-survived. The active 0.0.34 blocker is menu mouse ownership: the overlay opens
-but the DirectInput producer/suppression layer retired with the old dinput8
-proxy was never migrated into the one-DLL SKSE architecture.
+survived.
+
+The bounded 0.0.34 DirectInput menu-ownership migration is now COMPLETE and
+archived under GZFXWorkFolder/old/. PR #39 is merged; merged-main product gates
+passed the PE contract and 39/39 tests; the validated package is published to
+main. Next action is real-Skyrim validation that the GZFX cursor receives the
+physical mouse while Skyrim camera-look is suppressed only while the GZFX menu
+is open.
+
+
+## 0.0.34 DirectInput menu ownership
+
+Completed authority:
+
+```text
+GZFX_0.0.34_DIRECTINPUT_MENU_ENGINEERING_RESULT.txt
+GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.34.txt
+GZFX_0.0.34_REAL_SKYRIM_FIELD_FINDINGS.txt
+GZFX_0.0.34_DIRECTINPUT_MENU_RESEARCH.txt
+GZFX_0.0.34_DIRECTINPUT_MENU_BLUEPRINT.txt
+```
+
+Current package remains exactly one payload:
+`Data/SKSE/Plugins/GZFX.dll`.
+
+The next field return should be uploaded directly to the repository as
+`GZFX2.zip`; the agent will move/process it through
+`GZFXWorkFolder/field_uploads/`.
