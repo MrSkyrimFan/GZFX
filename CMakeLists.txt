@@ -150,6 +150,11 @@ gzfx_apply_common(GZFX)
 add_executable(GZFXCommonLibContractHarness
     tests/commonlib_contract_harness.cpp
 )
+target_include_directories(
+    GZFXCommonLibContractHarness
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
 target_link_libraries(
     GZFXCommonLibContractHarness
     PRIVATE
