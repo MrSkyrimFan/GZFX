@@ -1,0 +1,97 @@
+name: GZFX Field Upload Intake
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "GZFXWorkFolder/field_uploads/**"
+
+permissions:
+  contents: read
+
+jobs:
+  unpack:
+    name: Unpack latest GZFX field upload
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Select and unpack field ZIP
+        id: select
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $root = "GZFXWorkFolder/field_uploads"
+          $changed = @()
+
+          if ("${{ github.event.before }}" -and
+              "${{ github.event.before }}" -ne "0000000000000000000000000000000000000000") {
+            $changed = @(
+              git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" |
+                Where-Object {
+                  $_ -like "GZFXWorkFolder/field_uploads/*.zip"
+                }
+            )
+          }
+
+          if ($changed.Count -gt 0) {
+            $zip = $changed[-1]
+          }
+          else {
+            $zip = Get-ChildItem $root -Filter "*.zip" -File |
+              Sort-Object {
+                if ($_.BaseName -match '(\d+)$') {
+                  [int]$Matches[1]
+                }
+                else {
+                  -1
+                }
+              }, Name -Descending |
+              Select-Object -First 1 -ExpandProperty FullName
+          }
+
+          if ([string]::IsNullOrWhiteSpace($zip) -or -not (Test-Path $zip)) {
+            throw "No GZFX field ZIP was found."
+          }
+
+          $zip = (Resolve-Path $zip).Path
+          $label = [IO.Path]::GetFileNameWithoutExtension($zip)
+          $out = Join-Path $env:RUNNER_TEMP "gzfx-field-unpacked"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+          Expand-Archive -LiteralPath $zip -DestinationPath $out -Force
+
+          $manifest = Join-Path $out "_GZFX_FIELD_MANIFEST.txt"
+          @(
+            "source=$zip"
+            "label=$label"
+            "source_bytes=$((Get-Item $zip).Length)"
+            "source_sha256=$((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant())"
+            ""
+            "FILES:"
+          ) | Set-Content $manifest -Encoding UTF8
+
+          Get-ChildItem $out -Recurse -File |
+            Where-Object { $_.FullName -ne $manifest } |
+            Sort-Object FullName |
+            ForEach-Object {
+              $relative = [IO.Path]::GetRelativePath($out, $_.FullName)
+              "$relative`t$($_.Length)" | Add-Content $manifest -Encoding UTF8
+            }
+
+          Get-Content $manifest
+          "label=$label" >> $env:GITHUB_OUTPUT
+          "out=$out" >> $env:GITHUB_OUTPUT
+
+      - name: Upload unpacked field evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: GZFX-field-${{ steps.select.outputs.label }}
+          path: ${{ steps.select.outputs.out }}
+          if-no-files-found: error
+          retention-days: 30
