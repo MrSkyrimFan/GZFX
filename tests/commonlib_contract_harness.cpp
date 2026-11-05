@@ -4,6 +4,9 @@
 using namespace std::literals;
 #include <RE/Skyrim.h>
 
+#include "gzfx/skse_api.hpp"
+
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 
@@ -16,6 +19,33 @@ int main()
     static_assert(
         sizeof(RE::Sky) ==
         0x2C8);
+
+    static_assert(
+        sizeof(gzfx::skse::Interface) ==
+        sizeof(SKSE::detail::SKSEInterface));
+
+    static_assert(
+        offsetof(gzfx::skse::Interface, skseVersion) ==
+        offsetof(SKSE::detail::SKSEInterface, skseVersion));
+    static_assert(
+        offsetof(gzfx::skse::Interface, runtimeVersion) ==
+        offsetof(SKSE::detail::SKSEInterface, runtimeVersion));
+    static_assert(
+        offsetof(gzfx::skse::Interface, QueryInterface) ==
+        offsetof(SKSE::detail::SKSEInterface, QueryInterface));
+    static_assert(
+        offsetof(gzfx::skse::Interface, GetPluginHandle) ==
+        offsetof(SKSE::detail::SKSEInterface, GetPluginHandle));
+    static_assert(
+        offsetof(gzfx::skse::Interface, GetReleaseIndex) ==
+        offsetof(SKSE::detail::SKSEInterface, GetReleaseIndex));
+    static_assert(
+        offsetof(gzfx::skse::Interface, GetPluginInfo) ==
+        offsetof(SKSE::detail::SKSEInterface, GetPluginInfo));
+
+    static_assert(
+        sizeof(gzfx::skse::PluginVersionData) ==
+        sizeof(SKSE::PluginVersionData));
 
     if (SKSE::RUNTIME_SSE_1_7_104 !=
         REL::Version{ 1, 7, 104, 0 })
