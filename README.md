@@ -29,7 +29,7 @@ Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
 current runtime: 0.0.33-skse-loader-rescue
-current phase: 0.0.33 SKSE LOADER RESCUE / CI + REAL-SKYRIM REVALIDATION
+current phase: 0.0.33 LOADER RESCUE CLOSED / MINIMAL REAL-SKYRIM LOAD REVALIDATION NEXT
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
@@ -105,18 +105,17 @@ never hooked by 0.0.30 and engineProfileAvailable remains false until later
 field DATA and research independently verify them.
 
 The first real-Skyrim 0.0.32 validation failed before healthy GZFX runtime
-output: no GZFX runtime folder and no functional GZFX controls. 0.0.33 is a
-bounded loader rescue. It makes SKSE Preload non-invasive, moves renderer arming
-to normal SKSE Load, initializes CommonLib through SKSE::Init, and removes
-dynamic Microsoft VC runtime dependencies from the shipped DLL. No locked
-renderer semantic is being reopened.
+output: no GZFX runtime folder and no functional GZFX controls. 0.0.33 completed
+the bounded loader rescue: SKSE Preload is non-invasive, renderer arming moved to
+normal SKSE Load, CommonLib initializes through SKSE::Init, and the shipped DLL
+no longer depends on the dynamic Microsoft VC runtime. PR #38 is merged, the PE
+load contract and all 38 tests are green, and the main package refresh completed.
+No locked renderer semantic was reopened.
 
-0.0.32 completes the owner-authorized MIT CommonLib engine-access integration.
-PR #37 and merged-main CI are green at 38/38. CommonLib is statically linked into
-the single GZFX DLL; Address Library remains external; the validated package still
-contains only `Data/SKSE/Plugins/GZFX.dll`. The next required action is a compact
-real-Skyrim 1.7.104 field validation of the combined SKSE + CommonLib path before
-broad graphics-feature engineering resumes.
+0.0.32 completed the owner-authorized MIT CommonLib engine-access integration.
+PR #37 and merged-main CI were green at 38/38. Its first real-Skyrim load test
+then failed before healthy GZFX runtime output; that loader result is superseded
+by the 0.0.33 rescue and its next real-Skyrim revalidation.
 
 **Important:** GZFX uses official SKSE as its loader/lifecycle host, the
 MIT-licensed CommonLibSSE-GG line as a typed read-only Skyrim engine-access
