@@ -252,7 +252,9 @@ int wmain(
         std::string(version->name) != "GZFX" ||
         version->compatibleVersions[0] !=
             gzfx::skse::kRuntime_1_7_104 ||
-        version->compatibleVersions[1] != 0)
+        version->compatibleVersions[1] != 0 ||
+        version->seVersionRequired !=
+            gzfx::skse::kSkse_2_3_1)
     {
         return 5;
     }
