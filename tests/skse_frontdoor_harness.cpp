@@ -26,6 +26,9 @@ namespace
     using ShutdownFn =
         void(*)() noexcept;
 
+    using InitializationStateFn =
+        std::uint32_t(*)() noexcept;
+
     gzfx::skse::MessagingInterface::EventCallback
         g_listener = nullptr;
 
@@ -241,14 +244,21 @@ int wmain(
                 module,
                 "GZFX_Shutdown"));
 
+    const auto initializationState =
+        reinterpret_cast<InitializationStateFn>(
+            GetProcAddress(
+                module,
+                "GZFX_GetInitializationState"));
+
     if (version == nullptr ||
         preload == nullptr ||
         load == nullptr ||
         shutdown == nullptr ||
+        initializationState == nullptr ||
         version->dataVersion !=
             gzfx::skse::
                 PluginVersionData::kVersion ||
-        version->pluginVersion != 32 ||
+        version->pluginVersion != 33 ||
         std::string(version->name) != "GZFX" ||
         version->compatibleVersions[0] !=
             gzfx::skse::kRuntime_1_7_104 ||
@@ -275,13 +285,38 @@ int wmain(
     skse.GetPluginInfo =
         &GetPluginInfo;
 
-    if (!preload(&skse) ||
-        !load(&skse) ||
-        !g_messagingQueried ||
-        !g_trampolineQueried ||
-        g_listener == nullptr)
+    if (!preload(&skse))
     {
         return 6;
+    }
+
+    // Preload must remain inert in 0.0.33: no runtime initialization and no
+    // filesystem-heavy D3D lifecycle probe before Skyrim's global initializers.
+    if (initializationState() != 0)
+    {
+        return 61;
+    }
+
+    const fs::path preloadDiagnostics =
+        outputRoot /
+        L"GZFX" /
+        L"Diagnostics" /
+        L"d3d11_lifecycle.txt";
+
+    if (fs::exists(
+            preloadDiagnostics,
+            error))
+    {
+        return 62;
+    }
+
+    if (!load(&skse) ||
+        !g_messagingQueried ||
+        !g_trampolineQueried ||
+        g_listener == nullptr ||
+        initializationState() != 2)
+    {
+        return 63;
     }
 
     gzfx::skse::MessagingInterface::Message
@@ -457,6 +492,12 @@ int wmain(
 
     const bool bridgeOk =
         bridge.find(
+            "preload_entered=true") !=
+                std::string::npos &&
+        bridge.find(
+            "graphics_arm_phase=load") !=
+                std::string::npos &&
+        bridge.find(
             "early_graphics_armed=true") !=
                 std::string::npos &&
         bridge.find(
@@ -467,6 +508,12 @@ int wmain(
                 std::string::npos &&
         bridge.find(
             "runtime_initialized=true") !=
+                std::string::npos &&
+        bridge.find(
+            "commonlib_module_ready=true") !=
+                std::string::npos &&
+        bridge.find(
+            "commonlib_skse_api_ready=true") !=
                 std::string::npos &&
         bridge.find(
             "message=post_load") !=

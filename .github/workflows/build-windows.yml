@@ -28,17 +28,21 @@ jobs:
       - name: Install static build dependencies
         shell: pwsh
         run: |
-          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install --triplet x64-windows-static-md
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install --triplet x64-windows-static
 
       - name: Configure
         shell: pwsh
         run: |
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
             "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
-            "-DVCPKG_TARGET_TRIPLET=x64-windows-static-md"
+            "-DVCPKG_TARGET_TRIPLET=x64-windows-static"
 
       - name: Build
         run: cmake --build build --config Release --parallel
+
+      - name: Verify GZFX PE load contract
+        shell: pwsh
+        run: ./scripts/verify-pe-contract.ps1 -DllPath build/bin/GZFX.dll
 
       - name: Runtime smoke test
         run: ctest --test-dir build -C Release --output-on-failure

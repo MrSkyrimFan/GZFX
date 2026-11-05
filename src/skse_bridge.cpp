@@ -19,6 +19,7 @@ namespace
 {
     namespace fs = std::filesystem;
 
+    std::atomic<bool> g_preloadEntered{false};
     std::atomic<bool> g_preloadGraphicsArmed{false};
     std::atomic<bool> g_loadEntered{false};
 
@@ -165,7 +166,7 @@ extern "C"
         SKSEPlugin_Version =
     {
         gzfx::skse::PluginVersionData::kVersion,
-        32,
+        33,
         "GZFX",
         "Greenezone Software LLC",
         "",
@@ -187,17 +188,18 @@ extern "C"
             return false;
         }
 
-        const bool armed =
-            gzfx::runtime::
-                ArmEarlyGraphicsBootstrap();
-
-        g_preloadGraphicsArmed.store(
-            armed,
+        // SKSE documents the preload phase as capability-limited. 0.0.31/32
+        // performed PE/IAT mutation here before Skyrim's global initializers,
+        // which was never proven against the real 1.7.104 executable. Keep
+        // preload deliberately inert and move graphics arming to normal Load.
+        g_preloadEntered.store(
+            true,
             std::memory_order_release);
 
-        // Once the early front door has been attempted, keep the DLL resident.
-        // A partially installed import hook must never point into an unloaded
-        // plugin even when the front door reports a degraded state.
+        g_preloadGraphicsArmed.store(
+            false,
+            std::memory_order_release);
+
         return true;
     }
 
@@ -257,12 +259,27 @@ extern "C"
                         &OnSkseMessage);
             }
 
+            // Normal SKSE Load still runs before normal game execution and
+            // is the first phase in which GZFX performs renderer mutation.
+            const bool graphicsArmed =
+                gzfx::runtime::
+                    ArmEarlyGraphicsBootstrap();
+
+            g_preloadGraphicsArmed.store(
+                graphicsArmed,
+                std::memory_order_release);
+
             const bool initialized =
                 GZFX_Initialize();
 
             const bool commonLibModuleReady =
                 gzfx::engine::commonlib::
                     InitializeModule();
+
+            const bool commonLibSkseApiReady =
+                commonLibModuleReady &&
+                gzfx::engine::commonlib::
+                    InitializeSkseInterface(skse);
 
             const bool processLifecycleArmed =
                 gzfx::process_lifecycle::Arm();
@@ -282,6 +299,15 @@ extern "C"
                 "target_skse=2.3.1");
             AppendStatus(
                 "target_runtime=1.7.104");
+            AppendStatus(
+                std::string(
+                    "preload_entered=") +
+                (g_preloadEntered.load(
+                    std::memory_order_acquire)
+                    ? "true"
+                    : "false"));
+            AppendStatus(
+                "graphics_arm_phase=load");
             AppendStatus(
                 std::string(
                     "early_graphics_armed=") +
@@ -312,6 +338,12 @@ extern "C"
                 std::string(
                     "commonlib_module_ready=") +
                 (commonLibModuleReady
+                    ? "true"
+                    : "false"));
+            AppendStatus(
+                std::string(
+                    "commonlib_skse_api_ready=") +
+                (commonLibSkseApiReady
                     ? "true"
                     : "false"));
             AppendStatus(

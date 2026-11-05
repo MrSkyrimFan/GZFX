@@ -190,7 +190,7 @@ foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.32-commonlib-mit-engine-access
+0.0.33-skse-loader-rescue
 
 Wave 1:
 CLOSED
@@ -209,10 +209,11 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-0.0.32 COMMONLIB INTEGRATION CLOSED / REAL-SKYRIM SKSE + COMMONLIB FIELD VALIDATION NEXT
+0.0.33 SKSE LOADER RESCUE ACTIVE / REAL-SKYRIM 0.0.32 LOAD FAILURE UNDER REPAIR
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
+0.0.33 rule: Preload is non-invasive; D3D observation arms in normal SKSE Load
 
 engine access:
 pinned MIT CommonLibSSE-GG + external Address Library v5 on Skyrim 1.7.104
@@ -367,6 +368,25 @@ contracts, and this wave authorizes no weather or renderer-state writes.
 
 Real-Skyrim field validation of the combined SKSE + CommonLib path is the next
 required action before broad graphics-feature engineering.
+
+## 10C. 0.0.33 real-field loader rescue
+
+The first real-Skyrim test of the 0.0.32 SKSE + CommonLib integration failed
+before healthy GZFX runtime output. The owner observed no generated GZFX runtime
+folder and no working GZFX hotkeys/menu.
+
+This field evidence supersedes the automated-only loader acceptance.
+
+Active bounded repair authority lives in:
+
+```text
+GZFXWorkFolder/new/GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
+GZFXWorkFolder/new/GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
+GZFXWorkFolder/new/GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
+```
+
+0.0.33 must remain loader/integration-only. Do not use this failure to reopen
+HDR/TAA contracts or broad renderer semantics.
 
 ## 11. Repository lifecycle proof
 

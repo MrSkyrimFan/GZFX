@@ -3,13 +3,13 @@
 Current runtime:
 
 ```text
-0.0.32-commonlib-mit-engine-access
+0.0.33-skse-loader-rescue
 ```
 
 Current phase:
 
 ```text
-0.0.32 COMMONLIB INTEGRATION CLOSED / REAL-SKYRIM FIELD VALIDATION NEXT / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
+0.0.33 SKSE LOADER RESCUE ACTIVE / REAL-SKYRIM 0.0.32 LOAD FAILURE UNDER REPAIR / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
 ```
 
 Active authority:
@@ -20,6 +20,9 @@ GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_1.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
+GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
+GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
+GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
 ```
 
 Corrected project verdict:
@@ -103,3 +106,31 @@ Next integration action is real-Skyrim 1.7.104 + SKSE 2.3.1 + Address Library
 field validation. Do not start broad graphics-feature implementation before that
 integration validation is complete. The renderer-domain re-audit records above
 remain active authority for later feature engineering.
+
+
+
+## 0.0.33 SKSE loader rescue
+
+The first real-Skyrim 0.0.32 integration test failed before healthy GZFX runtime
+output: no GZFX runtime folder and no functional GZFX controls.
+
+The field result overrides the previous automated-only loader acceptance.
+
+Active repair authority:
+
+```text
+GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
+GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
+GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
+```
+
+Bounded repair only:
+
+- make SKSEPlugin_Preload non-invasive;
+- arm D3D observation in normal SKSEPlugin_Load;
+- initialize CommonLib through SKSE::Init;
+- eliminate dynamic Microsoft VC runtime dependencies from GZFX.dll;
+- add PE import/export CI proof;
+- preserve all locked renderer semantics.
+
+No broad graphics feature work is authorized until the loader is field-proven.

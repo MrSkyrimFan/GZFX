@@ -5,11 +5,13 @@
 #include <SKSE/Impl/PCH.h>
 using namespace std::literals;
 #include <RE/Skyrim.h>
+#include <SKSE/SKSE.h>
 
 #include "gzfx/engine/commonlib_bridge.hpp"
 #include "gzfx/diagnostics/renderer_forensics.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/render/renderer_execution_service.hpp"
+#include "gzfx/skse_api.hpp"
 
 #include <Windows.h>
 #include <d3d11.h>
@@ -58,6 +60,7 @@ namespace gzfx::engine::commonlib
         RE::TESDataHandler* g_dataHandler = nullptr;
 
         bool g_moduleAttempted = false;
+        bool g_skseApiAttempted = false;
         bool g_bindAttempted = false;
 
         fs::path AddressLibraryPath()
@@ -198,6 +201,11 @@ namespace gzfx::engine::commonlib
                     << "\n"
                     << "address_library_present="
                     << (g_snapshot.addressLibraryPresent
+                        ? "true"
+                        : "false")
+                    << "\n"
+                    << "skse_api_ready="
+                    << (g_snapshot.skseApiReady
                         ? "true"
                         : "false")
                     << "\n"
@@ -574,6 +582,90 @@ namespace gzfx::engine::commonlib
         }
     }
 
+    bool InitializeSkseInterface(
+        const gzfx::skse::Interface* const skse) noexcept
+    {
+        try
+        {
+            if (!InitializeModule())
+            {
+                return false;
+            }
+
+            {
+                std::scoped_lock lock(
+                    g_mutex);
+
+                if (g_snapshot.status ==
+                    Status::TestBypass)
+                {
+                    g_snapshot.skseApiReady = true;
+
+                    WriteDiagnostic(
+                        "skse_api_test_bypass");
+
+                    return true;
+                }
+
+                if (g_skseApiAttempted)
+                {
+                    return
+                        g_snapshot.skseApiReady;
+                }
+
+                g_skseApiAttempted = true;
+
+                if (skse == nullptr ||
+                    !g_snapshot.moduleReady ||
+                    !g_snapshot.addressLibraryPresent)
+                {
+                    g_snapshot.skseApiReady = false;
+
+                    WriteDiagnostic(
+                        "skse_api_prerequisite_missing");
+
+                    return false;
+                }
+            }
+
+            // CommonLib's LoadInterface is intentionally a zero-data wrapper
+            // over SKSE's raw interface pointer. The verified GZFX SKSE ABI
+            // matches SKSE 2.3.1 exactly, so initialize CommonLib through its
+            // supported public contract instead of touching REL state ad hoc.
+            SKSE::Init(
+                reinterpret_cast<
+                    const SKSE::LoadInterface*>(
+                    skse),
+                false);
+
+            {
+                std::scoped_lock lock(
+                    g_mutex);
+
+                g_snapshot.skseApiReady = true;
+
+                WriteDiagnostic(
+                    "skse_api_ready");
+            }
+
+            return true;
+        }
+        catch (...)
+        {
+            std::scoped_lock lock(
+                g_mutex);
+
+            g_snapshot.skseApiReady = false;
+            g_snapshot.status =
+                Status::BindFailed;
+
+            WriteDiagnostic(
+                "skse_api_exception");
+
+            return false;
+        }
+    }
+
     bool BindAfterDataLoaded() noexcept
     {
         try
@@ -614,6 +706,17 @@ namespace gzfx::engine::commonlib
 
                 WriteDiagnostic(
                     "data_loaded_without_address_library");
+
+                return false;
+            }
+
+            if (!g_snapshot.skseApiReady)
+            {
+                g_snapshot.status =
+                    Status::BindFailed;
+
+                WriteDiagnostic(
+                    "data_loaded_without_skse_api");
 
                 return false;
             }
