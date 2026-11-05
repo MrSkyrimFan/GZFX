@@ -144,6 +144,11 @@ gzfx_apply_common(GZFXSKSEFrontDoorHarness)
 add_executable(GZFXNaturalExitChild
     tests/natural_exit_child.cpp
 )
+target_include_directories(
+    GZFXNaturalExitChild
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
 target_link_libraries(
     GZFXNaturalExitChild
     PRIVATE
