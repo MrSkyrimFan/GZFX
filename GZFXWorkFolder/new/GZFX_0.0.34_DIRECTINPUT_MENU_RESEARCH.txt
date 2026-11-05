@@ -237,7 +237,73 @@ If dinput8.dll is not yet loaded at arm time:
 This does not create a proxy or replace the system DLL.
 
 ======================================================================
-9. DIAGNOSTIC CONTRACT
+9. SKSE 2.3.1 DIRECTINPUT WRAPPER COMPATIBILITY
+======================================================================
+
+Official SKSE 2.3.1 source was inspected at:
+
+    ianpatt/skse64
+    25b72352adb6543fa6d0bd3795780672b2e238e0
+
+SKSE initialization order in skse64.cpp is:
+
+    g_pluginManager.InstallPlugins(kPhase_Load)
+    g_pluginManager.LoadComplete()
+    ...
+    Hooks_DirectInput_Commit()
+
+Therefore GZFX SKSEPlugin_Load executes before SKSE commits its DirectInput IAT
+wrapper.
+
+SKSE Hooks_DirectInput_Commit then:
+
+    reads SkyrimSE.exe's existing dinput8!DirectInput8Create IAT target
+    stores that address as DICreate_RealFunc
+    replaces Skyrim's IAT slot with SKSE Hook_DirectInput8Create_Execute
+
+SKSE's wrapper later calls:
+
+    DICreate_RealFunc(...)
+
+and its FakeDirectInput / FakeDirectInputDevice wrappers ultimately call the
+real IDirectInput8 and real IDirectInputDevice8 methods.
+
+This is compatible with the selected 0.0.34 design:
+
+1. During GZFX SKSEPlugin_Load, MinHook patches the real
+   dinput8!DirectInput8Create function entry.
+
+2. SKSE later captures the same real function address in DICreate_RealFunc and
+   rewrites Skyrim's IAT to its own wrapper.
+
+3. When SKSE's wrapper calls DICreate_RealFunc, execution still reaches the
+   MinHook detour at the real function entry.
+
+4. GZFX receives the real IDirectInput8 object returned under SKSE's wrapper and
+   hooks its real CreateDevice method.
+
+5. SKSE FakeDirectInput::CreateDevice later calls the real object's
+   CreateDevice; GZFX observes GUID_SysMouse and hooks the real mouse device.
+
+6. SKSE FakeDirectInputDevice::GetDeviceState / GetDeviceData later call the
+   real mouse device methods; GZFX intercepts those lower-level calls.
+
+7. With the GZFX menu open, GZFX forwards the real mouse packet to the menu and
+   zeros/suppresses it before SKSE's wrapper and Skyrim consume it.
+
+Thus GZFX does NOT replace or bypass SKSE's DirectInput wrapper. It operates
+underneath it on the real system DirectInput implementation.
+
+This ordering is desirable because SKSE continues to own its normal input
+processing while GZFX temporarily owns only the system mouse stream when its
+overlay is open.
+
+The SKSE source also documents kMessage_InputLoaded as being sent only after
+game input is loaded and immediately before main-menu initialization, further
+confirming that plugin Load is the correct early arm point.
+
+======================================================================
+10. DIAGNOSTIC CONTRACT
 ======================================================================
 
 Add deterministic:
@@ -272,7 +338,7 @@ Also update settings_menu.txt after the first DirectInput packet so it no longer
 remains frozen at the pre-mouse "opened" snapshot.
 
 ======================================================================
-10. TEST STRATEGY
+11. TEST STRATEGY
 ======================================================================
 
 Retain all existing 38 tests.
@@ -311,7 +377,7 @@ C. pure mouse packet contract
 The production runtime must not depend on an interactive CI desktop to pass.
 
 ======================================================================
-11. VERSION / FIELD GATE
+12. VERSION / FIELD GATE
 ======================================================================
 
 Next runtime:
