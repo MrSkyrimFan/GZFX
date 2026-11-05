@@ -9,7 +9,7 @@ Current runtime:
 Current phase:
 
 ```text
-0.0.33 SKSE LOADER RESCUE ACTIVE / REAL-SKYRIM 0.0.32 LOAD FAILURE UNDER REPAIR / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
+0.0.33 LOADER RESCUE CLOSED / MINIMAL REAL-SKYRIM LOAD REVALIDATION NEXT / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
 ```
 
 Active authority:
@@ -20,9 +20,6 @@ GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_1.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
-GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
-GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
-GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
 ```
 
 Corrected project verdict:
@@ -114,23 +111,31 @@ remain active authority for later feature engineering.
 The first real-Skyrim 0.0.32 integration test failed before healthy GZFX runtime
 output: no GZFX runtime folder and no functional GZFX controls.
 
-The field result overrides the previous automated-only loader acceptance.
+The bounded 0.0.33 loader rescue is COMPLETE and archived under
+`GZFXWorkFolder/old/`.
 
-Active repair authority:
+Current controlling records:
 
 ```text
+GZFX_0.0.33_SKSE_LOADER_RESCUE_ENGINEERING_RESULT.txt
+GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.33.txt
 GZFX_0.0.33_SKSE_LOADER_RESCUE_FINDINGS.txt
 GZFX_0.0.33_SKSE_LOADER_RESCUE_RESEARCH.txt
 GZFX_0.0.33_SKSE_LOADER_RESCUE_BLUEPRINT.txt
 ```
 
-Bounded repair only:
+PR #38 is merged. Final PR validation passed the PE load contract and 38/38
+tests. The main workflow refreshed the Lance package after all required build,
+PE, test, package-verification, and artifact steps.
 
-- make SKSEPlugin_Preload non-invasive;
-- arm D3D observation in normal SKSEPlugin_Load;
-- initialize CommonLib through SKSE::Init;
-- eliminate dynamic Microsoft VC runtime dependencies from GZFX.dll;
-- add PE import/export CI proof;
-- preserve all locked renderer semantics.
+0.0.33 corrections:
 
-No broad graphics feature work is authorized until the loader is field-proven.
+- SKSE Preload is non-invasive;
+- D3D observation arms in normal SKSE Load;
+- CommonLib initializes through SKSE::Init;
+- the shipped DLL uses the static MSVC runtime;
+- PE CI rejects dynamic MSVCP/VCRUNTIME dependencies;
+- all locked renderer semantics remain unchanged.
+
+Next action is a deliberately minimal real-Skyrim loader revalidation before any
+broad graphics work.
