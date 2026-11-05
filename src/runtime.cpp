@@ -6,7 +6,6 @@
 #include "gzfx/diagnostics/startup_trace.hpp"
 #include "gzfx/diagnostics/telemetry_listener.hpp"
 #include "gzfx/paths.hpp"
-#include "gzfx/process_lifecycle.hpp"
 #include "gzfx/version.hpp"
 #include "gzfx/render/wave3_pipeline.hpp"
 #include "gzfx/render/ambient_visibility_v2.hpp"
@@ -94,9 +93,6 @@ namespace
             gzfx::diagnostics::telemetry_listener::
                 Initialize();
 
-        const bool processLifecycleArmed =
-            gzfx::process_lifecycle::Arm();
-
         const fs::path logPath = runtimeRoot / L"GZFX.log";
         std::ofstream log(logPath, std::ios::out | std::ios::app);
         if (!log)
@@ -135,9 +131,6 @@ namespace
             << "\n";
         log << "telemetry_listener="
             << (telemetryInitialized ? "initialized" : "disabled_or_failed")
-            << "\n";
-        log << "process_lifecycle="
-            << (processLifecycleArmed ? "armed" : "failed")
             << "\n";
         log << "status=initialized\n";
         log << "===============================\n";
