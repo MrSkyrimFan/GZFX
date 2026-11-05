@@ -1,0 +1,475 @@
+GZFX 0.0.32 COMMONLIB MIT ENGINE ACCESS
+FINAL ENGINEERING RESULT
+Closure date: 2026-11-05
+
+STATUS:
+    OWNER-AUTHORIZED COMMONLIB ENGINE-ACCESS MIGRATION COMPLETE
+    PR #37 GREEN
+    MERGED
+    MERGED-MAIN GREEN
+    ONE-DLL PACKAGE REFRESH VERIFIED
+    READY FOR REAL-SKYRIM 1.7.104 + SKSE 2.3.1 + ADDRESS LIBRARY FIELD VALIDATION
+
+RUNTIME:
+    0.0.32-commonlib-mit-engine-access
+
+TARGET:
+    Skyrim Special Edition / Anniversary Edition Steam 1.7.104
+    SKSE 2.3.1
+    Address Library for SKSE Plugins format 5
+    expected database Data/SKSE/Plugins/versionlib-1-7-104-0.bin
+
+======================================================================
+1. PURPOSE
+======================================================================
+
+Add a current permissive CommonLib engine-access plane to the already-merged
+0.0.31 one-DLL SKSE architecture so GZFX can use typed Skyrim engine knowledge
+without replacing its field-proven D3D11/DXGI renderer or locked semantic
+contracts.
+
+Final product path:
+
+    SkyrimSE.exe 1.7.104
+      -> official SKSE 2.3.1
+         -> Data/SKSE/Plugins/GZFX.dll
+            -> statically linked MIT CommonLibSSE-GG
+            -> external Address Library database
+            -> existing GZFX D3D11/DXGI renderer
+            -> existing HLSL/GPU systems
+
+This wave does NOT promote:
+
+    WaterDomain
+    PostTonemapPreUi
+    AfterShadowProduction
+
+and does NOT alter the field-locked:
+
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+======================================================================
+2. SELECTED COMMONLIB / LICENSE BOUNDARY
+======================================================================
+
+Selected dependency:
+
+    eddoursul/CommonLibSSE-GG
+
+Pinned revision:
+
+    2053e94fd1c147b36eae2b4338118552fba407e2
+
+License:
+
+    MIT
+
+The selected fork is the current MIT continuation used for this proprietary
+GZFX build and supports Skyrim 1.7.99 / 1.7.104 plus Address Library format 5.
+
+GZFX intentionally does NOT switch to the current GPL-3.0-or-later
+CommonLibSSE-NG line.
+
+CommonLib is statically linked into GZFX.dll. There is no separate CommonLib
+runtime DLL in the GZFX package.
+
+MIT attribution remains in THIRD_PARTY_NOTICES.md and a human-readable notice
+is embedded/written by GZFX.
+
+======================================================================
+3. BUILD / DEPENDENCY MODEL
+======================================================================
+
+CommonLib configuration is intentionally AE-only:
+
+    ENABLE_SKYRIM_SE=OFF
+    ENABLE_SKYRIM_AE=ON
+    ENABLE_SKYRIM_VR=OFF
+    BUILD_TESTS=OFF
+    COMMONLIB_ENABLE_IPO=OFF
+    REX_OPTION_INI=OFF
+    REX_OPTION_JSON=OFF
+    REX_OPTION_TOML=OFF
+    SKSE_SUPPORT_XBYAK=OFF
+
+GZFX compiler baseline advanced to C++23.
+
+CI uses vcpkg with:
+
+    x64-windows-static-md
+
+so CommonLib/build dependencies do not become additional distributed DLLs.
+
+External runtime dependencies remain user-installed:
+
+    official SKSE 2.3.1
+    Address Library for SKSE Plugins
+
+Neither is bundled in the GZFX package.
+
+======================================================================
+4. ENGINE ACCESS BRIDGE
+======================================================================
+
+New production bridge:
+
+    include/gzfx/engine/commonlib_bridge.hpp
+    src/engine/commonlib_bridge.cpp
+
+The bridge provides:
+
+    CommonLib module/runtime validation
+    Address Library presence detection
+    SKSE DataLoaded-time singleton binding
+    typed RE::BSGraphics::Renderer access
+    typed RE::Sky access
+    typed RE::TESDataHandler access
+    renderer/device/context/swap-chain pointer correlation
+    bounded fallback AttachPrimaryRendererObjects when the D3D front door
+        has not already acquired a valid primary renderer
+    thread-safe read-only engine snapshot
+    per-frame Sky/weather/environment refresh
+    deterministic Diagnostics/commonlib_engine.txt evidence
+
+Current read-only snapshot includes:
+
+    renderer
+    device
+    context
+    swap chain
+    Sky singleton
+    TESDataHandler
+    current weather
+    last weather
+    sun
+    clouds
+    Masser
+    Secunda
+    precipitation
+    game hour
+    weather blend percentage
+    wind speed
+    wind angle
+    fog near
+    fog far
+    fog power
+    fog clamp
+    sky mode
+
+Lifecycle:
+
+    CommonLib module initialization -> SKSEPlugin_Load
+    engine singleton binding -> SKSE DataLoaded
+    read-only frame refresh -> already-owned primary Present path
+
+======================================================================
+5. RENDERER AUTHORITY / LOCK ORDER
+======================================================================
+
+CommonLib AUGMENTS GZFX renderer evidence.
+
+It does not silently replace:
+
+    D3D11/DXGI primary ownership
+    renderer forensics
+    shader/resource identity
+    semantic freshness/fail-closed rules
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+The bridge correlates CommonLib renderer COM identities with GZFX's existing
+renderer_execution_service lease.
+
+A first bridge draft risked an ABBA deadlock by holding the CommonLib state
+mutex while entering renderer-forensics fallback attach, while Present could
+take the same locks in reverse order.
+
+Final lock rule:
+
+    capture required CommonLib renderer pointers under CommonLib mutex
+    release CommonLib mutex
+    perform renderer-forensics fallback attach
+    reacquire CommonLib mutex only to store/correlate result
+
+Do not regress this ordering.
+
+======================================================================
+6. FIRST COMMONLIB CI FAILURE / ROOT-CAUSE REPAIR
+======================================================================
+
+First CommonLib workflow:
+
+    42093156324
+
+CommonLib itself built successfully to CommonLibSSE.lib.
+
+GZFX/CommonLib consumer translation units then failed with symptoms including:
+
+    missing std::uint16_t
+    missing std::array
+    missing std::string_view
+    missing sv literal
+    Windows API detected before CommonLib
+
+Root cause:
+
+    the selected CommonLib public headers require their supported PCH/include
+    environment; Windows/D3D or incomplete direct includes were entering first.
+
+Repair sequence:
+
+    bdd2fa48c900cec67000123ac1e436e03dc5b288
+        honor CommonLib consumer include contract
+
+    fdf9276544150c6df0c7d3e472e01e29de30e203
+        compile contract through umbrella header
+
+    527f5a8866dbf7485741daddaf10bcb6871a5ff6
+        establish CommonLib consumer PCH environment
+
+    1fc749b1890e33ec6177b70246208237c8474e83
+        satisfy documented CommonLib PCH contract
+
+    5299194764a5da24915e2a234172c185f7d5b4fd
+        preserve /MP parallel compile for pinned CommonLib
+
+Final consumer rule:
+
+    CommonLib PCH/umbrella environment before native Windows/D3D headers
+    std::literals established as required by the public header contract
+
+Status:
+
+    CLOSED
+
+======================================================================
+7. TEST / PR PROOF
+======================================================================
+
+PR:
+
+    #37
+    0.0.32: add MIT CommonLib engine access plane
+
+Final PR head:
+
+    5299194764a5da24915e2a234172c185f7d5b4fd
+
+PR workflow:
+
+    42098296551
+
+PR job:
+
+    127494050948
+
+Result:
+
+    38 / 38 PASS
+    0 failures
+
+PR artifact:
+
+    id 13450676409
+    uploaded artifact-container bytes 581,202
+    digest:
+        sha256:407eb8b31c7aae12f0da71f74625abe6eb3ab649dcd9a467c7b9e44a4d9189a4
+
+Merge commit:
+
+    7c20bf289134820c4f8bb27457d02b42dfac8724
+
+======================================================================
+8. MERGED-MAIN PROOF
+======================================================================
+
+Merged-main workflow:
+
+    42102969205
+
+Job:
+
+    127510296230
+
+Final result:
+
+    Build PASS
+    Runtime smoke test PASS
+    Package SKSE plugin archive PASS
+    Verify package contents PASS
+    Upload GZFX SKSE package PASS
+    Publish Lance test ZIP on main PASS
+
+CTest:
+
+    100% tests passed, 0 tests failed out of 38
+
+Merged-main artifact:
+
+    id 13451806919
+    artifact-container bytes 581,184
+    digest:
+        sha256:774ea6a016739fe53324d256740d62f617155e794be87fd65a762145baf81c44
+
+The GitHub artifact container contains:
+
+    GZFX-SkyrimSE-x64.zip
+
+Inner package:
+
+    bytes:
+        582,286
+
+    SHA-256:
+        88bf1ee7b33864bc0461805d69f21abcebe16c4ac964c0ffc08e4fb0d9f99384
+
+    Git blob SHA-1:
+        ea830b3a9be658415ef9a9f842694ef46c01ec5f
+
+Inner package entries:
+
+    Data/SKSE/
+    Data/SKSE/Plugins/GZFX.dll
+
+GZFX.dll bytes:
+
+    1,413,120
+
+Only the GZFX DLL is a file payload.
+
+======================================================================
+9. LANCE ZIP REFRESH PROOF
+======================================================================
+
+Automatic package refresh commit:
+
+    1d46ca113db3a73aea72e5470c439506b6c252fd
+
+Commit message:
+
+    chore: refresh Lance Skyrim test package
+
+That commit changed ONLY:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Current repository ZIP blob:
+
+    ea830b3a9be658415ef9a9f842694ef46c01ec5f
+
+That blob exactly matches the Git blob SHA-1 independently computed from the
+merged-main inner package ZIP.
+
+Therefore the committed Lance ZIP and the validated merged-main package are the
+same bytes.
+
+Package file payload remains exactly:
+
+    Data/SKSE/Plugins/GZFX.dll
+
+No GZFX-owned d3d11.dll.
+No GZFX-owned dinput8.dll.
+No bundled SKSE binary.
+No bundled Address Library database.
+No separate CommonLib DLL.
+
+======================================================================
+10. FIELD STATUS / NON-CLAIMS
+======================================================================
+
+Automated engineering acceptance for 0.0.32 is COMPLETE.
+
+Real-Skyrim field validation of the combined SKSE + CommonLib architecture has
+NOT yet occurred.
+
+Do NOT claim yet:
+
+    real Skyrim 1.7.104 confirms SKSEPlugin_Preload succeeds
+    real Skyrim confirms CommonLib module initialization succeeds
+    real Skyrim confirms Address Library database is found
+    real Skyrim confirms DataLoaded engine binding succeeds
+    real Skyrim confirms Renderer/Sky/TESDataHandler singleton binding
+    real Skyrim confirms GZFX/CommonLib renderer pointer correlation
+    real Skyrim confirms fallback renderer attach is unnecessary or successful
+    real Skyrim confirms primary renderer attaches before tracked resource birth
+        after the integration migration
+    real Skyrim confirms menu/raw-input behavior after proxy retirement
+    real Skyrim confirms natural-exit telemetry closure on 0.0.32
+    WaterDomain proven
+    PostTonemapPreUi proven
+    AfterShadowProduction proven
+
+The 0.0.29 real-Skyrim field-locked HDR/TAA renderer semantics remain
+authoritative unless newer real-field evidence contradicts them.
+
+======================================================================
+11. NEXT FIELD TEST
+======================================================================
+
+Required installation:
+
+    Skyrim Steam 1.7.104
+    official SKSE 2.3.1
+    Address Library for SKSE Plugins for 1.7.104
+    current repo GZFX ZIP
+
+Expected GZFX product file:
+
+    Data/SKSE/Plugins/GZFX.dll
+
+Launch through SKSE.
+
+First field validation should be intentionally small:
+
+    reach main menu
+    load into playable world
+    exterior daylight for 30-60 seconds
+    open/close the GZFX menu
+    change one slider with the mouse
+    interior if convenient
+    return exterior if convenient
+    quit normally
+    confirm SkyrimSE.exe fully exits
+
+Collect newest:
+
+    GZFX telemetry session
+    GZFX.log
+    Diagnostics/skse_bridge.txt
+    Diagnostics/commonlib_engine.txt
+    Diagnostics/d3d11_lifecycle.txt
+    Diagnostics/renderer_startup.csv
+    SKSE log
+
+Primary acceptance questions:
+
+    SKSE 2.3.1 / runtime 1.7.104 recognized?
+    early_graphics_armed=true?
+    messaging_registered=true?
+    trampoline_available=true?
+    runtime_initialized=true?
+    process_lifecycle_armed=true?
+    CommonLib module ready?
+    Address Library present?
+    CommonLib DataLoaded binding successful?
+    Renderer singleton bound?
+    Sky bound?
+    TESDataHandler bound?
+    GZFX/CommonLib renderer pointers correlated?
+    fallback attach used or unnecessary?
+    primary renderer still attached before tracked resource birth?
+    menu works without dinput8.dll?
+    locked HDR/TAA semantics remain coherent?
+    telemetry drops zero?
+    natural exit clean?
+
+After that field DATA:
+
+    DATA -> FINDINGS -> RESEARCH -> BLUEPRINT -> IMPLEMENTATION
+
+END ENGINEERING RESULT
