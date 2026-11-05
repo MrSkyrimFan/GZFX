@@ -1,6 +1,9 @@
-// CommonLib's public headers rely on the environment established by
-// RE/Skyrim.h and require that Windows API headers have not been included yet.
-// Keep this umbrella include first in this translation unit.
+// CommonLib's public headers are intentionally PCH-dependent. Consumer
+// translation units must establish the CommonLib standard-library environment
+// and global string-view literals before entering RE/Skyrim.h. Windows API
+// headers must still come only after CommonLib.
+#include <SKSE/Impl/PCH.h>
+using namespace std::literals;
 #include <RE/Skyrim.h>
 
 #include "gzfx/engine/commonlib_bridge.hpp"
