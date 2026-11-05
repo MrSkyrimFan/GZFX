@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "GZFXWorkFolder/field_uploads/**"
+      - "GZFXWorkFolder/field_uploads/*.zip"
 
 permissions:
   contents: read

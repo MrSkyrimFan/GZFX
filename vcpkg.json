@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "gzfx",
-  "version-string": "0.0.33",
+  "version-string": "0.0.34",
   "dependencies": [
     "directxmath",
     "directxtk",

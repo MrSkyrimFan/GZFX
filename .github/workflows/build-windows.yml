@@ -9,6 +9,7 @@ on:
       - main
     paths-ignore:
       - "LANCE YOUR FILE IS HERE/**"
+      - "GZFX*.zip"
       - "GZFXWorkFolder/**"
       - "README.md"
       - "AGENT.md"

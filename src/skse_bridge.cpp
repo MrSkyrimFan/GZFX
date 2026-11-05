@@ -5,6 +5,7 @@
 #include "gzfx/paths.hpp"
 #include "gzfx/process_lifecycle.hpp"
 #include "gzfx/runtime.hpp"
+#include "gzfx/ui/directinput_mouse.hpp"
 
 #include <Windows.h>
 
@@ -166,7 +167,7 @@ extern "C"
         SKSEPlugin_Version =
     {
         gzfx::skse::PluginVersionData::kVersion,
-        33,
+        34,
         "GZFX",
         "Greenezone Software LLC",
         "",
@@ -272,6 +273,11 @@ extern "C"
             const bool initialized =
                 GZFX_Initialize();
 
+            const bool directInputMouseArmed =
+                initialized &&
+                gzfx::ui::directinput_mouse::
+                    Arm();
+
             const bool commonLibModuleReady =
                 gzfx::engine::commonlib::
                     InitializeModule();
@@ -332,6 +338,12 @@ extern "C"
                 std::string(
                     "runtime_initialized=") +
                 (initialized
+                    ? "true"
+                    : "false"));
+            AppendStatus(
+                std::string(
+                    "directinput_mouse_armed=") +
+                (directInputMouseArmed
                     ? "true"
                     : "false"));
             AppendStatus(

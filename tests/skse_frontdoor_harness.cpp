@@ -258,7 +258,7 @@ int wmain(
         version->dataVersion !=
             gzfx::skse::
                 PluginVersionData::kVersion ||
-        version->pluginVersion != 33 ||
+        version->pluginVersion != 34 ||
         std::string(version->name) != "GZFX" ||
         version->compatibleVersions[0] !=
             gzfx::skse::kRuntime_1_7_104 ||
@@ -490,6 +490,11 @@ int wmain(
             diagnostics /
             L"renderer_startup.csv");
 
+    const std::string directInput =
+        ReadAll(
+            diagnostics /
+            L"directinput_mouse.txt");
+
     const bool bridgeOk =
         bridge.find(
             "preload_entered=true") !=
@@ -508,6 +513,9 @@ int wmain(
                 std::string::npos &&
         bridge.find(
             "runtime_initialized=true") !=
+                std::string::npos &&
+        bridge.find(
+            "directinput_mouse_armed=true") !=
                 std::string::npos &&
         bridge.find(
             "commonlib_module_ready=true") !=
@@ -539,24 +547,35 @@ int wmain(
             "skse_plugin_load") !=
                 std::string::npos;
 
+    const bool directInputOk =
+        directInput.find(
+            "status=armed") !=
+                std::string::npos &&
+        directInput.find(
+            "directinput8_create_hooked=true") !=
+                std::string::npos;
+
     if (!bridgeOk ||
-        !graphicsOk)
+        !graphicsOk ||
+        !directInputOk)
     {
         std::cerr
-            << "SKSE bridge or graphics front-door proof failed.\n"
+            << "SKSE bridge, graphics, or DirectInput front-door proof failed.\n"
             << "--- bridge ---\n"
             << bridge
             << "\n--- lifecycle ---\n"
             << lifecycle
             << "\n--- startup ---\n"
             << startup
+            << "\n--- directinput ---\n"
+            << directInput
             << "\n";
 
         return 10;
     }
 
     std::wcout
-        << L"SKSE single-DLL front door passed.\n";
+        << L"SKSE single-DLL + DirectInput front door passed.\n";
 
     // Do not FreeLibrary. Native hooks are intentionally process-lifetime.
     return 0;

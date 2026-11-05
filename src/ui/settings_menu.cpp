@@ -97,6 +97,7 @@ namespace gzfx::ui
         std::uint64_t g_directInputPackets = 0;
         std::int64_t g_directInputDeltaX = 0;
         std::int64_t g_directInputDeltaY = 0;
+        std::uint64_t g_inputFrame = 0;
 
         KeyEdge g_numpad1{};
         KeyEdge g_numpad2{};
@@ -1446,6 +1447,8 @@ namespace gzfx::ui
         {
             std::scoped_lock lock(g_mutex);
 
+            g_inputFrame = frame;
+
             EnsureWindowHook(gameWindow);
 
             if (TestFlag(
@@ -1619,7 +1622,9 @@ namespace gzfx::ui
             }
 
             g_directInputSeen = true;
-            ++g_directInputPackets;
+            const std::uint64_t packet =
+                ++g_directInputPackets;
+
             g_directInputDeltaX += deltaX;
             g_directInputDeltaY += deltaY;
 
@@ -1653,6 +1658,14 @@ namespace gzfx::ui
 
             g_leftDown = leftDown;
             g_dirty = true;
+
+            if (packet == 1 ||
+                (packet % 120) == 0)
+            {
+                WriteState(
+                    g_inputFrame,
+                    "directinput_mouse");
+            }
         }
         catch (...)
         {

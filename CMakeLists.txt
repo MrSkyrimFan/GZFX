@@ -14,7 +14,7 @@ set(
 
 project(
     GZFX
-    VERSION 0.0.33
+    VERSION 0.0.34
     DESCRIPTION "SKSE-hosted native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -101,6 +101,7 @@ add_library(GZFX SHARED
     src/runtime.cpp
     src/settings.cpp
     src/ui/input_api.cpp
+    src/ui/directinput_mouse.cpp
     src/ui/settings_menu.cpp
     src/version.cpp
     src/diagnostics/d3d11_lifecycle.cpp
@@ -161,6 +162,21 @@ target_link_libraries(
         CommonLibSSE::CommonLibSSE
 )
 gzfx_apply_common(GZFXCommonLibContractHarness)
+
+add_executable(GZFXDirectInputMouseContractHarness
+    tests/directinput_mouse_contract_harness.cpp
+)
+target_include_directories(
+    GZFXDirectInputMouseContractHarness
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+target_link_libraries(
+    GZFXDirectInputMouseContractHarness
+    PRIVATE
+        dxguid
+)
+gzfx_apply_common(GZFXDirectInputMouseContractHarness)
 
 add_executable(GZFXSmokeHost
     tests/smoke_host.cpp
@@ -379,6 +395,12 @@ add_test(
     NAME commonlib_engine_contract
     COMMAND
         "$<TARGET_FILE:GZFXCommonLibContractHarness>"
+)
+
+add_test(
+    NAME directinput_mouse_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXDirectInputMouseContractHarness>"
 )
 
 add_test(
