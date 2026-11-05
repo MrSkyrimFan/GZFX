@@ -1,6 +1,5 @@
 name: Windows x64
 
-# 0.0.33 merged-main validation trigger
 
 on:
   pull_request:
