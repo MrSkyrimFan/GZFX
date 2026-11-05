@@ -52,7 +52,7 @@ namespace gzfx::ui::directinput_mouse
         std::mutex g_hookMutex;
         std::mutex g_diagnosticMutex;
 
-        bool g_armResult = false;
+        std::atomic<bool> g_armResult{ false };
         std::string g_lastError;
 
         DirectInput8CreateFn
@@ -377,7 +377,7 @@ namespace gzfx::ui::directinput_mouse
 
             ++g_stateReads;
 
-            if (!ui::IsMenuVisible())
+            if (!gzfx::ui::IsMenuVisible())
             {
                 return result;
             }
@@ -397,7 +397,7 @@ namespace gzfx::ui::directinput_mouse
                 packet.buttons,
                 std::memory_order_release);
 
-            ui::SubmitDirectInputMouse(
+            gzfx::ui::SubmitDirectInputMouse(
                 packet.x,
                 packet.y,
                 packet.wheel,
@@ -480,7 +480,7 @@ namespace gzfx::ui::directinput_mouse
 
             ++g_dataReads;
 
-            if (!ui::IsMenuVisible() ||
+            if (!gzfx::ui::IsMenuVisible() ||
                 (flags & DIGDD_PEEK) != 0 ||
                 objectDataSize !=
                     sizeof(DIDEVICEOBJECTDATA))
@@ -943,7 +943,9 @@ namespace gzfx::ui::directinput_mouse
                 true,
                 std::memory_order_release);
 
-            g_armResult = true;
+            g_armResult.store(
+                true,
+                std::memory_order_release);
 
             WriteDiagnostic(
                 "armed");
@@ -958,7 +960,9 @@ namespace gzfx::ui::directinput_mouse
                 g_armOnce,
                 ArmImpl);
 
-            return g_armResult;
+            return
+                g_armResult.load(
+                    std::memory_order_acquire);
         }
         catch (...)
         {
@@ -977,7 +981,8 @@ namespace gzfx::ui::directinput_mouse
         Status status{};
 
         status.armed =
-            g_armResult;
+            g_armResult.load(
+                std::memory_order_acquire);
 
         status.directInput8CreateHooked =
             g_directInput8CreateHooked.load(
