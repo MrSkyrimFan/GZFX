@@ -44,14 +44,19 @@ jobs:
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $zip = [System.IO.Compression.ZipFile]::OpenRead("dist/GZFX-SkyrimSE-x64.zip")
           try {
-            $actual = @($zip.Entries | ForEach-Object { $_.FullName -replace '\\', '/' } | Sort-Object)
+            $actual = @(
+              $zip.Entries |
+                Where-Object { -not [string]::IsNullOrEmpty($_.Name) } |
+                ForEach-Object { $_.FullName -replace '\\', '/' } |
+                Sort-Object
+            )
             $expected = @("Data/SKSE/Plugins/GZFX.dll")
 
-            $actual | ForEach-Object { Write-Host $_ }
+            $zip.Entries | ForEach-Object { Write-Host $_.FullName }
 
             if ($actual.Count -ne $expected.Count -or
                 (Compare-Object -ReferenceObject $expected -DifferenceObject $actual)) {
-              throw "Unexpected GZFX package contents."
+              throw "Unexpected GZFX package file contents."
             }
           }
           finally {
