@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.30.txt` first, then `GZFXWorkFolder/old/GZFX_NEW_CHAT_TAKEOVER_0.0.30.txt`, `GZFXWorkFolder/old/GZFX_NEW_CHAT_TECHNICAL_APPENDIX_0.0.30.txt`, and `GZFXWorkFolder/old/GZFX_0.0.30_POST_TONEMAP_PREUI_CARTOGRAPHY_ENGINEERING_RESULT.txt` in full. Follow the 0.0.29 field-closed records referenced by that index for the locked HDR/tonemap/TAA evidence.
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.31.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.31_SKSE_SINGLE_DLL_ENGINEERING_RESULT.txt`. Follow the 0.0.30 / 0.0.29 records referenced by that index for renderer-domain and locked HDR/tonemap/TAA evidence.
 
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
@@ -209,7 +209,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-SKSE SINGLE-DLL FRONT-DOOR MIGRATION / CI + FIELD VALIDATION
+SKSE SINGLE-DLL FRONT DOOR MERGED / REAL-SKYRIM FIELD VALIDATION NEXT
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
