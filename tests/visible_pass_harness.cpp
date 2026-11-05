@@ -11,12 +11,6 @@
 #include <string>
 
 using InitializeFn = bool (*)();
-using IsMenuOpenFn = bool (*)();
-using SubmitMouseInputFn = void (*)(
-    LONG,
-    LONG,
-    LONG,
-    std::uint32_t);
 
 namespace
 {
@@ -202,24 +196,6 @@ int wmain(int argc, wchar_t** argv)
         !initialize())
     {
         return 5;
-    }
-
-    const auto isMenuOpen =
-        reinterpret_cast<IsMenuOpenFn>(
-            GetProcAddress(
-                gzfx,
-                "GZFX_IsSettingsMenuOpen"));
-
-    const auto submitMouse =
-        reinterpret_cast<SubmitMouseInputFn>(
-            GetProcAddress(
-                gzfx,
-                "GZFX_SubmitMouseInput"));
-
-    if (isMenuOpen == nullptr ||
-        submitMouse == nullptr)
-    {
-        return 6;
     }
 
     const wchar_t* className =
@@ -423,28 +399,33 @@ int wmain(int argc, wchar_t** argv)
         return 13;
     }
 
-    // First Present lets GZFX acquire this real swap chain/context
-    // and opens the forced test menu.
+    // First Present lets GZFX acquire this real swap chain/context,
+    // subclasses the game window, and opens the forced test menu.
     swap->Present(0, 0);
 
-    if (!isMenuOpen())
-    {
-        return 16;
-    }
+    // Drive the first numeric slider through the surviving Win32 menu
+    // path. The retired dinput8 proxy bridge is intentionally not part
+    // of the one-DLL architecture.
+    constexpr int sliderX = 520;
+    constexpr int sliderY = 70;
 
-    // Drive the first numeric slider through the same exported
-    // relative-mouse bridge used by the dinput8 proxy.
-    submitMouse(
-        200,
-        -314,
+    SendMessageW(
+        hwnd,
+        WM_MOUSEMOVE,
         0,
-        0x1u);
+        MAKELPARAM(sliderX, sliderY));
 
-    submitMouse(
+    SendMessageW(
+        hwnd,
+        WM_LBUTTONDOWN,
+        MK_LBUTTON,
+        MAKELPARAM(sliderX, sliderY));
+
+    SendMessageW(
+        hwnd,
+        WM_LBUTTONUP,
         0,
-        0,
-        0,
-        0x0u);
+        MAKELPARAM(sliderX, sliderY));
 
     D3D11_VIEWPORT viewport{};
     viewport.Width = 640.0f;
