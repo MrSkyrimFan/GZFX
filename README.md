@@ -29,7 +29,7 @@ Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
 current runtime: 0.0.33-skse-loader-rescue
-current phase: 0.0.33 SKSE LOADER RESCUE / CI + REAL-SKYRIM REVALIDATION
+current phase: 0.0.33 LOADER RESCUE CLOSED / REAL-SKYRIM LOADER REVALIDATION NEXT
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
@@ -105,11 +105,12 @@ never hooked by 0.0.30 and engineProfileAvailable remains false until later
 field DATA and research independently verify them.
 
 The first real-Skyrim 0.0.32 validation failed before healthy GZFX runtime
-output: no GZFX runtime folder and no functional GZFX controls. 0.0.33 is a
-bounded loader rescue. It makes SKSE Preload non-invasive, moves renderer arming
-to normal SKSE Load, initializes CommonLib through SKSE::Init, and removes
-dynamic Microsoft VC runtime dependencies from the shipped DLL. No locked
-renderer semantic is being reopened.
+output: no GZFX runtime folder and no functional GZFX controls. 0.0.33 closes a
+bounded loader rescue: SKSE Preload is non-invasive, renderer arming occurs in
+normal SKSE Load, CommonLib initializes through SKSE::Init, and the shipped DLL
+has no dynamic Microsoft VC runtime dependency. PR #38 and merged-main CI pass
+38/38 plus the PE load contract. Real-Skyrim loader revalidation is next. No
+locked renderer semantic was reopened.
 
 0.0.32 completes the owner-authorized MIT CommonLib engine-access integration.
 PR #37 and merged-main CI are green at 38/38. CommonLib is statically linked into
