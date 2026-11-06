@@ -96,7 +96,7 @@ int wmain(
         !Has(defaultMask, Effect::AmbientContact) ||
         !Has(defaultMask, Effect::HorizonOcclusion) ||
         !Has(defaultMask, Effect::IndirectBounce) ||
-        !Has(defaultMask, Effect::Bloom) ||
+        Has(defaultMask, Effect::Bloom) ||
         !Has(defaultMask, Effect::LocalGlow))
     {
         return 7;

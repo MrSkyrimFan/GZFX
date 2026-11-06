@@ -659,26 +659,12 @@ float4 PSLuminanceBloom(VSOutput input) : SV_TARGET
 
     float3 bright = 0.0;
 
-    if (HasEffect(EFFECT_BLOOM))
+    if (HasEffect(EFFECT_BLOOM) &&
+        BloomEnabled != 0)
     {
-        float bloomWeight =
-            BloomEnabled != 0
-            ? BloomWeight(luminance)
-            : 0.0;
-
-        float localGlowWeight =
-            LocalGlowEnabled != 0
-            ? ThresholdWeight(
-                luminance,
-                max(LocalGlowThreshold, 1e-4),
-                0.35)
-            : 0.0;
-
         bright =
             color *
-            max(
-                bloomWeight,
-                localGlowWeight);
+            BloomWeight(luminance);
     }
 
     return float4(
@@ -1135,25 +1121,19 @@ float3 DepthOfFieldColor(
 
 float3 BloomColor(float2 uv)
 {
-    if (!HasEffect(EFFECT_BLOOM))
+    if (!HasEffect(EFFECT_BLOOM) ||
+        BloomEnabled == 0 ||
+        BloomStrength <= 0.0)
     {
         return 0.0;
     }
 
     float3 bloom = 0.0;
-    float3 localGlow = 0.0;
-    float bloomWeightTotal = 0.0;
-    float glowWeightTotal = 0.0;
+    float weightTotal = 0.0;
 
     float bloomRadiusScale =
         clamp(
             BloomRadius / 4.0,
-            0.25,
-            2.0);
-
-    float glowRadiusScale =
-        clamp(
-            LocalGlowRadius / 8.0,
             0.25,
             2.0);
 
@@ -1177,60 +1157,26 @@ float3 BloomColor(float2 uv)
             1.0 /
             (1.0 + float(level));
 
-        if (BloomEnabled != 0 &&
-            BloomStrength > 0.0)
-        {
-            float bloomLod =
-                min(
-                    float(level) *
-                        bloomRadiusScale,
-                    maximumLod);
+        float bloomLod =
+            min(
+                float(level) *
+                    bloomRadiusScale,
+                maximumLod);
 
-            bloom +=
-                PyramidTexture.SampleLevel(
-                    LinearSampler,
-                    uv,
-                    bloomLod).rgb *
-                weight;
+        bloom +=
+            PyramidTexture.SampleLevel(
+                LinearSampler,
+                uv,
+                bloomLod).rgb *
+            weight;
 
-            bloomWeightTotal += weight;
-        }
-
-        if (LocalGlowEnabled != 0 &&
-            LocalGlowStrength > 0.0)
-        {
-            float glowLod =
-                min(
-                    float(level) *
-                        glowRadiusScale,
-                    maximumLod);
-
-            localGlow +=
-                PyramidTexture.SampleLevel(
-                    LinearSampler,
-                    uv,
-                    glowLod).rgb *
-                weight;
-
-            glowWeightTotal += weight;
-        }
+        weightTotal += weight;
     }
 
     bloom /=
         max(
-            bloomWeightTotal,
+            weightTotal,
             1e-5);
-
-    localGlow /=
-        max(
-            glowWeightTotal,
-            1e-5);
-
-    float3 result =
-        bloom *
-            max(BloomStrength, 0.0) +
-        localGlow *
-            max(LocalGlowStrength, 0.0);
 
     if (LensDirtEnabled != 0 &&
         LensDirtStrength > 0.0)
@@ -1244,14 +1190,85 @@ float3 BloomColor(float2 uv)
                 1.35,
                 Hash12(cell));
 
-        result *=
+        bloom *=
             lerp(
                 1.0,
                 dirt,
                 saturate(LensDirtStrength));
     }
 
-    return result;
+    return bloom *
+        max(BloomStrength, 0.0);
+}
+
+float3 LocalGlowColor(float2 uv)
+{
+    if (LocalGlowEnabled == 0 ||
+        LocalGlowStrength <= 0.0)
+    {
+        return 0.0;
+    }
+
+    float3 glow = 0.0;
+    float weightTotal = 0.0;
+
+    [unroll]
+    for (uint index = 0;
+         index < 8;
+         ++index)
+    {
+        float radialScale =
+            0.45 +
+            0.55 *
+            float((index % 4) + 1) /
+            4.0;
+
+        float2 direction =
+            SAMPLE_DIRECTIONS[index * 2];
+
+        float2 sampleUv =
+            saturate(
+                uv +
+                direction *
+                float2(InvWidth, InvHeight) *
+                LocalGlowRadius *
+                radialScale);
+
+        float3 sampleColor =
+            max(
+                SceneColor.SampleLevel(
+                    LinearSampler,
+                    sampleUv,
+                    0).rgb,
+                0.0);
+
+        float luminance =
+            max(
+                Luminance(sampleColor),
+                1e-5);
+
+        float brightWeight =
+            ThresholdWeight(
+                luminance,
+                max(LocalGlowThreshold, 1e-4),
+                0.35);
+
+        float sampleWeight =
+            1.0 -
+            0.25 * radialScale;
+
+        glow +=
+            sampleColor *
+            brightWeight *
+            sampleWeight;
+
+        weightTotal +=
+            sampleWeight;
+    }
+
+    return glow /
+        max(weightTotal, 1e-5) *
+        max(LocalGlowStrength, 0.0);
 }
 
 float3 ApplyColor(float3 color)
@@ -1489,6 +1506,7 @@ float4 PSComposite(VSOutput input) : SV_TARGET
     }
 
     color += BloomColor(input.uv);
+    color += LocalGlowColor(input.uv);
 
     if (ExposureEnabled != 0)
     {

@@ -74,15 +74,14 @@ namespace gzfx::render::unified_product
             }
         }
 
-        if (values.bloomEnabled ||
-            values.localGlowEnabled)
+        if (values.bloomEnabled)
         {
             mask |= Bit(Effect::Bloom);
-        }
 
-        if (values.lensDirtEnabled)
-        {
-            mask |= Bit(Effect::LensDirt);
+            if (values.lensDirtEnabled)
+            {
+                mask |= Bit(Effect::LensDirt);
+            }
         }
 
         if (values.colorEnabled)
