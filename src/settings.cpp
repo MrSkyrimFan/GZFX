@@ -686,6 +686,7 @@ namespace gzfx::settings
         {
             switch (setting)
             {
+            case Editable::ProductEnabled:
             case Editable::ProductPreset:
             case Editable::ProductCustomSlot:
             case Editable::ApplyPresetAction:
