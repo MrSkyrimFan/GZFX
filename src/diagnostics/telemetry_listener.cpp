@@ -1269,6 +1269,27 @@ namespace gzfx::diagnostics::telemetry_listener
             {
             case EngineAnchor::PostProcessing: return "post_processing";
             case EngineAnchor::PreUi: return "pre_ui";
+            case EngineAnchor::MainDepth: return "main_depth";
+            case EngineAnchor::MainShadowMasks: return "main_shadowmasks";
+            case EngineAnchor::MainWorld: return "main_world";
+            case EngineAnchor::MainWaterEffects: return "main_water_effects";
+            case EngineAnchor::Effects: return "effects";
+            case EngineAnchor::ShadowDirectional: return "shadow_directional";
+            case EngineAnchor::ShadowSpot: return "shadow_spot";
+            case EngineAnchor::ShadowOmni: return "shadow_omni";
+            case EngineAnchor::ShadowUnknown: return "shadow_unknown";
+            case EngineAnchor::WaterTaa: return "water_taa";
+            case EngineAnchor::WaterBlend: return "water_blend";
+            case EngineAnchor::ApplyReflections: return "apply_reflections";
+            case EngineAnchor::UnderwaterMask: return "underwater_mask";
+            case EngineAnchor::VolumetricLighting: return "volumetric_lighting";
+            case EngineAnchor::ApplyVolumetricLighting: return "apply_volumetric_lighting";
+            case EngineAnchor::VolumetricBlurH: return "volumetric_blur_h";
+            case EngineAnchor::VolumetricBlurV: return "volumetric_blur_v";
+            case EngineAnchor::CompositeVolumetricLighting: return "composite_volumetric_lighting";
+            case EngineAnchor::WaterFlow: return "water_flow";
+            case EngineAnchor::WaterDisplacement: return "water_displacement";
+            case EngineAnchor::Count: return "count";
             }
             return "unknown";
         }
