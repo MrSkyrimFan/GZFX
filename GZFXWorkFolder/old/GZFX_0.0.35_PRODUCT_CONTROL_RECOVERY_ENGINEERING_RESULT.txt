@@ -1,0 +1,779 @@
+GZFX 0.0.35 PRODUCT CONTROL RECOVERY
+FINAL ENGINEERING RESULT
+Closure date: 2026-11-05 / 2026-11-06 UTC boundary
+
+STATUS:
+    GZFX2 SPLIT FIELD RETURN INGESTED
+    0.0.34 DIRECTINPUT MENU OWNERSHIP FIELD-CLOSED AS PASS
+    EFFECT SLIDER TRANSPORT/PERSISTENCE FIELD-PROVEN
+    EFFECT SLIDER RENDER RESPONSE FIELD-FAILED
+    CURRENT SOURCE ROOT CAUSE IDENTIFIED
+    HISTORICAL 0.0.51 / 652-TARGET PRODUCT LEDGER RECOVERED
+    0.0.35 PRODUCT-CONTROL RECOVERY IMPLEMENTED
+    PR #40 MERGED
+    FINAL PR HEAD 40/40 PASS
+    MERGED-MAIN 40/40 PASS
+    PE LOAD CONTRACT PASS
+    ONE-DLL PACKAGE VERIFIED
+    VALIDATED LANCE ZIP SYNCED TO MAIN
+    ROUTINE LATE PIPELINE DETAIL NOW OPT-IN
+    READY FOR REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION
+
+RUNTIME:
+    0.0.35-product-control-recovery
+
+TARGET:
+    Skyrim Steam 1.7.104
+    SKSE 2.3.1
+    Address Library for SKSE Plugins format 5
+    Data/SKSE/Plugins/versionlib-1-7-104-0.bin
+
+======================================================================
+1. GZFX2 RAW FIELD RETURN
+======================================================================
+
+The owner returned one logical field session in two ZIPs because repository
+uploads must remain under the practical per-file size ceiling.
+
+Raw evidence is preserved at:
+
+    GZFXWorkFolder/field_uploads/GZFX2.zip
+    GZFXWorkFolder/field_uploads/GZFX2Telemetry.zip
+
+GZFX2.zip:
+    bytes:
+        7,428,327
+    Git blob:
+        aadc69ed248f8e13ce42000a3ca58d64ea140774
+    SHA-256:
+        f7b470a25810fa44e8d067a4551214225197d294ca6a567c23a0780abf11f6a5
+
+GZFX2Telemetry.zip:
+    bytes:
+        20,393,391
+    Git blob:
+        d64d2ca433c21c7664585cadce3722fc927969a7
+    SHA-256:
+        459e1998947634c0cff922c6a114fdd8d031f957945294b21f375e5624aa8591
+
+These two files are one DATA return.
+
+======================================================================
+2. 0.0.34 DIRECTINPUT MENU OWNERSHIP — REAL-SKYRIM CLOSED
+======================================================================
+
+GZFX2 proves the 0.0.34 DirectInput migration works in real Skyrim.
+
+directinput_mouse.txt:
+
+    status=armed
+    directinput8_create_hooked=true
+    directinput8_create_calls=1
+    create_device_hooked=true
+    create_device_calls=2
+    system_mouse_seen=true
+    get_device_state_hooked=true
+    get_device_data_hooked=true
+    state_reads=2921
+    menu_packets_forwarded=1320
+    state_reads_suppressed=1320
+    last_error=<empty>
+
+settings_menu.txt:
+
+    directinput_seen=true
+    directinput_packets=1373
+    directinput_delta_total=119,-463
+    cursor=557,138
+
+The owner also confirmed the GZFX menu mouse now works.
+
+0.0.34 mouse ownership is therefore field-closed as PASS.
+
+======================================================================
+3. GZFX2 EFFECT-SLIDER FAILURE
+======================================================================
+
+The owner reported that current effect sliders moved and saved, but produced no
+visible rendering changes.
+
+Settings.ini proved the UI/persistence path was functioning and contained strong
+non-default values:
+
+    AmbientContact Strength=2.000
+    AmbientContact RadiusPixels=24.00
+
+    HorizonOcclusion Enabled=1
+    HorizonOcclusion Strength=1.000
+    HorizonOcclusion RadiusPixels=28.00
+    HorizonOcclusion Quality=2
+
+    IndirectBounce Enabled=1
+    IndirectBounce Strength=0.600
+    IndirectBounce RadiusPixels=36.00
+    IndirectBounce Saturation=1.500
+
+    LocalGlow Enabled=1
+    LocalGlow Strength=1.375
+    LocalGlow Threshold=0.250
+    LocalGlow RadiusPixels=8.00
+
+Therefore the failure was downstream of mouse/menu persistence.
+
+pre_ui_effects.txt proved the exact runtime condition:
+
+    status=skipped_wave4_owns_mode
+    injections=0
+    mode=2
+
+and simultaneously recorded the changed AmbientContact/LocalGlow values.
+
+Current source then proved the architectural disconnect:
+
+A. SceneEffects returned immediately whenever AV2 owned mode 1/2.
+   Therefore it never reached:
+       AmbientContact
+       LocalGlow
+       legacy ambient-depth / indirect stack
+
+B. AmbientVisibilityV2 owned modes 1/2 but did not include settings.hpp.
+   Its artistic parameters were hard-coded.
+
+C. visible_pass.cpp retained an AmbientContact fallback, but disabled that
+   fallback whenever AV2 successfully applied.
+
+Result:
+
+    settings changed correctly;
+    no active renderer owner consumed them coherently.
+
+This was a control-plane/render-owner disconnect, not a mouse/UI defect.
+
+======================================================================
+4. GZFX2 RENDERER FOUNDATION NON-REGRESSION
+======================================================================
+
+The same field return shows the current renderer foundation remained healthy.
+
+SKSE/CommonLib:
+    runtime initialized
+    DirectInput armed
+    CommonLib module ready
+    CommonLib SKSE API ready
+    DataLoaded bound
+    Address Library present
+    renderer correlated
+
+Wave3 final:
+    executions=2303
+    skips=0
+    hierarchy valid
+    temporal/history valid
+
+AV2 final:
+    computes=2119
+    applications=2119
+    skips=0
+
+Total Present frames:
+    3280
+
+World-active owned/locked boundary population:
+    2303 each
+
+Including:
+    AfterCameraZ
+    AfterOpaqueWorldMRT
+    AfterStockAO
+    BeforeAmbientScreenSpaceComposite
+    AtAmbientScreenSpaceComposite
+    AfterAmbientScreenSpaceComposite
+    BeforeVolumetricApply
+    AfterVolumetricApply
+    PublishPreWaterDepth
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+Telemetry:
+    enqueued=527031
+    written=527031
+    dropped=0
+    complete=true
+
+The slider failure did not invalidate the field-locked HDR/TAA or renderer
+foundation.
+
+======================================================================
+5. HISTORICAL 0.0.51 PRODUCT/TARGET RECOVERY
+======================================================================
+
+A persistent owner Library record was recovered:
+
+    GZFX_RELEASE_CAPABILITIES_AND_ALL_REMAINING_TARGETS_2026-10-29.txt
+
+Historical title:
+
+    GZFX 0.0.51 - RELEASE CAPABILITIES AND ALL 606 CORE TARGETS
+
+A compact 652-row historical target/status/family index is now preserved at:
+
+    GZFXWorkFolder/old/GZFX_HISTORICAL_0.0.51_652_TARGET_INDEX.csv
+
+Historical status population:
+
+    CurrentKnownImplementedInScope    88
+    Partial                          107
+    ImplementedButUnqualified         2
+    AbsentNamedNative                50
+    NoCurrentIndividualClaim        359
+    Excluded                         46
+
+Historical 0.0.51 player-facing effects were documented as including:
+
+    AV2 ambient visibility
+    SSAO / HBAO
+    bounded ambient composition
+    spatial ambient filtering
+    private AO temporal history
+    spatial SSIL
+    manual near/far DoF
+    bloom/glow
+    manual exposure
+    adapted automatic exposure
+    basic color grading
+    pre-tonemap toe/shoulder/clip shaping
+    bilateral denoise
+    procedural lens dirt
+    depth fog
+    native-vector linear motion blur
+    vignette
+    film grain
+    chromatic aberration
+    sharpening
+    letterbox/pillarbox masking
+
+Historical product UI was documented as:
+
+    100 visible effect controls
+    78 scalar sliders
+    22 toggles
+    Medium / Ultra+
+    Clearfell
+    Emberveil
+    Moonforge
+    Verdant North
+    Sable Cinema
+    Custom 1 / 2 / 3 profile lifecycle
+
+The historical report also explicitly did NOT close:
+
+    native shadow-map families
+    cloud shadows
+    sun/moon ray native executors
+    weather-native rendering
+    water/reflection/material replacement
+    LUT workflow
+    native tonemap replacement
+    display HDR
+    broad temporal/multibounce GI
+
+The old report cites source files that are absent from current repository source:
+
+    include/gzfx/ui/product_control_model.hpp
+    src/render/product_hdr_executor.cpp
+    src/render/product_hdr_executor_hlsl.inl
+    src/render/product_ldr_executor_hlsl.inl
+
+The preserved 309,872,109-byte
+GZFX_ALL_TEN_ARCHIVE_ITEMS_CONSOLIDATED_2026-10-29.zip was inspected directly.
+It contains one consolidated text record and no source tree.
+
+Therefore historical 0.0.51 is roadmap/history evidence only.
+Missing product executor bytes are not secretly recoverable from that archive.
+
+======================================================================
+6. 0.0.35 AV2 LIVE HORIZON CONTROL
+======================================================================
+
+New mapping authority:
+
+    include/gzfx/render/product_control_mapping.hpp
+
+Horizon strength:
+
+    default setting 0.25 -> multiplier 1.0
+
+Mapping:
+
+    multiplier =
+        clamp(setting / 0.25, 0, 4)
+
+This preserves the current AV2 default image when the user does not change the
+setting while making the slider materially responsive.
+
+Horizon radius:
+
+    default legacy setting 28 -> AV2 world radius 240
+
+Mapping:
+
+    radiusWorld =
+        clamp(240 * radiusPixels / 28, 48, 960)
+
+This is an explicit compatibility mapping, not a claim that world units equal
+screen pixels.
+
+Quality budgets now change actual AV2 sampling work:
+
+    quality 0 -> 2 slices x 4 steps
+    quality 1 -> 3 slices x 4 steps
+    quality 2 -> 3 slices x 6 steps
+    quality 3 -> 4 slices x 8 steps
+
+Quality 2 preserves the previous AV2 default.
+
+AV2 now consumes live:
+    Horizon enabled
+    Horizon strength
+    Horizon radius
+    Horizon quality
+
+When Horizon is disabled:
+    AV2 does not overwrite stock AO for normal execution.
+
+AV2 diagnostics now include:
+    horizon_enabled
+    horizon_strength_setting
+    horizon_strength_multiplier
+    horizon_radius_setting
+    horizon_radius_world
+    horizon_quality
+    submitted_slices
+    submitted_steps
+
+======================================================================
+7. AMBIENT CONTACT / LOCAL GLOW / SSIL RECOVERY
+======================================================================
+
+SceneEffects no longer globally returns merely because AV2 owns mode 1/2.
+
+Current ownership policy:
+
+    AV2:
+        Horizon/HBAO owner
+
+    SceneEffects:
+        AmbientContact
+        LocalGlow
+
+    legacy ambient-depth stack under AV2:
+        spatial IndirectBounce / SSIL only
+        legacy AO disabled
+
+ambient_depth::Apply now receives allowAo.
+
+Effective legacy AO:
+
+    allowAo && HorizonOcclusionEnabled
+
+When AV2 owns AO:
+    allowAo=false
+    legacy AO is disabled
+    indirect bounce remains independently enabled/controlled
+
+Therefore 0.0.35 does not stack the old HBAO implementation on top of AV2.
+
+Current IndirectBounce controls again reach the spatial indirect stack:
+    Enabled
+    Strength
+    RadiusPixels
+    Saturation
+
+Current AmbientContact controls again reach SceneEffects:
+    Strength
+    RadiusPixels
+
+Current LocalGlow controls again reach SceneEffects:
+    Enabled
+    Strength
+    Threshold
+    RadiusPixels
+
+======================================================================
+8. LIVE GPU CONTROL PROOF
+======================================================================
+
+New compact diagnostic:
+
+    Diagnostics/product_control_submission.txt
+
+It records the current submitted control state and owner relationship:
+
+    AmbientContact settings
+    Horizon settings
+    mapped AV2 strength/radius
+    quality slice/step budget
+    IndirectBounce settings
+    LocalGlow settings
+    wave4 AO ownership
+    current-frame AV2 application
+    indirect stack application
+    SceneEffects injection
+
+AV2 status and ambient-depth status also expose submitted ownership/control data.
+
+This prevents future field acceptance from relying only on the fact that a
+slider moved or Settings.ini changed.
+
+======================================================================
+9. ROUTINE TELEMETRY VOLUME REPAIR
+======================================================================
+
+GZFX2 telemetry wrote approximately:
+
+    276,115,361 bytes
+
+The dominant output was four pipeline_runs segments totaling about 266 MB
+uncompressed.
+
+The previous telemetry policy automatically enabled detailed late-pipeline
+capture every world frame from the ambient screen-space region through physical
+Present.
+
+That policy was renderer-cartography infrastructure, not an appropriate routine
+product-validation default.
+
+0.0.35 adds:
+
+    g_lateDetailEnabled
+
+Default routine field mode:
+
+    late detailed pipeline capture DISABLED
+
+Explicit opt-in:
+
+    GZFX_TELEMETRY_LATE_DETAIL
+
+Full-pipeline test/forensic override remains available.
+
+Tests that require detailed telemetry explicitly opt in.
+
+listener status/manifest now record:
+
+    detail_gate
+    late_detail_enabled
+
+The compact structural summaries and zero-drop health evidence remain.
+
+Expected routine field result:
+    a small single ZIP under the repository upload ceiling.
+
+If a future targeted blocker requires broad pipeline capture, that forensic mode
+must be explicitly armed rather than silently generating hundreds of megabytes.
+
+======================================================================
+10. TEST / FAILURE / REPAIR HISTORY
+======================================================================
+
+New deterministic test:
+
+    product_control_binding_contract
+
+It proves:
+    default Horizon strength .25 -> 1x
+    zero -> 0x
+    1.0 -> 4x
+    default radius 28 -> world radius 240
+    radius bounds
+    quality 0/1/2/3 exact sampling budgets
+    legacy AO ownership helper
+
+Total suite:
+    40 tests
+
+One strengthened pre_ui_effects test initially failed during PR validation.
+
+The product behavior itself was valid:
+    pre-UI injected
+    scene changed
+    ambient-depth applied
+    indirect enabled
+    product_control_submission emitted
+
+The failed assertion incorrectly required wave4_owns_ao=true.
+
+That harness intentionally disables AV2 through its legacy-harness environment,
+so wave4_owns_ao=false and legacy ao_allowed=true were the correct state.
+
+The harness was repaired to require ownership CONSISTENCY:
+    if AV2 owns AO -> legacy AO disabled
+    if AV2 is intentionally disabled -> legacy AO permitted
+
+No product/runtime source changed for that repair.
+
+The deferred-outside-detail telemetry test was also updated to explicitly opt
+into GZFX_TELEMETRY_LATE_DETAIL because detailed capture is no longer the
+routine default.
+
+======================================================================
+11. PR #40 FINAL PROOF
+======================================================================
+
+PR:
+    #40
+    0.0.35: recover live product controls and bound routine telemetry
+
+Final PR head:
+    f48e2c60f90bcf2032fc5e0914514e1b1bef52d0
+
+Final PR workflow:
+    run 42136310102
+    job 127625228457
+
+Final PR result:
+    Build PASS
+    PE load contract PASS
+    product_control_binding_contract PASS
+    pre_ui_effects PASS
+    40 / 40 PASS
+    package creation PASS
+    package-content verification PASS
+    artifact upload PASS
+
+Final PR artifact:
+    id 13466633375
+    artifact-container bytes 776126
+    digest:
+        sha256:e643051cf57bb01345c991874554d410781fd54ba33f5b216d02ada334791ee0
+
+======================================================================
+12. MERGE / MERGED-MAIN PROOF
+======================================================================
+
+Merge commit:
+
+    f39605a1734293a0f319b9d885c8686cdc68ec24
+
+Merged-main workflow:
+
+    run 42136920247
+
+Job:
+
+    127627305289
+
+Merged-main result:
+
+    dependencies PASS
+    configure PASS
+    build PASS
+    PE load contract PASS
+    product_control_binding_contract PASS
+    pre_ui_effects PASS
+    40 / 40 PASS
+    package creation PASS
+    package-content verification PASS
+    artifact upload PASS
+    lance-package staging PASS
+
+CTest:
+
+    100% tests passed
+    0 tests failed out of 40
+
+Merged-main artifact:
+
+    id 13466594291
+    artifact-container bytes 776108
+    artifact digest:
+        sha256:71659fbf817854e199d973d311e0827d349d1d8d0d03603f61f147f009361175
+
+Artifact outer ZIP:
+    bytes 776108
+    SHA-256:
+        71659fbf817854e199d973d311e0827d349d1d8d0d03603f61f147f009361175
+
+Inner user package:
+    GZFX-SkyrimSE-x64.zip
+    bytes 777206
+    SHA-256:
+        a77efceadfa73dfe9196c82debba3d3fbf23d93a9e4235666e92a147d42c6a50
+    Git blob:
+        ea6d55dd033fd903787ddeb731a181c481f50cf4
+
+Package entries:
+
+    Data/SKSE/
+    Data/SKSE/Plugins/GZFX.dll
+
+Actual payload file:
+
+    Data/SKSE/Plugins/GZFX.dll
+
+GZFX.dll:
+    bytes 1782784
+    SHA-256:
+        893b37b43123f6fccadbb38d02c75c7f69eecad55627bf1c868f666437c6ed6c
+    Git blob:
+        4e01eb11966ba5154c7add0da23eb86f9c14538b
+
+======================================================================
+13. VALIDATED MAIN LANCE PACKAGE
+======================================================================
+
+The merged-main workflow staged the validated ZIP to:
+
+    lance-package
+
+Staging commit:
+
+    9d6b665db29ccd15e2f58dd7bd7334c0b605cbef
+
+Staged ZIP blob:
+
+    ea6d55dd033fd903787ddeb731a181c481f50cf4
+
+The connected GitHub authority then synced that exact blob into main.
+
+Main publication commit:
+
+    4550f8aff44799fe88a5cc489e95c51f9d0b4f43
+
+Commit message:
+
+    chore: refresh Lance Skyrim test package [skip ci]
+
+That commit changed ONLY:
+
+    LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+Current main package blob:
+
+    ea6d55dd033fd903787ddeb731a181c481f50cf4
+
+Therefore:
+
+    merged-main artifact inner ZIP
+    lance-package ZIP
+    main Lance ZIP
+
+are the same Git blob / exact package bytes.
+
+======================================================================
+14. CURRENT PRODUCT CLAIM AFTER 0.0.35
+======================================================================
+
+AUTOMATED / SOURCE-CURRENT:
+
+    SKSE lifecycle
+    CommonLib typed engine access
+    D3D11/DXGI renderer ownership
+    Wave3 geometry/temporal foundation
+    AV2 ambient visibility
+    live Horizon/HBAO control mapping
+    AmbientContact active path
+    spatial IndirectBounce/SSIL active path
+    LocalGlow active path
+    current settings persistence
+    DirectInput menu ownership
+    compact product-control proof
+    bounded routine telemetry
+    locked HDR/TAA structural contracts
+
+NOT YET REAL-SKYRIM FIELD-PROVEN AFTER THIS CONTROL RECOVERY:
+
+    visible Horizon slider response
+    visible AmbientContact slider response
+    visible IndirectBounce slider response
+    visible LocalGlow slider response
+    routine output-size target
+
+HISTORICAL ONLY / NOT CURRENTLY RESTORED:
+
+    DoF
+    bloom/HDR bloom product executor
+    exposure/adaptation
+    broad color grading
+    pre-tonemap shaping product executor
+    motion blur product executor
+    cinematic optics
+    full product control model
+    quality tiers
+    built-in looks
+    custom profile lifecycle
+
+STILL NATIVE-RENDERER OPEN / UNPROMOTED:
+
+    native shadow families
+    cloud shadows
+    sun/moon rays
+    sky/cloud/celestial ownership
+    weather-native rendering
+    water/refraction/underwater
+    reflections
+    material/wetness/snow/foliage
+    fire/emissive/particle/local-light domains
+    native tonemap replacement
+    display HDR
+
+======================================================================
+15. NEXT FIELD TEST
+======================================================================
+
+Important:
+GZFX2 left deliberately extreme values in Settings.ini while those values were
+inert.
+
+Those values become live in 0.0.35.
+
+Before testing, preserve the old GZFX2 settings by renaming:
+
+    Settings.ini
+    ->
+    Settings-GZFX2-test.ini
+
+Do not delete it.
+
+Allow GZFX to create fresh defaults on first 0.0.35 launch.
+
+Test one family at a time:
+
+Horizon/HBAO:
+    enable
+    strength minimum -> maximum
+    radius minimum -> maximum
+    quality 0 -> 3
+
+AmbientContact:
+    strength minimum -> maximum
+    radius minimum -> maximum
+
+IndirectBounce:
+    enable
+    strength 0 -> maximum
+    saturation low -> maximum
+
+LocalGlow:
+    enable
+    strength 0 -> maximum
+    threshold high -> low
+
+Required field outcome:
+    visibly different image at deliberately extreme control values
+    no double-AO/banding regression
+    mouse ownership remains correct
+    telemetry dropped=0
+    locked HDR/TAA remains coherent
+    routine evidence stays small
+
+Return:
+    complete generated GZFX folder as GZFX3.zip in the repository.
+
+If the generated ZIP is unexpectedly over the practical repository limit, a
+small split such as GZFX3.zip + GZFX3Telemetry.zip is acceptable. The owner
+must not be asked to manually split multi-gigabyte evidence.
+
+END ENGINEERING RESULT
