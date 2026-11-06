@@ -250,6 +250,43 @@ int wmain(
         return 18;
     }
 
+    if (!gzfx::settings::ApplyPreset(
+            gzfx::settings::Preset::Moonforge) ||
+        !gzfx::settings::Toggle(
+            gzfx::settings::Editable::ProductEnabled))
+    {
+        return 19;
+    }
+
+    const auto masterOff =
+        gzfx::settings::Get();
+
+    if (masterOff.productEnabled ||
+        masterOff.productPreset !=
+            static_cast<std::uint32_t>(
+                gzfx::settings::Preset::Moonforge) ||
+        BuildEffectMask(masterOff) != 0)
+    {
+        return 20;
+    }
+
+    if (!gzfx::settings::Toggle(
+            gzfx::settings::Editable::ProductEnabled))
+    {
+        return 21;
+    }
+
+    const auto masterOn =
+        gzfx::settings::Get();
+
+    if (!masterOn.productEnabled ||
+        masterOn.productPreset !=
+            static_cast<std::uint32_t>(
+                gzfx::settings::Preset::Moonforge))
+    {
+        return 22;
+    }
+
     std::wcout
         << L"Unified product renderer contracts passed.\n";
 
