@@ -1134,7 +1134,7 @@ float3 BloomColor(float2 uv)
     float bloomRadiusScale =
         clamp(
             BloomRadius / 4.0,
-            0.25,
+            0.0,
             2.0);
 
     float maximumLod =
@@ -1194,7 +1194,8 @@ float3 BloomColor(float2 uv)
             lerp(
                 1.0,
                 dirt,
-                saturate(LensDirtStrength));
+                saturate(
+                    LensDirtStrength * 0.5));
     }
 
     return bloom *
