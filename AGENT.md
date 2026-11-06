@@ -209,7 +209,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-0.0.35 PRODUCT CONTROL RECOVERY / REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION NEXT
+0.0.35 ENGINEERING CLOSED / REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION NEXT
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
@@ -475,7 +475,7 @@ The active AV2 path used hard-coded artistic parameters, SceneEffects returned
 early whenever AV2 owned modes 1/2, and the Present fallback was suppressed after
 AV2 application.
 
-0.0.35 reconnects the current control plane without abandoning the current
+0.0.35 automated engineering is now CLOSED. It reconnects the current control plane without abandoning the current
 renderer foundation:
 
 - AV2 owns Horizon/HBAO and receives live enable/strength/radius/quality values;
