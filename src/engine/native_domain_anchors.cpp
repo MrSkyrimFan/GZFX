@@ -1192,9 +1192,21 @@ namespace gzfx::engine::native_domain_anchors
                 << "high_level_hooks="
                 << g_highLevelHooks
                 << "\n"
+                << "expected_high_level_hooks=7\n"
+                << "post_processing_hooked="
+                << (g_mainPostProcessing != nullptr
+                    ? "true"
+                    : "false")
+                << "\n"
+                << "pre_ui_hooked="
+                << (g_menuDrawInterfaceStart != nullptr
+                    ? "true"
+                    : "false")
+                << "\n"
                 << "image_effects_bound="
                 << g_effectBindingCount
                 << "\n"
+                << "expected_image_effects=37\n"
                 << "render_targets_hooked="
                 << g_renderTargetCount
                 << "\n"
