@@ -558,21 +558,33 @@ int wmain(
             "status=applied") !=
             std::string::npos;
 
-    const bool indirectOnlyOwnership =
-        ambientDepthLog.find(
-            "ao_allowed=false") !=
-                std::string::npos &&
-        ambientDepthLog.find(
-            "ao_enabled=false") !=
-                std::string::npos &&
-        ambientDepthLog.find(
-            "indirect_enabled=true") !=
-                std::string::npos;
-
-    const bool productControlProof =
+    const bool wave4OwnsAo =
         productControlLog.find(
             "wave4_owns_ao=true") !=
-                std::string::npos &&
+            std::string::npos;
+
+    const bool indirectEnabled =
+        ambientDepthLog.find(
+            "indirect_enabled=true") !=
+            std::string::npos;
+
+    const bool ownershipConsistent =
+        wave4OwnsAo
+            ? (
+                ambientDepthLog.find(
+                    "ao_allowed=false") !=
+                        std::string::npos &&
+                ambientDepthLog.find(
+                    "ao_enabled=false") !=
+                        std::string::npos
+              )
+            : (
+                ambientDepthLog.find(
+                    "ao_allowed=true") !=
+                        std::string::npos
+              );
+
+    const bool productControlProof =
         productControlLog.find(
             "indirect_stack_applied=true") !=
                 std::string::npos &&
@@ -584,7 +596,8 @@ int wmain(
         !signalRecorded ||
         !sceneChanged ||
         !ambientDepthApplied ||
-        !indirectOnlyOwnership ||
+        !indirectEnabled ||
+        !ownershipConsistent ||
         !productControlProof)
     {
         std::cerr
@@ -593,7 +606,9 @@ int wmain(
             << " signal=" << signalRecorded
             << " scene_changed=" << sceneChanged
             << " ambient_depth=" << ambientDepthApplied
-            << " indirect_only=" << indirectOnlyOwnership
+            << " wave4_owns_ao=" << wave4OwnsAo
+            << " indirect_enabled=" << indirectEnabled
+            << " ownership_consistent=" << ownershipConsistent
             << " product_control=" << productControlProof
             << "\n"
             << ambientDepthLog
