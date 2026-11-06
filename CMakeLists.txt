@@ -14,7 +14,7 @@ set(
 
 project(
     GZFX
-    VERSION 0.0.35
+    VERSION 0.0.36
     DESCRIPTION "SKSE-hosted native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -122,6 +122,7 @@ add_library(GZFX SHARED
     src/render/ambient_visibility_v2.cpp
     src/render/ambient_visibility_stack.cpp
     src/render/scene_effects.cpp
+    src/render/unified_product_renderer.cpp
     src/render/visible_pass.cpp
 )
 
@@ -187,6 +188,24 @@ target_include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 gzfx_apply_common(GZFXProductControlBindingHarness)
+
+add_executable(GZFXUnifiedProductContractHarness
+    tests/unified_product_contract_harness.cpp
+    src/settings.cpp
+    src/paths.cpp
+)
+target_include_directories(
+    GZFXUnifiedProductContractHarness
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+target_link_libraries(
+    GZFXUnifiedProductContractHarness
+    PRIVATE
+        shell32
+        ole32
+)
+gzfx_apply_common(GZFXUnifiedProductContractHarness)
 
 add_executable(GZFXSmokeHost
     tests/smoke_host.cpp
@@ -417,6 +436,13 @@ add_test(
     NAME product_control_binding_contract
     COMMAND
         "$<TARGET_FILE:GZFXProductControlBindingHarness>"
+)
+
+add_test(
+    NAME unified_product_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXUnifiedProductContractHarness>"
+        "${CMAKE_BINARY_DIR}/unified-product-contract-output"
 )
 
 add_test(

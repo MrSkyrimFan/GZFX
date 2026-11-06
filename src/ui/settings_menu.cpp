@@ -5,6 +5,7 @@
 #include "gzfx/settings.hpp"
 #include "gzfx/render/wave3_pipeline.hpp"
 #include "gzfx/render/ambient_visibility_v2.hpp"
+#include "gzfx/render/unified_product_renderer.hpp"
 
 #include <Windows.h>
 #include <windowsx.h>
@@ -35,6 +36,7 @@ namespace gzfx::ui
         constexpr int kRowHeight = 34;
         constexpr int kSliderLeft = 430;
         constexpr int kSliderRight = 610;
+        constexpr std::uint32_t kVisibleRows = 19;
 
         struct Runtime
         {
@@ -80,6 +82,7 @@ namespace gzfx::ui
         bool g_captureRequested = false;
         bool g_manualCaptureRequested = false;
         std::uint32_t g_selected = 0;
+        std::uint32_t g_scrollOffset = 0;
         bool g_testAdjustmentApplied = false;
         bool g_testManualCaptureApplied = false;
 
@@ -133,294 +136,125 @@ namespace gzfx::ui
                         kMenuHeight - 1));
         }
 
-        const wchar_t* ModeName(
-            const std::uint32_t mode)
-        {
-            switch (mode)
-            {
-            case 0: return L"OFF";
-            case 1: return L"SPLIT AMBIENT VISIBILITY";
-            case 2: return L"FULL AMBIENT VISIBILITY";
-            case 3: return L"DEPTH";
-            case 4: return L"PRE-UI COLOR";
-            default: return L"UNKNOWN";
-            }
-        }
-
         const wchar_t* ItemName(
             const settings::Editable item)
         {
-            switch (item)
-            {
-            case settings::Editable::
-                AmbientContactStrength:
-                return L"AMBIENT CONTACT STRENGTH";
-
-            case settings::Editable::
-                AmbientContactRadiusPixels:
-                return L"AMBIENT CONTACT RADIUS";
-
-            case settings::Editable::HorizonOcclusionEnabled:
-                return L"HORIZON OCCLUSION";
-
-            case settings::Editable::HorizonOcclusionStrength:
-                return L"HORIZON OCCLUSION STRENGTH";
-
-            case settings::Editable::HorizonOcclusionRadiusPixels:
-                return L"HORIZON OCCLUSION RADIUS";
-
-            case settings::Editable::HorizonOcclusionQuality:
-                return L"HORIZON OCCLUSION QUALITY";
-
-            case settings::Editable::IndirectBounceEnabled:
-                return L"INDIRECT BOUNCE (SSIL)";
-
-            case settings::Editable::IndirectBounceStrength:
-                return L"INDIRECT BOUNCE STRENGTH";
-
-            case settings::Editable::IndirectBounceRadiusPixels:
-                return L"INDIRECT BOUNCE RADIUS";
-
-            case settings::Editable::IndirectBounceSaturation:
-                return L"INDIRECT BOUNCE SATURATION";
-
-            case settings::Editable::LocalGlowEnabled:
-                return L"LOCAL GLOW";
-
-            case settings::Editable::LocalGlowStrength:
-                return L"LOCAL GLOW STRENGTH";
-
-            case settings::Editable::LocalGlowThreshold:
-                return L"LOCAL GLOW THRESHOLD";
-
-            case settings::Editable::LocalGlowRadiusPixels:
-                return L"LOCAL GLOW RADIUS";
-
-            case settings::Editable::DefaultMode:
-                return L"DEFAULT DEVELOPMENT VIEW";
-
-            case settings::Editable::
-                ActivationDrawIndexedThreshold:
-                return L"WORLD DRAW THRESHOLD";
-
-            case settings::Editable::
-                AccessibleDiagnostics:
-                return L"ACCESSIBLE DIAGNOSTICS";
-
-            case settings::Editable::
-                CaptureOnModeChange:
-                return L"CAPTURE ON MODE CHANGE";
-
-            case settings::Editable::Count:
-                return L"";
-            }
-
-            return L"";
+            return settings::EditableName(item);
         }
 
         std::wstring ItemValue(
             const settings::Editable item)
         {
-            const auto& values =
-                settings::Get();
-
-            std::wostringstream stream;
-
-            switch (item)
-            {
-            case settings::Editable::
-                AmbientContactStrength:
-                stream
-                    << std::fixed
-                    << std::setprecision(2)
-                    << values.ambientContactStrength;
-                return stream.str();
-
-            case settings::Editable::
-                AmbientContactRadiusPixels:
-                stream
-                    << std::fixed
-                    << std::setprecision(1)
-                    << values.ambientContactRadiusPixels
-                    << L" PX";
-                return stream.str();
-
-            case settings::Editable::HorizonOcclusionEnabled:
-                return values.horizonOcclusionEnabled
-                    ? L"ON"
-                    : L"OFF";
-
-            case settings::Editable::HorizonOcclusionStrength:
-                stream
-                    << std::fixed
-                    << std::setprecision(2)
-                    << values.horizonOcclusionStrength;
-                return stream.str();
-
-            case settings::Editable::HorizonOcclusionRadiusPixels:
-                stream
-                    << std::fixed
-                    << std::setprecision(1)
-                    << values.horizonOcclusionRadiusPixels
-                    << L" PX";
-                return stream.str();
-
-            case settings::Editable::HorizonOcclusionQuality:
-                switch (values.horizonOcclusionQuality)
-                {
-                case 0: return L"LOW";
-                case 1: return L"MEDIUM";
-                case 2: return L"HIGH";
-                case 3: return L"ULTRA";
-                default: return L"UNKNOWN";
-                }
-
-            case settings::Editable::IndirectBounceEnabled:
-                return values.indirectBounceEnabled
-                    ? L"ON"
-                    : L"OFF";
-
-            case settings::Editable::IndirectBounceStrength:
-                stream
-                    << std::fixed
-                    << std::setprecision(2)
-                    << values.indirectBounceStrength;
-                return stream.str();
-
-            case settings::Editable::IndirectBounceRadiusPixels:
-                stream
-                    << std::fixed
-                    << std::setprecision(1)
-                    << values.indirectBounceRadiusPixels
-                    << L" PX";
-                return stream.str();
-
-            case settings::Editable::IndirectBounceSaturation:
-                stream
-                    << std::fixed
-                    << std::setprecision(2)
-                    << values.indirectBounceSaturation;
-                return stream.str();
-
-            case settings::Editable::LocalGlowEnabled:
-                return values.localGlowEnabled
-                    ? L"ON"
-                    : L"OFF";
-
-            case settings::Editable::LocalGlowStrength:
-                stream
-                    << std::fixed
-                    << std::setprecision(2)
-                    << values.localGlowStrength;
-                return stream.str();
-
-            case settings::Editable::LocalGlowThreshold:
-                stream
-                    << std::fixed
-                    << std::setprecision(2)
-                    << values.localGlowThreshold;
-                return stream.str();
-
-            case settings::Editable::LocalGlowRadiusPixels:
-                stream
-                    << std::fixed
-                    << std::setprecision(1)
-                    << values.localGlowRadiusPixels
-                    << L" PX";
-                return stream.str();
-
-            case settings::Editable::DefaultMode:
-                return ModeName(
-                    values.defaultMode);
-
-            case settings::Editable::
-                ActivationDrawIndexedThreshold:
-                return std::to_wstring(
-                    values.activationDrawIndexedThreshold);
-
-            case settings::Editable::
-                AccessibleDiagnostics:
-                return values.accessibleDiagnostics
-                    ? L"ON"
-                    : L"OFF";
-
-            case settings::Editable::
-                CaptureOnModeChange:
-                return values.captureOnModeChange
-                    ? L"ON"
-                    : L"OFF";
-
-            case settings::Editable::Count:
-                return L"";
-            }
-
-            return L"";
+            return settings::EditableValue(item);
         }
 
         bool BooleanItem(
             const settings::Editable item)
         {
-            return
-                item ==
-                    settings::Editable::
-                        HorizonOcclusionEnabled ||
-                item ==
-                    settings::Editable::
-                        IndirectBounceEnabled ||
-                item ==
-                    settings::Editable::
-                        LocalGlowEnabled ||
-                item ==
-                    settings::Editable::
-                        AccessibleDiagnostics ||
-                item ==
-                    settings::Editable::
-                        CaptureOnModeChange;
+            return settings::IsToggle(item);
         }
 
         bool SliderItem(
             const settings::Editable item)
         {
-            return
-                item ==
-                    settings::Editable::
-                        AmbientContactStrength ||
-                item ==
-                    settings::Editable::
-                        AmbientContactRadiusPixels ||
-                item ==
-                    settings::Editable::
-                        HorizonOcclusionStrength ||
-                item ==
-                    settings::Editable::
-                        HorizonOcclusionRadiusPixels ||
-                item ==
-                    settings::Editable::
-                        HorizonOcclusionQuality ||
-                item ==
-                    settings::Editable::
-                        IndirectBounceStrength ||
-                item ==
-                    settings::Editable::
-                        IndirectBounceRadiusPixels ||
-                item ==
-                    settings::Editable::
-                        IndirectBounceSaturation ||
-                item ==
-                    settings::Editable::
-                        LocalGlowStrength ||
-                item ==
-                    settings::Editable::
-                        LocalGlowThreshold ||
-                item ==
-                    settings::Editable::
-                        LocalGlowRadiusPixels ||
-                item ==
-                    settings::Editable::
-                        DefaultMode ||
-                item ==
-                    settings::Editable::
-                        ActivationDrawIndexedThreshold;
+            return settings::IsSlider(item);
+        }
+
+        bool ActionItem(
+            const settings::Editable item)
+        {
+            return settings::IsAction(item);
+        }
+
+        void ClampScroll()
+        {
+            const std::uint32_t count =
+                static_cast<std::uint32_t>(
+                    settings::Editable::Count);
+
+            const std::uint32_t maximum =
+                count > kVisibleRows
+                ? count - kVisibleRows
+                : 0;
+
+            g_scrollOffset =
+                std::min(
+                    g_scrollOffset,
+                    maximum);
+        }
+
+        void EnsureSelectionVisible()
+        {
+            const std::uint32_t count =
+                static_cast<std::uint32_t>(
+                    settings::Editable::Count);
+
+            if (count == 0)
+            {
+                g_selected = 0;
+                g_scrollOffset = 0;
+                return;
+            }
+
+            g_selected =
+                std::min(
+                    g_selected,
+                    count - 1);
+
+            if (g_selected < g_scrollOffset)
+            {
+                g_scrollOffset = g_selected;
+            }
+            else if (g_selected >=
+                     g_scrollOffset +
+                        kVisibleRows)
+            {
+                g_scrollOffset =
+                    g_selected -
+                    kVisibleRows + 1;
+            }
+
+            ClampScroll();
+        }
+
+        void ScrollBy(
+            const int rows)
+        {
+            const int count =
+                static_cast<int>(
+                    settings::Editable::Count);
+
+            const int maximum =
+                std::max(
+                    0,
+                    count -
+                        static_cast<int>(
+                            kVisibleRows));
+
+            const int next =
+                std::clamp(
+                    static_cast<int>(
+                        g_scrollOffset) + rows,
+                    0,
+                    maximum);
+
+            g_scrollOffset =
+                static_cast<std::uint32_t>(next);
+
+            if (g_selected < g_scrollOffset)
+            {
+                g_selected = g_scrollOffset;
+            }
+            else if (g_selected >=
+                     g_scrollOffset +
+                        kVisibleRows)
+            {
+                g_selected =
+                    g_scrollOffset +
+                    kVisibleRows - 1;
+            }
+
+            g_dirty = true;
         }
 
         int RowFromCursor()
@@ -434,21 +268,21 @@ namespace gzfx::ui
                 static_cast<int>(g_cursor.y) -
                 kFirstRowY;
 
-            const int row =
+            const int visibleRow =
                 relative / kRowHeight;
 
-            const int count =
-                static_cast<int>(
-                    settings::Editable::Count);
-
-            if (row < 0 || row >= count)
+            if (visibleRow < 0 ||
+                visibleRow >=
+                    static_cast<int>(
+                        kVisibleRows))
             {
                 return -1;
             }
 
             const int rowTop =
                 kFirstRowY +
-                row * kRowHeight;
+                visibleRow *
+                    kRowHeight;
 
             if (g_cursor.y >=
                 rowTop + kRowHeight - 4)
@@ -456,7 +290,19 @@ namespace gzfx::ui
                 return -1;
             }
 
-            return row;
+            const int logicalRow =
+                static_cast<int>(
+                    g_scrollOffset) +
+                visibleRow;
+
+            const int count =
+                static_cast<int>(
+                    settings::Editable::Count);
+
+            return logicalRow >= 0 &&
+                logicalRow < count
+                ? logicalRow
+                : -1;
         }
 
         void WriteState(
@@ -766,8 +612,17 @@ namespace gzfx::ui
                 static_cast<std::uint32_t>(
                     settings::Editable::Count);
 
-            for (std::uint32_t index = 0;
-                 index < count;
+            ClampScroll();
+
+            const std::uint32_t endIndex =
+                std::min(
+                    count,
+                    g_scrollOffset +
+                        kVisibleRows);
+
+            for (std::uint32_t index =
+                    g_scrollOffset;
+                 index < endIndex;
                  ++index)
             {
                 const auto item =
@@ -775,15 +630,20 @@ namespace gzfx::ui
                         settings::Editable>(
                             index);
 
+                const std::uint32_t visibleIndex =
+                    index - g_scrollOffset;
+
                 RECT row{
                     14,
                     kFirstRowY +
-                        static_cast<int>(index) *
+                        static_cast<int>(
+                            visibleIndex) *
                             kRowHeight,
                     static_cast<LONG>(
                         kMenuWidth - 14),
                     kFirstRowY +
-                        static_cast<int>(index + 1) *
+                        static_cast<int>(
+                            visibleIndex + 1) *
                             kRowHeight - 4
                 };
 
@@ -948,9 +808,25 @@ namespace gzfx::ui
                     kMenuHeight - 10)
             };
 
+            std::wostringstream footerText;
+            footerText
+                << L"MOUSE: CLICK / DRAG / WHEEL   "
+                << L"ROWS "
+                << (count == 0
+                    ? 0
+                    : g_scrollOffset + 1)
+                << L"-"
+                << endIndex
+                << L" OF "
+                << count
+                << L"   SHIFT+NUM1 CLOSE";
+
+            const std::wstring footerValue =
+                footerText.str();
+
             DrawTextW(
                 dc,
-                L"MOUSE: CLICK / DRAG SLIDERS   CLICK TOGGLES   SHIFT+NUM1 CLOSE",
+                footerValue.c_str(),
                 -1,
                 &footer,
                 DT_LEFT |
@@ -1211,6 +1087,12 @@ namespace gzfx::ui
                 settings::Toggle(item);
                 MarkChanged();
             }
+            else if (click &&
+                     ActionItem(item))
+            {
+                settings::Activate(item);
+                MarkChanged();
+            }
             else
             {
                 g_dirty = true;
@@ -1330,6 +1212,20 @@ namespace gzfx::ui
                                         RIM_TYPEMOUSE &&
                                     !g_directInputSeen)
                                 {
+                                    if ((input->data.mouse.usButtonFlags &
+                                         RI_MOUSE_WHEEL) != 0)
+                                    {
+                                        const SHORT wheel =
+                                            static_cast<SHORT>(
+                                                input->data.mouse.
+                                                    usButtonData);
+
+                                        ScrollBy(
+                                            wheel > 0
+                                            ? -3
+                                            : 3);
+                                    }
+
                                     g_cursor.x +=
                                         input->data.mouse
                                             .lLastX;
@@ -1374,11 +1270,26 @@ namespace gzfx::ui
                         SetCursor(nullptr);
                         return TRUE;
 
+                    case WM_MOUSEWHEEL:
+                    {
+                        const SHORT delta =
+                            GET_WHEEL_DELTA_WPARAM(wParam);
+
+                        if (delta != 0)
+                        {
+                            ScrollBy(
+                                delta > 0
+                                ? -3
+                                : 3);
+                        }
+
+                        return 0;
+                    }
+
                     case WM_RBUTTONDOWN:
                     case WM_RBUTTONUP:
                     case WM_MBUTTONDOWN:
                     case WM_MBUTTONUP:
-                    case WM_MOUSEWHEEL:
                         return 0;
 
                     default:
@@ -1525,6 +1436,9 @@ namespace gzfx::ui
                     g_cursor.y =
                         static_cast<LONG>(
                             kMenuHeight / 2);
+
+                    g_scrollOffset = 0;
+                    EnsureSelectionVisible();
                 }
                 else
                 {
@@ -1583,6 +1497,9 @@ namespace gzfx::ui
                 gzfx::render::ambient_visibility_v2::
                     RequestManualCapture();
 
+                gzfx::render::unified_product_renderer::
+                    RequestManualCapture();
+
                 WriteState(
                     frame,
                     "semantic_wave3_wave4_capture_requested");
@@ -1609,7 +1526,7 @@ namespace gzfx::ui
     void SubmitDirectInputMouse(
         const LONG deltaX,
         const LONG deltaY,
-        const LONG,
+        const LONG wheel,
         const std::uint32_t buttonMask) noexcept
     {
         try
@@ -1627,6 +1544,14 @@ namespace gzfx::ui
 
             g_directInputDeltaX += deltaX;
             g_directInputDeltaY += deltaY;
+
+            if (wheel != 0)
+            {
+                ScrollBy(
+                    wheel > 0
+                    ? -3
+                    : 3);
+            }
 
             g_cursor.x += deltaX;
             g_cursor.y += deltaY;

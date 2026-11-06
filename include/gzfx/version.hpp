@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.35-product-control-recovery";
+        "0.0.36-unified-product-renderer";
 }
 
 extern "C" __declspec(dllexport)
