@@ -15,55 +15,49 @@ int main()
         gzfx::diagnostics::telemetry_listener::
             EngineAnchor;
 
-    if (ClassifyShadowFlags(
+    static_assert(
+        ClassifyShadowFlags(
             true,
             false,
             false,
-            false) !=
-        ShadowKind::Directional)
-    {
-        return 2;
-    }
+            false) ==
+        ShadowKind::Directional);
 
-    if (ClassifyShadowFlags(
+    static_assert(
+        ClassifyShadowFlags(
             false,
             true,
             false,
-            false) !=
-        ShadowKind::Spot)
-    {
-        return 3;
-    }
+            false) ==
+        ShadowKind::Spot);
 
-    if (ClassifyShadowFlags(
+    static_assert(
+        ClassifyShadowFlags(
             false,
             false,
             true,
-            true) !=
-        ShadowKind::Omni)
-    {
-        return 4;
-    }
+            true) ==
+        ShadowKind::Omni);
 
-    if (ClassifyShadowFlags(
+    static_assert(
+        ClassifyShadowFlags(
             false,
             false,
             false,
-            false) !=
-        ShadowKind::Unknown)
-    {
-        return 5;
-    }
+            false) ==
+        ShadowKind::Unknown);
 
-    if (static_cast<std::uint32_t>(
-            Anchor::PostProcessing) != 0 ||
+    static_assert(
         static_cast<std::uint32_t>(
-            Anchor::PreUi) != 1 ||
+            Anchor::PostProcessing) == 0);
+
+    static_assert(
         static_cast<std::uint32_t>(
-            Anchor::Count) < 22)
-    {
-        return 6;
-    }
+            Anchor::PreUi) == 1);
+
+    static_assert(
+        static_cast<std::uint32_t>(
+            Anchor::Count) >= 22);
 
     std::cout
         << "Native domain anchor contracts passed.\n";
