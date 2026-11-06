@@ -1,0 +1,109 @@
+GZFX HISTORICAL 0.0.51 TARGET LEDGER RECOVERY SUMMARY
+Recovered: 2026-11-05
+
+SOURCE AUTHORITY
+Persistent owner Library record:
+    GZFX_RELEASE_CAPABILITIES_AND_ALL_REMAINING_TARGETS_2026-10-29.txt
+
+Historical document title:
+    GZFX 0.0.51 - RELEASE CAPABILITIES AND ALL 606 CORE TARGETS
+
+This is historical product/roadmap evidence.
+It is NOT current 0.0.35 implementation proof.
+
+COMPACT REPO INDEX
+    GZFXWorkFolder/old/GZFX_HISTORICAL_0.0.51_652_TARGET_INDEX.csv
+
+Unique historical target rows preserved:
+    652
+
+Historical status population:
+    CurrentKnownImplementedInScope    88
+    Partial                          107
+    ImplementedButUnqualified         2
+    AbsentNamedNative                50
+    NoCurrentIndividualClaim        359
+    Excluded                         46
+
+High-population historical families:
+    COLOR_HDR
+    PROGRAMMABLE_FRAMEWORK
+    LIGHTS_EMISSIVES
+    TOOLS_DIAGNOSTICS
+    SKY_ATMOSPHERE
+    EDITOR_PRESETS
+    MATERIAL_GEOMETRY
+    IMAGE_FILTER_ART
+    WEATHER_TIME
+    SHADOW
+    OPTICS
+    REFLECTION_IBL
+    WATER
+    CAMERA_DOF_MOTION
+    MASK_COMPOSITION
+    TEMPORAL_AA
+    AO
+    SCENE_UI
+    INDIRECT
+    PLATFORM_LOADER
+
+HISTORICAL 0.0.51 PLAYER-FACING EFFECTS CALLED OUT AS OWNED
+    AV2 ambient visibility
+    SSAO / HBAO
+    bounded ambient composition
+    spatial ambient filtering
+    private per-pixel AO temporal history
+    spatial SSIL
+    manual near/far DoF
+    bloom/glow
+    manual exposure
+    adapted automatic exposure
+    basic color grading
+    pre-tonemap toe/shoulder/clip shaping
+    bilateral denoise
+    procedural lens dirt
+    depth fog
+    native-vector linear motion blur
+    vignette
+    dynamic monochrome film grain
+    lateral/radial chromatic aberration
+    high-pass sharpening
+    letterbox/pillarbox masking
+
+HISTORICAL PRODUCT SURFACE
+    100 visible effect controls
+    78 scalar sliders
+    22 toggles
+    Medium / Ultra+ quality tiers
+    Clearfell
+    Emberveil
+    Moonforge
+    Verdant North
+    Sable Cinema
+    Custom 1 / 2 / 3 profile lifecycle
+
+HISTORICAL LIMITS EXPLICITLY NOT CLOSED
+    native shadow-map replacement/enhancement
+    cloud-shadow/sun-ray/moon-ray native executors
+    weather-native rendering
+    water/reflection/material replacement
+    LUT workflow
+    native tonemap replacement
+    display HDR
+    broad temporal/multibounce GI
+
+CURRENT-SOURCE WARNING
+The historical report cites source files including:
+    include/gzfx/ui/product_control_model.hpp
+    src/render/product_hdr_executor.cpp
+    src/render/product_hdr_executor_hlsl.inl
+    src/render/product_ldr_executor_hlsl.inl
+
+Those files are absent from current 0.0.35 repository source.
+
+Therefore:
+    historical 0.0.51 statuses are targets/history;
+    current capability claims require current source + current tests + current
+    real-Skyrim field proof.
+
+END SUMMARY
