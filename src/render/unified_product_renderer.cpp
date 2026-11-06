@@ -325,7 +325,8 @@ namespace gzfx::render::unified_product_renderer
 
         const char* ShaderSource()
         {
-            return R"GZFX_HLSL(
+            static const std::string source =
+                std::string(R"GZFX_HLSL(
 struct VSOutput
 {
     float4 position : SV_POSITION;
@@ -831,7 +832,8 @@ float AmbientContact(float2 uv)
 
         float3 delta = neighbor - center;
         float distanceToSample =
-            length(delta);
+)GZFX_HLSL") +
+                R"GZFX_HLSL(            length(delta);
 
         if (distanceToSample <= 1e-5)
         {
@@ -1391,7 +1393,8 @@ float4 PSComposite(VSOutput input) : SV_TARGET
             1.0 -
             exp(
                 -linearFog *
-                max(DepthFogDensity, 0.0));
+)GZFX_HLSL" +
+                R"GZFX_HLSL(                max(DepthFogDensity, 0.0));
 
         color =
             lerp(
@@ -1519,6 +1522,8 @@ float4 PSComposite(VSOutput input) : SV_TARGET
         original.a);
 }
 )GZFX_HLSL";
+
+            return source.c_str();
         }
 
         UINT ComputeMipCount(
