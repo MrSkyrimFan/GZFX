@@ -28,8 +28,8 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.36-unified-product-renderer
-current phase: 0.0.36 ENGINEERING CLOSED / 0.0.37 COMBINED NATIVE-DOMAIN ANCHOR WAVE NEXT
+current runtime: 0.0.37-native-domain-anchors
+current phase: 0.0.37 IMPLEMENTATION ACTIVE / COMBINED NATIVE-DOMAIN SEMANTIC CORRELATION
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
@@ -236,3 +236,15 @@ PR #41 and merged-main CI pass 41/41 plus PE and one-DLL packaging. Real-Skyrim
 visual/performance validation of this broad graph is intentionally combined with
 the next native-domain semantic-anchor build instead of forcing another tiny
 field cycle.
+
+
+## 0.0.37 combined native-domain anchors
+
+0.0.37 adds one read-only semantic observer over the existing D3D11 evidence.
+It correlates Address Library / CommonLib engine identities for shadow, water,
+reflection, underwater, volumetric and broad effects intervals with the same
+telemetry timeline used by the renderer.
+
+This is intentionally one combined wave. The next real-Skyrim session will
+validate the broad 0.0.36 product graph and return native-domain correlations
+together instead of testing one feature per DLL.
