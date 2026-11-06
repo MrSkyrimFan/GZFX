@@ -12,5 +12,6 @@ namespace gzfx::render::ambient_depth
         std::uint64_t frame,
         ID3D11Device* device,
         ID3D11DeviceContext* context,
-        const gzfx::diagnostics::resource_intelligence::LiveInputs& inputs) noexcept;
+        const gzfx::diagnostics::resource_intelligence::LiveInputs& inputs,
+        bool allowAo = true) noexcept;
 }
