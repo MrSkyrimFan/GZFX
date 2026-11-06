@@ -605,16 +605,19 @@ float Hash12(float2 p)
     return frac((p3.x + p3.y) * p3.z);
 }
 
-float BloomWeight(float luminance)
+float ThresholdWeight(
+    float luminance,
+    float threshold,
+    float softKnee)
 {
     float knee =
         max(
-            BloomThreshold * BloomSoftKnee,
+            threshold * softKnee,
             1e-5);
 
     float soft =
         clamp(
-            luminance - BloomThreshold + knee,
+            luminance - threshold + knee,
             0.0,
             2.0 * knee);
 
@@ -624,11 +627,19 @@ float BloomWeight(float luminance)
 
     float hard =
         max(
-            luminance - BloomThreshold,
+            luminance - threshold,
             0.0);
 
     return max(hard, soft) /
         max(luminance, 1e-5);
+}
+
+float BloomWeight(float luminance)
+{
+    return ThresholdWeight(
+        luminance,
+        BloomThreshold,
+        BloomSoftKnee);
 }
 
 float4 PSLuminanceBloom(VSOutput input) : SV_TARGET
@@ -650,9 +661,24 @@ float4 PSLuminanceBloom(VSOutput input) : SV_TARGET
 
     if (HasEffect(EFFECT_BLOOM))
     {
+        float bloomWeight =
+            BloomEnabled != 0
+            ? BloomWeight(luminance)
+            : 0.0;
+
+        float localGlowWeight =
+            LocalGlowEnabled != 0
+            ? ThresholdWeight(
+                luminance,
+                max(LocalGlowThreshold, 1e-4),
+                0.35)
+            : 0.0;
+
         bright =
             color *
-            BloomWeight(luminance);
+            max(
+                bloomWeight,
+                localGlowWeight);
     }
 
     return float4(
@@ -1115,7 +1141,26 @@ float3 BloomColor(float2 uv)
     }
 
     float3 bloom = 0.0;
-    float weightTotal = 0.0;
+    float3 localGlow = 0.0;
+    float bloomWeightTotal = 0.0;
+    float glowWeightTotal = 0.0;
+
+    float bloomRadiusScale =
+        clamp(
+            BloomRadius / 4.0,
+            0.25,
+            2.0);
+
+    float glowRadiusScale =
+        clamp(
+            LocalGlowRadius / 8.0,
+            0.25,
+            2.0);
+
+    float maximumLod =
+        max(
+            float(PyramidMipCount) - 1.0,
+            0.0);
 
     [loop]
     for (uint level = 0;
@@ -1132,23 +1177,60 @@ float3 BloomColor(float2 uv)
             1.0 /
             (1.0 + float(level));
 
-        bloom +=
-            PyramidTexture.SampleLevel(
-                LinearSampler,
-                uv,
-                float(level)).rgb *
-            weight;
+        if (BloomEnabled != 0 &&
+            BloomStrength > 0.0)
+        {
+            float bloomLod =
+                min(
+                    float(level) *
+                        bloomRadiusScale,
+                    maximumLod);
 
-        weightTotal += weight;
+            bloom +=
+                PyramidTexture.SampleLevel(
+                    LinearSampler,
+                    uv,
+                    bloomLod).rgb *
+                weight;
+
+            bloomWeightTotal += weight;
+        }
+
+        if (LocalGlowEnabled != 0 &&
+            LocalGlowStrength > 0.0)
+        {
+            float glowLod =
+                min(
+                    float(level) *
+                        glowRadiusScale,
+                    maximumLod);
+
+            localGlow +=
+                PyramidTexture.SampleLevel(
+                    LinearSampler,
+                    uv,
+                    glowLod).rgb *
+                weight;
+
+            glowWeightTotal += weight;
+        }
     }
 
-    bloom /= max(weightTotal, 1e-5);
+    bloom /=
+        max(
+            bloomWeightTotal,
+            1e-5);
 
-    float strength =
-        max(BloomStrength, 0.0) +
-        (LocalGlowEnabled != 0
-            ? max(LocalGlowStrength, 0.0)
-            : 0.0);
+    localGlow /=
+        max(
+            glowWeightTotal,
+            1e-5);
+
+    float3 result =
+        bloom *
+            max(BloomStrength, 0.0) +
+        localGlow *
+            max(LocalGlowStrength, 0.0);
 
     if (LensDirtEnabled != 0 &&
         LensDirtStrength > 0.0)
@@ -1162,14 +1244,14 @@ float3 BloomColor(float2 uv)
                 1.35,
                 Hash12(cell));
 
-        bloom *=
+        result *=
             lerp(
                 1.0,
                 dirt,
                 saturate(LensDirtStrength));
     }
 
-    return bloom * strength;
+    return result;
 }
 
 float3 ApplyColor(float3 color)
