@@ -566,6 +566,17 @@ namespace gzfx::settings
                     values.exposureMaxEv);
             }
 
+            if (values.exposureMaxEv -
+                    values.exposureMinEv <
+                0.25f)
+            {
+                values.exposureMaxEv =
+                    std::min(
+                        12.0f,
+                        values.exposureMinEv +
+                            0.25f);
+            }
+
             values.depthFogEnd =
                 std::max(
                     values.depthFogEnd,
