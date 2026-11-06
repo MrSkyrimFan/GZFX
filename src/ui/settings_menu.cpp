@@ -189,13 +189,6 @@ namespace gzfx::ui
                 static_cast<std::uint32_t>(
                     settings::Editable::Count);
 
-            if (count == 0)
-            {
-                g_selected = 0;
-                g_scrollOffset = 0;
-                return;
-            }
-
             g_selected =
                 std::min(
                     g_selected,
