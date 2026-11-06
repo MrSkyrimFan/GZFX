@@ -1,0 +1,421 @@
+GZFX 0.0.36 — GZFX3 INTEGRATED RENDERER FIELD FINDINGS
+Date: 2026-11-05
+Raw field commit: edb970f892d830a2bcc941868b1f38d85347a7b1
+Raw preservation commit: d84cdd586abbd07b15797d66c831f53347a18100
+Intake workflow: 42142244068
+Intake artifact: GZFX-field-GZFX3 / 13467664691
+
+STATUS
+    GZFX3 SPLIT FIELD RETURN INGESTED
+    RAW ARCHIVES PRESERVED BYTE-FOR-BYTE
+    0.0.35 LIVE CONTROL WIRING FIELD-PASSED
+    CURRENT PERFORMANCE FIELD-FAILED
+    HIGH HBAO / HORIZON SETTINGS STILL FLICKER AROUND THE PLAYER
+    MOUSE OWNERSHIP REMAINS FIELD-GREEN
+    FULL THREE-FRAME PIPELINE CARTOGRAPHY CAPTURED
+    UNIFIED LARGE-WAVE RENDERER WORK AUTHORIZED
+    TINY SERIAL FEATURE PROBES EXPLICITLY REJECTED BY OWNER
+
+======================================================================
+1. RAW FIELD RETURN
+======================================================================
+
+The owner uploaded one logical GZFX3 field session in two ZIPs:
+
+    GZFX3.zip
+    gzfx3Diagnostics.zip
+
+The repository intake move preserved their original Git blobs and placed them at:
+
+    GZFXWorkFolder/field_uploads/GZFX3.zip
+    GZFXWorkFolder/field_uploads/gzfx3Diagnostics.zip
+
+GZFX3.zip:
+    bytes:
+        3,540,559
+    Git blob:
+        07fcc9ab03586e2a1c067f7294fda4d13b989cd4
+    SHA-256:
+        e5dd1346cd3bda250efad9eee6a0d2bc43146d5e9b978a845eff213ef1af515e
+
+gzfx3Diagnostics.zip:
+    bytes:
+        7,978,236
+    Git blob:
+        10180dc51747750dd33fff2cc1c6c231f1ef12c3
+    SHA-256:
+        ea81220e852ce538137298a9104f7af85a05be6da8e750944aa9aa7ecb0e6b4e
+
+These two archives are one DATA return.
+
+======================================================================
+2. OWNER FIELD VERDICT
+======================================================================
+
+The owner reports:
+
+    sliders work again;
+    performance is poor;
+    increasing HBAO / Horizon strength and radius increases shadow flicker,
+    especially around the player character;
+    artifact/performance tuning is not the immediate priority;
+    all ENB/ReShade-class functions must now be recovered in large coherent
+    waves;
+    pipeline logging must remain available because features share stages,
+    resources and history;
+    the renderer must become one integrated system rather than many isolated
+    feature executors.
+
+This is controlling field evidence.
+
+0.0.35 therefore closes the following field gate as PASS:
+
+    current menu values reach active GPU render owners and visibly change the
+    image.
+
+It does NOT close:
+
+    final HBAO quality;
+    temporal stability;
+    integrated renderer performance;
+    ENB/ReShade feature breadth;
+    final stage ownership for every future feature.
+
+======================================================================
+3. LIVE 0.0.35 CONTROL PROOF
+======================================================================
+
+The field session used:
+
+    version=0.0.35-product-control-recovery
+    resolution=2560x1440
+    development mode=2
+
+Submitted values recorded by product_control_submission.txt:
+
+    AmbientContact:
+        strength=0.122222
+        radius=24
+
+    Horizon/HBAO:
+        enabled=true
+        strength setting=0.361111
+        strength multiplier=1.44444
+        radius setting=96
+        radius world=822.857
+        quality=3
+        slices=4
+        steps=8
+
+    IndirectBounce:
+        enabled=true
+        strength=0.496667
+        radius=128
+        saturation=1
+
+    LocalGlow:
+        enabled=true
+        strength=0.0916667
+        threshold=0.25
+        radius=8
+
+Active ownership proof:
+
+    wave4_owns_ao=true
+    av2_applied_current_frame=true
+    indirect_stack_applied=true
+    scene_effects_injected=true
+
+pre_ui_effects.txt:
+
+    status=pre_ui_injected
+    injections=3689
+
+ambient_depth_stack.txt:
+
+    status=applied
+    applications=3680
+    half_resolution=1280x720
+    ao_allowed=false
+    ao_enabled=false
+    indirect_enabled=true
+    temporal=true
+    history=true
+    history_reused=true
+
+AmbientVisibilityV2:
+
+    status=computed_temporal
+    computes=3393
+    applications=3392
+    skips=0
+
+Therefore:
+
+    AV2 remains the AO owner;
+    the legacy ambient-depth path contributes indirect only;
+    AmbientContact and LocalGlow run in the scene pass;
+    no evidence shows the old double-AO ownership bug returned.
+
+======================================================================
+4. INPUT / LIFECYCLE NON-REGRESSION
+======================================================================
+
+DirectInput remains healthy:
+
+    directinput8_create_hooked=true
+    create_device_hooked=true
+    system_mouse_seen=true
+    get_device_state_hooked=true
+    get_device_data_hooked=true
+    menu_packets_forwarded=2640
+    state_reads_suppressed=2640
+    last_error=<empty>
+
+Settings menu:
+
+    directinput_seen=true
+    directinput_packets=2743
+
+Telemetry closed naturally:
+
+    enqueued=249560
+    written=249560
+    dropped=0
+    queue_depth=0
+    status=complete
+
+The 0.0.33 loader and 0.0.34 mouse contracts remain field-green.
+
+======================================================================
+5. CURRENT COST SIGNAL
+======================================================================
+
+The session manifest correctly warns that this forensic build is not release-FPS
+evidence. The measurements are still useful as architecture signals.
+
+Ambient indirect stack final timing:
+
+    analyze=4.2050 ms
+    temporal=0.2294 ms
+    denoise horizontal=0.0358 ms
+    denoise vertical=0.0369 ms
+    composite=0.1823 ms
+    total=4.6893 ms
+
+Wave3 256-sample timing summary:
+
+    median total:
+        0.6559 ms
+
+    mean total:
+        1.2329 ms
+
+    p95 total:
+        6.1496 ms
+
+    maximum total:
+        13.5721 ms
+
+The high tail is dominated by intermittent depth-tail work and cannot be treated
+as a clean release benchmark. It does prove the current architecture has
+meaningful synchronization/work spikes.
+
+Current cost topology is structurally poor for product expansion:
+
+    Wave3 owns geometry/history preparation;
+    AV2 owns ambient visibility;
+    ambient_depth owns an additional half-resolution analyze/temporal/filter/
+    composite sequence;
+    scene_effects performs another full-resolution copy + pass + copy;
+    telemetry and diagnostic capture add independent overhead.
+
+Adding every missing feature as another isolated executor would multiply
+full-resolution copies, state transitions, history stores, resource allocations
+and synchronization points.
+
+That architecture is rejected.
+
+======================================================================
+6. DETAILED PIPELINE CAPTURE
+======================================================================
+
+The GZFX3 diagnostics capture covers frames 640-642.
+
+Population:
+
+    passes=12,253
+    unique pass signatures=423
+    draw passes=11,887
+    dispatch passes=294
+    copy/resolve/mip passes=9
+    clear passes=63
+    resources=446
+    shaders=203
+    buffer updates=27,944
+
+The capture is large enough to support one integrated renderer graph. It is not
+necessary to return to one-feature-at-a-time blind probes.
+
+Verified/strong semantic resources available in the same frame:
+
+    MAIN_HDR
+        2560x1440
+        R16G16B16A16_FLOAT
+        valid after ambient composite through UI/present
+
+    MAIN_DEPTH_CURRENT
+        2560x1440
+        typeless depth
+        valid after opaque MRT through UI/present
+
+    MOTION
+        2560x1440
+        two-channel floating motion
+        valid after opaque MRT through global TAA
+
+    NORMAL_MASK_CURRENT
+        2560x1440
+        native normal/mask
+
+    AUXILIARY_RT3
+        2560x1440
+        native MRT auxiliary
+
+    STOCK_CAMERAZ
+        2560x1440
+        12-mip R32 hierarchy
+
+    SAO_RAWAO_CURRENT / PREVIOUS
+        temporal ping-pong pair
+
+    SAO_FILTER_TEMP / SAO_FILTERED
+        stock temporal/spatial AO intermediates
+
+    RAW_INDIRECT
+        full-resolution stock indirect signal
+
+    SHADOW_MASK
+        full-resolution shadow mask
+
+    VOLUMETRIC_DENSITY_A / B
+        320x192x90 R16_FLOAT volumes
+
+    VOLUMETRIC_PREVIOUS_DEPTH / PRE_WATER_DEPTH_CURRENT
+        one physical resource with explicit content-epoch transition
+
+This proves that the future renderer does not need to rediscover or recreate
+every input independently.
+
+======================================================================
+7. VERIFIED STAGE ORDER
+======================================================================
+
+For frame 640:
+
+    AfterDepthPrepass                         ordinal 2491
+    AfterOpaqueWorldMRT                      ordinal 3658
+    AfterCameraZ                             ordinal 3669
+    AfterStockAO                             ordinal 3672
+    BeforeAmbientScreenSpaceComposite        ordinal 3674
+    AtAmbientScreenSpaceComposite            ordinal 3674
+    AfterAmbientScreenSpaceComposite         ordinal 3674
+    BeforeVolumetricApply                    ordinal 3881
+    AfterVolumetricApply                     ordinal 3881
+    PublishPreWaterDepth                     ordinal 3881
+    HDRReduction                             ordinal 3912
+    BeforeTonemap                            ordinal 3915
+    BeforeGlobalTAA                          ordinal 3916
+    AfterGlobalTAA                           ordinal 3916
+    UiPresent
+
+Frames 641 and 642 preserve the same ordering with scene-dependent ordinal
+movement.
+
+The existing live scene-effects signal occurs after the terminal paired
+scene-color/depth phase and before HDR reduction/tonemap. It is therefore a
+current field-working HDR scene-mutation point. It must not be falsely described
+as a post-tonemap LDR boundary.
+
+PostTonemapPreUi remains unpromoted until a separate exact boundary is proven.
+
+======================================================================
+8. ARCHITECTURAL CONCLUSIONS
+======================================================================
+
+The next renderer must be organized around shared stage products:
+
+    geometry/depth/motion/normal inputs;
+    ambient visibility and indirect;
+    one HDR scene source;
+    one luminance/bloom pyramid;
+    one exposure history;
+    one reusable full-resolution ping-pong pair;
+    one current/previous temporal registry;
+    one ordered effect graph;
+    one settings revision;
+    one timing/diagnostic ledger.
+
+Effects must declare:
+
+    required stage;
+    required semantic inputs;
+    output semantic;
+    temporal history ownership;
+    quality tier;
+    neutral behavior;
+    reset conditions.
+
+They must not each create a private renderer, private scene copy, private
+scheduler or private interpretation of the same Skyrim resource.
+
+The first large recovery wave is authorized to implement, together:
+
+    product master switch;
+    shared quality tiers;
+    manual and automatic exposure;
+    eye adaptation;
+    bloom/glow and lens dirt;
+    pre-tonemap shaping;
+    color controls;
+    DoF;
+    motion blur;
+    depth fog;
+    vignette;
+    film grain;
+    chromatic aberration;
+    sharpening;
+    letterbox/pillarbox;
+    bounded integrated timing/stage logs;
+    built-in looks and custom profile lifecycle where safely achievable.
+
+Native shadows, sky/weather, water/reflections and material replacement remain
+separate native-domain work because they require distinct engine-stage
+ownership, not because the project should return to tiny feature probes.
+
+======================================================================
+9. HBAO FLICKER / PERFORMANCE DISPOSITION
+======================================================================
+
+The HBAO flicker around the character is recorded as a real defect.
+
+Likely contributing dimensions to test later:
+
+    very large radius mapping:
+        setting 96 -> world radius 822.857
+
+    highest workload:
+        4 slices x 8 steps
+
+    stochastic per-frame horizon sampling;
+    temporal rejection/disocclusion around animated geometry;
+    depth/normal instability near the player;
+    independent AV2 and Wave3 history behavior.
+
+No field evidence currently justifies one exact root-cause claim.
+
+The owner explicitly deprioritized this defect until the broad pipeline is
+landed. The unified graph must preserve diagnostics needed to repair it later,
+but this wave must not be derailed into another HBAO-only loop.
+
+END FINDINGS

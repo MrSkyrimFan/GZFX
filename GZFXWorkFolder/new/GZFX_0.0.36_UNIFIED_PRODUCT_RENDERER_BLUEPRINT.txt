@@ -1,0 +1,664 @@
+GZFX 0.0.36 — UNIFIED PRODUCT RENDERER BLUEPRINT
+Date: 2026-11-05
+Branch: feature/0.0.36-unified-renderer
+
+OBJECTIVE
+
+Recover the historical player-facing ENB/ReShade-class feature surface in one
+integrated HDR scene graph, preserve every current field-locked loader/input/
+semantic/HDR-TAA contract, and replace isolated scene-effect expansion with one
+shared product renderer.
+
+RUNTIME
+
+    0.0.36-unified-product-renderer
+
+TARGET
+
+    Skyrim Steam 1.7.104
+    SKSE 2.3.1
+    Address Library format 5
+    one packaged binary:
+        Data/SKSE/Plugins/GZFX.dll
+
+======================================================================
+1. AUTHORITY / VERSION
+======================================================================
+
+Advance:
+
+    CMake project 0.0.36
+    vcpkg 0.0.36
+    gzfx::kVersion = 0.0.36-unified-product-renderer
+    SKSE pluginVersion = 36
+
+Active records:
+
+    GZFX_0.0.36_GZFX3_INTEGRATED_RENDERER_FIELD_FINDINGS.txt
+    GZFX_0.0.36_UNIFIED_ENB_RESHADE_RENDERER_RESEARCH.txt
+    this blueprint
+    GZFX_0.0.35_PRODUCT_RECOVERY_MATRIX.csv
+    GZFX_HISTORICAL_0.0.51_TARGET_RECOVERY_SUMMARY.txt
+    current source
+
+The raw GZFX3 archives remain unchanged under field_uploads.
+
+======================================================================
+2. SOURCE LAYOUT
+======================================================================
+
+Add:
+
+    include/gzfx/render/unified_product_renderer.hpp
+    include/gzfx/render/unified_product_math.hpp
+    src/render/unified_product_renderer.cpp
+    tests/unified_product_contract_harness.cpp
+
+Modify:
+
+    include/gzfx/settings.hpp
+    src/settings.cpp
+    src/ui/settings_menu.cpp
+    src/render/scene_effects.cpp
+    src/diagnostics/renderer_forensics.cpp only if required for manual capture
+    tests/pre_ui_effects_harness.cpp
+    CMakeLists.txt
+    vcpkg.json
+    include/gzfx/version.hpp or current version source
+    src/skse_bridge.cpp
+    README.md
+    AGENT.md
+    GZFXWorkFolder/new/README.md
+
+Do not create one renderer file per effect.
+
+======================================================================
+3. PRODUCT SETTINGS
+======================================================================
+
+Extend settings::Values with:
+
+Product:
+    productEnabled
+    productQuality
+    productPreset
+    productCustomSlot
+
+Exposure:
+    exposureEnabled
+    autoExposureEnabled
+    manualExposureEv
+    exposureCompensationEv
+    exposureKey
+    exposureMinEv
+    exposureMaxEv
+    exposureSpeedUp
+    exposureSpeedDown
+
+Bloom:
+    bloomEnabled
+    bloomStrength
+    bloomThreshold
+    bloomSoftKnee
+    bloomRadius
+    lensDirtEnabled
+    lensDirtStrength
+
+Color:
+    colorEnabled
+    colorContrast
+    colorGamma
+    colorSaturation
+    colorVibrance
+    colorTemperature
+    colorTint
+    colorLift
+    colorGain
+
+Tone shaping:
+    toneToe
+    toneShoulder
+    toneWhiteClip
+
+Depth of field:
+    dofEnabled
+    dofFocusDistance
+    dofFocusRange
+    dofNearStrength
+    dofFarStrength
+    dofMaxRadius
+
+Motion blur:
+    motionBlurEnabled
+    motionBlurStrength
+    motionBlurMaxPixels
+
+Depth fog:
+    depthFogEnabled
+    depthFogStart
+    depthFogEnd
+    depthFogDensity
+    depthFogColorR
+    depthFogColorG
+    depthFogColorB
+
+Optics/filtering:
+    vignetteEnabled
+    vignetteStrength
+    vignetteRadius
+    vignetteSoftness
+    filmGrainEnabled
+    filmGrainStrength
+    filmGrainScale
+    chromaticAberrationEnabled
+    chromaticAberrationStrength
+    denoiseEnabled
+    denoiseStrength
+    sharpenEnabled
+    sharpenStrength
+    sharpenClamp
+
+Composition:
+    barsEnabled
+    letterboxAmount
+    pillarboxAmount
+
+Defaults:
+
+    productEnabled=true
+    productQuality=1 (Ultra+)
+    all newly recovered effects disabled or neutral
+    all scalar identities exactly neutral
+    current ambient defaults preserved
+
+Add settings revision:
+
+    std::uint64_t Revision() noexcept
+
+Increment after:
+
+    reload;
+    adjustment;
+    normalized set;
+    toggle;
+    preset apply;
+    custom load.
+
+======================================================================
+4. PRESETS / CUSTOM PROFILES
+======================================================================
+
+Add product operations:
+
+    enum class Preset:
+        Custom
+        Clearfell
+        Emberveil
+        Moonforge
+        VerdantNorth
+        SableCinema
+
+    bool ApplyPreset(Preset)
+    bool SaveCustom(std::uint32_t slot)
+    bool LoadCustom(std::uint32_t slot)
+
+Custom sections:
+
+    [Custom1.*]
+    [Custom2.*]
+    [Custom3.*]
+
+A profile includes:
+
+    every current ambient value;
+    every unified post value;
+    quality;
+    product enabled state.
+
+Preset application is atomic under the settings mutex and persists once.
+
+Menu action rows:
+
+    APPLY PRESET
+    CUSTOM SLOT
+    LOAD CUSTOM
+    SAVE CUSTOM
+
+Action rows do not masquerade as sliders.
+
+======================================================================
+5. MENU SCROLLING
+======================================================================
+
+Current fixed layout can show only approximately 20 rows. Replace absolute
+index-to-row mapping with:
+
+    g_scrollOffset
+    kVisibleRows =
+        floor((menu height - first row y - footer reserve) / row height)
+
+Render only:
+
+    [g_scrollOffset,
+     min(count, g_scrollOffset + kVisibleRows))
+
+RowFromCursor returns logical index:
+
+    scrollOffset + visible row
+
+Keep selected row visible after:
+
+    keyboard movement;
+    mouse wheel;
+    direct input wheel;
+    preset/profile action;
+    reload.
+
+Display:
+
+    row range;
+    total control count;
+    category prefix in labels.
+
+Do not make color discrimination necessary.
+
+======================================================================
+6. UNIFIED RENDERER PUBLIC CONTRACT
+======================================================================
+
+Header API:
+
+    struct ApplyInputs
+    {
+        frame;
+        drawOrdinal;
+        device;
+        immediate context;
+        LiveInputs pointer/reference;
+        ambientDepthApplied;
+        av2Applied;
+    };
+
+    struct Status
+    {
+        applications;
+        skips;
+        failures;
+        lastFrame;
+        settingsRevision;
+        activeEffectMask;
+        width;
+        height;
+        format;
+        exposure;
+        historyValid;
+    };
+
+    bool Apply(const ApplyInputs&) noexcept;
+    Status GetStatus() noexcept;
+    void RequestManualCapture() noexcept;
+    void Reset() noexcept;
+
+scene_effects::ApplyPreUi becomes the integration wrapper:
+
+    validate mode and inputs;
+    run ambient indirect policy;
+    call unified_product_renderer::Apply;
+    write compatibility diagnostics;
+    do not execute the old independent full-resolution effect shader.
+
+The old scene-effect source may remain temporarily only as compatibility
+logging, not as an additional image pass.
+
+======================================================================
+7. SHARED RUNTIME
+======================================================================
+
+Runtime owns:
+
+    device;
+    one deferred context;
+    fullscreen vertex shader;
+    luminance/bloom pixel shader;
+    exposure pixel shader;
+    final product pixel shader;
+    linear and point samplers;
+    parameter constant buffer;
+    sourceCopy + SRV;
+    output + RTV;
+    bloom/luminance pyramid + RTV mip 0 + SRV;
+    exposure A/B textures + RTV/SRV;
+    validated depth SRV;
+    validated motion SRV;
+    optional native normal/aux SRVs;
+    GPU timing queries;
+    width/height/format;
+    history index/validity;
+    resource generation;
+    structural settings revision.
+
+Allocation rules:
+
+    scene must be single-sample;
+    source/output use scene format;
+    pyramid base is half resolution rounded up;
+    pyramid has full mip chain;
+    pyramid format R16G16B16A16_FLOAT;
+    exposure history format R16G16_FLOAT or RGBA16F;
+    failures release the whole partially created runtime;
+    resize/device/format change rebuilds atomically.
+
+======================================================================
+8. SHADER / PASS GRAPH
+======================================================================
+
+Compile one HLSL source with entries:
+
+    VSMain
+    PSLuminanceBloom
+    PSExposure
+    PSComposite
+
+Pass A — source snapshot:
+    CopyResource MAIN_HDR -> sourceCopy
+
+Pass B — luminance/bloom mip 0:
+    render half-resolution from sourceCopy
+    output:
+        RGB = soft-knee bright contribution
+        A = log luminance
+
+Pass C — pyramid:
+    GenerateMips on the shared pyramid
+
+Pass D — exposure:
+    render 1x1
+    inputs:
+        last pyramid mip
+        previous exposure
+    output:
+        adapted exposure
+        target exposure
+        measured luminance
+        validity
+    ping-pong A/B
+
+Pass E — final composite:
+    full resolution
+    inputs:
+        sourceCopy
+        depth
+        motion if available
+        pyramid
+        current exposure
+        optional native normal/aux
+    output:
+        final HDR scene
+
+Pass F — one writeback:
+    CopyResource output -> MAIN_HDR
+
+No other recovered effect performs a separate full-resolution copy/writeback.
+
+======================================================================
+9. FINAL COMPOSITE ORDER
+======================================================================
+
+PSComposite order:
+
+    sample/decode source;
+    optional depth-aware denoise;
+    optional motion gather;
+    optional DoF gather;
+    optional depth fog;
+    add weighted bloom pyramid;
+    modulate bloom with procedural lens dirt;
+    apply manual/automatic exposure;
+    apply temperature/tint;
+    apply lift/gamma/gain;
+    apply saturation/vibrance;
+    apply contrast/gamma;
+    apply toe/shoulder/white clip shaping;
+    apply vignette;
+    apply monochrome grain;
+    apply radial chromatic aberration;
+    apply high-pass sharpening;
+    apply letterbox/pillarbox mask;
+    return HDR color with original alpha.
+
+Neutrality requirements:
+
+    every disabled branch is exact identity;
+    productEnabled=false returns source exactly;
+    missing optional depth/motion inputs disable only dependent effects;
+    NaN/Inf guards return finite clamped values;
+    split development mode preserves left half original where required.
+
+======================================================================
+10. QUALITY BUDGET
+======================================================================
+
+unified_product_math.hpp supplies constexpr budgets.
+
+Medium:
+    bloomLevels=4
+    dofSamples=8
+    motionSamples=6
+    denoiseSamples=4
+
+Ultra+:
+    bloomLevels=6
+    dofSamples=16
+    motionSamples=12
+    denoiseSamples=8
+
+Shader loops use fixed maximum arrays and break at submitted counts.
+
+Tests lock these mappings.
+
+======================================================================
+11. ACTIVE EFFECT MASK
+======================================================================
+
+Define stable bit flags:
+
+    ExposureManual
+    ExposureAuto
+    Bloom
+    LensDirt
+    Color
+    ToneShaping
+    DoF
+    MotionBlur
+    DepthFog
+    Vignette
+    FilmGrain
+    ChromaticAberration
+    Denoise
+    Sharpen
+    Bars
+    AmbientContact
+    HorizonOcclusion
+    IndirectBounce
+    LocalGlowCompatibility
+
+Build mask from one settings snapshot.
+
+Record the mask in:
+
+    status;
+    product control proof;
+    timing rows;
+    graph manifest.
+
+======================================================================
+12. TIMING / DIAGNOSTICS
+======================================================================
+
+GPU timestamps:
+
+    total begin/end;
+    pyramid begin/end;
+    exposure begin/end;
+    composite begin/end.
+
+Maintain a delayed query ring so timing reads never block the current frame.
+If a query is not ready, skip timing publication for that slot.
+
+Files:
+
+unified_renderer_status.txt:
+    version
+    status
+    frame
+    applications
+    skips
+    failures
+    settings_revision
+    active_effect_mask
+    active_effect_names
+    product_enabled
+    quality
+    preset
+    width/height/format
+    pyramid dimensions/mips
+    source/depth/motion availability
+    exposure valid/current/target/luminance
+    history valid/index
+    last_error
+    ambient ownership summary
+
+unified_renderer_timings.csv:
+    bounded header + rows
+    frame,pyramid_ms,exposure_ms,composite_ms,total_ms,effect_mask,quality
+
+Bound:
+    retain at most the latest 512 rows by rewriting at coarse cadence or use one
+    fixed ring flushed on close/manual capture.
+
+unified_renderer_graph.csv:
+    stage,input,output,temporal,quality_dependency
+    rewritten only on graph/resource generation changes.
+
+unified_renderer_capture.txt:
+    first three valid frames after graph creation/reset;
+    three frames after manual capture;
+    exact pass/resource/settings sequence.
+
+Do not re-enable continuous pipeline_accesses/samplers/constant-buffer dumps by
+default.
+
+======================================================================
+13. COMPATIBILITY
+======================================================================
+
+Keep:
+
+    scene_effects::WasInjectedFrame
+    pre_ui_effects.txt
+    product_control_submission.txt
+
+Update them to say:
+
+    unified_product_renderer_applied=true
+    unified_effect_mask=...
+    unified_settings_revision=...
+    source_copy_count=1
+    scene_writeback_count=1
+
+Current harnesses continue to pass.
+
+======================================================================
+14. TESTS
+======================================================================
+
+Add GZFXUnifiedProductContractHarness.
+
+Pure contracts:
+
+    quality budgets;
+    default effect mask;
+    master disabled effect mask;
+    preset deterministic values;
+    clamp/normalization helpers;
+    exposure adaptation monotonicity;
+    soft-knee bloom function;
+    graph stage order;
+    expected feature-name ledger.
+
+Extend PreUi harness:
+
+    diagnostics include:
+        unified renderer applied;
+        all required graph families;
+        one source copy;
+        one writeback;
+        product status;
+        current ambient ownership consistency.
+
+Add test count:
+
+    existing 40
+    + unified_product_contract
+    = minimum 41
+
+Do not weaken existing tests.
+
+======================================================================
+15. IMPLEMENTATION SEQUENCE
+======================================================================
+
+One branch, one coherent PR:
+
+1. GZFX3 findings/research/blueprint.
+2. Version/product settings/presets/profile persistence.
+3. Scrollable product menu.
+4. Unified math/contracts.
+5. Shared runtime and shaders.
+6. scene_effects integration and compatibility diagnostics.
+7. Bounded graph/timing logs.
+8. Tests.
+9. Full Windows build and all tests.
+10. PE contract.
+11. One-DLL package.
+12. PR review/no-drift audit.
+13. Merge.
+14. Merged-main CI.
+15. Validate package bytes and publish exact Lance ZIP.
+16. Engineering result and continuity closeout.
+17. One broad real-Skyrim field test of the complete graph.
+
+No one-feature field builds inside this sequence unless a hard safety/loader
+failure makes the combined build impossible.
+
+======================================================================
+16. FIELD ACCEPTANCE AFTER MERGE
+======================================================================
+
+The field test will exercise feature families in grouped presets and manual
+extremes, not one new DLL per effect.
+
+Required:
+
+    master switch returns visibly to vanilla;
+    Medium and Ultra+ both run;
+    all five built-in looks visibly differ;
+    custom profile save/load round-trips;
+    exposure responds;
+    bloom/glow/lens dirt responds;
+    color and tone shaping respond;
+    DoF responds;
+    motion blur responds while moving;
+    depth fog responds;
+    vignette/grain/aberration/sharpen/bars respond;
+    current ambient controls remain live;
+    menu remains usable and scrollable;
+    mouse ownership remains correct;
+    no crash;
+    telemetry drops=0;
+    integrated status/graph/timing files complete.
+
+Quality/performance defects are recorded after the graph is functionally
+complete. They do not justify dismantling the integrated architecture.
+
+END BLUEPRINT

@@ -1,0 +1,597 @@
+GZFX 0.0.36 — UNIFIED ENB/RESHADE-CLASS RENDERER RESEARCH
+Date: 2026-11-05
+Authority:
+    GZFX_0.0.36_GZFX3_INTEGRATED_RENDERER_FIELD_FINDINGS.txt
+    GZFX_HISTORICAL_0.0.51_TARGET_RECOVERY_SUMMARY.txt
+    GZFX_HISTORICAL_0.0.51_652_TARGET_INDEX.csv
+    GZFX_0.0.35_PRODUCT_RECOVERY_MATRIX.csv
+    current main source at d84cdd586abbd07b15797d66c831f53347a18100
+
+PURPOSE
+
+Define one integrated renderer architecture that can recover the historical
+player-facing post stack in a large coherent wave without creating a separate
+renderer, scheduler, resource pool or telemetry stream for each effect.
+
+This research intentionally favors broad architectural convergence over
+isolated feature micro-waves.
+
+======================================================================
+1. CONTROLLING PRODUCT TARGET
+======================================================================
+
+The historical 0.0.51 ledger identifies the player-facing target surface:
+
+    ambient visibility / SSAO / HBAO;
+    spatial SSIL;
+    manual near/far depth of field;
+    bloom and glow;
+    manual exposure;
+    adapted automatic exposure;
+    RGB and artistic color controls;
+    pre-tonemap toe/shoulder/clip shaping;
+    denoise;
+    lens dirt;
+    depth fog;
+    native-motion-vector motion blur;
+    vignette;
+    film grain;
+    chromatic aberration;
+    sharpening;
+    letterbox/pillarbox composition;
+    Medium and Ultra+ quality tiers;
+    five built-in looks;
+    three custom profile slots;
+    master Vanilla/GZFX switch.
+
+Current 0.0.35 source owns only the ambient subset and a small full-resolution
+scene pass. The old product_hdr/product_ldr/control-model source is absent.
+Therefore 0.0.36 is a new current-source implementation, not a claim that old
+source was recovered.
+
+======================================================================
+2. CURRENT STAGE FACTS
+======================================================================
+
+The GZFX3 stage schedule proves the current order:
+
+    opaque MRT
+    CameraZ
+    stock AO
+    ambient composite
+    volumetric apply
+    pre-water depth publication
+    HDR reduction
+    tonemap entry
+    global TAA
+    present/UI
+
+The current scene-effects trigger is field-working before HDR reduction and
+tonemap. The scene texture is R16G16B16A16_FLOAT and remains paired with current
+depth, motion, native normal/auxiliary, CameraZ and the camera constant buffer.
+
+Selected decision:
+
+    0.0.36 uses this field-working HDR scene mutation point for the integrated
+    product graph.
+
+Consequences:
+
+    exposure, bloom, DoF, fog, motion blur, denoise, pre-tonemap shaping and
+    scene color controls have a valid current stage;
+
+    vignette, grain, chromatic aberration, sharpening and bars can be made
+    functional in this graph, but they remain HDR-stage implementations until a
+    true PostTonemapPreUi boundary is separately promoted;
+
+    0.0.36 must not call this a native tonemap replacement or a proven
+    post-tonemap LDR hook.
+
+======================================================================
+3. UNIFIED GRAPH DECISION
+======================================================================
+
+Reject:
+
+    one source copy per effect;
+    one deferred context per effect;
+    one private temporal history per effect;
+    one private stage detector per effect;
+    one diagnostics file per inner sample/pass;
+    feature code that independently reinterprets depth or motion;
+    serial field builds that expose only one feature at a time.
+
+Select one graph:
+
+    Acquire validated semantic inputs once.
+    Snapshot settings once.
+    Build/update shared luminance and bloom products once.
+    Update one exposure history once.
+    Execute one ordered full-resolution composite.
+    Copy back to MAIN_HDR once.
+    Emit one bounded stage/timing ledger.
+
+Logical order:
+
+    1. acquire/snapshot;
+    2. luminance and bright-pass pyramid;
+    3. exposure adaptation;
+    4. depth/motion reconstruction;
+    5. denoise / source conditioning;
+    6. motion blur;
+    7. depth of field;
+    8. depth fog;
+    9. bloom / local glow / lens dirt;
+   10. manual + adapted exposure;
+   11. lift/gamma/gain and white balance;
+   12. saturation/vibrance/contrast/gamma;
+   13. toe/shoulder/white-clip shaping;
+   14. vignette / grain / chromatic aberration;
+   15. sharpening;
+   16. letterbox/pillarbox;
+   17. one final MAIN_HDR writeback.
+
+Ambient contact and indirect remain upstream in 0.0.36 but their ownership,
+settings revision and timing are imported into the same product ledger. Later
+convergence may fold their passes into the shared graph after quality is stable.
+
+======================================================================
+4. SHARED RESOURCE MODEL
+======================================================================
+
+Per renderer/resolution:
+
+    full-resolution source copy:
+        same format as MAIN_HDR;
+        SRV only;
+        receives one CopyResource from MAIN_HDR.
+
+    full-resolution output:
+        same format as MAIN_HDR;
+        RTV only;
+        receives final composite.
+
+    half-resolution luminance pyramid:
+        R16G16B16A16_FLOAT;
+        RTV + SRV;
+        full mip chain;
+        GenerateMips enabled;
+        mip 0 stores log luminance and bright color.
+
+    exposure history A/B:
+        1x1 R16G16_FLOAT or R16G16B16A16_FLOAT;
+        RTV + SRV;
+        ping-pong;
+        stores adapted exposure and validity.
+
+    optional scratch A/B:
+        only if a future multi-pass effect cannot be expressed in the unified
+        composite.
+
+No effect gets its own full-resolution copy unless a proven data dependency
+requires it.
+
+The graph owns all resource allocation and invalidates it on:
+
+    device change;
+    resolution change;
+    scene-format change;
+    explicit reset;
+    camera cut/history generation change where available;
+    settings changes that alter structural quality.
+
+======================================================================
+5. EXPOSURE / LUMINANCE
+======================================================================
+
+Manual exposure:
+
+    multiplier = exp2(manualExposureEv)
+
+Automatic exposure:
+
+    build log luminance from the HDR source;
+    average through the hardware mip chain;
+    convert final average log luminance back to linear luminance;
+    target exposure = keyValue / max(luminance, epsilon);
+    apply exposure compensation in EV;
+    clamp to configured minimum/maximum EV;
+    adapt previous exposure toward target with distinct up/down speeds.
+
+Adaptation must be frame-rate stable:
+
+    alpha = 1 - exp(-deltaSeconds * speed)
+
+The available camera buffer includes frame parameters, but delta time encoding
+is not yet a product contract. Use a bounded default 1/60 step in the first
+implementation and expose one diagnostic field stating the source. Replace it
+with a verified engine delta once proven.
+
+Neutral/default behavior:
+
+    automatic exposure disabled by default;
+    manual EV=0;
+    exposure multiplier=1.
+
+======================================================================
+6. BLOOM / GLOW / LENS DIRT
+======================================================================
+
+The luminance pyramid also serves bloom:
+
+    mip 0:
+        soft-knee thresholded bright color;
+
+    lower mips:
+        progressively broader filtered bloom;
+
+    final composite:
+        weighted multi-mip reconstruction.
+
+Quality tier controls:
+
+    Medium:
+        fewer mip samples;
+        lower maximum radius;
+
+    Ultra+:
+        more mip samples;
+        broader reconstruction.
+
+LocalGlow becomes one product-facing bloom control rather than a separate
+eight-tap full-resolution effect. Existing LocalGlow settings remain backward
+compatible and feed the new bloom model until the menu migration is complete.
+
+Procedural lens dirt:
+
+    deterministic low-frequency cell/noise mask;
+    modulates bloom only;
+    no external copyrighted texture asset;
+    controlled by amount and threshold.
+
+======================================================================
+7. DEPTH OF FIELD
+======================================================================
+
+Use current depth and verified camera matrices.
+
+Manual model:
+
+    focus distance;
+    focus range;
+    near blur;
+    far blur;
+    maximum radius.
+
+Circle-of-confusion approximation:
+
+    distance = reconstructed view-space distance;
+    near/far defocus calculated separately;
+    signed CoC determines blur amount;
+    gather source from a fixed rotational sample pattern;
+    quality controls tap count.
+
+0.0.36 does not claim autofocus or physically exact lens simulation.
+The implementation must be stable, adjustable and neutral when disabled.
+
+======================================================================
+8. MOTION BLUR
+======================================================================
+
+Use the verified native MOTION resource.
+
+The GZFX3 capture proves identity and lifetime but does not yet lock an exact
+screen-space scale convention. Therefore:
+
+    expose strength and max-pixel clamp;
+    retain a motion-scale compatibility parameter internally;
+    keep default disabled;
+    log sampled/derived maximum motion;
+    fail neutral if the motion SRV cannot be created.
+
+The shader performs a symmetric linear gather along the native vector. It is one
+branch inside the unified composite, not a separate scene copy.
+
+======================================================================
+9. DEPTH FOG
+======================================================================
+
+0.0.36 implements depth-based product fog, not native weather replacement.
+
+Inputs:
+
+    reconstructed view distance;
+    start/end;
+    density;
+    RGB color;
+    optional height-like vertical weighting only if camera-space position is
+    stable.
+
+This gives the product a working fog function while native weather/sky/fog
+ownership remains a later engine-domain project.
+
+======================================================================
+10. COLOR / TONEMAP SHAPING
+======================================================================
+
+Order:
+
+    exposure;
+    white balance approximation;
+    lift/gamma/gain;
+    saturation/vibrance;
+    contrast;
+    gamma;
+    toe/shoulder/white clip.
+
+White balance:
+
+    temperature shifts red/blue in opposite directions;
+    tint shifts green/magenta;
+    neutral 0/0 is exact identity.
+
+Lift/gamma/gain:
+
+    scalar first implementation;
+    architecture leaves room for per-channel controls;
+    defaults are identity.
+
+Vibrance:
+
+    increases saturation more strongly for low-saturation colors;
+    protects already saturated colors.
+
+Tonemap shaping:
+
+    toe and shoulder are bounded curve modifiers;
+    white clip bounds highlights before Skyrim's own tonemap;
+    defaults are identity.
+
+This is pre-tonemap shaping, not native tonemap replacement.
+
+======================================================================
+11. OPTICS / COMPOSITION
+======================================================================
+
+Vignette:
+    radial smoothstep;
+    neutral at zero.
+
+Film grain:
+    deterministic frame-varying monochrome noise;
+    amount and scale controls;
+    accessibility never depends on hue.
+
+Chromatic aberration:
+    radial red/blue channel offset;
+    neutral at zero.
+
+Sharpening:
+    high-pass / unsharp mask;
+    amount and clamp;
+    uses existing source samples.
+
+Denoise:
+    small edge-aware spatial blend using depth;
+    amount control;
+    neutral at zero.
+
+Letterbox/pillarbox:
+    normalized top/bottom and side mask;
+    black composition mask;
+    no hue-based acceptance.
+
+These are all branches of one final pass.
+
+======================================================================
+12. PRODUCT MODEL
+======================================================================
+
+Required product controls:
+
+    master enable;
+    quality tier;
+    preset;
+    custom slot;
+    load custom;
+    save custom;
+
+    exposure;
+    bloom;
+    color;
+    tonemap shaping;
+    DoF;
+    motion blur;
+    depth fog;
+    lens dirt;
+    vignette;
+    film grain;
+    chromatic aberration;
+    denoise;
+    sharpen;
+    bars.
+
+Settings must:
+
+    persist to Settings.ini;
+    clamp every value;
+    retain current ambient settings;
+    expose normalized mapping for the mouse menu;
+    support scrollable menu rows;
+    keep defaults neutral or current-baseline-compatible;
+    update one monotonically increasing settings revision.
+
+Built-in looks:
+
+    Clearfell:
+        clean, restrained contrast, cool-neutral, light sharpen.
+
+    Emberveil:
+        warm, stronger bloom, deeper shoulder.
+
+    Moonforge:
+        cool, darker exposure, restrained saturation.
+
+    Verdant North:
+        natural greens through temperature/tint/saturation balance.
+
+    Sable Cinema:
+        lower saturation, stronger contrast/vignette, mild bars and grain.
+
+Presets are parameter sets, not separate shaders.
+
+Custom 1/2/3:
+
+    store complete product values in separate INI sections;
+    load atomically into the live settings snapshot;
+    save explicitly from the menu;
+    keep ambient and post values together so a profile is coherent.
+
+======================================================================
+13. QUALITY TIERS
+======================================================================
+
+Quality is structural, not a label.
+
+Medium:
+
+    bloom pyramid sampled at fewer levels;
+    DoF gather 8 taps;
+    motion blur gather 6 taps;
+    denoise 4 taps;
+    reduced chromatic/sharpen sample work where possible.
+
+Ultra+:
+
+    bloom pyramid sampled at more levels;
+    DoF gather 16 taps;
+    motion blur gather 12 taps;
+    denoise 8 taps;
+    highest current post quality.
+
+Existing HBAO quality remains independently controllable in 0.0.36 because its
+temporal/artifact tuning is not yet converged.
+
+======================================================================
+14. DIAGNOSTICS / LOGGING
+======================================================================
+
+Re-enable understanding without re-enabling unbounded multi-gigabyte logging.
+
+Always-on compact files:
+
+    unified_renderer_status.txt
+        latest stage state;
+        active effect mask;
+        resource sizes/formats;
+        exposure state;
+        settings revision;
+        frame/applications/skips/failures.
+
+    unified_renderer_timings.csv
+        bounded rolling rows;
+        frame;
+        pyramid;
+        exposure;
+        composite;
+        total;
+        active mask;
+        quality.
+
+    unified_renderer_graph.csv
+        one row per logical stage/resource edge;
+        rewritten only when graph structure changes.
+
+Bounded detailed window:
+
+    automatically capture the first three valid world frames after graph
+    creation or structural reset;
+    capture another three frames on explicit manual capture;
+    do not capture every draw for the full play session.
+
+The existing full pipeline cartography remains available for targeted manual
+captures. Its continuous detail gate stays opt-in.
+
+======================================================================
+15. TEST STRATEGY
+======================================================================
+
+One large wave still requires deterministic contracts.
+
+Add tests for:
+
+    settings neutral defaults and clamps;
+    quality budgets;
+    built-in preset determinism;
+    custom profile round-trip;
+    effect-mask construction;
+    pass graph order;
+    resource plan;
+    shader source contains every required effect branch;
+    master-off identity;
+    disabled-effect identity;
+    PE/load/one-DLL packaging;
+    existing 40 contracts unchanged.
+
+The pre-UI harness must prove:
+
+    unified renderer applied;
+    one source copy;
+    one final scene writeback;
+    compact status/log emitted;
+    active graph contains all major feature families;
+    ambient ownership remains consistent.
+
+The test does not claim real visual quality. Field validation decides that.
+
+======================================================================
+16. NATIVE-DOMAIN BOUNDARY
+======================================================================
+
+Do not counterfeit native systems with post effects.
+
+Still separate after the unified product post graph:
+
+    shadow-map enhancement/replacement;
+    cloud shadows;
+    sun/moon shafts tied to sky/weather;
+    native water/refraction/underwater;
+    reflection/IBL;
+    material wetness/snow/foliage;
+    fire/emissive/particle/local-light replacement;
+    native tonemap replacement;
+    display HDR.
+
+Those domains will consume the same semantic/stage registry and diagnostics
+model. They are not permission to return to disconnected architecture.
+
+======================================================================
+17. SELECTED 0.0.36 SCOPE
+======================================================================
+
+Implement in one coherent branch:
+
+    unified post graph;
+    shared luminance/bloom pyramid;
+    exposure history;
+    manual/automatic exposure;
+    bloom/glow/lens dirt;
+    color controls;
+    pre-tonemap shaping;
+    DoF;
+    motion blur;
+    depth fog;
+    vignette;
+    grain;
+    chromatic aberration;
+    denoise;
+    sharpening;
+    bars;
+    master/quality/preset/custom-profile product model;
+    scrollable menu;
+    bounded integrated logs;
+    current ambient integration in the same status ledger.
+
+Do not split these into one-feature PRs.
+
+END RESEARCH
