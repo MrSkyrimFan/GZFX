@@ -6,6 +6,7 @@
 #include "gzfx/diagnostics/deferred_context_cartography.hpp"
 #include "gzfx/diagnostics/telemetry_listener.hpp"
 #include "gzfx/engine/commonlib_bridge.hpp"
+#include "gzfx/engine/native_domain_anchors.hpp"
 #include "gzfx/render/scene_effects.hpp"
 #include "gzfx/render/renderer_execution_service.hpp"
 #include "gzfx/render/semantic_authority.hpp"
@@ -2963,6 +2964,9 @@ namespace gzfx::diagnostics
                         drawIndexedActivity);
 
                 gzfx::engine::commonlib::
+                    OnPresent(g_frame);
+
+                gzfx::engine::native_domain_anchors::
                     OnPresent(g_frame);
 
                 if (!semantic_probe::SuppressSceneEffects())
