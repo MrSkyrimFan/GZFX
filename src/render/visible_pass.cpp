@@ -1637,7 +1637,8 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 gzfx::render::state::GetDevelopmentMode();
 
             parameters.mode =
-                inputs != nullptr
+                inputs != nullptr &&
+                    settings.productEnabled
                     ? developmentMode
                     : 0u;
 

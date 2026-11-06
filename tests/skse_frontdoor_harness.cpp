@@ -258,7 +258,7 @@ int wmain(
         version->dataVersion !=
             gzfx::skse::
                 PluginVersionData::kVersion ||
-        version->pluginVersion != 35 ||
+        version->pluginVersion != 36 ||
         std::string(version->name) != "GZFX" ||
         version->compatibleVersions[0] !=
             gzfx::skse::kRuntime_1_7_104 ||

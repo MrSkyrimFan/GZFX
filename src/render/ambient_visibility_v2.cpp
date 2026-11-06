@@ -4088,8 +4088,8 @@ void PackCS(
                 const auto& settings =
                     gzfx::settings::Get();
 
-                if (!settings.
-                        horizonOcclusionEnabled)
+                if (!settings.productEnabled ||
+                    !settings.horizonOcclusionEnabled)
                 {
                     g_signalHistory.valid = false;
                     g_finalVisibilityFrame = 0;
@@ -4101,7 +4101,9 @@ void PackCS(
                     {
                         WriteStatus(
                             event.frame,
-                            "disabled_horizon");
+                            settings.productEnabled
+                                ? "disabled_horizon"
+                                : "disabled_product");
                         g_lastStatusFrame =
                             event.frame;
                     }

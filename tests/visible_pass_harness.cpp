@@ -432,8 +432,9 @@ int wmain(int argc, wchar_t** argv)
         return 16;
     }
 
-    // Drive the first numeric slider through the same exported
-    // relative-mouse bridge used by the dinput8 proxy.
+    // Drive the first current menu row through the same exported
+    // relative-mouse bridge used by the DirectInput path. In 0.0.36 the
+    // first row is PRODUCT MASTER, so this click must persist Enabled=0.
     submitMouse(
         200,
         -314,
@@ -640,7 +641,8 @@ int wmain(int argc, wchar_t** argv)
             std::string::npos;
 
     const bool settingsPersisted =
-        settingsText.find("Strength=1.000") !=
+        settingsText.find(
+            "[Product]\nEnabled=0") !=
         std::string::npos;
 
     if (!active ||

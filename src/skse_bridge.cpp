@@ -167,7 +167,7 @@ extern "C"
         SKSEPlugin_Version =
     {
         gzfx::skse::PluginVersionData::kVersion,
-        35,
+        36,
         "GZFX",
         "Greenezone Software LLC",
         "",

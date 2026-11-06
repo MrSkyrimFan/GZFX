@@ -537,6 +537,16 @@ int wmain(
             diagnostics /
             L"product_control_submission.txt");
 
+    const std::string unifiedStatusLog =
+        ReadAll(
+            diagnostics /
+            L"unified_renderer_status.txt");
+
+    const std::string unifiedGraphLog =
+        ReadAll(
+            diagnostics /
+            L"unified_renderer_graph.csv");
+
     const bool injected =
         effectLog.find(
             "status=pre_ui_injected") !=
@@ -592,13 +602,43 @@ int wmain(
             "scene_effects_injected=true") !=
                 std::string::npos;
 
+    const bool unifiedApplied =
+        effectLog.find(
+            "unified_product_renderer_applied=true") !=
+                std::string::npos &&
+        unifiedStatusLog.find(
+            "status=applied") !=
+                std::string::npos;
+
+    const bool unifiedSingleCopy =
+        unifiedStatusLog.find(
+            "source_copy_count=1") !=
+                std::string::npos &&
+        unifiedStatusLog.find(
+            "scene_writeback_count=1") !=
+                std::string::npos;
+
+    const bool unifiedGraphComplete =
+        unifiedGraphLog.find(
+            "source_snapshot,MAIN_HDR,source_copy") !=
+                std::string::npos &&
+        unifiedGraphLog.find(
+            "product_composite") !=
+                std::string::npos &&
+        unifiedGraphLog.find(
+            "scene_writeback") !=
+                std::string::npos;
+
     if (!injected ||
         !signalRecorded ||
         !sceneChanged ||
         !ambientDepthApplied ||
         !indirectEnabled ||
         !ownershipConsistent ||
-        !productControlProof)
+        !productControlProof ||
+        !unifiedApplied ||
+        !unifiedSingleCopy ||
+        !unifiedGraphComplete)
     {
         std::cerr
             << "pre-UI stack failed acceptance\n"
@@ -610,10 +650,17 @@ int wmain(
             << " indirect_enabled=" << indirectEnabled
             << " ownership_consistent=" << ownershipConsistent
             << " product_control=" << productControlProof
+            << " unified_applied=" << unifiedApplied
+            << " unified_single_copy=" << unifiedSingleCopy
+            << " unified_graph=" << unifiedGraphComplete
             << "\n"
             << ambientDepthLog
             << "\n"
             << productControlLog
+            << "\n"
+            << unifiedStatusLog
+            << "\n"
+            << unifiedGraphLog
             << "\n"
             << effectLog
             << "\n"
