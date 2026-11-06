@@ -14,7 +14,7 @@ set(
 
 project(
     GZFX
-    VERSION 0.0.36
+    VERSION 0.0.37
     DESCRIPTION "SKSE-hosted native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -95,6 +95,7 @@ endfunction()
 add_library(GZFX SHARED
     src/dllmain.cpp
     src/engine/commonlib_bridge.cpp
+    src/engine/native_domain_anchors.cpp
     src/process_lifecycle.cpp
     src/skse_bridge.cpp
     src/paths.cpp
@@ -163,6 +164,16 @@ target_link_libraries(
         CommonLibSSE::CommonLibSSE
 )
 gzfx_apply_common(GZFXCommonLibContractHarness)
+
+add_executable(GZFXNativeDomainAnchorContractHarness
+    tests/native_domain_anchor_contract_harness.cpp
+)
+target_include_directories(
+    GZFXNativeDomainAnchorContractHarness
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+gzfx_apply_common(GZFXNativeDomainAnchorContractHarness)
 
 add_executable(GZFXDirectInputMouseContractHarness
     tests/directinput_mouse_contract_harness.cpp
@@ -443,6 +454,12 @@ add_test(
     COMMAND
         "$<TARGET_FILE:GZFXUnifiedProductContractHarness>"
         "${CMAKE_BINARY_DIR}/unified-product-contract-output"
+)
+
+add_test(
+    NAME native_domain_anchor_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXNativeDomainAnchorContractHarness>"
 )
 
 add_test(
