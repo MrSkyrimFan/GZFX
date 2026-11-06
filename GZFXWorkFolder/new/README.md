@@ -3,13 +3,13 @@
 Current runtime:
 
 ```text
-0.0.36-unified-product-renderer
+0.0.37-native-domain-anchors
 ```
 
 Current phase:
 
 ```text
-0.0.36 ENGINEERING CLOSED / 0.0.37 COMBINED NATIVE-DOMAIN ANCHOR WAVE NEXT / FIELD TEST DEFERRED TO COMBINED BUILD
+0.0.37 IMPLEMENTATION ACTIVE / COMBINED NATIVE-DOMAIN ANCHOR WAVE / NEXT FIELD RUN VALIDATES 0.0.36 + 0.0.37 TOGETHER
 ```
 
 0.0.36 completed authority has moved to `GZFXWorkFolder/old/`.
