@@ -612,6 +612,18 @@
                 << (usedMotion
                     ? "true"
                     : "false")
+                << " ao_allowed="
+                << (allowAo
+                    ? "true"
+                    : "false")
+                << " ao_enabled="
+                << (effectiveAoEnabled
+                    ? "true"
+                    : "false")
+                << " indirect_enabled="
+                << (settings.indirectBounceEnabled
+                    ? "true"
+                    : "false")
                 << " temporal="
                 << (temporalEnabled
                     ? "true"
