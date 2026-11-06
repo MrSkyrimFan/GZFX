@@ -1,0 +1,49 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.37
+Closure: 2026-11-05 local / 2026-11-06 UTC
+
+READ FIRST
+    AGENT.md
+    GZFXWorkFolder/old/GZFX_0.0.37_NATIVE_DOMAIN_ANCHOR_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/old/GZFX_0.0.37_NATIVE_DOMAIN_ANCHOR_FINDINGS.txt
+    GZFXWorkFolder/old/GZFX_0.0.37_NATIVE_DOMAIN_ANCHOR_RESEARCH.txt
+    GZFXWorkFolder/old/GZFX_0.0.37_NATIVE_DOMAIN_ANCHOR_BLUEPRINT.txt
+    GZFXWorkFolder/old/GZFX_0.0.36_UNIFIED_PRODUCT_RENDERER_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/new/README.md
+
+CURRENT RUNTIME
+    0.0.37-native-domain-anchors
+    0.0.37 ENGINEERING CLOSED / GZFX4 REAL-SKYRIM FIELD VALIDATION NEXT
+
+LATEST SOURCE / RELEASE
+    PR #42 merge: 0ddc9a97fcf462ed404b21f2d751dfaf22bac22e
+    PR #43 merge: d5078fb0f23058249052570c1e2688b172dd4020
+    Windows main CI #301 / 42162962740: PASS 42/42 PE package
+    Validated inner ZIP: 819826 bytes
+    SHA-256: 3eaf5536eaef4089faeb1dd1e98105bd5ee0bebe598028cc2888a4074413e875
+    Git blob: 8e0e8744db35574ed8e8720ed161f9820e2523fe
+    Main package publication: be958535bdc5e939a54491979c90c69969c6fc8d
+    One runtime file: Data/SKSE/Plugins/GZFX.dll
+    Runtime: Skyrim Steam AE 1.7.104, SKSE 2.3.1, Address Library v5
+
+FIELD-EVIDENCE BOUNDARIES
+    0.0.35 GZFX3 sliders are real-Skyrim working.
+    0.0.36 unified 86-row HDR product graph automated-green but visual field-pending.
+    0.0.37 broad native-domain and late pipeline READ-ONLY observer automated-green;
+    no native ownership/stage promotion until real-Skyrim correlation.
+    AfterShadowProduction / WaterDomain / PostTonemapPreUi UNPROMOTED.
+    HBAO flicker and performance intentionally deferred.
+
+NEXT OWNER ACTION
+    One practical GZFX4 session, not a new probe build:
+    exterior day + effects, water/underwater, night, inn fire/local lights,
+    menu control/quality/presets and normal exit.
+    Upload compact GZFX4.zip (+ optional bounded GZFX4Diagnostics.zip) into repo.
+    Agent inspects repo directly and performs DATA -> FINDINGS -> RESEARCH
+    -> BLUEPRINT -> coherent native-domain implementation.
+
+DO NOT
+    Restart cartography, rewrite 0.0.36, tune flicker/performance first,
+    claim native renderer ownership from observer events, reintroduce ENB or
+    ReShade compatibility work, or ask owner to re-upload existing files to chat.
+
+END INDEX

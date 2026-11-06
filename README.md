@@ -29,7 +29,7 @@ Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
 current runtime: 0.0.37-native-domain-anchors
-current phase: 0.0.37 IMPLEMENTATION ACTIVE / COMBINED NATIVE-DOMAIN SEMANTIC CORRELATION
+current phase: 0.0.37 ENGINEERING CLOSED / COMBINED REAL-SKYRIM PRODUCT + NATIVE-DOMAIN FIELD VALIDATION NEXT
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
@@ -248,3 +248,12 @@ telemetry timeline used by the renderer.
 This is intentionally one combined wave. The next real-Skyrim session will
 validate the broad 0.0.36 product graph and return native-domain correlations
 together instead of testing one feature per DLL.
+
+
+## 0.0.37 automated-engineering closeout: ready for GZFX4
+
+PRs #42 and #43 are merged. The latest Windows merged-main run #301 (42162962740) passes PE/load, 42/42 tests, runtime smoke and one-DLL packaging. Exact main package: 819826-byte ZIP, SHA-256 `3eaf5536eaef4089faeb1dd1e98105bd5ee0bebe598028cc2888a4074413e875`, Git blob `8e0e8744db35574ed8e8720ed161f9820e2523fe`. Commit `be958535bdc5e939a54491979c90c69969c6fc8d` published that validated blob without rebuilding or rezipping it.
+
+0.0.37 adds a read-only engine-domain observer for shadow-light subtypes, world/water/effects phases, image-space water/reflection/underwater/volumetric identities and late post-processing/global and UI TAA/HDR/tonemap/copy/refraction/pre-UI anchors. It does not yet replace native weather, water, shadows, fire or lighting and does not prove final product visual quality. Shadow/water/PostTonemapPreUi promotions await real-Skyrim field correlation. The next step is one combined GZFX4 field test of the 0.0.36 unified renderer + 0.0.37 observers; HBAO flicker, performance and final tuning stay deferred.
+
+Controlling closeout: `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.37.txt` and `GZFXWorkFolder/old/GZFX_0.0.37_NATIVE_DOMAIN_ANCHOR_ENGINEERING_RESULT.txt`.

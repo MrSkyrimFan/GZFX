@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.36.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.36_UNIFIED_PRODUCT_RENDERER_ENGINEERING_RESULT.txt`. Continue from current main; do not reconstruct 0.0.36 from chat.\n
+> **NEW-CHAT TAKEOVER:** Read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.37.txt` first, followed by `GZFXWorkFolder/old/GZFX_0.0.37_NATIVE_DOMAIN_ANCHOR_ENGINEERING_RESULT.txt`. Current engineering is closed; the next required action is one combined GZFX4 real-Skyrim field run.
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
 ## 0. READ THIS FIRST
@@ -208,7 +208,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-0.0.37 IMPLEMENTATION ACTIVE / COMBINED NATIVE-DOMAIN SEMANTIC CORRELATION
+0.0.37 ENGINEERING CLOSED / COMBINED REAL-SKYRIM PRODUCT + NATIVE-DOMAIN FIELD VALIDATION NEXT
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
@@ -625,3 +625,19 @@ resource evidence remains mandatory.
 
 The next field session is deliberately combined: validate 0.0.36 broad effects
 and collect 0.0.37 domain correlations in the same run.
+
+
+## 10I. 0.0.37 full engineering closure and GZFX4 field gate
+
+0.0.37 engineering is CLOSED on Skyrim Steam 1.7.104 / SKSE 2.3.1:
+
+- PR #42 merged at `0ddc9a97fcf462ed404b21f2d751dfaf22bac22e`.
+- PR #43 merged at `d5078fb0f23058249052570c1e2688b172dd4020` and completed late post/TAA/tonemap/copy/refraction/pre-UI anchor observability.
+- Latest merged-main Windows CI #301 / workflow 42162962740 passed PE, 42/42, packaging, content checks, artifact upload and stage to `lance-package`.
+- The exact inner artifact, 819826 bytes SHA-256 `3eaf5536eaef4089faeb1dd1e98105bd5ee0bebe598028cc2888a4074413e875`, has Git blob `8e0e8744db35574ed8e8720ed161f9820e2523fe`.
+- Main package-only publication commit `be958535bdc5e939a54491979c90c69969c6fc8d` changes only `LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip` and retains that exact blob.
+- The ZIP has only `Data/SKSE/Plugins/GZFX.dll` as a runtime file. SKSE, Address Library and ENB/ReShade are not bundled.
+- No native renderer-domain ownership is promoted by hook firing alone; AfterShadowProduction, WaterDomain and PostTonemapPreUi remain unpromoted.
+- The broad 0.0.36 player-facing graph plus 0.0.37 read-only semantic observers are NOT yet real-Skyrim field-tested together.
+
+Read the full proof record in `GZFXWorkFolder/old/GZFX_0.0.37_NATIVE_DOMAIN_ANCHOR_ENGINEERING_RESULT.txt` before interpreting any results. Next action: one combined GZFX4 daylight/water/night/inn-fire/UI run, then DATA -> FINDINGS -> RESEARCH -> BLUEPRINT. The HBAO flicker/performance issues remain deliberately deferred and must not derail this field gate.

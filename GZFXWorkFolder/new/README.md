@@ -9,13 +9,12 @@ Current runtime:
 Current phase:
 
 ```text
-0.0.37 IMPLEMENTATION ACTIVE / COMBINED NATIVE-DOMAIN ANCHOR WAVE / NEXT FIELD RUN VALIDATES 0.0.36 + 0.0.37 TOGETHER
+0.0.37 ENGINEERING CLOSED / COMBINED REAL-SKYRIM PRODUCT + NATIVE-DOMAIN FIELD VALIDATION NEXT
 ```
 
-0.0.36 completed authority has moved to `GZFXWorkFolder/old/`.
+0.0.37 engineering is closed. Its three completed findings/research/blueprint TXT records and full CI/package engineering result are preserved in `GZFXWorkFolder/old/`. There is no active 0.0.37 implementation blueprint in this directory.
 
-The remaining long-lived renderer-domain re-audit records stay active in this
-workspace because they directly govern 0.0.37:
+Retained long-lived evidence for the next field correlation:
 
 ```text
 GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_1.txt
@@ -25,8 +24,4 @@ GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
 ```
 
-0.0.37 objective: add one combined semantic-anchor/telemetry layer for native
-shadow, water/reflection/underwater, volumetric, sky/particle and post/UI
-domains using existing D3D semantic evidence plus typed CommonLib/Address
-Library engine access. Do not request another generic field run and do not split
-the work into one-feature DLLs.
+Next required action: install the verified 0.0.37 DLL from main, run one combined real-Skyrim test covering 0.0.36 player effects, daytime/water/night/inn fire and 0.0.37 native/late anchors, then upload GZFX4.zip (or bounded GZFX4Diagnostics.zip if needed). Process it through DATA -> FINDINGS -> RESEARCH -> BLUEPRINT before new implementation. Do not restart broad cartography or prioritize deferred HBAO performance/flicker.

@@ -1,0 +1,183 @@
+GZFX 0.0.37 — NATIVE-DOMAIN + LATE-PIPELINE ANCHORS
+FULL ENGINEERING RESULT
+Closure: 2026-11-05 America/Denver / 2026-11-06 UTC
+
+FINAL STATUS
+    ENGINEERING CLOSED
+    PR #42 MERGED / PR #43 MERGED
+    PR AND LATEST MERGED-MAIN WINDOWS X64 GREEN
+    LATEST MERGED-MAIN: 42/42 TESTS PASS
+    PE LOAD CONTRACT PASS
+    RUNTIME SMOKE PASS
+    ONE-DLL PACKAGE VERIFIED
+    INNER ARTIFACT BYTE-VERIFIED AGAINST STAGED GIT BLOB
+    EXACT PACKAGE PUBLISHED TO MAIN
+    ONE COMBINED GZFX4 REAL-SKYRIM FIELD PASS NEXT
+    NO REAL-SKYRIM 0.0.37 NATIVE ANCHOR SUCCESS CLAIM YET
+
+PLATFORM
+    Runtime: 0.0.37-native-domain-anchors
+    Skyrim Steam AE: 1.7.104
+    SKSE: 2.3.1
+    Address Library v5 external, versionlib-1-7-104-0.bin
+    CommonLibSSE-GG 2053e94fd1c147b36eae2b4338118552fba407e2 (MIT)
+    Product artifact: Data/SKSE/Plugins/GZFX.dll only
+
+OWNER POLICY PRESERVED
+    No circling, drift, repetitive one-feature DLL/test cycles.
+    Complete coherent renderer systems together.
+    0.0.36 unified HDR product graph remains integrated and intact.
+    Avoid double ambient-occlusion ownership (AV2 owns HBAO; ambient-depth indirect only).
+    Diagnostics bounded; full continuous detail remains opt-in.
+    No premature HBAO flicker, GPU performance or artistic default optimization.
+    Engine semantic observation is not proof of native renderer ownership.
+
+FIELD INPUT AND EARLIER PHASE
+    GZFX3.zip and gzfx3Diagnostics.zip under field_uploads/
+    GZFX3 proved 0.0.35 sliders respond; performance bad and high HBAO flickers around player.
+    0.0.36 product renderer merged, 86 controls and five built-in looks plus Custom 1/2/3.
+    0.0.36 effects remain visually untested in real Skyrim, intentionally combined with 0.0.37.
+
+PR #42 — COMBINED NATIVE-DOMAIN OBSERVER
+    Title: correlate native shadow, water, volumetric, and effects domains
+    PR: https://github.com/MrSkyrimFan/GZFX/pull/42
+    Final PR head: dc220803a4dd8efe829536714a0945a597364095
+    Merge: 0ddc9a97fcf462ed404b21f2d751dfaf22bac22e
+    PR CI run #297: 42159914223 SUCCESS; 42/42; PE, smoke, package PASS
+    Merged-main CI run #298: 42161180654 SUCCESS; 42/42; PE, smoke, package, stage PASS
+
+    Read-only high-level engine anchors:
+        Main_RenderDepth
+        Main_RenderShadowmasks
+        Main_RenderWorld
+        Main_RenderWaterEffects
+        BSShaderAccumulator_RenderEffects
+
+    Image-space families:
+        ISTemporalAA_Water, ISWaterBlend, ISUnderwaterMask,
+        ISApplyReflections, ISWaterFlow, water displacement/ripple,
+        volumetric lighting/apply/blur/composite.
+
+    Shadow observation:
+        live directional / frustum-spot / parabolic-omni classifications;
+        mainShadowSceneNode, activeShadowLights, map/descriptor/mask metadata.
+
+PR #43 — SAME-WAVE PRE-FIELD HARDENING
+    Title: complete late post-processing and pre-UI anchor coverage
+    PR: https://github.com/MrSkyrimFan/GZFX/pull/43
+    Final PR head: d0318ea88c1eade53f47516fcb8af05998ac9223
+    Merge: d5078fb0f23058249052570c1e2688b172dd4020
+    PR CI run #300: 42161628567 SUCCESS; 42/42; PE, smoke, package PASS
+    PR tested tree equals merged-main tree: c04e31acb44a9e6cc65c3dc8dcdd5ddd5024be42
+
+    Extends existing observer, not a new renderer or logger:
+        Main_PostProcessing (1.7.104 Address Library call site, E8 rel32 validated target)
+        MenuManager::DrawInterfaceStart / pre_ui
+        global_taa, ui_taa
+        hdr_downsample, hdr_adaptation
+        tonemap, image_copy, refraction
+        37 expected image-space effect identities, 48 generic binding capacity.
+
+    The post-processing hook decodes and validates an executable call target;
+    mismatches fail closed. Read-only Skyrim state observer; no engine renderer
+    state mutation or 0.0.36 graph replacement is authorized by this wave.
+
+LATEST MERGED-MAIN CI — FINAL GATE
+    Source SHA: d5078fb0f23058249052570c1e2688b172dd4020
+    Windows x64 workflow run #301: 42162962740
+    Result: SUCCESS
+    Build: PASS
+    PE/load: PASS
+    Runtime smoke: PASS
+    ctest: 100% tests passed, 0 tests failed out of 42
+    One-DLL package creation: PASS
+    Package contents verification: PASS
+    Artifact upload: PASS
+    Main-only `lance-package` staging: PASS
+    Artifact ID: 13477584617
+    Outer GitHub Actions artifact ZIP bytes: 818590
+
+INDEPENDENT ARTIFACT PROOF
+    GitHub artifact unwrapped, inner ZIP inspected directly.
+    Inner ZIP filename: GZFX-SkyrimSE-x64.zip
+    Inner ZIP byte count: 819826
+    Inner ZIP SHA-256:
+        3eaf5536eaef4089faeb1dd1e98105bd5ee0bebe598028cc2888a4074413e875
+    Inner ZIP Git blob SHA-1 (Git object framing):
+        8e0e8744db35574ed8e8720ed161f9820e2523fe
+    Archive entries:
+        Data/SKSE/ (directory)
+        Data/SKSE/Plugins/GZFX.dll (ONLY runtime file)
+    DLL uncompressed byte count: 1875456
+    DLL SHA-256:
+        47f8f2362bd7701c65c5df13aa3a46804631853e9917ea11ee067dcc37c3c6ca
+    DLL PE MZ header: present
+    No SKSE, Address Library, ENB, ReShade or secondary DLL packaged.
+
+STAGING AND MAIN PACKAGE PUBLICATION
+    `lance-package` staging commit:
+        2126f11b7b5d9f20d99d60ee2c37551fcc21305c
+    Staged file:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    Staged Git blob: 8e0e8744db35574ed8e8720ed161f9820e2523fe
+    This exactly matches independent Git-blob hash of the uploaded CI inner ZIP.
+    Main package publication commit:
+        be958535bdc5e939a54491979c90c69969c6fc8d
+    Main file Git blob: 8e0e8744db35574ed8e8720ed161f9820e2523fe
+    Main package commit changed ONLY that one ZIP, verified by compare endpoint.
+    No local rezip, binary rebuild, or package byte modification occurred.
+    Package and closeout commits carry [skip ci] as directed.
+
+DIAGNOSTICS IN 0.0.37
+    Existing: engine_events.csv extended, not duplicated.
+    Compact: native_domain_anchors.txt; native_domain_snapshot.txt.
+    Snapshot cadence bounded, approximately first valid frames and every 120 frames.
+    Existing D3D resource/semantic observations retained; full-detail mode opt-in.
+
+UNPROVEN / NOT PROMOTED
+    No real-Skyrim 0.0.37 field confirmation yet.
+    No proof that every hook fires in appropriate worlds/weather/interiors.
+    No proof that observer anchor names correlate to all D3D resource lifetimes.
+    AfterShadowProduction, WaterDomain and PostTonemapPreUi remain UNPROMOTED.
+    No native shadow-map filtering/replacement, water/refraction/underwater
+    replacement, clouds/weather/celestial ownership, particle/fire/local-light
+    source rendering, material response or true display HDR is claimed.
+    Visual response of the broad 0.0.36 post stack and five looks remains field pending.
+    HBAO temporal flicker, current GPU performance and final art tuning deferred.
+    Older-runtime certification and ENB/ReShade coexistence are NOT current goals.
+
+NEXT FIELD REQUIREMENT — GZFX4 (ONE SESSION)
+    Install exact 0.0.37 package from main with separate SKSE 2.3.1 and
+    Address Library v5 present. If legacy Settings.ini contains extreme values,
+    back up/rename it before launch rather than forcing those settings.
+
+    Day exterior: normal movement; try built-in looks, master, exposure,
+    bloom/local glow, color/tone, DoF, motion blur, fog and a few optics.
+    Water: view/circle water, enter/leave underwater when practical.
+    Night exterior: ordinary moon/sky/weather/shadow exposure.
+    Inn/fire interior: inspect fire, smoke, particles and local light responses.
+    Menu: scroll through 86 controls, verify mouse capture only while open,
+    confirm mouse-look restored when closed, try Medium/Ultra+ and optional custom.
+    Exit normally to flush bounded diagnostics.
+
+    Operator controls from current source:
+        Shift+Numpad1 menu toggle
+        Shift+Numpad4 frame/settings capture if desired
+    Do not impose simultaneous movement + capture octopus combinations;
+    do not force 86 individual min/max checks or huge continuous raw capture.
+
+    Expected return in repository field_uploads/:
+        GZFX4.zip
+        optional GZFX4Diagnostics.zip if file size needs partitioning
+    Each GitHub-uploaded file should remain under the 25 MB single-file limit.
+    Do not ask the owner to manually split multi-gigabyte telemetry archives.
+
+AFTER GZFX4
+    DATA -> full findings TXT in new -> short chat summary
+    RESEARCH -> full research TXT in new -> short chat summary
+    BLUEPRINT -> full blueprint TXT in new -> short chat summary
+    IMPLEMENT broad cohesive native-domain promotions where correlation proves
+    stage identity; otherwise fail closed and document exact gaps.
+    No micro-DLL cycle, no performance/HBAO-only diversion.
+
+END ENGINEERING RESULT
