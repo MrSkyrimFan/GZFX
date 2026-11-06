@@ -830,7 +830,7 @@ namespace gzfx::engine::native_domain_anchors
             }
 
             auto* const shader =
-                RE::skyrim_cast<
+                skyrim_cast<
                     RE::BSImagespaceShader*>(
                         effect);
 
