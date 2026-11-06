@@ -29,7 +29,7 @@ Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
 current runtime: 0.0.35-product-control-recovery
-current phase: 0.0.35 PRODUCT CONTROL RECOVERY / REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION NEXT
+current phase: 0.0.35 ENGINEERING CLOSED / REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION NEXT
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
