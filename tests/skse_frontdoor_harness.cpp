@@ -258,7 +258,7 @@ int wmain(
         version->dataVersion !=
             gzfx::skse::
                 PluginVersionData::kVersion ||
-        version->pluginVersion != 36 ||
+        version->pluginVersion != 37 ||
         std::string(version->name) != "GZFX" ||
         version->compatibleVersions[0] !=
             gzfx::skse::kRuntime_1_7_104 ||
@@ -495,6 +495,11 @@ int wmain(
             diagnostics /
             L"directinput_mouse.txt");
 
+    const std::string nativeAnchors =
+        ReadAll(
+            diagnostics /
+            L"native_domain_anchors.txt");
+
     const bool bridgeOk =
         bridge.find(
             "preload_entered=true") !=
@@ -531,6 +536,9 @@ int wmain(
                 std::string::npos &&
         bridge.find(
             "message=data_loaded") !=
+                std::string::npos &&
+        bridge.find(
+            "native_domain_anchors_armed=true") !=
                 std::string::npos;
 
     const bool graphicsOk =
@@ -555,9 +563,18 @@ int wmain(
             "directinput8_create_hooked=true") !=
                 std::string::npos;
 
+    const bool nativeAnchorsOk =
+        nativeAnchors.find(
+            "armed=true") !=
+                std::string::npos &&
+        nativeAnchors.find(
+            "test_bypass=true") !=
+                std::string::npos;
+
     if (!bridgeOk ||
         !graphicsOk ||
-        !directInputOk)
+        !directInputOk ||
+        !nativeAnchorsOk)
     {
         std::cerr
             << "SKSE bridge, graphics, or DirectInput front-door proof failed.\n"
@@ -569,6 +586,8 @@ int wmain(
             << startup
             << "\n--- directinput ---\n"
             << directInput
+            << "\n--- native anchors ---\n"
+            << nativeAnchors
             << "\n";
 
         return 10;

@@ -21,7 +21,28 @@ namespace gzfx::diagnostics::telemetry_listener
     enum class EngineAnchor : std::uint32_t
     {
         PostProcessing = 0,
-        PreUi
+        PreUi,
+        MainDepth,
+        MainShadowMasks,
+        MainWorld,
+        MainWaterEffects,
+        Effects,
+        ShadowDirectional,
+        ShadowSpot,
+        ShadowOmni,
+        ShadowUnknown,
+        WaterTaa,
+        WaterBlend,
+        ApplyReflections,
+        UnderwaterMask,
+        VolumetricLighting,
+        ApplyVolumetricLighting,
+        VolumetricBlurH,
+        VolumetricBlurV,
+        CompositeVolumetricLighting,
+        WaterFlow,
+        WaterDisplacement,
+        Count
     };
 
     enum class EnginePhase : std::uint32_t

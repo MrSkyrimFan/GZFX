@@ -189,7 +189,7 @@ foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.36-unified-product-renderer
+0.0.37-native-domain-anchors
 
 Wave 1:
 CLOSED
@@ -208,7 +208,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-0.0.36 ENGINEERING CLOSED / 0.0.37 COMBINED NATIVE-DOMAIN ANCHOR WAVE NEXT / FIELD TEST DEFERRED TO COMBINED BUILD
+0.0.37 IMPLEMENTATION ACTIVE / COMBINED NATIVE-DOMAIN SEMANTIC CORRELATION
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
@@ -609,3 +609,19 @@ The next wave is NOT another one-feature field test. 0.0.37 must add one combine
 native-domain observability layer for shadow, water/reflection/underwater,
 volumetric, sky/particle and post/UI semantic anchors, then the next real-Skyrim
 session validates 0.0.36 effects and returns those domain correlations together.
+
+
+## 10H. 0.0.37 combined native-domain anchor wave
+
+Owner direction forbids returning to one-feature field builds. 0.0.37 therefore
+adds one bounded read-only observer covering high-level shadow/world/water/effects
+phases, water/reflection/underwater image-space identities, volumetric identities,
+and live directional/spot/omni shadow-light render targets.
+
+All observations feed the existing engine-event timeline and compact 120-frame
+snapshots. This wave does not write Skyrim renderer state and does not promote a
+domain merely because an engine hook fires. Field correlation with existing D3D
+resource evidence remains mandatory.
+
+The next field session is deliberately combined: validate 0.0.36 broad effects
+and collect 0.0.37 domain correlations in the same run.

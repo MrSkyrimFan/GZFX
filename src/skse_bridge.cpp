@@ -2,6 +2,7 @@
 
 #include "gzfx/diagnostics/startup_trace.hpp"
 #include "gzfx/engine/commonlib_bridge.hpp"
+#include "gzfx/engine/native_domain_anchors.hpp"
 #include "gzfx/paths.hpp"
 #include "gzfx/process_lifecycle.hpp"
 #include "gzfx/runtime.hpp"
@@ -156,6 +157,18 @@ namespace
                 (commonLibBound
                     ? "true"
                     : "false"));
+
+            const bool nativeDomainAnchorsArmed =
+                commonLibBound &&
+                gzfx::engine::native_domain_anchors::
+                    ArmAfterDataLoaded();
+
+            AppendStatus(
+                std::string(
+                    "native_domain_anchors_armed=") +
+                (nativeDomainAnchorsArmed
+                    ? "true"
+                    : "false"));
         }
     }
 }
@@ -167,7 +180,7 @@ extern "C"
         SKSEPlugin_Version =
     {
         gzfx::skse::PluginVersionData::kVersion,
-        36,
+        37,
         "GZFX",
         "Greenezone Software LLC",
         "",
