@@ -1,0 +1,487 @@
+GZFX 0.0.35 — PRODUCT CONTROL RECOVERY BLUEPRINT
+Date: 2026-11-05
+Branch: feature/0.0.35-product-control-recovery
+
+OBJECTIVE
+Repair the current player-facing effect controls so they visibly drive the
+current renderer while preserving the field-proven AV2/Wave3/HDR/TAA foundation,
+and reduce routine field evidence to a repo-safe bounded volume.
+
+RUNTIME
+    0.0.35-product-control-recovery
+
+SCOPE
+    AV2 Horizon/HBAO settings
+    AmbientContact
+    spatial IndirectBounce / SSIL
+    LocalGlow
+    live parameter proof
+    routine telemetry bounding
+    split-upload intake documentation
+
+NOT IN THIS WAVE
+    Bloom
+    DoF
+    exposure/adaptation
+    color grading
+    tonemap replacement
+    motion blur
+    cinematic optics
+    presets/profile system
+    native shadows
+    sky/weather/water/material native executors
+
+Those remain explicit recovery/native waves in:
+    GZFX_0.0.35_PRODUCT_RECOVERY_MATRIX.csv
+
+======================================================================
+1. VERSION / AUTHORITY
+======================================================================
+
+Advance:
+    CMake project 0.0.35
+    vcpkg 0.0.35
+    gzfx::kVersion = 0.0.35-product-control-recovery
+    SKSE pluginVersion = 35
+
+Update:
+    README.md
+    AGENT.md
+    GZFXWorkFolder/new/README.md
+
+Current DATA/RESEARCH authority:
+    GZFX_0.0.35_GZFX2_PRODUCT_RECOVERY_FINDINGS.txt
+    GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_RESEARCH.txt
+    GZFX_0.0.35_PRODUCT_RECOVERY_MATRIX.csv
+    this blueprint
+
+======================================================================
+2. AV2 — LIVE HORIZON SETTINGS
+======================================================================
+
+Add:
+    #include "gzfx/settings.hpp"
+
+Extend AV2 Parameters without changing existing field-proven defaults.
+
+New submitted fields:
+    horizonStrengthMultiplier
+    horizonEnabled
+    quality-derived slices
+    quality-derived steps
+
+Use settings snapshot at command recording time.
+
+Horizon enabled:
+    setting false:
+        AV2 compute may skip for normal field execution
+        stock AO remains untouched
+    setting true:
+        current AV2 path active
+
+Horizon strength:
+    setting default 0.25 must preserve current AV2 visual baseline.
+
+    multiplier =
+        clamp(setting / 0.25, 0.0, 4.0)
+
+Pack shader:
+    raw visibility = current AV2 result
+    occlusion = 1 - raw visibility
+    adjusted visibility =
+        saturate(1 - occlusion * multiplier)
+
+Mode 1:
+    left remains stock
+    right uses adjusted AV2
+
+Mode 2:
+    full uses adjusted AV2
+
+Horizon radius:
+    preserve current baseline:
+        28 setting -> 240 RadiusWorld
+
+    mapping:
+        radiusWorld =
+            clamp(
+                240 * radiusPixels / 28,
+                48,
+                960)
+
+Horizon quality:
+    0 -> slices 2 / steps 4
+    1 -> slices 3 / steps 4
+    2 -> slices 3 / steps 6 [current baseline]
+    3 -> slices 4 / steps 8
+
+Quality therefore changes actual work.
+
+AV2 status diagnostic must write:
+    horizon_enabled
+    horizon_strength_setting
+    horizon_strength_multiplier
+    horizon_radius_setting
+    horizon_radius_world
+    horizon_quality
+    submitted_slices
+    submitted_steps
+
+======================================================================
+3. LEGACY AMBIENT-DEPTH — INDIRECT-ONLY POLICY
+======================================================================
+
+Change public internal signature:
+
+    ambient_depth::Apply(
+        frame,
+        device,
+        context,
+        inputs,
+        allowAo)
+
+Default/callers may retain allowAo=true where appropriate.
+
+Inside Apply:
+
+    effectiveAoEnabled =
+        allowAo &&
+        settings.horizonOcclusionEnabled
+
+Early neutral skip becomes:
+    if !effectiveAoEnabled &&
+       !settings.indirectBounceEnabled
+        -> skip_disabled
+
+GPU parameters:
+    aoEnabled = effectiveAoEnabled
+    indirectEnabled = settings.indirectBounceEnabled
+
+Do NOT alter existing:
+    indirect strength
+    indirect radius
+    indirect saturation
+    spatial/temporal stack behavior
+    output composition
+
+Under current AV2 modes:
+    allowAo=false
+
+This recovers SSIL without double-HBAO.
+
+ambient_depth_stack.txt must record:
+    ao_allowed
+    ao_enabled
+    indirect_enabled
+    submitted values
+    applications
+
+======================================================================
+4. SCENE EFFECTS — REMOVE THE GLOBAL AV2 BYPASS
+======================================================================
+
+Current bug:
+    AV2 ownership causes immediate return before every scene effect.
+
+Replace with:
+    wave4OwnsAo =
+        ambient_visibility_v2::OwnsDevelopmentMode(mode)
+
+Keep mode 1/2 requirement.
+
+Call:
+    ambient_depth::Apply(
+        ...,
+        !wave4OwnsAo)
+
+Then continue current scene-effects pass.
+
+Result:
+    AV2 owns Horizon/HBAO
+    legacy stack contributes indirect only under AV2
+    SceneEffects contributes AmbientContact + LocalGlow
+
+Preserve:
+    current source/depth/camera validation
+    existing shader
+    split/full development mode behavior
+    fail-closed resource validation
+
+pre_ui_effects.txt must no longer report:
+    skipped_wave4_owns_mode
+
+for an otherwise valid mode 1/2 frame.
+
+It must report active/injection status and current settings.
+
+======================================================================
+5. AMBIENT CONTACT / LOCAL GLOW
+======================================================================
+
+No algorithm replacement in 0.0.35.
+
+Use current implementations and current settings:
+
+AmbientContact:
+    Strength
+    RadiusPixels
+
+LocalGlow:
+    Enabled
+    Strength
+    Threshold
+    RadiusPixels
+
+Required proof:
+    current settings appear in pre_ui_effects.txt
+    injection count increases
+    field slider changes are reflected in subsequent diagnostics
+    visible effect changes are owner-observable at deliberately extreme values
+
+======================================================================
+6. GPU CONTROL PROOF
+======================================================================
+
+Add one compact diagnostics file:
+
+    Diagnostics/product_control_submission.txt
+
+Update at bounded cadence or on changed submitted settings.
+
+Fields:
+    version
+    frame
+    mode
+
+    ambient_contact_strength
+    ambient_contact_radius
+
+    horizon_enabled
+    horizon_strength_setting
+    horizon_strength_multiplier
+    horizon_radius_setting
+    horizon_radius_world
+    horizon_quality
+    horizon_slices
+    horizon_steps
+
+    indirect_enabled
+    indirect_strength
+    indirect_radius
+    indirect_saturation
+
+    local_glow_enabled
+    local_glow_strength
+    local_glow_threshold
+    local_glow_radius
+
+    av2_applied_frame
+    indirect_stack_applied
+    scene_effects_injected
+
+This file is evidence that CPU settings reached active render owners.
+Do not produce per-frame copies.
+
+======================================================================
+7. ROUTINE TELEMETRY BOUNDING
+======================================================================
+
+Current automatic detail gate is retired as DEFAULT behavior.
+
+Add:
+    bool g_lateDetailEnabled
+
+Set true only when:
+    GZFX_TELEMETRY_LATE_DETAIL environment variable exists
+    OR full-pipeline test override exists
+
+Change automatic detail-gate callbacks:
+    only start/stop late detailed pipeline collection when
+        g_lateDetailEnabled == true
+
+Default routine field run:
+    no pipeline_runs rows from the automatic late interval
+
+Retain:
+    frames.csv
+    seconds.csv
+    stages.csv
+    semantics.csv
+    resources.csv
+    transitions.csv
+    ownership.csv
+    timings.csv
+    present_timeline.csv
+    engine_events.csv
+    compact diagnostics
+
+Manifest/status must record:
+    late_detail_enabled=true/false
+
+Tests that explicitly require pipeline detail:
+    set the environment flag in CMake test properties
+
+No regression to renderer cartography tests is allowed.
+
+Target ordinary field return:
+    compressed output comfortably below 24 MB.
+
+======================================================================
+8. FIELD-UPLOAD DOCUMENTATION
+======================================================================
+
+Update:
+    GZFXWorkFolder/field_uploads/README.md
+
+One logical return may consist of:
+    GZFX3.zip
+    GZFX3Telemetry.zip
+
+or:
+    GZFX3-part01.zip
+    GZFX3-part02.zip
+
+Agent combines matching logical prefixes.
+
+But routine 0.0.35+ runs should no longer require telemetry splitting unless a
+targeted forensic campaign was explicitly armed.
+
+Never ask the owner to manually split multi-gigabyte output.
+
+======================================================================
+9. TESTS
+======================================================================
+
+Retain all 39 existing tests.
+
+Add:
+    product_control_binding_contract
+
+Deterministic pure/helper coverage:
+
+AV2 mapping:
+    default strength .25 -> multiplier 1
+    0 -> multiplier 0
+    1 -> multiplier 4
+    default radius 28 -> world 240
+    quality 0/1/2/3 -> exact slice/step budgets
+
+AmbientDepth policy:
+    AV2 owns AO + indirect enabled:
+        aoEnabled=false
+        indirectEnabled=true
+
+    AV2 does not own AO:
+        settings AO controls remain available
+
+SceneEffects ownership:
+    AV2 ownership must not globally suppress SceneEffects
+
+Telemetry:
+    default late detail disabled
+    explicit test flag enables late detail
+
+Target:
+    40 / 40 tests minimum
+
+Existing HDR/TAA acceptance tests remain untouched.
+
+======================================================================
+10. CI / MERGE / PACKAGE
+======================================================================
+
+Required:
+    Windows x64 build PASS
+    PE load contract PASS
+    40/40 PASS
+    package exactly one file:
+        Data/SKSE/Plugins/GZFX.dll
+    PR artifact verified
+    PR merged
+    merged-main product gates PASS
+    package staged to lance-package
+    exact validated blob synced to main
+    package sync changes only Lance ZIP
+
+Then:
+    engineering result -> old/
+    findings/research/blueprint/matrix -> old/
+    new/ cleared back to still-active renderer-domain evidence
+    0.0.35 continuity index written
+
+======================================================================
+11. REAL-SKYRIM FIELD TEST
+======================================================================
+
+First test is intentionally visual/control-focused.
+
+Load into normal exterior/world.
+
+Open GZFX.
+
+Test these controls at extreme values, one family at a time:
+
+A. HORIZON / HBAO
+    Enabled ON
+    Strength min -> max
+    Radius min -> max
+    Quality 0 -> 3
+
+Expected:
+    obvious AO/horizon response
+    quality changes real workload
+
+B. AMBIENT CONTACT
+    Strength min -> max
+    Radius min -> max
+
+Expected:
+    near-contact darkening visibly changes
+
+C. INDIRECT BOUNCE
+    Enabled ON
+    Strength 0 -> max
+    Saturation low -> max
+
+Expected:
+    indirect color/energy visibly changes
+    no duplicate AO darkening
+
+D. LOCAL GLOW
+    Enabled ON
+    Strength 0 -> max
+    Threshold high -> low
+
+Expected:
+    emissive/high-luminance neighborhood glow visibly changes
+
+Then:
+    close GZFX
+    normal mouse resumes
+    play briefly exterior/interior
+    quit normally
+
+Return:
+    GZFX3.zip directly to repo
+
+Routine evidence should now be small enough to upload as one ZIP.
+If not, the telemetry-volume target remains failed.
+
+======================================================================
+12. ACCEPTANCE / NON-CLAIMS
+======================================================================
+
+0.0.35 succeeds only if:
+    sliders visibly affect their intended current effects
+    diagnostics prove submitted parameters
+    AV2 remains stable
+    indirect bounce works without double-AO
+    telemetry drops remain zero
+    HDR/TAA locked contracts remain 1:1
+    routine evidence volume is materially bounded
+
+0.0.35 does NOT restore the whole 0.0.51 product.
+It establishes the correct live control architecture on which recovery waves B-D
+will be built.
+
+END BLUEPRINT
