@@ -101,6 +101,12 @@ The historical report cites source files including:
 
 Those files are absent from current 0.0.35 repository source.
 
+The preserved 309,872,109-byte Library archive
+`GZFX_ALL_TEN_ARCHIVE_ITEMS_CONSOLIDATED_2026-10-29.zip` was also inspected
+directly. It contains exactly one consolidated text record and no source tree,
+so it does not contain recoverable copies of the old product executor/control
+files.
+
 Therefore:
     historical 0.0.51 statuses are targets/history;
     current capability claims require current source + current tests + current
