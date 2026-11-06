@@ -1,0 +1,103 @@
+GZFX 0.0.37 — NATIVE-DOMAIN ANCHOR RESEARCH
+Date: 2026-11-05
+
+PURPOSE
+Overlay typed Skyrim/Address Library identities on the existing D3D11 resource
+map. Engine identity and D3D structure remain independent evidence.
+
+PINNED ENGINE ACCESS
+    eddoursul/CommonLibSSE-GG
+    2053e94fd1c147b36eae2b4338118552fba407e2
+    MIT
+    Skyrim 1.7.104 + Address Library v5
+
+PUBLIC CORROBORATION
+Current Community Shaders FrameAnnotations exposes the same classes of anchors:
+    Main_RenderShadowmasks
+    Main_RenderWaterEffects
+    directional / frustum / parabolic shadow Render
+    BSCubeMapCamera
+    ISTemporalAA_Water
+    ISWaterBlend
+    ISApplyReflections
+    ISUnderwaterMask
+    volumetric image-space effects
+    high-level Effects interval
+    Sky / Water / Particle shader annotation
+
+Reference source:
+    community-shaders/skyrim-community-shaders
+    dev/src/FrameAnnotations.cpp
+Inspected SHA:
+    bed7074931feaa98cd2abbb26f1bef924473c2cf
+
+GZFX implements its own bounded observer. No Community Shaders implementation
+is copied.
+
+ADDRESS LIBRARY HIGH-LEVEL ANCHORS
+    Main_RenderDepth           REL::RelocationID(100421,107139)
+    Main_RenderShadowmasks     REL::RelocationID(100422,107140)
+    Main_RenderWorld           REL::RelocationID(100424,107142)
+    Main_RenderWaterEffects    REL::RelocationID(35561,36560)
+    RenderEffects              REL::RelocationID(99940,106585)
+
+IMAGE-SPACE IDENTITIES IN PINNED COMMONLIB
+    ISTemporalAA_Water
+    ISWaterBlend
+    ISUnderwaterMask
+    ISApplyReflections
+    ISVolumetricLighting
+    ISApplyVolumetricLighting
+    ISVolumetricLightingBlurHCS
+    ISVolumetricLightingBlurVCS
+    ISCompositeVolumetricLighting
+    ISWaterFlow
+    water displacement/ripple/heightmap families
+
+SHADOW SUBTYPE IDENTITY
+    RE::DrawWorld::mainShadowSceneNode
+    ShadowSceneNode::activeShadowLights
+    ShadowSceneNode::sunShadowDirLight
+    BSShadowLight::Render virtual slot 0x0A
+    directional/frustum/parabolic/omni classification helpers
+    shadowMapCount / maskIndex / descriptor arrays
+
+SELECTED TELEMETRY
+Extend existing engine_events.csv rather than creating per-draw spam.
+
+Add anchors:
+    main_depth
+    main_shadowmasks
+    main_world
+    main_water_effects
+    effects
+    shadow_directional
+    shadow_spot
+    shadow_omni
+    water_taa
+    water_blend
+    apply_reflections
+    underwater_mask
+    volumetric_lighting
+    apply_volumetric_lighting
+    volumetric_blur_h
+    volumetric_blur_v
+    composite_volumetric_lighting
+    water_flow
+
+Keep:
+    post_processing
+    pre_ui
+
+Add compact status/snapshot files. Existing full pipeline detail remains manual
+and opt-in.
+
+FAIL CLOSED
+    arm only after CommonLib DataLoaded bind;
+    resolve through Address Library / live objects;
+    dedupe duplicate hook targets;
+    optional failures do not disable unrelated anchors;
+    observer writes no Skyrim renderer state;
+    hook firing alone does not promote a domain.
+
+END RESEARCH

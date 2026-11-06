@@ -1,0 +1,85 @@
+GZFX 0.0.37 — COMBINED NATIVE-DOMAIN ANCHOR BLUEPRINT
+Date: 2026-11-05
+Branch: feature/0.0.37-native-domain-anchors
+
+OBJECTIVE
+One bounded read-only semantic observer for shadow, water/reflection/underwater,
+volumetric and broad effects intervals in the same DLL that field-validates the
+0.0.36 unified product renderer.
+
+VERSION
+    0.0.37-native-domain-anchors
+    SKSE pluginVersion 37
+
+ADD
+    include/gzfx/engine/native_domain_anchors.hpp
+    src/engine/native_domain_anchors.cpp
+    tests/native_domain_anchor_contract_harness.cpp
+
+MODIFY
+    CMakeLists.txt
+    include/gzfx/version.hpp
+    src/skse_bridge.cpp
+    include/gzfx/diagnostics/telemetry_listener.hpp
+    src/diagnostics/telemetry_listener.cpp
+    tests/skse_frontdoor_harness.cpp
+
+ARM
+    after DataLoaded + successful CommonLib bind.
+
+HIGH-LEVEL MINHOOK ANCHORS
+    Main_RenderDepth
+    Main_RenderShadowmasks
+    Main_RenderWorld
+    Main_RenderWaterEffects
+    BSShaderAccumulator_RenderEffects
+
+SHADOW SUBTYPES
+    inspect live DrawWorld/main ShadowSceneNode on bounded cadence;
+    hook unique BSShadowLight::Render targets;
+    classify directional / frustum-spot / parabolic-omni;
+    record shadow map count, mask index and descriptor count.
+
+IMAGE-SPACE EFFECTS
+    resolve live ImageSpaceManager effects by enum index;
+    hook ImageSpaceEffect::Render for:
+        ISTemporalAA_Water
+        ISWaterBlend
+        ISUnderwaterMask
+        ISApplyReflections
+        ISVolumetricLighting
+        ISApplyVolumetricLighting
+        ISVolumetricLightingBlurHCS
+        ISVolumetricLightingBlurVCS
+        ISCompositeVolumetricLighting
+        ISWaterFlow
+
+    include additional water displacement/ripple/heightmap identities if the
+    same generic machinery can observe them without extra renderer paths.
+
+FRAME IDENTITY
+    callbacks use CurrentRendererFrame().
+    existing telemetry sequence + QPC supplies within-frame ordering.
+
+FILES
+    native_domain_anchors.txt
+    native_domain_snapshot.txt
+    existing engine_events.csv
+
+TESTS
+    anchor-name coverage;
+    selected ImageSpaceEffect IDs supported on flat SE/AE;
+    classification helper contracts;
+    test-bypass path remains non-invasive;
+    suite minimum 42.
+
+FIELD
+    one session, not one-feature builds:
+        exterior day;
+        water + underwater if convenient;
+        exterior night if convenient;
+        inn/fire interior;
+        normal movement;
+        exercise 0.0.36 presets/effects during the same run.
+
+END BLUEPRINT

@@ -1,0 +1,58 @@
+GZFX 0.0.37 — COMBINED NATIVE-DOMAIN ANCHOR FINDINGS
+Date: 2026-11-05
+
+STATUS
+    0.0.36 UNIFIED PRODUCT RENDERER MERGED AND AUTOMATED-GREEN
+    0.0.36 REAL-SKYRIM VISUAL TEST INTENTIONALLY DEFERRED
+    EXISTING SHADOW/WATER/VOLUMETRIC CLUSTERS ALREADY STRONGLY MAPPED
+    SKY/FIRE/PARTICLE DATA EXISTS BUT FINAL SEMANTIC DECOMPOSITION IS INCOMPLETE
+    OWNER REQUIRES LARGE COHERENT PASSES, NOT ONE-FEATURE FIELD LOOPS
+    0.0.37 AUTHORIZED AS ONE COMBINED NATIVE-DOMAIN OBSERVABILITY WAVE
+
+CONTROLLING EVIDENCE
+    GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_1.txt
+    GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
+    GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
+    GZFX_RESEARCH_PASS_7_RENDER_TIMELINE_ENGINE_ANCHORS_AND_LATE_STACK_CLOSURE.txt
+    GZFX3 split field return
+    current main after 0.0.36 closeout
+
+SHADOW
+    4096 array-2, 512 array-2 and 4096 array-8 depth families recur;
+    full-resolution SHADOW_MASK reads MAIN_DEPTH and large shadow arrays;
+    exact directional/local/omni subtype identity and Main_RenderShadowmasks
+    correlation remain open.
+
+WATER / REFLECTIONS
+    PublishPreWaterDepth is locked;
+    dynamic six-face RGBA16F cubemap is structurally verified;
+    half-resolution reflection/lighting chain and exterior apply are verified;
+    exact Main_RenderWaterEffects, ISTemporalAA_Water, ISWaterBlend,
+    ISApplyReflections, ISUnderwaterMask and flow/displacement correlation
+    remain open.
+
+VOLUMETRICS
+    density current/history, temporal apply and day/night exterior execution
+    are proven; exact image-space volumetric effect identity remains open.
+
+SKY / WEATHER
+    CommonLib already exposes current/last weather, sun, clouds, Masser,
+    Secunda, precipitation, time, fog and wind state. Final renderer-family
+    correlation is open.
+
+FIRE / PARTICLES
+    repeated inn/fire captures and interior-only families exist. Source
+    fire/emissive/particle/local-light semantics were never separated from
+    downstream bloom/glow.
+
+POST/UI
+    1.7.104 retains a unique pre-UI discovery candidate. PostTonemapPreUi
+    remains unpromoted until field correlation.
+
+OWNER FIELD POLICY
+    No generic walk.
+    No one-feature testing.
+    Next field run validates the whole 0.0.36 product graph and captures all
+    0.0.37 native-domain anchors together.
+
+END FINDINGS
