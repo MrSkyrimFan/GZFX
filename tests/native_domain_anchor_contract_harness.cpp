@@ -57,7 +57,7 @@ int main()
 
     static_assert(
         static_cast<std::uint32_t>(
-            Anchor::Count) >= 22);
+            Anchor::Count) >= 29);
 
     std::cout
         << "Native domain anchor contracts passed.\n";

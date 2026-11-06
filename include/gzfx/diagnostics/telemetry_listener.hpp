@@ -42,6 +42,13 @@ namespace gzfx::diagnostics::telemetry_listener
         CompositeVolumetricLighting,
         WaterFlow,
         WaterDisplacement,
+        GlobalTaa,
+        UiTaa,
+        HdrDownsample,
+        HdrAdaptation,
+        Tonemap,
+        ImageCopy,
+        Refraction,
         Count
     };
 

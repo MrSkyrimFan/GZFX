@@ -101,3 +101,82 @@ FAIL CLOSED
     hook firing alone does not promote a domain.
 
 END RESEARCH
+
+
+======================================================================
+PRE-FIELD HARDENING — LATE PIPELINE COMPLETION
+======================================================================
+
+The first PR implementation covered the native world-domain anchors but left
+two previously researched late-pipeline landmarks unarmed on 1.7.104.
+
+Current public source re-verification confirms:
+
+    MenuManager::DrawInterfaceStart
+        REL::RelocationID(79947, 82084)
+        thunk signature:
+            void(int64_t)
+
+    Main_PostProcessing call site
+        REL::RelocationID(100430, 107148)
+        AE call offset:
+            0x1E7
+        called function signature:
+            void(
+                RE::ImageSpaceManager*,
+                uint32_t,
+                RE::RENDER_TARGET,
+                void*,
+                bool)
+
+Current verification source:
+    community-shaders/skyrim-community-shaders
+    dev branch
+    Hooks.cpp
+    Features/Upscaling.h
+    Features/Upscaling.cpp
+    Features/HDRDisplay.cpp
+
+The pinned CommonLib revision also exposes the exact named image-space effects
+needed to correlate the entire late post chain:
+
+    ISTemporalAA
+    ISTemporalAA_UI
+    ISHDRTonemapBlendCinematic
+    ISHDRTonemapBlendCinematicFade
+    ISHDRDownSample16
+    ISHDRDownSample4
+    ISHDRDownSample16Lum
+    ISHDRDownSample4RGB2Lum
+    ISHDRDownSample4LumClamp
+    ISHDRDownSample16LumClamp
+    ISHDRDownSample4LightAdapt
+    ISHDRDownSample16LightAdapt
+    ISCopy
+    ISCopyDynamicFetchDisabled
+    ISCopyScaleBias
+    ISCopyCustomViewport
+    ISCopyGrayScale
+    ISRefraction
+
+Selected hardening:
+    reuse existing post_processing / pre_ui event names for the real 1.7.104
+    engine landmarks;
+    add grouped engine-event families:
+        global_taa
+        ui_taa
+        hdr_downsample
+        hdr_adaptation
+        tonemap
+        image_copy
+        refraction
+
+The Main_PostProcessing observer does not blindly hook an offset as a function.
+It resolves the version-aware Address Library call site, requires opcode E8,
+decodes the rel32 call target, verifies executable memory, then installs MinHook
+on the resolved target. Any mismatch fails closed.
+
+This completion is still read-only and does not promote PostTonemapPreUi before
+real-Skyrim event/D3D correlation.
+
+END PRE-FIELD HARDENING

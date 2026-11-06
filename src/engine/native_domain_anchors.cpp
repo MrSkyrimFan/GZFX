@@ -19,6 +19,7 @@ using namespace std::literals;
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
@@ -40,6 +41,15 @@ namespace gzfx::engine::native_domain_anchors
         using MainWorldFn = void(*)(bool);
         using MainWaterEffectsFn = void(*)();
         using RenderEffectsFn = void(*)(void*, std::uint32_t);
+        using MainPostProcessingFn =
+            void(*)(
+                RE::ImageSpaceManager*,
+                std::uint32_t,
+                RE::RENDER_TARGET,
+                void*,
+                bool);
+        using MenuDrawInterfaceStartFn =
+            void(*)(std::int64_t);
 
         using ImageRenderFn =
             void(*)(
@@ -59,9 +69,9 @@ namespace gzfx::engine::native_domain_anchors
                 RE::BSShadowLight*,
                 std::uint32_t&);
 
-        constexpr std::size_t kMaxEffectBindings = 24;
-        constexpr std::size_t kMaxRenderTargets = 24;
-        constexpr std::size_t kMaxDispatchTargets = 24;
+        constexpr std::size_t kMaxEffectBindings = 48;
+        constexpr std::size_t kMaxRenderTargets = 48;
+        constexpr std::size_t kMaxDispatchTargets = 48;
         constexpr std::size_t kMaxShadowTargets = 8;
 
         struct EffectSpec
@@ -70,8 +80,26 @@ namespace gzfx::engine::native_domain_anchors
             Anchor anchor;
         };
 
-        constexpr std::array<EffectSpec, 19> kEffects
+        constexpr std::array<EffectSpec, 37> kEffects
         {{
+            { RE::ImageSpaceManager::ISTemporalAA, Anchor::GlobalTaa },
+            { RE::ImageSpaceManager::ISTemporalAA_UI, Anchor::UiTaa },
+            { RE::ImageSpaceManager::ISHDRTonemapBlendCinematic, Anchor::Tonemap },
+            { RE::ImageSpaceManager::ISHDRTonemapBlendCinematicFade, Anchor::Tonemap },
+            { RE::ImageSpaceManager::ISHDRDownSample16, Anchor::HdrDownsample },
+            { RE::ImageSpaceManager::ISHDRDownSample4, Anchor::HdrDownsample },
+            { RE::ImageSpaceManager::ISHDRDownSample16Lum, Anchor::HdrDownsample },
+            { RE::ImageSpaceManager::ISHDRDownSample4RGB2Lum, Anchor::HdrDownsample },
+            { RE::ImageSpaceManager::ISHDRDownSample4LumClamp, Anchor::HdrDownsample },
+            { RE::ImageSpaceManager::ISHDRDownSample16LumClamp, Anchor::HdrDownsample },
+            { RE::ImageSpaceManager::ISHDRDownSample4LightAdapt, Anchor::HdrAdaptation },
+            { RE::ImageSpaceManager::ISHDRDownSample16LightAdapt, Anchor::HdrAdaptation },
+            { RE::ImageSpaceManager::ISCopy, Anchor::ImageCopy },
+            { RE::ImageSpaceManager::ISCopyDynamicFetchDisabled, Anchor::ImageCopy },
+            { RE::ImageSpaceManager::ISCopyScaleBias, Anchor::ImageCopy },
+            { RE::ImageSpaceManager::ISCopyCustomViewport, Anchor::ImageCopy },
+            { RE::ImageSpaceManager::ISCopyGrayScale, Anchor::ImageCopy },
+            { RE::ImageSpaceManager::ISRefraction, Anchor::Refraction },
             { RE::ImageSpaceManager::ISTemporalAA_Water, Anchor::WaterTaa },
             { RE::ImageSpaceManager::ISWaterBlend, Anchor::WaterBlend },
             { RE::ImageSpaceManager::ISUnderwaterMask, Anchor::UnderwaterMask },
@@ -147,12 +175,16 @@ namespace gzfx::engine::native_domain_anchors
         MainWorldFn g_mainWorld = nullptr;
         MainWaterEffectsFn g_mainWaterEffects = nullptr;
         RenderEffectsFn g_renderEffects = nullptr;
+        MainPostProcessingFn g_mainPostProcessing = nullptr;
+        MenuDrawInterfaceStartFn g_menuDrawInterfaceStart = nullptr;
 
         void* g_mainDepthTarget = nullptr;
         void* g_mainShadowMasksTarget = nullptr;
         void* g_mainWorldTarget = nullptr;
         void* g_mainWaterEffectsTarget = nullptr;
         void* g_renderEffectsTarget = nullptr;
+        void* g_mainPostProcessingTarget = nullptr;
+        void* g_menuDrawInterfaceStartTarget = nullptr;
 
         std::uintptr_t ModuleBase() noexcept
         {
@@ -211,6 +243,30 @@ namespace gzfx::engine::native_domain_anchors
                 protect == PAGE_EXECUTE_READ ||
                 protect == PAGE_EXECUTE_READWRITE ||
                 protect == PAGE_EXECUTE_WRITECOPY;
+        }
+
+        void* DecodeRel32Call(
+            std::uint8_t* const call) noexcept
+        {
+            if (call == nullptr ||
+                call[0] != 0xE8)
+            {
+                return nullptr;
+            }
+
+            std::int32_t displacement = 0;
+            std::memcpy(
+                &displacement,
+                call + 1,
+                sizeof(displacement));
+
+            auto* const target =
+                call + 5 +
+                displacement;
+
+            return Executable(target)
+                ? target
+                : nullptr;
         }
 
         void Emit(
@@ -358,6 +414,47 @@ namespace gzfx::engine::native_domain_anchors
                 Anchor::Effects,
                 Phase::Exit,
                 g_renderEffectsTarget);
+        }
+
+        void MainPostProcessingThunk(
+            RE::ImageSpaceManager* const manager,
+            const std::uint32_t a3,
+            const RE::RENDER_TARGET target,
+            void* const a4,
+            const bool a5)
+        {
+            Emit(
+                Anchor::PostProcessing,
+                Phase::Enter,
+                g_mainPostProcessingTarget);
+
+            g_mainPostProcessing(
+                manager,
+                a3,
+                target,
+                a4,
+                a5);
+
+            Emit(
+                Anchor::PostProcessing,
+                Phase::Exit,
+                g_mainPostProcessingTarget);
+        }
+
+        void MenuDrawInterfaceStartThunk(
+            const std::int64_t a1)
+        {
+            Emit(
+                Anchor::PreUi,
+                Phase::Enter,
+                g_menuDrawInterfaceStartTarget);
+
+            g_menuDrawInterfaceStart(a1);
+
+            Emit(
+                Anchor::PreUi,
+                Phase::Exit,
+                g_menuDrawInterfaceStartTarget);
         }
 
         const EffectBinding* FindEffect(
@@ -926,6 +1023,48 @@ namespace gzfx::engine::native_domain_anchors
             }
         }
 
+        void InstallPostProcessingHook()
+        {
+            try
+            {
+                const auto callAddress =
+                    REL::RelocationID(
+                        100430,
+                        107148).address() +
+                    REL::Relocate(
+                        0x1F0,
+                        0x1E7);
+
+                auto* const call =
+                    reinterpret_cast<
+                        std::uint8_t*>(
+                        callAddress);
+
+                void* const target =
+                    DecodeRel32Call(call);
+
+                if (target == nullptr)
+                {
+                    return;
+                }
+
+                g_mainPostProcessingTarget =
+                    target;
+
+                if (HookTarget(
+                        target,
+                        reinterpret_cast<void*>(
+                            &MainPostProcessingThunk),
+                        g_mainPostProcessing))
+                {
+                    ++g_highLevelHooks;
+                }
+            }
+            catch (...)
+            {
+            }
+        }
+
         void InstallHighLevelHooks()
         {
             InstallRelocationHook(
@@ -972,6 +1111,17 @@ namespace gzfx::engine::native_domain_anchors
                     &RenderEffectsThunk),
                 g_renderEffects,
                 g_renderEffectsTarget);
+
+            InstallRelocationHook(
+                REL::RelocationID(
+                    79947,
+                    82084),
+                reinterpret_cast<void*>(
+                    &MenuDrawInterfaceStartThunk),
+                g_menuDrawInterfaceStart,
+                g_menuDrawInterfaceStartTarget);
+
+            InstallPostProcessingHook();
         }
 
         void EnsureRoot(
@@ -1042,9 +1192,21 @@ namespace gzfx::engine::native_domain_anchors
                 << "high_level_hooks="
                 << g_highLevelHooks
                 << "\n"
+                << "expected_high_level_hooks=7\n"
+                << "post_processing_hooked="
+                << (g_mainPostProcessing != nullptr
+                    ? "true"
+                    : "false")
+                << "\n"
+                << "pre_ui_hooked="
+                << (g_menuDrawInterfaceStart != nullptr
+                    ? "true"
+                    : "false")
+                << "\n"
                 << "image_effects_bound="
                 << g_effectBindingCount
                 << "\n"
+                << "expected_image_effects=37\n"
                 << "render_targets_hooked="
                 << g_renderTargetCount
                 << "\n"

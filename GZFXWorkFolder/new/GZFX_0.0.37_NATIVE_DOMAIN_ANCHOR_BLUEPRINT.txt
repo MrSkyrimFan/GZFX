@@ -83,3 +83,52 @@ FIELD
         exercise 0.0.36 presets/effects during the same run.
 
 END BLUEPRINT
+
+
+======================================================================
+PRE-FIELD HARDENING ADDENDUM
+======================================================================
+
+Before field handoff, extend the same observer rather than creating another
+feature subsystem.
+
+Add high-level landmarks:
+    post_processing:
+        decode and hook the Main_PostProcessing call target from
+        REL::RelocationID(100430,107148) + runtime offset
+    pre_ui:
+        hook MenuManager::DrawInterfaceStart
+        REL::RelocationID(79947,82084)
+
+Add image-space families:
+    global_taa:
+        ISTemporalAA
+    ui_taa:
+        ISTemporalAA_UI
+    hdr_downsample:
+        HDR downsample/luminance/clamp variants
+    hdr_adaptation:
+        HDR LightAdapt variants
+    tonemap:
+        cinematic + cinematic fade
+    image_copy:
+        copy / dynamic-fetch-disabled / scale-bias / custom-viewport / grayscale
+    refraction:
+        ISRefraction
+
+Increase generic effect-binding capacity to 48. Do not add another executor,
+scheduler, diagnostics stream, or full-resolution render pass.
+
+Field acceptance must be able to correlate:
+    world/water/volumetric work
+    -> Main_PostProcessing
+    -> HDR downsample/adaptation
+    -> tonemap
+    -> global TAA
+    -> image copies
+    -> MenuManager DrawInterfaceStart / pre_ui
+
+PostTonemapPreUi remains a candidate until the combined real-Skyrim evidence
+shows a repeatable bracket.
+
+END PRE-FIELD HARDENING ADDENDUM

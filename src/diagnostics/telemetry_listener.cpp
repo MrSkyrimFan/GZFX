@@ -1289,6 +1289,13 @@ namespace gzfx::diagnostics::telemetry_listener
             case EngineAnchor::CompositeVolumetricLighting: return "composite_volumetric_lighting";
             case EngineAnchor::WaterFlow: return "water_flow";
             case EngineAnchor::WaterDisplacement: return "water_displacement";
+            case EngineAnchor::GlobalTaa: return "global_taa";
+            case EngineAnchor::UiTaa: return "ui_taa";
+            case EngineAnchor::HdrDownsample: return "hdr_downsample";
+            case EngineAnchor::HdrAdaptation: return "hdr_adaptation";
+            case EngineAnchor::Tonemap: return "tonemap";
+            case EngineAnchor::ImageCopy: return "image_copy";
+            case EngineAnchor::Refraction: return "refraction";
             case EngineAnchor::Count: return "count";
             }
             return "unknown";
