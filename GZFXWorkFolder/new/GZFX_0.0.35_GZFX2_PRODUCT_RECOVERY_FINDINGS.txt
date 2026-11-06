@@ -1,0 +1,669 @@
+GZFX 0.0.35 — GZFX2 REAL-SKYRIM DATA FINDINGS
+PRODUCT-CONTROL RECOVERY + ENB/RESHADE TARGET REBASE
+Date: 2026-11-05
+
+STATUS:
+    GZFX2 SPLIT FIELD RETURN INGESTED
+    0.0.34 DIRECTINPUT MENU OWNERSHIP FIELD-PROVEN
+    EFFECT-SLIDER TRANSPORT FIELD-PROVEN
+    EFFECT-SLIDER RENDER RESPONSE FIELD-FAILED
+    ROOT CAUSE FOUND IN CURRENT SOURCE
+    CURRENT SOURCE AUDITED AGAINST HISTORICAL 0.0.51 PRODUCT BASELINE
+    ROUTINE TELEMETRY VOLUME NOW A PRODUCT/WORKFLOW DEFECT
+
+======================================================================
+1. RAW GZFX2 FIELD INPUT
+======================================================================
+
+The owner returned one logical field session as two repository ZIPs because a
+single GitHub upload must stay below the practical 25 MB per-file ceiling.
+
+Permanent raw intake:
+
+    GZFXWorkFolder/field_uploads/GZFX2.zip
+    GZFXWorkFolder/field_uploads/GZFX2Telemetry.zip
+
+Part A:
+    file: GZFX2.zip
+    bytes: 7,428,327
+    Git blob: aadc69ed248f8e13ce42000a3ca58d64ea140774
+    SHA-256: f7b470a25810fa44e8d067a4551214225197d294ca6a567c23a0780abf11f6a5
+
+Part B:
+    file: GZFX2Telemetry.zip
+    bytes: 20,393,391
+    Git blob: d64d2ca433c21c7664585cadce3722fc927969a7
+    SHA-256: 459e1998947634c0cff922c6a114fdd8d031f957945294b21f375e5624aa8591
+
+Logical runtime:
+    0.0.34-directinput-menu-capture
+
+Logical telemetry session:
+    session_20261105_163604_33016
+
+The two ZIPs are one DATA return, not independent tests.
+
+======================================================================
+2. 0.0.34 DIRECTINPUT MENU OWNERSHIP — REAL-SKYRIM PASS
+======================================================================
+
+Diagnostics/directinput_mouse.txt:
+
+    status=armed
+    directinput8_create_hooked=true
+    directinput8_create_calls=1
+    create_device_hooked=true
+    create_device_calls=2
+    system_mouse_seen=true
+    get_device_state_hooked=true
+    get_device_data_hooked=true
+    state_reads=2921
+    data_reads=0
+    menu_packets_forwarded=1320
+    state_reads_suppressed=1320
+    data_reads_suppressed=0
+    last_error=<empty>
+
+Diagnostics/settings_menu.txt:
+
+    directinput_seen=true
+    directinput_packets=1373
+    directinput_delta_total=119,-463
+    cursor=557,138
+
+The owner additionally reports that the mouse can now be used inside the GZFX
+menu. Therefore the 0.0.34 DirectInput migration is field-proven.
+
+This is closed unless contradictory future data appears.
+
+======================================================================
+3. EFFECT SLIDERS — INPUT/PERSISTENCE PASS, RENDER RESPONSE FAIL
+======================================================================
+
+The owner reports that none of the current effect sliders produce a visible
+change in-game.
+
+The field evidence proves the sliders are not failing at mouse transport or INI
+persistence. Settings.ini contains strong non-default values:
+
+    [AmbientContact]
+    Strength=2.000
+    RadiusPixels=24.00
+
+    [HorizonOcclusion]
+    Enabled=1
+    Strength=1.000
+    RadiusPixels=28.00
+    Quality=2
+
+    [IndirectBounce]
+    Enabled=1
+    Strength=0.600
+    RadiusPixels=36.00
+    Saturation=1.500
+
+    [LocalGlow]
+    Enabled=1
+    Strength=1.375
+    Threshold=0.250
+    RadiusPixels=8.00
+
+Current source defaults are materially lower for several of those controls:
+
+    AmbientContact Strength default 0.62
+    AmbientContact Radius default 4.0
+    HorizonOcclusion Strength default 0.25
+    IndirectBounce Strength default 0.12
+    IndirectBounce Saturation default 1.00
+    LocalGlow Strength default 0.18
+    LocalGlow Threshold default 1.10
+
+The returned values therefore represent large enough changes that a correctly
+bound effect should be visibly different.
+
+The settings transport works.
+The renderer response does not.
+
+======================================================================
+4. EXACT ROOT CAUSE — CURRENT MODE OWNERSHIP ORPHANED THE SETTINGS
+======================================================================
+
+Diagnostics/pre_ui_effects.txt is conclusive:
+
+    status=skipped_wave4_owns_mode
+    frame=3280
+    injections=0
+    mode=2
+    ambient_contact_strength=2
+    ambient_contact_radius=24
+    local_glow_enabled=true
+    local_glow_strength=1.375
+    local_glow_threshold=0.25
+    local_glow_radius=8
+
+Current source:
+
+    src/render/scene_effects.cpp
+
+begins ApplyPreUi by asking:
+
+    ambient_visibility_v2::OwnsDevelopmentMode(mode)
+
+When true, it writes:
+
+    skipped_wave4_owns_mode
+
+and returns before:
+
+    ambient_depth::Apply(...)
+    settings-backed AmbientContact parameters
+    settings-backed LocalGlow parameters
+    scene-color effect injection
+
+Current:
+
+    ambient_visibility_v2::OwnsDevelopmentMode(mode)
+
+returns true for development modes 1 and 2.
+
+Those are the normal GZFX visual modes used in the field session.
+
+Therefore:
+
+    scene_effects is skipped in the modes where the user is testing GZFX.
+
+This is why:
+
+    AmbientContact settings do not reach scene_effects.
+    LocalGlow settings do not reach scene_effects.
+    ambient_depth::Apply is never reached through this path.
+    HorizonOcclusion settings do not reach their legacy stack.
+    IndirectBounce settings do not reach their legacy stack.
+
+======================================================================
+5. AV2 ITSELF DOES NOT CONSUME THE MENU EFFECT SETTINGS
+======================================================================
+
+Current source:
+
+    src/render/ambient_visibility_v2.cpp
+
+does NOT include gzfx/settings.hpp.
+
+Its Parameters structure carries hard-coded defaults such as:
+
+    radiusWorld=240.0
+    falloffFraction=0.35
+    distributionPower=2.0
+    visibilityPower=1.0
+    sliceCount=3
+    stepsPerSlice=6
+    depthSigma=30.0
+    normalPower=8.0
+    temporalBaseWeight=0.70
+    temporalMaxWeight=0.95
+
+MakeParameters only fills:
+
+    width
+    height
+    mipCount
+    frameIndex
+    temporalEnabled
+    mode
+
+The remaining values stay at those hard-coded defaults.
+
+Therefore AV2 can execute correctly while every artistic slider remains
+visually inert.
+
+This is exactly what GZFX2 demonstrates.
+
+======================================================================
+6. VISIBLE-PASS FALLBACK ALSO DOES NOT RESCUE THE SLIDERS
+======================================================================
+
+src/render/visible_pass.cpp does read:
+
+    ambientContactStrength
+    ambientContactRadiusPixels
+
+but the shader only applies that fallback AmbientContact when:
+
+    PreUiInjected == 0
+
+The CPU sets PreUiInjected when either:
+
+    scene_effects::WasInjectedFrame(frame)
+    OR
+    ambient_visibility_v2::WasAppliedFrame(frame)
+
+GZFX2 shows AV2 applications succeeding.
+
+Therefore the Present-time AmbientContact fallback is deliberately disabled on
+the active AV2 frames.
+
+Result:
+
+    the old scene-effects settings path is skipped;
+    the AV2 path is hard-coded;
+    the visible-pass fallback is suppressed because AV2 succeeded.
+
+The current effect sliders are consequently a disconnected control plane.
+
+======================================================================
+7. CURRENT RENDERER HEALTH — FOUNDATION STILL GREEN
+======================================================================
+
+GZFX2 main runtime:
+
+    GZFX.log version=0.0.34-directinput-menu-capture
+    status=initialized
+
+SKSE/CommonLib:
+
+    target_skse=2.3.1
+    target_runtime=1.7.104
+    runtime_initialized=true
+    directinput_mouse_armed=true
+    commonlib_module_ready=true
+    commonlib_skse_api_ready=true
+    commonlib_data_loaded_bound=true
+
+CommonLib engine snapshot:
+
+    status=bound
+    address_library_present=true
+    renderer_bound=true
+    renderer_correlated=true
+    fallback_attach_attempted=false
+
+Wave3:
+
+    status=executed
+    executions=2281
+    skips=0
+    hierarchy_valid=true
+    temporal_valid=true
+    history_valid=true
+
+AV2:
+
+    status=computed_temporal
+    computes=2099 in final sampled status
+    applications=2098 in final sampled status
+    skips=0
+
+Telemetry frames:
+    total Present frames=3,280
+
+Final frame counters:
+    Wave3 executions=2,303
+    AV2 computes=2,119
+    AV2 applications=2,119
+    AV2 skips=0
+
+Mode populations:
+    mode 0: 104 frames
+    mode 1: 2,913 frames
+    mode 2: 183 frames
+    mode 3: 14 frames
+    mode 4: 66 frames
+
+World-active/stage population:
+    2,303 frames
+
+Each of these locked/owned boundaries appears exactly 2,303 times:
+
+    AfterCameraZ
+    AfterOpaqueWorldMRT
+    AfterStockAO
+    BeforeAmbientScreenSpaceComposite
+    AtAmbientScreenSpaceComposite
+    AfterAmbientScreenSpaceComposite
+    BeforeVolumetricApply
+    AfterVolumetricApply
+    PublishPreWaterDepth
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+Telemetry:
+
+    enqueued=527,031
+    written=527,031
+    dropped=0
+    queue_depth=0
+    complete=true
+
+The slider defect does not invalidate the locked renderer foundation.
+
+======================================================================
+8. CURRENT SOURCE VS THE HISTORICAL CODEX-ERA 0.0.51 PRODUCT
+======================================================================
+
+A preserved Library authority was recovered:
+
+    GZFX_RELEASE_CAPABILITIES_AND_ALL_REMAINING_TARGETS_2026-10-29.txt
+
+Historical release identity:
+    GZFX 0.0.51
+    "RELEASE CAPABILITIES AND ALL 606 CORE TARGETS"
+
+This is historical evidence of the prior product, not proof that the current
+0.0.34 source still implements those systems.
+
+The historical 0.0.51 report states that the prior product owned:
+
+    AV2 ambient visibility
+    SSAO
+    HBAO
+    bounded ambient composition
+    spatial ambient filtering
+    private per-pixel AO temporal history
+    spatial SSIL
+
+    manual near/far depth of field
+    bloom/glow
+    manual exposure
+    adapted automatic exposure
+    basic RGB color grading
+    pre-tonemap toe/shoulder/clip shaping
+    bilateral denoise
+    procedural lens dirt
+    depth fog
+    native-vector linear motion blur
+    vignette
+    dynamic monochrome film grain
+    lateral/radial chromatic aberration
+    high-pass sharpening
+    letterbox/pillarbox masking
+
+Historical product-control surface:
+
+    100 visible effect controls
+    78 scalar sliders
+    22 toggles
+
+Historical quality tiers:
+    Medium
+    Ultra+
+
+Historical built-in looks:
+    Clearfell
+    Emberveil
+    Moonforge
+    Verdant North
+    Sable Cinema
+
+Historical custom slots:
+    Custom 1
+    Custom 2
+    Custom 3
+    save/load/update/rename/confirmed delete
+    restart persistence
+
+Historical master behavior:
+    binary Vanilla / GZFX switch
+    effect settings persist through the product/profile path
+
+The old report references product source that is NOT present in the current repo:
+
+    include/gzfx/ui/product_control_model.hpp
+    src/render/product_hdr_executor.cpp
+    src/render/product_hdr_executor_hlsl.inl
+    src/render/product_ldr_executor_hlsl.inl
+
+The current repo tree does not contain those product executor/control files.
+
+Therefore the old 0.0.51 product stack cannot be treated as current
+implementation.
+
+======================================================================
+9. HISTORICAL 0.0.51 LIMITS THAT WERE NEVER CLOSED
+======================================================================
+
+The old release report also explicitly stated that these were not yet owned:
+
+    native shadow-map replacement/enhancement
+    detailed/material/light shadows
+    point/spot-light shadows
+    distant/LOD shadows
+    cloud shadows
+    sun rays
+    moon rays
+    weather-native rendering
+    water rendering/replacement
+    reflections/material replacement
+    LUT grading workflow
+    native tonemap replacement
+    display HDR
+    broader GI / multibounce / temporal GI variants
+
+It also states:
+    SSIL was spatial, not temporal/multibounce GI.
+    AV2/AO was not proof of native shadows.
+
+Those historical limitations remain useful because the current target is again
+to reach and exceed useful ENB + ReShade visual capability, especially
+ENB-class Skyrim rendering/shading ownership.
+
+======================================================================
+10. CURRENT PRODUCT REALITY
+======================================================================
+
+Current 0.0.34 is NOT equivalent to the historical 0.0.51 player-facing product.
+
+Current source retains a strong renderer foundation:
+
+    SKSE lifecycle
+    CommonLib typed engine access
+    Address Library
+    D3D11/DXGI interception
+    renderer ownership / semantic map
+    Wave3 geometry/temporal foundation
+    AV2 ambient visibility
+    stage scheduler
+    locked HDR/TAA boundaries
+    renderer telemetry
+    menu/input
+    settings persistence
+
+Current source does NOT contain the prior full product executor/control stack.
+
+Current player-facing effect controls are also partially orphaned from the
+active renderer.
+
+The project must therefore treat the next work as:
+
+    PRODUCT EFFECT-STACK RECOVERY / REBUILD
+
+on top of the current, better-understood renderer foundation.
+
+This is not a greenfield renderer rewrite.
+
+======================================================================
+11. OWNER-LOCKED PRODUCT TARGET — REBASED
+======================================================================
+
+The target is not a small AO mod.
+
+The target remains:
+
+    a native GZFX graphics framework that can credibly sit beside or replace the
+    useful graphics role of ENB + ReShade, with particular emphasis on ENB-class
+    Skyrim rendering/shading quality.
+
+Required product domains include:
+
+AMBIENT / INDIRECT
+    SSAO / ambient contact
+    HBAO / horizon occlusion
+    SSIL / indirect bounce
+    higher-quality indirect radiance where technically justified
+    temporal stabilization
+    denoising
+    depth/normal-aware rejection
+
+LIGHT / SHADOW
+    contact shadows
+    directional sun shadows
+    moon shadows
+    local point/spot-light shadows
+    detailed/material shadows
+    distant/LOD shadows
+    cloud shadows
+    shadow filtering/stability
+
+SKY / ATMOSPHERE
+    sky fill / skylighting
+    clouds
+    cloud lighting
+    sun
+    moon
+    stars/celestials
+    aurora where appropriate
+    volumetric atmosphere
+    sun shafts/rays
+    moon shafts/rays
+    fog
+    weather-aware atmosphere
+
+WATER / REFLECTION
+    water shading
+    reflection ownership
+    refraction
+    underwater rendering
+    transitions
+    wet surfaces / weather response
+
+MATERIAL / WORLD LIGHTING
+    image-based lighting / environment response
+    complex materials
+    parallax/material response
+    grass/foliage response
+    snow/wetness response
+    fire
+    emissives
+    particles
+    local lights
+    particle/emissive lighting
+    subsurface-style material response where appropriate
+
+HDR / COLOR / POST
+    manual exposure
+    adaptive exposure
+    HDR scene processing
+    tonemap shaping / eventual native tonemap ownership
+    bloom / glow
+    color grading
+    LUT workflow
+    contrast
+    saturation / vibrance
+    brightness/exposure
+    lift/gamma/gain style grading
+    highlight handling
+    sharpening/reconstruction
+    depth of field
+    motion blur
+    lens dirt
+    vignette
+    film grain
+    chromatic aberration
+    letterbox/pillarbox
+    anti-aliasing / post-AA where useful
+    display HDR as a later explicit target
+
+PRODUCT / TOOLING
+    real live controls whose GPU constants actually change
+    five built-in looks
+    custom profile slots
+    save/load/update/rename/delete persistence
+    Medium and Ultra+ quality tiers with real workload differences
+    safe preset/configuration editor
+    compatibility/runtime certification
+    performance budgets
+    bounded diagnostics
+    eventual GZFX-owned extension/API surface where useful
+
+The goal is outcome breadth and quality.
+It does NOT require copying ENB/ReShade code, shader languages, APIs, SDKs,
+preset names, or arbitrary third-party shader ecosystems.
+
+======================================================================
+12. ROUTINE FIELD EVIDENCE VOLUME IS NOW A DEFECT
+======================================================================
+
+GZFX2 telemetry alone produced:
+
+    bytes_written=276,115,361
+
+Heavy files include four pipeline run segments of roughly 64 MB each before ZIP
+compression.
+
+The owner cannot upload a single repository file above the practical 25 MB
+ceiling and will not manually split 15–45 GB forensic captures into dozens or
+hundreds of ZIP files.
+
+This is a hard workflow/product requirement.
+
+New rule:
+
+    routine GZFX field validation MUST be bounded by construction.
+
+Target:
+
+    one logical field return
+    preferably one ZIP
+    each repository-uploaded ZIP < 24 MB for safety
+
+Broad continuous pipeline tracing must NOT be the default field mode now that the
+foundation contracts are known.
+
+Future diagnostics must use:
+
+    compact summary counters
+    bounded ring/window captures
+    targeted per-domain evidence
+    automatic segment caps
+    explicit opt-in forensic campaigns only when a real blocker requires them
+
+Do not ask the owner to manually manufacture massive split archives.
+
+======================================================================
+13. GZFX2 VERDICT
+======================================================================
+
+0.0.34 mouse ownership:
+    PASS
+
+Settings menu interaction:
+    PASS
+
+Settings.ini persistence:
+    PASS
+
+Effect slider visual response:
+    FAIL
+
+Current artistic control plane:
+    DISCONNECTED FROM ACTIVE AV2 / EFFECT GRAPH
+
+Current renderer foundation:
+    GREEN
+
+Current ENB/ReShade-class product breadth:
+    NOT PRESENT IN CURRENT SOURCE
+
+Historical 0.0.51 feature baseline:
+    RECOVERED AS DOCUMENTED AUTHORITY
+    SOURCE EXECUTOR BYTES NOT RECOVERED FROM CURRENT REPO
+
+Routine telemetry volume:
+    TOO LARGE / MUST BE BOUNDED
+
+NEXT REQUIRED PHASE:
+    targeted research + master recovery matrix + coherent 0.0.35 blueprint
+
+END FINDINGS

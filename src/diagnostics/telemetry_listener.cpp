@@ -333,6 +333,7 @@ namespace gzfx::diagnostics::telemetry_listener
         std::atomic<bool> g_overflowActive{false};
         std::atomic<bool> g_detailActive{false};
         bool g_fullPipelineDetail = false;
+        bool g_lateDetailEnabled = false;
         std::atomic<std::uint64_t> g_detailedPipelineRows{0};
 
         HANDLE g_wakeEvent = nullptr;
@@ -994,7 +995,8 @@ namespace gzfx::diagnostics::telemetry_listener
                 Event& stage,
             void*) noexcept
         {
-            if (!g_fullPipelineDetail)
+            if (!g_fullPipelineDetail &&
+                g_lateDetailEnabled)
             {
                 const auto action =
                     DetailGateForStage(
@@ -1544,7 +1546,14 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "detail_gate="
                 << (g_fullPipelineDetail
                     ? "full_pipeline"
-                    : "late_to_before_original_present")
+                    : (g_lateDetailEnabled
+                        ? "late_to_before_original_present"
+                        : "disabled"))
+                << "\n"
+                << "late_detail_enabled="
+                << (g_lateDetailEnabled
+                    ? "true"
+                    : "false")
                 << "\n"
                 << "detailed_pipeline_rows="
                 << g_detailedPipelineRows.load()
@@ -1701,7 +1710,14 @@ namespace gzfx::diagnostics::telemetry_listener
                 << "detail_gate="
                 << (g_fullPipelineDetail
                     ? "full_pipeline"
-                    : "late_to_before_original_present")
+                    : (g_lateDetailEnabled
+                        ? "late_to_before_original_present"
+                        : "disabled"))
+                << "\n"
+                << "late_detail_enabled="
+                << (g_lateDetailEnabled
+                    ? "true"
+                    : "false")
                 << "\n"
                 << "performance_note=forensic_build_not_release_fps_evidence\n"
                 << "renderer_identity_policy=creation_time_exact_hash\n"
@@ -2564,6 +2580,15 @@ namespace gzfx::diagnostics::telemetry_listener
                     static_cast<DWORD>(
                         std::size(fullPipeline))) > 0;
 
+            wchar_t lateDetail[8]{};
+            g_lateDetailEnabled =
+                g_fullPipelineDetail ||
+                GetEnvironmentVariableW(
+                    L"GZFX_TELEMETRY_LATE_DETAIL",
+                    lateDetail,
+                    static_cast<DWORD>(
+                        std::size(lateDetail))) > 0;
+
             g_detailActive.store(
                 g_fullPipelineDetail,
                 std::memory_order_release);
@@ -3269,6 +3294,7 @@ namespace gzfx::diagnostics::telemetry_listener
         const std::int32_t hresult) noexcept
     {
         if (!g_fullPipelineDetail &&
+            g_lateDetailEnabled &&
             DetailGateForPresent(phase) ==
                 DetailGateAction::Stop)
         {

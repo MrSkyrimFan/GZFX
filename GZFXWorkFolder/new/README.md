@@ -3,13 +3,13 @@
 Current runtime:
 
 ```text
-0.0.34-directinput-menu-capture
+0.0.35-product-control-recovery
 ```
 
 Current phase:
 
 ```text
-0.0.34 DIRECTINPUT MENU ENGINEERING CLOSED / REAL-SKYRIM MENU MOUSE REVALIDATION NEXT / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
+0.0.35 PRODUCT CONTROL RECOVERY ENGINEERING / GZFX2 INGESTED / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
 ```
 
 Active authority:
@@ -20,6 +20,10 @@ GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_1.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
+GZFX_0.0.35_GZFX2_PRODUCT_RECOVERY_FINDINGS.txt
+GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_RESEARCH.txt
+GZFX_0.0.35_PRODUCT_RECOVERY_MATRIX.csv
+GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_BLUEPRINT.txt
 ```
 
 Corrected project verdict:
@@ -158,3 +162,29 @@ Current package remains exactly one payload:
 The next field return should be uploaded directly to the repository as
 `GZFX2.zip`; the agent will move/process it through
 `GZFXWorkFolder/field_uploads/`.
+
+
+## 0.0.35 product-control recovery
+
+GZFX2 closes the 0.0.34 DirectInput menu ownership wave as a real-Skyrim PASS:
+the system mouse is found, both mouse hooks are installed, menu packets are
+forwarded, Skyrim mouse reads are suppressed while the menu is open, and the
+GZFX cursor moves.
+
+GZFX2 also exposes the next product defect: the current effect sliders persist
+their values but the active renderer does not consume them coherently.
+SceneEffects is skipped whenever AV2 owns mode 1/2, AV2 uses hard-coded artistic
+parameters, and the Present fallback is suppressed after AV2 applies.
+
+0.0.35 therefore reconnects:
+- AV2 Horizon/HBAO enable/strength/radius/quality;
+- AmbientContact;
+- spatial IndirectBounce/SSIL without double-HBAO;
+- LocalGlow;
+- compact proof that settings reach active GPU passes;
+- bounded routine telemetry so normal field returns stay repo-safe.
+
+The historical 0.0.51 ENB/ReShade-breadth product target has been recovered as a
+roadmap baseline, but historical implementation claims are not current proof.
+Broad post/native feature recovery follows in later coherent waves after this
+control foundation is field-green.

@@ -1,0 +1,48 @@
+Domain,Capability,Historical_0.0.51,Current_0.0.34,0.0.35_Action,Long_Term_Action
+FOUNDATION,SKSE lifecycle,Not old architecture,FIELD_PROVEN,Preserve,Preserve
+FOUNDATION,CommonLib typed engine access,Not old architecture,FIELD_PROVEN,Preserve,Expand only as needed
+FOUNDATION,D3D11/DXGI renderer ownership,Implemented,FIELD_PROVEN,Preserve,Preserve
+FOUNDATION,Stage scheduler / locked HDR-TAA boundaries,Implemented foundation,FIELD_PROVEN,Preserve,Extend only from evidence
+FOUNDATION,Wave3 geometry-temporal inputs,Implemented foundation,PRESENT_AND_GREEN,Preserve,Use for later effects
+AMBIENT,AV2 ambient visibility,Implemented,PRESENT_ACTIVE_HARDCODED,Bind live settings and keep default visual baseline,Continue quality work
+AMBIENT,SSAO / ambient contact,Implemented,CODE_PRESENT_BUT_ORPHANED,Reactivate scene-effect contact controls without double-HBAO,Quality tuning
+AMBIENT,HBAO / horizon occlusion,Implemented,PRESENT_VIA_AV2_CONTROLS_DISCONNECTED,Bind strength/radius/quality/enabled to AV2 GPU constants,Quality tuning
+INDIRECT,Spatial SSIL / indirect bounce,Implemented,LEGACY_CODE_PRESENT_BUT_INACTIVE,Run legacy indirect-only path under AV2 ownership and prove live controls,Replace/improve later if needed
+LIGHTS,Local glow,Implemented,CODE_PRESENT_BUT_INACTIVE,Allow scene-effects LocalGlow under AV2 ownership and prove live controls,Integrate emissive/light model
+TEMPORAL,AO temporal history,Implemented,PRESENT_IN_AV2,Preserve,Improve rejection/performance
+FILTERING,Ambient spatial filtering,Implemented,PRESENT,Preserve,Improve quality tiers
+POST,Bloom / HDR bloom,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in HDR/post wave
+POST,Depth of field near/far,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in cinematic/depth wave
+POST,Motion blur,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover using native motion vectors
+HDR,Manual exposure,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in HDR/post wave
+HDR,Automatic exposure / eye adaptation,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in HDR/post wave
+HDR,Pre-tonemap toe/shoulder/clip shaping,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover on locked BeforeTonemap boundary
+COLOR,Basic RGB color grading,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in HDR/post wave
+COLOR,Lift/gamma/gain / temperature/tint / saturation/vibrance,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in HDR/post wave
+COLOR,LUT workflow,Historically absent,ABSENT,Not in 0.0.35,Implement later
+FILTERING,Bilateral denoise,Implemented,PARTIAL_AMBIENT_ONLY,Preserve ambient filtering,Recover general post denoise only if useful
+OPTICS,Lens dirt,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in cinematic/post wave
+ATMOSPHERE,Depth fog,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover after current fog/native weather audit
+OPTICS,Vignette,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in cinematic/post wave
+OPTICS,Film grain,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in cinematic/post wave
+OPTICS,Chromatic aberration,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in cinematic/post wave
+FILTERING,High-pass sharpening,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover in HDR/LDR post wave
+COMPOSITION,Letterbox / pillarbox masking,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover with product menu/presets
+PRODUCT,Live effect controls,100 controls historically,CURRENT_MINIMAL_CONTROLS_BUT_RENDER_DISCONNECTED,Make every current control GPU-effective and prove it,Expand to full product model
+PRODUCT,Medium / Ultra+ quality tiers,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover with product executor
+PRODUCT,Five built-in looks,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover with product executor
+PRODUCT,Custom 1/2/3 profiles,Implemented,ABSENT_CURRENT_SOURCE,Not in 0.0.35,Recover with product executor
+PRODUCT,Binary Vanilla/GZFX master switch,Implemented,ABSENT_CURRENT_PRODUCT_MODEL,Do not add in 0.0.35 unless required,Recover with product executor
+SHADOWS,Native sun/moon/local/detailed/distant shadows,Historically absent,OPEN_UNQUALIFIED,Do not fake with AO,Target native shadow wave
+SHADOWS,Cloud shadows,Historically absent,OPEN_UNQUALIFIED,Do not fake,Target sky/weather/shadow wave
+SKY,Sky/cloud/celestial ownership,Historically incomplete,PARTIAL_EVIDENCE_ONLY,Preserve evidence,Target native sky/atmosphere wave
+VOLUMETRICS,Volumetric core / shafts,Historically incomplete,STRONGLY_MAPPED_PARTIAL,Preserve evidence,Target sun/moon/cloud interaction wave
+WEATHER,Weather-aware rendering,Historically absent,COMMONLIB_DATA_PRESENT_EXECUTOR_ABSENT,Preserve typed data,Target native weather wave
+WATER,Water / refraction / underwater,Historically absent,PARTIAL_EVIDENCE_ONLY,Preserve evidence,Target native water wave
+REFLECTIONS,Reflections,Historically absent,PARTIAL_EVIDENCE_ONLY,Preserve evidence,Target water/reflection wave
+MATERIALS,Material / snow / wetness / foliage response,Historically absent,OPEN_UNQUALIFIED,Do not invent semantics,Target material wave
+LIGHTS,Fire / emissives / particles / local lighting,Historically incomplete,OPEN_UNQUALIFIED,Preserve evidence,Target light/emissive wave
+HDR,Native tonemap replacement,Historically absent,LOCKED_BOUNDARY_PRESENT_EXECUTOR_ABSENT,Do not claim replacement,Target later HDR wave
+HDR,Display HDR output,Historically absent,ABSENT,Not in 0.0.35,Later explicit output project
+API,GZFX-owned extension/API surface,Historically incomplete,ABSENT_PUBLIC_PRODUCT_API,Not in 0.0.35,Later safe extension wave
+DIAGNOSTICS,Routine field telemetry,Engineering-only,CURRENTLY_EXCESSIVE,Disable automatic late pipeline detail by default and retain compact summaries,Use opt-in bounded forensic windows

@@ -7,6 +7,8 @@
 #include "gzfx/render/semantic_authority.hpp"
 #include "gzfx/render/stage_scheduler.hpp"
 #include "gzfx/render/wave3_pipeline.hpp"
+#include "gzfx/render/product_control_mapping.hpp"
+#include "gzfx/settings.hpp"
 #include "gzfx/version.hpp"
 
 #include <Windows.h>
@@ -63,9 +65,14 @@ namespace gzfx::render::ambient_visibility_v2
             float normalPower = 8.0f;
             float temporalBaseWeight = 0.70f;
             float temporalMaxWeight = 0.95f;
+
+            float horizonStrengthMultiplier = 1.0f;
+            float parameterPadding0 = 0.0f;
+            float parameterPadding1 = 0.0f;
+            float parameterPadding2 = 0.0f;
         };
 
-        static_assert(sizeof(Parameters) == 64);
+        static_assert(sizeof(Parameters) == 80);
 
         struct TextureView
         {
@@ -463,6 +470,9 @@ cbuffer AVParameters : register(b0)
     float NormalPower;
     float TemporalBaseWeight;
     float TemporalMaxWeight;
+
+    float HorizonStrengthMultiplier;
+    float3 ParameterPadding;
 };
 
 cbuffer SkyrimPerFrame : register(b12)
@@ -1487,6 +1497,18 @@ void PackCS(
             T0.Load(
                 int3(pixel, 0)).r);
 
+    float occlusion =
+        saturate(
+            1.0 - visibility);
+
+    visibility =
+        saturate(
+            1.0 -
+            occlusion *
+                max(
+                    HorizonStrengthMultiplier,
+                    0.0));
+
     if (Mode == 1 &&
         pixel.x <
             activeSize.x / 2)
@@ -2426,6 +2448,16 @@ void PackCS(
             const std::uint32_t mode)
         {
             Parameters p{};
+
+            const auto& settings =
+                gzfx::settings::Get();
+
+            const auto quality =
+                product_control::
+                    HorizonBudget(
+                        settings.
+                            horizonOcclusionQuality);
+
             p.width = inputs.width;
             p.height = inputs.height;
             p.mipCount =
@@ -2433,9 +2465,24 @@ void PackCS(
             p.frameIndex =
                 static_cast<std::uint32_t>(
                     inputs.frame);
+            p.radiusWorld =
+                product_control::
+                    HorizonRadiusWorld(
+                        settings.
+                            horizonOcclusionRadiusPixels);
+            p.sliceCount =
+                quality.slices;
+            p.stepsPerSlice =
+                quality.steps;
             p.temporalEnabled =
                 temporal ? 1u : 0u;
             p.mode = mode;
+            p.horizonStrengthMultiplier =
+                product_control::
+                    HorizonStrengthMultiplier(
+                        settings.
+                            horizonOcclusionStrength);
+
             return p;
         }
 
@@ -2816,6 +2863,16 @@ void PackCS(
                 g_runtime.deferred;
 
             Parameters parameters{};
+
+            const auto& settings =
+                gzfx::settings::Get();
+
+            const auto quality =
+                product_control::
+                    HorizonBudget(
+                        settings.
+                            horizonOcclusionQuality);
+
             parameters.width =
                 g_runtime.width;
             parameters.height =
@@ -2823,8 +2880,22 @@ void PackCS(
             parameters.frameIndex =
                 static_cast<std::uint32_t>(
                     frame);
+            parameters.radiusWorld =
+                product_control::
+                    HorizonRadiusWorld(
+                        settings.
+                            horizonOcclusionRadiusPixels);
+            parameters.sliceCount =
+                quality.slices;
+            parameters.stepsPerSlice =
+                quality.steps;
             parameters.mode =
                 mode;
+            parameters.horizonStrengthMultiplier =
+                product_control::
+                    HorizonStrengthMultiplier(
+                        settings.
+                            horizonOcclusionStrength);
 
             deferred->ClearState();
 
@@ -3679,10 +3750,42 @@ void PackCS(
                 << g_runtime.height
                 << "\n"
                 << "algorithm=gtao_inspired_full_resolution\n"
-                << "integration=replace_sao_filtered_before_ambient_composite\n"
-                << "radius_world=240\n"
-                << "slices=3\n"
-                << "steps_per_slice=6\n"
+                << "integration=replace_sao_filtered_before_ambient_composite\n";
+
+            const auto& captureSettings =
+                gzfx::settings::Get();
+
+            const auto captureQuality =
+                product_control::
+                    HorizonBudget(
+                        captureSettings.
+                            horizonOcclusionQuality);
+
+            summary
+                << "horizon_strength_setting="
+                << captureSettings.horizonOcclusionStrength
+                << "\n"
+                << "horizon_strength_multiplier="
+                << product_control::
+                    HorizonStrengthMultiplier(
+                        captureSettings.
+                            horizonOcclusionStrength)
+                << "\n"
+                << "radius_setting="
+                << captureSettings.horizonOcclusionRadiusPixels
+                << "\n"
+                << "radius_world="
+                << product_control::
+                    HorizonRadiusWorld(
+                        captureSettings.
+                            horizonOcclusionRadiusPixels)
+                << "\n"
+                << "slices="
+                << captureQuality.slices
+                << "\n"
+                << "steps_per_slice="
+                << captureQuality.steps
+                << "\n"
                 << "capture="
                 << (ok
                     ? "complete"
@@ -3745,6 +3848,49 @@ void PackCS(
                 << "\n"
                 << "last_applied_frame="
                 << g_lastAppliedFrame
+                << "\n";
+
+            const auto& settings =
+                gzfx::settings::Get();
+
+            const auto quality =
+                product_control::
+                    HorizonBudget(
+                        settings.
+                            horizonOcclusionQuality);
+
+            out
+                << "horizon_enabled="
+                << (settings.horizonOcclusionEnabled
+                    ? "true"
+                    : "false")
+                << "\n"
+                << "horizon_strength_setting="
+                << settings.horizonOcclusionStrength
+                << "\n"
+                << "horizon_strength_multiplier="
+                << product_control::
+                    HorizonStrengthMultiplier(
+                        settings.
+                            horizonOcclusionStrength)
+                << "\n"
+                << "horizon_radius_setting="
+                << settings.horizonOcclusionRadiusPixels
+                << "\n"
+                << "horizon_radius_world="
+                << product_control::
+                    HorizonRadiusWorld(
+                        settings.
+                            horizonOcclusionRadiusPixels)
+                << "\n"
+                << "horizon_quality="
+                << settings.horizonOcclusionQuality
+                << "\n"
+                << "submitted_slices="
+                << quality.slices
+                << "\n"
+                << "submitted_steps="
+                << quality.steps
                 << "\n";
 
             if (!detail.empty())
@@ -3936,6 +4082,30 @@ void PackCS(
                 if (mode != 1 &&
                     mode != 2)
                 {
+                    return;
+                }
+
+                const auto& settings =
+                    gzfx::settings::Get();
+
+                if (!settings.
+                        horizonOcclusionEnabled)
+                {
+                    g_signalHistory.valid = false;
+                    g_finalVisibilityFrame = 0;
+
+                    if (event.frame <= 3 ||
+                        event.frame -
+                            g_lastStatusFrame >=
+                        120)
+                    {
+                        WriteStatus(
+                            event.frame,
+                            "disabled_horizon");
+                        g_lastStatusFrame =
+                            event.frame;
+                    }
+
                     return;
                 }
 

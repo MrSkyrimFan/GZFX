@@ -14,7 +14,7 @@ set(
 
 project(
     GZFX
-    VERSION 0.0.34
+    VERSION 0.0.35
     DESCRIPTION "SKSE-hosted native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -177,6 +177,16 @@ target_link_libraries(
         dxguid
 )
 gzfx_apply_common(GZFXDirectInputMouseContractHarness)
+
+add_executable(GZFXProductControlBindingHarness
+    tests/product_control_binding_harness.cpp
+)
+target_include_directories(
+    GZFXProductControlBindingHarness
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+gzfx_apply_common(GZFXProductControlBindingHarness)
 
 add_executable(GZFXSmokeHost
     tests/smoke_host.cpp
@@ -404,6 +414,12 @@ add_test(
 )
 
 add_test(
+    NAME product_control_binding_contract
+    COMMAND
+        "$<TARGET_FILE:GZFXProductControlBindingHarness>"
+)
+
+add_test(
     NAME runtime_smoke
     COMMAND
         "$<TARGET_FILE:GZFXSmokeHost>"
@@ -621,7 +637,7 @@ add_test(
 set_tests_properties(
     telemetry_listener
     PROPERTIES
-        ENVIRONMENT "GZFX_TEST_TELEMETRY_ACTIVE=1"
+        ENVIRONMENT "GZFX_TEST_TELEMETRY_ACTIVE=1;GZFX_TELEMETRY_LATE_DETAIL=1"
 )
 
 add_test(
@@ -635,7 +651,7 @@ add_test(
 set_tests_properties(
     telemetry_listener_overflow
     PROPERTIES
-        ENVIRONMENT "GZFX_TEST_TELEMETRY_ACTIVE=1;GZFX_TEST_TELEMETRY_RING_CAPACITY=64;GZFX_TEST_TELEMETRY_FORCE_OVERFLOW=1;GZFX_TEST_TELEMETRY_EXPECT_OVERFLOW=1"
+        ENVIRONMENT "GZFX_TEST_TELEMETRY_ACTIVE=1;GZFX_TELEMETRY_LATE_DETAIL=1;GZFX_TEST_TELEMETRY_RING_CAPACITY=64;GZFX_TEST_TELEMETRY_FORCE_OVERFLOW=1;GZFX_TEST_TELEMETRY_EXPECT_OVERFLOW=1"
 )
 
 add_test(
@@ -663,7 +679,7 @@ add_test(
 set_tests_properties(
     deferred_telemetry_outside_detail_gate
     PROPERTIES
-        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_DEFERRED_OUTSIDE_DETAIL_ACTIVE=1"
+        ENVIRONMENT "GZFX_TEST_LATE_STACK_ACTIVE=1;GZFX_TEST_DEFERRED_OUTSIDE_DETAIL_ACTIVE=1;GZFX_TELEMETRY_LATE_DETAIL=1"
 )
 
 add_test(
