@@ -1114,17 +1114,10 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 gzfx::render::state::
                     GetDevelopmentMode();
 
-            if (gzfx::render::
+            const bool wave4OwnsAo =
+                gzfx::render::
                     ambient_visibility_v2::
-                    OwnsDevelopmentMode(mode))
-            {
-                WriteLog(
-                    frame,
-                    drawOrdinal,
-                    "skipped_wave4_owns_mode");
-
-                return false;
-            }
+                    OwnsDevelopmentMode(mode);
 
             if (mode != 1 &&
                 mode != 2)
@@ -1171,7 +1164,8 @@ float4 PSMain(VSOutput input) : SV_TARGET
                     frame,
                     device,
                     context,
-                    inputs);
+                    inputs,
+                    !wave4OwnsAo);
 
             (void)ambientDepthApplied;
 
