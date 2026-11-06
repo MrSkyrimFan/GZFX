@@ -777,6 +777,14 @@ namespace gzfx::settings
         void ApplyPresetUnlocked(
             const Preset preset)
         {
+            if (preset == Preset::Custom)
+            {
+                g_values.productPreset =
+                    static_cast<std::uint32_t>(
+                        Preset::Custom);
+                return;
+            }
+
             Values next =
                 g_values;
 
