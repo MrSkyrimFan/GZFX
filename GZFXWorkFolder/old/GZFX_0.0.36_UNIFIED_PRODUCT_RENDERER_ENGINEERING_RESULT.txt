@@ -1,0 +1,129 @@
+GZFX 0.0.36 — UNIFIED PRODUCT RENDERER
+FINAL ENGINEERING RESULT
+Closure: 2026-11-05 / 2026-11-06 UTC boundary
+
+STATUS
+    GZFX3 FIELD RETURN INGESTED
+    0.0.35 LIVE CONTROL WIRING FIELD-PASSED
+    OWNER AUTHORIZED LARGE INTEGRATED RECOVERY WAVE
+    UNIFIED HDR PRODUCT GRAPH IMPLEMENTED
+    86-ROW CONTROL MODEL IMPLEMENTED
+    FIVE BUILT-IN LOOKS + CUSTOM 1/2/3 IMPLEMENTED
+    PR #41 MERGED
+    FINAL PR WINDOWS X64 41/41 PASS
+    MERGED-MAIN WINDOWS X64 41/41 PASS
+    PE LOAD CONTRACT PASS
+    ONE-DLL PACKAGE PASS
+    VALIDATED PACKAGE PUBLISHED
+    READY FOR 0.0.37 COMBINED NATIVE-DOMAIN ANCHOR WAVE
+    REAL-SKYRIM 0.0.36 VISUAL TEST INTENTIONALLY DEFERRED TO COMBINED BUILD
+
+RUNTIME
+    0.0.36-unified-product-renderer
+
+FIELD INPUT
+    GZFXWorkFolder/field_uploads/GZFX3.zip
+    GZFXWorkFolder/field_uploads/gzfx3Diagnostics.zip
+
+GZFX3 verdict:
+    live sliders respond;
+    DirectInput/menu remains healthy;
+    HBAO at high strength/radius/quality still flickers, especially near the
+    player;
+    current performance is poor;
+    owner explicitly deferred tuning until broad renderer convergence.
+
+ARCHITECTURE
+    One shared HDR graph:
+        MAIN_HDR -> source snapshot
+        -> luminance/bloom pyramid
+        -> exposure history
+        -> one ordered full-resolution composite
+        -> one MAIN_HDR writeback
+
+    Existing ownership preserved:
+        AV2 owns Horizon/HBAO
+        ambient-depth stack contributes indirect/SSIL only under AV2
+        unified graph owns AmbientContact + LocalGlow + broad post stack
+
+CURRENT 0.0.36 PRODUCT FAMILIES
+    product master
+    Medium / Ultra+
+    Clearfell / Emberveil / Moonforge / Verdant North / Sable Cinema
+    Custom 1 / 2 / 3
+    manual exposure
+    automatic exposure / eye adaptation
+    bloom
+    lens dirt
+    Local Glow
+    contrast / gamma / saturation / vibrance
+    temperature / tint / lift / gain
+    toe / shoulder / white clip
+    near/far DoF
+    native-motion-vector motion blur
+    depth fog
+    vignette
+    dynamic grain
+    chromatic aberration
+    denoise
+    sharpening
+    letterbox / pillarbox
+
+CONTROL SURFACE
+    settings::Editable::Count = 86
+
+CI / MERGE PROOF
+    PR:
+        #41
+    final PR head:
+        682aa4a3edd332c89deb5f7813ab6a1a5c552044
+    merge:
+        062b7127258129ad711bf4e25f3f7bdc088727be
+    PR workflow:
+        42153401764
+        41/41 PASS
+    merged-main workflow:
+        42155200802
+        41/41 PASS
+    PE:
+        PASS
+    package:
+        PASS
+
+VALIDATED PACKAGE
+    inner ZIP bytes:
+        811070
+    SHA-256:
+        fc2b897d88457f7119008a6b5ce760d987ac445aaf556b81a3e2dd44a7d91a36
+    Git blob:
+        36494b45fd6b5e0c162ce65b36ba0aedfd68373f
+    staged lance-package commit:
+        24df50182f057f8a9e4e355044fd6602623e744f
+    main publication commit:
+        0e22c5888004f34e148c2abf54e5160a943973b8
+    continuation overlap verification commit:
+        354159f28a30a88112ee5392318910463338861e
+        same tree as parent / zero changed files
+
+KNOWN NON-CLOSURES
+    HBAO temporal flicker
+    release performance
+    final artistic defaults
+    native shadows
+    cloud shadows
+    native sky/weather/celestial ownership
+    water/refraction/underwater ownership
+    reflections/IBL ownership
+    material wetness/snow/foliage response
+    fire/emissive/particle/local-light ownership
+    native tonemap replacement
+    display HDR
+    true PostTonemapPreUi boundary
+
+NEXT
+    Do not spend the next field cycle proving one post effect at a time.
+    Build 0.0.37 as one combined native-domain semantic-anchor layer, then use
+    one real-Skyrim run to validate the 0.0.36 product graph and collect exact
+    shadow/water/volumetric/sky/particle/post-UI correlations together.
+
+END ENGINEERING RESULT

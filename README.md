@@ -28,8 +28,8 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.35-product-control-recovery
-current phase: 0.0.35 ENGINEERING CLOSED / REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION NEXT
+current runtime: 0.0.36-unified-product-renderer
+current phase: 0.0.36 ENGINEERING CLOSED / 0.0.37 COMBINED NATIVE-DOMAIN ANCHOR WAVE NEXT
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
@@ -216,3 +216,23 @@ The test package contains exactly `Data/SKSE/Plugins/GZFX.dll`.
 - Large coherent engineering passes with embedded targeted probes are preferred over one-probe-per-version churn.
 
 See `AGENT.md` for the mandatory operating contract.
+
+
+## 0.0.36 unified product renderer
+
+0.0.36 is merged and automated-engineering closed. It replaces disconnected
+post-effect expansion with one shared HDR-stage product graph. The graph owns one
+scene snapshot, shared luminance/bloom products, exposure history, one ordered
+composite and one final MAIN_HDR writeback.
+
+The current live product model exposes 86 rows and includes exposure/adaptation,
+bloom/lens dirt, Local Glow, grading/tone shaping, DoF, native-vector motion blur,
+depth fog, vignette, grain, chromatic aberration, denoise, sharpening,
+letterbox/pillarbox, quality tiers, five built-in looks, three custom profiles and
+a product master switch while preserving AV2 HBAO and indirect-only SSIL
+ownership.
+
+PR #41 and merged-main CI pass 41/41 plus PE and one-DLL packaging. Real-Skyrim
+visual/performance validation of this broad graph is intentionally combined with
+the next native-domain semantic-anchor build instead of forcing another tiny
+field cycle.

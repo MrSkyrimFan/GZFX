@@ -1,0 +1,59 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.36
+Date: 2026-11-05
+
+READ FIRST
+    AGENT.md
+    GZFX_0.0.36_UNIFIED_PRODUCT_RENDERER_ENGINEERING_RESULT.txt
+    GZFX_0.0.36_GZFX3_INTEGRATED_RENDERER_FIELD_FINDINGS.txt
+    GZFX_0.0.36_UNIFIED_ENB_RESHADE_RENDERER_RESEARCH.txt
+    GZFX_0.0.36_UNIFIED_PRODUCT_RENDERER_BLUEPRINT.txt
+
+CURRENT MAIN
+    0.0.36-unified-product-renderer
+    PR #41 merged
+    41/41 PR PASS
+    41/41 merged-main PASS
+    validated one-DLL package published
+
+OWNER DIRECTION
+    no circling;
+    no one-feature DLL/test loop;
+    restore broad ENB/ReShade-class breadth in coherent passes;
+    keep bounded logs because domains share renderer stages/resources/history;
+    performance and HBAO flicker are deferred until broad graph convergence.
+
+CURRENT PRODUCT GRAPH
+    one source snapshot
+    one luminance/bloom pyramid
+    one exposure history
+    one ordered HDR composite
+    one MAIN_HDR writeback
+    86 controls
+    presets/profiles/quality/master
+    broad post stack
+
+NEXT AUTHORIZED WAVE
+    0.0.37 combined native-domain observability / semantic correlation.
+
+Targets in one DLL:
+    directional/spot/omnidirectional shadow rendering + Main_RenderShadowmasks
+    water high-level interval
+    ISTemporalAA_Water
+    ISWaterBlend
+    ISApplyReflections
+    ISUnderwaterMask
+    water displacement/flow families where safely observable
+    dynamic cubemap render interval
+    volumetric lighting/apply/blur/composite families
+    sky shader family
+    particle/effect shader families
+    post-processing / pre-UI candidate correlation
+    existing CommonLib weather/sky/sun/cloud/moon/precipitation snapshot
+
+The next field run should therefore validate both:
+    0.0.36 broad player-facing effects;
+    0.0.37 native-domain correlations.
+
+Do not request a generic telemetry walk before 0.0.37 is built.
+
+END INDEX

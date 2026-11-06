@@ -1,7 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.35.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_ENGINEERING_RESULT.txt`. Follow the 0.0.34 / 0.0.33 / 0.0.32 / 0.0.31 / 0.0.30 / 0.0.29 records referenced by that index for mouse ownership, loader, CommonLib, SKSE migration, renderer-domain, and locked HDR/tonemap/TAA evidence.
-
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.36.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.36_UNIFIED_PRODUCT_RENDERER_ENGINEERING_RESULT.txt`. Continue from current main; do not reconstruct 0.0.36 from chat.\n
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
 ## 0. READ THIS FIRST
@@ -190,7 +189,7 @@ foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.35-product-control-recovery
+0.0.36-unified-product-renderer
 
 Wave 1:
 CLOSED
@@ -209,7 +208,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-0.0.35 ENGINEERING CLOSED / REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION NEXT
+0.0.36 ENGINEERING CLOSED / 0.0.37 COMBINED NATIVE-DOMAIN ANCHOR WAVE NEXT / FIELD TEST DEFERRED TO COMBINED BUILD
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
@@ -559,3 +558,54 @@ Prefer:
 - automatic classification of stationary/slow/fast motion.
 
 A field test must remain valid when the user performs movement naturally and presses the capture control immediately before or after the movement. Build diagnostics to accommodate the operator, not the reverse.
+
+
+## 10G. 0.0.36 unified ENB/ReShade-class product renderer
+
+GZFX3 field evidence proved 0.0.35 control wiring in real Skyrim and recorded the
+deferred HBAO flicker/performance defects. The owner explicitly authorized broad
+integrated implementation instead of serial one-feature builds.
+
+0.0.36 engineering is CLOSED:
+
+- PR #41 merged at `062b7127258129ad711bf4e25f3f7bdc088727be`;
+- final PR head `682aa4a3edd332c89deb5f7813ab6a1a5c552044`;
+- PR and merged-main Windows x64 both pass PE + 41/41;
+- one-DLL package remains exactly `Data/SKSE/Plugins/GZFX.dll`;
+- merged-main workflow 42155200802 produced the validated package;
+- validated inner ZIP is 811,070 bytes, SHA-256
+  `fc2b897d88457f7119008a6b5ce760d987ac445aaf556b81a3e2dd44a7d91a36`,
+  Git blob `36494b45fd6b5e0c162ce65b36ba0aedfd68373f`;
+- main package publication commit `0e22c5888004f34e148c2abf54e5160a943973b8`
+  contains that exact blob;
+- follow-up `354159f28a30a88112ee5392318910463338861e` is a no-op
+  same-tree verification commit caused by continuation overlap.
+
+0.0.36 current-source product surface:
+
+- one shared HDR scene snapshot and one final MAIN_HDR writeback;
+- shared luminance/bloom pyramid and exposure history;
+- manual + automatic exposure / adaptation;
+- bloom, lens dirt, Local Glow;
+- color grading and toe/shoulder/white-clip shaping;
+- near/far DoF;
+- native-motion-vector motion blur;
+- depth fog;
+- vignette, film grain, chromatic aberration;
+- denoise and sharpening;
+- letterbox/pillarbox;
+- Medium / Ultra+ budgets;
+- Clearfell, Emberveil, Moonforge, Verdant North, Sable Cinema;
+- Custom 1/2/3 save/load;
+- product master switch;
+- 86-row scrollable live menu;
+- compact unified graph/status/timing/capture diagnostics.
+
+Do not claim final visual quality or performance from automated proof. HBAO
+flicker and total GPU cost remain deferred until the full renderer graph is
+landed.
+
+The next wave is NOT another one-feature field test. 0.0.37 must add one combined
+native-domain observability layer for shadow, water/reflection/underwater,
+volumetric, sky/particle and post/UI semantic anchors, then the next real-Skyrim
+session validates 0.0.36 effects and returns those domain correlations together.
