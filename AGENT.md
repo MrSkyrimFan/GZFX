@@ -1,6 +1,6 @@
 # AGENT.md
 
-> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.34.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.34_DIRECTINPUT_MENU_ENGINEERING_RESULT.txt`. Follow the 0.0.33 / 0.0.32 / 0.0.31 / 0.0.30 / 0.0.29 records referenced by that index for loader, CommonLib, SKSE migration, renderer-domain, and locked HDR/tonemap/TAA evidence.
+> **NEW-CHAT TAKEOVER:** Before doing any GZFX work in a fresh Project Chat, read `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.35.txt` first, then `GZFXWorkFolder/old/GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_ENGINEERING_RESULT.txt`. Follow the 0.0.34 / 0.0.33 / 0.0.32 / 0.0.31 / 0.0.30 / 0.0.29 records referenced by that index for mouse ownership, loader, CommonLib, SKSE migration, renderer-domain, and locked HDR/tonemap/TAA evidence.
 
 — GZFX MANDATORY AGENT OPERATING CONTRACT
 
@@ -190,7 +190,7 @@ foundation baseline:
 0.0.20-foundation-epochs-stage-correctness
 
 current runtime:
-0.0.34-directinput-menu-capture
+0.0.35-product-control-recovery
 
 Wave 1:
 CLOSED
@@ -209,7 +209,7 @@ renderer-stack ownership architecture PROVEN
 final artistic quality intentionally deferred
 
 current phase:
-0.0.34 ENGINEERING CLOSED / REAL-SKYRIM MENU MOUSE REVALIDATION NEXT
+0.0.35 ENGINEERING CLOSED / REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION NEXT
 
 graphics bootstrap:
 official SKSE Preload/Load + one Data/SKSE/Plugins/GZFX.dll
@@ -462,6 +462,57 @@ GZFXWorkFolder/old/GZFX_0.0.34_DIRECTINPUT_MENU_BLUEPRINT.txt
 
 Next required action is the compact real-Skyrim menu mouse validation. Do not
 start broad graphics feature work before that field result.
+
+## 10F. 0.0.35 product-control recovery and historical target rebase
+
+GZFX2 field evidence closes 0.0.34 DirectInput mouse ownership as a real-Skyrim
+PASS. The menu received physical mouse input and Skyrim mouse-look was suppressed
+only while the GZFX menu was open.
+
+GZFX2 then exposed a separate product defect: current artistic slider values
+persisted to Settings.ini but did not materially drive the active renderer.
+The active AV2 path used hard-coded artistic parameters, SceneEffects returned
+early whenever AV2 owned modes 1/2, and the Present fallback was suppressed after
+AV2 application.
+
+0.0.35 automated engineering is now CLOSED. It reconnects the current control plane without abandoning the current
+renderer foundation:
+
+- AV2 owns Horizon/HBAO and receives live enable/strength/radius/quality values;
+- AmbientContact and LocalGlow remain SceneEffects responsibilities;
+- the legacy ambient-depth stack may supply spatial IndirectBounce/SSIL under
+  AV2 ownership with its legacy AO contribution disabled;
+- product_control_submission.txt records submitted control values and active
+  ownership;
+- routine broad late pipeline telemetry is disabled by default and is opt-in for
+  targeted forensic work.
+
+Historical GZFX 0.0.51 product breadth was recovered as roadmap evidence, not
+current implementation proof. The repo now preserves:
+
+```text
+GZFXWorkFolder/old/GZFX_HISTORICAL_0.0.51_652_TARGET_INDEX.csv
+GZFXWorkFolder/old/GZFX_0.0.35_PRODUCT_RECOVERY_MATRIX.csv
+```
+
+The historical 0.0.51 source report described a much broader player-facing post
+stack, including DoF, bloom/glow, exposure/adaptation, color grading,
+pre-tonemap shaping, denoise, lens dirt, depth fog, motion blur, vignette, film
+grain, chromatic aberration, sharpening, masking, quality tiers and preset/profile
+support. Those historical claims are NOT current source proof. The old
+product_hdr/product_ldr executor/control-model files are absent from current
+main.
+
+Recovery order after 0.0.35 field-green:
+
+1. HDR / exposure / bloom / color / sharpening core post;
+2. DoF / motion blur / depth fog / cinematic optics;
+3. product master switch / quality tiers / built-ins / custom profiles;
+4. evidence-driven native shadows / sky / weather / water / reflections /
+   materials / fire-emissive-light domains.
+
+Do not call AO a native-shadow implementation and do not claim historical 0.0.51
+features are restored until current source + tests + real Skyrim prove them.
 
 ## 11. Repository lifecycle proof
 

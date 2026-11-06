@@ -9,7 +9,7 @@ Current runtime:
 Current phase:
 
 ```text
-0.0.35 PRODUCT CONTROL RECOVERY ENGINEERING / GZFX2 INGESTED / FULL-PRODUCT MAJOR-ENGINEERING GATE STILL NOT YET GREEN
+0.0.35 ENGINEERING CLOSED / REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION NEXT / FULL PRODUCT RECOVERY CONTINUES AFTER FIELD GREEN
 ```
 
 Active authority:
@@ -20,10 +20,6 @@ GZFX_0.0.30_REAL_SKYRIM_FIELD_DATA_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_1.txt
 GZFX_FULL_RENDERER_DOMAIN_REAUDIT_PASS_2.txt
 GZFX_FULL_RENDERER_DOMAIN_CLOSURE_MATRIX.csv
-GZFX_0.0.35_GZFX2_PRODUCT_RECOVERY_FINDINGS.txt
-GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_RESEARCH.txt
-GZFX_0.0.35_PRODUCT_RECOVERY_MATRIX.csv
-GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_BLUEPRINT.txt
 ```
 
 Corrected project verdict:
@@ -166,25 +162,34 @@ The next field return should be uploaded directly to the repository as
 
 ## 0.0.35 product-control recovery
 
-GZFX2 closes the 0.0.34 DirectInput menu ownership wave as a real-Skyrim PASS:
-the system mouse is found, both mouse hooks are installed, menu packets are
-forwarded, Skyrim mouse reads are suppressed while the menu is open, and the
-GZFX cursor moves.
+0.0.35 automated engineering is CLOSED and archived under
+`GZFXWorkFolder/old/`.
 
-GZFX2 also exposes the next product defect: the current effect sliders persist
-their values but the active renderer does not consume them coherently.
-SceneEffects is skipped whenever AV2 owns mode 1/2, AV2 uses hard-coded artistic
-parameters, and the Present fallback is suppressed after AV2 applies.
+Controlling records:
 
-0.0.35 therefore reconnects:
-- AV2 Horizon/HBAO enable/strength/radius/quality;
-- AmbientContact;
-- spatial IndirectBounce/SSIL without double-HBAO;
-- LocalGlow;
-- compact proof that settings reach active GPU passes;
-- bounded routine telemetry so normal field returns stay repo-safe.
+```text
+GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.35.txt
+GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_ENGINEERING_RESULT.txt
+GZFX_0.0.35_GZFX2_PRODUCT_RECOVERY_FINDINGS.txt
+GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_RESEARCH.txt
+GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_BLUEPRINT.txt
+GZFX_0.0.35_PRODUCT_RECOVERY_MATRIX.csv
+GZFX_HISTORICAL_0.0.51_TARGET_RECOVERY_SUMMARY.txt
+GZFX_HISTORICAL_0.0.51_652_TARGET_INDEX.csv
+```
 
-The historical 0.0.51 ENB/ReShade-breadth product target has been recovered as a
-roadmap baseline, but historical implementation claims are not current proof.
-Broad post/native feature recovery follows in later coherent waves after this
-control foundation is field-green.
+GZFX2 field evidence closed the 0.0.34 DirectInput path and exposed the
+disconnected slider/render-owner defect. 0.0.35 reconnects current Horizon/HBAO,
+AmbientContact, spatial IndirectBounce/SSIL and LocalGlow controls while keeping
+AV2 as the current AO owner.
+
+PR #40, final PR CI and merged-main CI all pass PE + 40/40. The validated
+one-DLL package is synced to main.
+
+Routine broad late pipeline telemetry is now opt-in instead of default, so the
+next normal field return should be small enough for a single repo ZIP.
+
+Next action is real-Skyrim validation that extreme control changes produce
+visible response without double-AO/banding regression. Historical 0.0.51
+post/product breadth is now preserved as recovery authority, not current
+implementation proof.

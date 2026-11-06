@@ -28,8 +28,8 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.34-directinput-menu-capture
-current phase: 0.0.34 ENGINEERING CLOSED / REAL-SKYRIM MENU MOUSE REVALIDATION NEXT
+current runtime: 0.0.35-product-control-recovery
+current phase: 0.0.35 ENGINEERING CLOSED / REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION NEXT
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
@@ -105,14 +105,14 @@ never hooked by 0.0.30 and engineProfileAvailable remains false until later
 field DATA and research independently verify them.
 
 The first real-Skyrim 0.0.32 validation failed before healthy GZFX runtime
-output. 0.0.33 repaired that loader boundary. GZFX1 field evidence now closes
-0.0.33 in real Skyrim: SKSE 2.3.1, CommonLib SKSE::Init, Address Library,
-DataLoaded binding, renderer correlation, telemetry, natural exit, and the
-locked HDR/TAA contracts all pass. 0.0.34 completes the remaining bounded menu
-repair by migrating the previously field-working DirectInput mouse
-capture/suppression path from the retired proxy into the single SKSE-loaded
-GZFX.dll. PR #39 is merged and merged-main product validation passes 39/39 plus
-the PE load contract. Real-Skyrim menu mouse ownership revalidation is next.
+output. 0.0.33 repaired that loader boundary and GZFX1 field-closed it. 0.0.34
+migrated DirectInput mouse ownership into the single SKSE-loaded GZFX.dll, and
+GZFX2 field evidence now closes that mouse path as PASS. GZFX2 also proved the
+current effect sliders were disconnected from the active render owners even
+though their values persisted. 0.0.35 reconnects live Horizon/HBAO,
+AmbientContact, spatial IndirectBounce/SSIL and LocalGlow controls while keeping
+AV2 as the current AO owner. Routine broad late-pipeline telemetry is now opt-in
+instead of default.
 
 0.0.32 completed the owner-authorized MIT CommonLib engine-access integration.
 Its loader path was subsequently repaired by 0.0.33 and field-proven by GZFX1.

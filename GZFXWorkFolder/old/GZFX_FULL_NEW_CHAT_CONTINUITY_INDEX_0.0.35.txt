@@ -1,0 +1,229 @@
+GZFX FULL NEW-CHAT CONTINUITY INDEX — 0.0.35
+PRODUCT CONTROL RECOVERY + HISTORICAL TARGET REBASE
+Created 2026-11-05 / 2026-11-06 UTC boundary.
+
+THIS FILE IS THE CURRENT CONTROLLING TAKEOVER INDEX.
+
+Repository:
+    MrSkyrimFan/GZFX
+
+Visibility:
+    PUBLIC
+
+READ FIRST:
+    1. AGENT.md
+    2. README.md
+    3. GZFXWorkFolder/new/README.md
+    4. GZFXWorkFolder/old/GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_ENGINEERING_RESULT.txt
+    5. GZFXWorkFolder/old/GZFX_0.0.35_GZFX2_PRODUCT_RECOVERY_FINDINGS.txt
+    6. GZFXWorkFolder/old/GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_RESEARCH.txt
+    7. GZFXWorkFolder/old/GZFX_0.0.35_PRODUCT_CONTROL_RECOVERY_BLUEPRINT.txt
+    8. GZFXWorkFolder/old/GZFX_0.0.35_PRODUCT_RECOVERY_MATRIX.csv
+    9. GZFXWorkFolder/old/GZFX_HISTORICAL_0.0.51_TARGET_RECOVERY_SUMMARY.txt
+    10. GZFXWorkFolder/old/GZFX_HISTORICAL_0.0.51_652_TARGET_INDEX.csv
+
+Then for prior integration:
+    11. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.34.txt
+    12. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.33.txt
+    13. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.32.txt
+    14. GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.31.txt
+
+For locked renderer semantics:
+    GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.30.txt
+    GZFXWorkFolder/old/GZFX_0.0.29_HDR_TONEMAP_FIELD_CLOSURE_ENGINEERING_RESULT.txt
+
+CURRENT RUNTIME:
+    0.0.35-product-control-recovery
+
+CURRENT PHASE:
+    0.0.35 AUTOMATED ENGINEERING CLOSED
+    REAL-SKYRIM LIVE EFFECT RESPONSE VALIDATION NEXT
+    FULL ENB/RESHADE-CLASS PRODUCT RECOVERY CONTINUES AFTER FIELD GREEN
+
+GZFX2 FIELD RESULT:
+    0.0.34 DirectInput mouse ownership PASS
+    current slider transport PASS
+    Settings.ini persistence PASS
+    visual response FAIL
+
+ROOT CAUSE:
+    SceneEffects was globally skipped when AV2 owned mode 1/2
+    AV2 artistic parameters were hard-coded
+    visible-pass fallback was suppressed after AV2 application
+
+0.0.35 OWNERSHIP:
+    AV2:
+        Horizon / HBAO
+
+    SceneEffects:
+        AmbientContact
+        LocalGlow
+
+    legacy ambient-depth under AV2:
+        spatial IndirectBounce / SSIL
+        legacy AO disabled
+
+LIVE HORIZON MAPPING:
+    default strength .25 -> 1x existing AV2 baseline
+    setting 0 -> 0x
+    setting 1 -> 4x
+    default radius 28 -> AV2 RadiusWorld 240
+
+QUALITY:
+    0 -> 2x4
+    1 -> 3x4
+    2 -> 3x6
+    3 -> 4x8
+
+NEW CONTROL PROOF:
+    Diagnostics/product_control_submission.txt
+
+ROUTINE TELEMETRY:
+    automatic broad late pipeline detail OFF by default
+    opt-in:
+        GZFX_TELEMETRY_LATE_DETAIL
+
+GZFX2 telemetry evidence:
+    ~276 MB uncompressed
+    ~266 MB was pipeline_runs detail
+    routine output target now small/repo-safe
+
+HISTORICAL 0.0.51:
+    full 652-row target/status/family index preserved in repo
+    historical post/product breadth recovered as roadmap evidence
+    old product executor source bytes are NOT present in current repo
+    309,872,109-byte consolidated archive contains one text record, no source tree
+
+HISTORICAL EFFECTS TO RECOVER AFTER 0.0.35 FIELD GREEN:
+    bloom/HDR bloom
+    manual exposure
+    automatic exposure/adaptation
+    color grading
+    pre-tonemap shaping
+    sharpening/denoise
+    near/far DoF
+    motion blur
+    depth fog
+    lens dirt
+    vignette
+    film grain
+    chromatic aberration
+    letterbox/pillarbox
+    Medium / Ultra+
+    Clearfell / Emberveil / Moonforge / Verdant North / Sable Cinema
+    Custom 1/2/3 profile lifecycle
+
+HISTORICAL FEATURES THAT WERE STILL ABSENT EVEN IN 0.0.51:
+    native shadow-map families
+    cloud-shadow native executor
+    sun/moon ray native executors
+    weather-native rendering
+    water/reflection/material replacement
+    LUT workflow
+    native tonemap replacement
+    display HDR
+    broad temporal/multibounce GI
+
+PR #40:
+    final head:
+        f48e2c60f90bcf2032fc5e0914514e1b1bef52d0
+
+    final workflow:
+        42136310102
+
+    job:
+        127625228457
+
+    result:
+        PE PASS
+        40/40 PASS
+
+MERGE:
+    f39605a1734293a0f319b9d885c8686cdc68ec24
+
+MERGED-MAIN:
+    run:
+        42136920247
+
+    job:
+        127627305289
+
+    result:
+        PE PASS
+        40/40 PASS
+        package PASS
+        artifact PASS
+        lance-package stage PASS
+
+MERGED-MAIN ARTIFACT:
+    id:
+        13466594291
+
+    artifact-container bytes:
+        776108
+
+    artifact SHA-256:
+        71659fbf817854e199d973d311e0827d349d1d8d0d03603f61f147f009361175
+
+VALIDATED USER ZIP:
+    bytes:
+        777206
+
+    SHA-256:
+        a77efceadfa73dfe9196c82debba3d3fbf23d93a9e4235666e92a147d42c6a50
+
+    Git blob:
+        ea6d55dd033fd903787ddeb731a181c481f50cf4
+
+PAYLOAD:
+    Data/SKSE/Plugins/GZFX.dll
+
+GZFX.dll:
+    bytes:
+        1782784
+
+    SHA-256:
+        893b37b43123f6fccadbb38d02c75c7f69eecad55627bf1c868f666437c6ed6c
+
+MAIN PACKAGE SYNC:
+    commit:
+        4550f8aff44799fe88a5cc489e95c51f9d0b4f43
+
+    changed only:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+
+    blob:
+        ea6d55dd033fd903787ddeb731a181c481f50cf4
+
+RAW FIELD-UPLOAD WORKFLOW:
+    owner uploads GZFXn.zip directly to repo
+    small split returns may use matching logical names
+    agent moves raw evidence into GZFXWorkFolder/field_uploads/
+    preserve raw bytes
+    combined intake workflow unpacks matching files together
+    do not ask owner to re-upload same ZIP in chat
+    do not ask owner to manually split multi-gigabyte output
+
+LOCKED — DO NOT REOPEN WITHOUT CONTRADICTORY FIELD EVIDENCE:
+    HDRReduction
+    BeforeTonemap
+    BeforeGlobalTAA
+    AfterGlobalTAA
+
+NEXT HUMAN TEST:
+    preserve GZFX2 Settings.ini by renaming it
+    launch current 0.0.35
+    test extreme Horizon/HBAO response
+    test extreme AmbientContact response
+    test IndirectBounce response
+    test LocalGlow response
+    close menu and verify normal mouse-look
+    brief exterior/interior
+    quit normally
+
+NEXT DATA:
+    upload complete generated GZFX folder as GZFX3.zip directly to repository
+
+DO NOT START BROAD NATIVE SHADOW/WATER/SKY CLAIMS FROM AO OR HISTORICAL TEXT.
+
+END 0.0.35 CONTINUITY INDEX

@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Select and unpack field ZIP
+      - name: Select and unpack field ZIPs
         id: select
         shell: pwsh
         run: |
@@ -40,52 +40,67 @@ jobs:
           }
 
           if ($changed.Count -gt 0) {
-            $zip = $changed[-1]
+            $selected = @($changed)
           }
           else {
-            $zip = Get-ChildItem $root -Filter "*.zip" -File |
+            $latest = Get-ChildItem $root -Filter "*.zip" -File |
               Sort-Object {
-                if ($_.BaseName -match '(\d+)$') {
+                if ($_.BaseName -match '(\d+)') {
                   [int]$Matches[1]
                 }
                 else {
                   -1
                 }
               }, Name -Descending |
-              Select-Object -First 1 -ExpandProperty FullName
+              Select-Object -First 1
+
+            if ($null -eq $latest) {
+              throw "No GZFX field ZIP was found."
+            }
+
+            $selected = @($latest.FullName)
           }
 
-          if ([string]::IsNullOrWhiteSpace($zip) -or -not (Test-Path $zip)) {
-            throw "No GZFX field ZIP was found."
-          }
-
-          $zip = (Resolve-Path $zip).Path
-          $label = [IO.Path]::GetFileNameWithoutExtension($zip)
           $out = Join-Path $env:RUNNER_TEMP "gzfx-field-unpacked"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
 
-          Expand-Archive -LiteralPath $zip -DestinationPath $out -Force
-
           $manifest = Join-Path $out "_GZFX_FIELD_MANIFEST.txt"
-          @(
-            "source=$zip"
-            "label=$label"
-            "source_bytes=$((Get-Item $zip).Length)"
-            "source_sha256=$((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant())"
-            ""
-            "FILES:"
-          ) | Set-Content $manifest -Encoding UTF8
+          "archive_count=$($selected.Count)" | Set-Content $manifest -Encoding UTF8
+          $labels = @()
 
-          Get-ChildItem $out -Recurse -File |
-            Where-Object { $_.FullName -ne $manifest } |
-            Sort-Object FullName |
-            ForEach-Object {
-              $relative = [IO.Path]::GetRelativePath($out, $_.FullName)
-              "$relative`t$($_.Length)" | Add-Content $manifest -Encoding UTF8
-            }
+          foreach ($entry in $selected) {
+            $zip = (Resolve-Path $entry).Path
+            $label = [IO.Path]::GetFileNameWithoutExtension($zip)
+            $labels += $label
+            $partOut = Join-Path $out $label
+            New-Item -ItemType Directory -Force -Path $partOut | Out-Null
+
+            Expand-Archive -LiteralPath $zip -DestinationPath $partOut -Force
+
+            @(
+              ""
+              "source=$zip"
+              "label=$label"
+              "source_bytes=$((Get-Item $zip).Length)"
+              "source_sha256=$((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant())"
+              "FILES:"
+            ) | Add-Content $manifest -Encoding UTF8
+
+            Get-ChildItem $partOut -Recurse -File |
+              Sort-Object FullName |
+              ForEach-Object {
+                $relative = [IO.Path]::GetRelativePath($partOut, $_.FullName)
+                "$label/$relative`t$($_.Length)" | Add-Content $manifest -Encoding UTF8
+              }
+          }
+
+          $logical = $labels[0] -replace "(?i)(Telemetry|-part\d+)$", ""
+          if ([string]::IsNullOrWhiteSpace($logical)) {
+            $logical = $labels[0]
+          }
 
           Get-Content $manifest
-          "label=$label" >> $env:GITHUB_OUTPUT
+          "label=$logical" >> $env:GITHUB_OUTPUT
           "out=$out" >> $env:GITHUB_OUTPUT
 
       - name: Upload unpacked field evidence
