@@ -532,6 +532,11 @@ int wmain(
             diagnostics /
             L"ambient_depth_stack.txt");
 
+    const std::string productControlLog =
+        ReadAll(
+            diagnostics /
+            L"product_control_submission.txt");
+
     const bool injected =
         effectLog.find(
             "status=pre_ui_injected") !=
@@ -553,10 +558,34 @@ int wmain(
             "status=applied") !=
             std::string::npos;
 
+    const bool indirectOnlyOwnership =
+        ambientDepthLog.find(
+            "ao_allowed=false") !=
+                std::string::npos &&
+        ambientDepthLog.find(
+            "ao_enabled=false") !=
+                std::string::npos &&
+        ambientDepthLog.find(
+            "indirect_enabled=true") !=
+                std::string::npos;
+
+    const bool productControlProof =
+        productControlLog.find(
+            "wave4_owns_ao=true") !=
+                std::string::npos &&
+        productControlLog.find(
+            "indirect_stack_applied=true") !=
+                std::string::npos &&
+        productControlLog.find(
+            "scene_effects_injected=true") !=
+                std::string::npos;
+
     if (!injected ||
         !signalRecorded ||
         !sceneChanged ||
-        !ambientDepthApplied)
+        !ambientDepthApplied ||
+        !indirectOnlyOwnership ||
+        !productControlProof)
     {
         std::cerr
             << "pre-UI stack failed acceptance\n"
@@ -564,8 +593,12 @@ int wmain(
             << " signal=" << signalRecorded
             << " scene_changed=" << sceneChanged
             << " ambient_depth=" << ambientDepthApplied
+            << " indirect_only=" << indirectOnlyOwnership
+            << " product_control=" << productControlProof
             << "\n"
             << ambientDepthLog
+            << "\n"
+            << productControlLog
             << "\n"
             << effectLog
             << "\n"
