@@ -287,6 +287,36 @@ int wmain(
         return 22;
     }
 
+    if (!gzfx::settings::SetNormalized(
+            gzfx::settings::Editable::BloomStrength,
+            0.611f))
+    {
+        return 23;
+    }
+
+    const float customBloomBefore =
+        gzfx::settings::Get().bloomStrength;
+
+    if (!gzfx::settings::ApplyPreset(
+            gzfx::settings::Preset::Custom))
+    {
+        return 24;
+    }
+
+    const auto customApplied =
+        gzfx::settings::Get();
+
+    if (customApplied.productPreset !=
+            static_cast<std::uint32_t>(
+                gzfx::settings::Preset::Custom) ||
+        !Near(
+            customApplied.bloomStrength,
+            customBloomBefore,
+            1e-4f))
+    {
+        return 25;
+    }
+
     std::wcout
         << L"Unified product renderer contracts passed.\n";
 
