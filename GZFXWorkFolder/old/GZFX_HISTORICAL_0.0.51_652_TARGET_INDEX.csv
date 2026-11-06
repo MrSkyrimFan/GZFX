@@ -1,0 +1,653 @@
+TargetID,Target,Historical_0.0.51_Status,Families
+F0001,Screen-space ambient occlusion (SSAO),CurrentKnownImplementedInScope,AO; SHADOW
+F0002,Screen-space indirect lighting (SSIL),CurrentKnownImplementedInScope,INDIRECT; LIGHTS_EMISSIVES
+F0003,Ambient occlusion quality controls,CurrentKnownImplementedInScope,AO; SHADOW; EDITOR_PRESETS
+F0004,Indirect-lighting quality controls,CurrentKnownImplementedInScope,INDIRECT; LIGHTS_EMISSIVES; EDITOR_PRESETS
+F0005,AO radius/range controls,CurrentKnownImplementedInScope,AO
+F0006,AO intensity controls,CurrentKnownImplementedInScope,AO
+F0007,AO amount controls,CurrentKnownImplementedInScope,AO
+F0008,AO/IL filtering,Partial,AO
+F0009,AO/IL temporal stabilization,Partial,AO; TEMPORAL_AA
+F0010,AO/IL application to subsurface-scattering materials,NoCurrentIndividualClaim,AO; MATERIAL_GEOMETRY; SKY_ATMOSPHERE
+F0011,Skylighting,NoCurrentIndividualClaim,SKY_ATMOSPHERE; LIGHTS_EMISSIVES
+F0012,Directional skylighting,NoCurrentIndividualClaim,SKY_ATMOSPHERE; LIGHTS_EMISSIVES
+F0013,Image-based lighting (IBL),NoCurrentIndividualClaim,REFLECTION_IBL; LIGHTS_EMISSIVES
+F0014,Reflective image-based lighting,NoCurrentIndividualClaim,REFLECTION_IBL; LIGHTS_EMISSIVES
+F0015,Specular image-based lighting,NoCurrentIndividualClaim,REFLECTION_IBL; LIGHTS_EMISSIVES
+F0016,Dynamic cubemaps,NoCurrentIndividualClaim,REFLECTION_IBL
+F0017,Dynamic environment reflections,NoCurrentIndividualClaim,REFLECTION_IBL
+F0018,Screen-space reflections,NoCurrentIndividualClaim,REFLECTION_IBL
+F0019,Cubemap reflection controls,NoCurrentIndividualClaim,REFLECTION_IBL
+F0020,Environment reflection intensity,NoCurrentIndividualClaim,REFLECTION_IBL
+F0021,Environment reflection curve controls,NoCurrentIndividualClaim,REFLECTION_IBL
+F0022,Eye reflections,NoCurrentIndividualClaim,REFLECTION_IBL
+F0023,Wet-surface reflections,NoCurrentIndividualClaim,REFLECTION_IBL; MATERIAL_GEOMETRY; WEATHER_TIME
+F0024,Aurora contribution to image-based lighting,NoCurrentIndividualClaim,REFLECTION_IBL; SKY_ATMOSPHERE; LIGHTS_EMISSIVES
+F0025,Detailed shadows,AbsentNamedNative,SHADOW
+F0026,Improved vanilla shadow filtering,AbsentNamedNative,SHADOW
+F0027,Improved point-light shadows,AbsentNamedNative,SHADOW; LIGHTS_EMISSIVES
+F0028,Distant shadows,AbsentNamedNative,SHADOW
+F0029,LOD shadows,AbsentNamedNative,SHADOW
+F0030,LOD-tree shadows,AbsentNamedNative,SHADOW; MATERIAL_GEOMETRY
+F0031,Shadows applied to water,AbsentNamedNative,SHADOW; WATER
+F0032,Shadows applied to transparent objects,AbsentNamedNative,SHADOW
+F0033,Shadows from particle lights,AbsentNamedNative,SHADOW; LIGHTS_EMISSIVES
+F0034,Shadows from fire lights,AbsentNamedNative,SHADOW; LIGHTS_EMISSIVES
+F0035,Shadows from point lights,AbsentNamedNative,SHADOW; LIGHTS_EMISSIVES
+F0036,Shadows from spot lights,AbsentNamedNative,SHADOW; LIGHTS_EMISSIVES
+F0037,Grass shadows,AbsentNamedNative,SHADOW; MATERIAL_GEOMETRY
+F0038,Complex-grass point-light shadows,AbsentNamedNative,SHADOW; MATERIAL_GEOMETRY; LIGHTS_EMISSIVES
+F0039,Cloud shadows,AbsentNamedNative,SHADOW; SKY_ATMOSPHERE
+F0040,Cloud shadows on water,AbsentNamedNative,SHADOW; WATER; SKY_ATMOSPHERE
+F0041,Cloud shadows in reflections,AbsentNamedNative,REFLECTION_IBL; SHADOW; SKY_ATMOSPHERE
+F0042,Cloud shadows on snow,AbsentNamedNative,SHADOW; MATERIAL_GEOMETRY; SKY_ATMOSPHERE; WEATHER_TIME
+F0043,Cloud-shadow influence on close objects,AbsentNamedNative,SHADOW; SKY_ATMOSPHERE
+F0044,Shadow hardness controls,AbsentNamedNative,SHADOW
+F0045,Shadow bias controls,AbsentNamedNative,SHADOW
+F0046,Complex-parallax self-shadowing,AbsentNamedNative,SHADOW; MATERIAL_GEOMETRY
+F0047,Volumetric shadowing,AbsentNamedNative,SHADOW
+F0048,Subsurface scattering,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; SKY_ATMOSPHERE
+F0049,Character skin subsurface scattering,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; SKY_ATMOSPHERE
+F0050,Grass subsurface scattering,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; SKY_ATMOSPHERE
+F0051,Skin specular,NoCurrentIndividualClaim,REFLECTION_IBL; MATERIAL_GEOMETRY
+F0052,Specular lighting controls,NoCurrentIndividualClaim,REFLECTION_IBL; LIGHTS_EMISSIVES
+F0053,Direct-light specular,NoCurrentIndividualClaim,REFLECTION_IBL; LIGHTS_EMISSIVES
+F0054,Point-light specular,NoCurrentIndividualClaim,REFLECTION_IBL; LIGHTS_EMISSIVES
+F0055,Material specular controls,NoCurrentIndividualClaim,REFLECTION_IBL; MATERIAL_GEOMETRY
+F0056,Complex material system,NoCurrentIndividualClaim,MATERIAL_GEOMETRY
+F0057,Complex parallax,NoCurrentIndividualClaim,MATERIAL_GEOMETRY
+F0058,Parallax correction,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; TOOLS_DIAGNOSTICS
+F0059,Parallax shadowing,AbsentNamedNative,SHADOW; MATERIAL_GEOMETRY
+F0060,Terrain parallax support,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WEATHER_TIME
+F0061,Terrain blending,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WEATHER_TIME
+F0062,Complex grass,NoCurrentIndividualClaim,MATERIAL_GEOMETRY
+F0063,Grass normal mapping,NoCurrentIndividualClaim,MATERIAL_GEOMETRY
+F0064,Grass directional lighting,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; LIGHTS_EMISSIVES
+F0065,Grass ambient lighting,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; LIGHTS_EMISSIVES
+F0066,Grass point lighting,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; LIGHTS_EMISSIVES
+F0067,Grass subsurface scattering,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; SKY_ATMOSPHERE
+F0068,Grass specular,NoCurrentIndividualClaim,REFLECTION_IBL; MATERIAL_GEOMETRY
+F0069,Grass collisions,NoCurrentIndividualClaim,MATERIAL_GEOMETRY
+F0070,Grass lighting fixes,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; LIGHTS_EMISSIVES; TOOLS_DIAGNOSTICS
+F0071,Tree lighting fixes,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; LIGHTS_EMISSIVES; TOOLS_DIAGNOSTICS
+F0072,Snow lighting controls,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WEATHER_TIME; LIGHTS_EMISSIVES
+F0073,Snow ambient-light influence,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WEATHER_TIME; LIGHTS_EMISSIVES
+F0074,Snow directional-light influence,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WEATHER_TIME; LIGHTS_EMISSIVES
+F0075,Snow particle shadows,AbsentNamedNative,SHADOW; MATERIAL_GEOMETRY; WEATHER_TIME; LIGHTS_EMISSIVES
+F0076,Water rendering enhancement,NoCurrentIndividualClaim,WATER
+F0077,Water lighting,NoCurrentIndividualClaim,WATER; LIGHTS_EMISSIVES
+F0078,Water displacement,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WATER
+F0079,Water parallax,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WATER
+F0080,Water caustics,NoCurrentIndividualClaim,WATER
+F0081,Underwater caustics,NoCurrentIndividualClaim,WATER
+F0082,Water dispersion,NoCurrentIndividualClaim,WATER
+F0083,Water refraction,NoCurrentIndividualClaim,WATER
+F0084,Water-depth/deepness calculations,NoCurrentIndividualClaim,WATER
+F0085,Water Fresnel controls,NoCurrentIndividualClaim,WATER
+F0086,Water surface reflections,NoCurrentIndividualClaim,REFLECTION_IBL; WATER
+F0087,Water cubemap reflections,NoCurrentIndividualClaim,REFLECTION_IBL; WATER
+F0088,Water reflection fog,NoCurrentIndividualClaim,REFLECTION_IBL; WATER; SKY_ATMOSPHERE
+F0089,Water volumetric shadows,AbsentNamedNative,SHADOW; WATER
+F0090,Water sun scattering,NoCurrentIndividualClaim,WATER; SKY_ATMOSPHERE
+F0091,Water shallow-color controls,NoCurrentIndividualClaim,WATER; COLOR_HDR
+F0092,Water deep-color controls,NoCurrentIndividualClaim,WATER; COLOR_HDR
+F0093,Water LOD rendering,NoCurrentIndividualClaim,WATER
+F0094,Water LOD corrections,NoCurrentIndividualClaim,WATER; TOOLS_DIAGNOSTICS
+F0095,Water TAA correction,NoCurrentIndividualClaim,WATER; TEMPORAL_AA; TOOLS_DIAGNOSTICS
+F0096,Water FXAA handling,NoCurrentIndividualClaim,WATER; TEMPORAL_AA; TOOLS_DIAGNOSTICS
+F0097,Water HDR expansion,NoCurrentIndividualClaim,WATER; COLOR_HDR
+F0098,Water fog controls,NoCurrentIndividualClaim,WATER; SKY_ATMOSPHERE
+F0099,Water amplitude controls,NoCurrentIndividualClaim,WATER
+F0100,Water reflection artifact fixes,NoCurrentIndividualClaim,REFLECTION_IBL; WATER; TOOLS_DIAGNOSTICS
+F0101,Underwater rendering,NoCurrentIndividualClaim,WATER
+F0102,Underwater distortion,NoCurrentIndividualClaim,WATER; OPTICS
+F0103,Underwater blur,NoCurrentIndividualClaim,WATER; IMAGE_FILTER_ART
+F0104,Underwater edge distortion,NoCurrentIndividualClaim,WATER; OPTICS
+F0105,Custom `enbunderwater.fx`,NoCurrentIndividualClaim,WATER; PROGRAMMABLE_FRAMEWORK
+F0106,Wet surfaces,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WEATHER_TIME
+F0107,Rain wet surfaces,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WEATHER_TIME
+F0108,Dynamic wet-surface cubemaps,NoCurrentIndividualClaim,REFLECTION_IBL; MATERIAL_GEOMETRY; WEATHER_TIME
+F0109,Wet-surface specular controls,NoCurrentIndividualClaim,REFLECTION_IBL; MATERIAL_GEOMETRY; WEATHER_TIME
+F0110,Rain rendering controls,NoCurrentIndividualClaim,WEATHER_TIME
+F0111,Rain brightness,NoCurrentIndividualClaim,WEATHER_TIME; COLOR_HDR
+F0112,Rain motion blur,NoCurrentIndividualClaim,WEATHER_TIME; CAMERA_DOF_MOTION; IMAGE_FILTER_ART
+F0113,Rain texture/UV controls,NoCurrentIndividualClaim,WEATHER_TIME
+F0114,Snow rendering controls,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WEATHER_TIME
+F0115,Fire rendering controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0116,Complex fire lights,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0117,Fire-light color/intensity controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES; COLOR_HDR
+F0118,Fire-light shadows,AbsentNamedNative,SHADOW; LIGHTS_EMISSIVES
+F0119,Particle rendering controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0120,Complex particle lighting,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0121,Particle diffuse lighting,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0122,Particle specular lighting,NoCurrentIndividualClaim,REFLECTION_IBL; LIGHTS_EMISSIVES
+F0123,Particle skin-specular contribution,NoCurrentIndividualClaim,REFLECTION_IBL; MATERIAL_GEOMETRY; LIGHTS_EMISSIVES
+F0124,Particle emissive controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0125,Particle lights,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0126,Particle-light shadows,AbsentNamedNative,SHADOW; LIGHTS_EMISSIVES
+F0127,Soft particles,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0128,Time-of-day-dependent particle emissive behavior,NoCurrentIndividualClaim,WEATHER_TIME; LIGHTS_EMISSIVES
+F0129,Bloom,CurrentKnownImplementedInScope,OPTICS
+F0130,HDR bloom,CurrentKnownImplementedInScope,COLOR_HDR; OPTICS
+F0131,Bloom intensity/curve controls,CurrentKnownImplementedInScope,OPTICS
+F0132,Lens effects,Partial,OPTICS
+F0133,Lens reflections,NoCurrentIndividualClaim,REFLECTION_IBL; OPTICS
+F0134,Lens flares,NoCurrentIndividualClaim,OPTICS
+F0135,Lens dirt-style effects through shaders,CurrentKnownImplementedInScope,OPTICS; PROGRAMMABLE_FRAMEWORK
+F0136,Sun glare,NoCurrentIndividualClaim,SKY_ATMOSPHERE; OPTICS
+F0137,Sun sprite,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0138,Lens sprite,NoCurrentIndividualClaim,OPTICS
+F0139,Depth of field,CurrentKnownImplementedInScope,CAMERA_DOF_MOTION
+F0140,Depth-based autofocus,ImplementedButUnqualified,CAMERA_DOF_MOTION
+F0141,Custom depth-of-field shaders,NoCurrentIndividualClaim,CAMERA_DOF_MOTION; PROGRAMMABLE_FRAMEWORK
+F0142,Pre-DOF shader pass,CurrentKnownImplementedInScope,CAMERA_DOF_MOTION; PROGRAMMABLE_FRAMEWORK; SCENE_UI
+F0143,Post-processing shader pass,Partial,PROGRAMMABLE_FRAMEWORK; SCENE_UI
+F0144,Motion blur through shader implementations,CurrentKnownImplementedInScope,CAMERA_DOF_MOTION; IMAGE_FILTER_ART; PROGRAMMABLE_FRAMEWORK
+F0145,HDR rendering,Partial,COLOR_HDR
+F0146,Removal/bypass of Skyrim's LDR limitation,Partial,SKY_ATMOSPHERE; COLOR_HDR; TOOLS_DIAGNOSTICS
+F0147,HDR exposure controls,CurrentKnownImplementedInScope,COLOR_HDR
+F0148,Eye adaptation,CurrentKnownImplementedInScope,COLOR_HDR
+F0149,Automatic exposure/adaptation,CurrentKnownImplementedInScope,COLOR_HDR
+F0150,Tone mapping,Partial,COLOR_HDR
+F0151,Custom tone mapping,Partial,COLOR_HDR; PROGRAMMABLE_FRAMEWORK
+F0152,Color filtering,NoCurrentIndividualClaim,COLOR_HDR
+F0153,HDR-weighted color filtering,Partial,COLOR_HDR
+F0154,Brightness controls,Partial,COLOR_HDR
+F0155,Contrast controls,CurrentKnownImplementedInScope,COLOR_HDR
+F0156,Gamma controls,CurrentKnownImplementedInScope,COLOR_HDR
+F0157,Saturation controls,CurrentKnownImplementedInScope,COLOR_HDR
+F0158,Desaturation controls,CurrentKnownImplementedInScope,COLOR_HDR
+F0159,Color-power controls,Partial,COLOR_HDR
+F0160,Direct-light color controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES; COLOR_HDR
+F0161,Ambient-light color controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES; COLOR_HDR
+F0162,Point-light color controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES; COLOR_HDR
+F0163,Specular color controls,NoCurrentIndividualClaim,REFLECTION_IBL; COLOR_HDR
+F0164,Fog color controls,CurrentKnownImplementedInScope,SKY_ATMOSPHERE; COLOR_HDR
+F0165,Fog color filtering,Partial,SKY_ATMOSPHERE; COLOR_HDR
+F0166,Interior fog controls,Partial,SKY_ATMOSPHERE
+F0167,Exterior fog controls,Partial,SKY_ATMOSPHERE
+F0168,Volumetric fog,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0169,Improved volumetric fog,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0170,Mountain volumetric fog handling,NoCurrentIndividualClaim,SKY_ATMOSPHERE; TOOLS_DIAGNOSTICS
+F0171,Game volumetric-ray controls,AbsentNamedNative,SKY_ATMOSPHERE
+F0172,Sun rays,AbsentNamedNative,SKY_ATMOSPHERE
+F0173,Moon rays,AbsentNamedNative,SKY_ATMOSPHERE
+F0174,Volumetric rays,AbsentNamedNative,SKY_ATMOSPHERE
+F0175,Ray intensity controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0176,Ray color controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE; COLOR_HDR
+F0177,Ray weather dependence,NoCurrentIndividualClaim,SKY_ATMOSPHERE; WEATHER_TIME
+F0178,Ray cloud-transparency interaction,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0179,Sky rendering controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0180,Sky color controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE; COLOR_HDR
+F0181,Sky intensity controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0182,Sky gradient controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE; IMAGE_FILTER_ART
+F0183,Sky scattering,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0184,Cloud rendering controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0185,Cloud intensity controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0186,Cloud opacity controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0187,Cloud scattering,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0188,Cloud vertex-alpha controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0189,Celestial-light rendering controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE; LIGHTS_EMISSIVES
+F0190,Sun controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0191,Moon controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0192,Moon brightness/curve controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE; COLOR_HDR
+F0193,Stars,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0194,Animated stars,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0195,Aurora borealis controls,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0196,Soul Cairn aurora handling,NoCurrentIndividualClaim,SKY_ATMOSPHERE; TOOLS_DIAGNOSTICS
+F0197,Object-glow controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0198,Window-light/glow handling,NoCurrentIndividualClaim,LIGHTS_EMISSIVES; TOOLS_DIAGNOSTICS
+F0199,Emissive-material controls,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; LIGHTS_EMISSIVES
+F0200,Direct lighting controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0201,Ambient lighting controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0202,Point lighting controls,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0203,Environment lighting controls,NoCurrentIndividualClaim,REFLECTION_IBL; LIGHTS_EMISSIVES
+F0204,Interior/exterior-specific lighting,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0205,Day/night-specific lighting,NoCurrentIndividualClaim,WEATHER_TIME; LIGHTS_EMISSIVES
+F0206,Dawn-specific parameters,NoCurrentIndividualClaim,WEATHER_TIME; EDITOR_PRESETS
+F0207,Sunrise-specific parameters,NoCurrentIndividualClaim,SKY_ATMOSPHERE; WEATHER_TIME; EDITOR_PRESETS
+F0208,Day-specific parameters,NoCurrentIndividualClaim,EDITOR_PRESETS
+F0209,Sunset-specific parameters,NoCurrentIndividualClaim,SKY_ATMOSPHERE; WEATHER_TIME; EDITOR_PRESETS
+F0210,Dusk-specific parameters,NoCurrentIndividualClaim,WEATHER_TIME; EDITOR_PRESETS
+F0211,Night-specific parameters,NoCurrentIndividualClaim,WEATHER_TIME; EDITOR_PRESETS
+F0212,Multiple-weather system,NoCurrentIndividualClaim,WEATHER_TIME
+F0213,Per-weather parameters,NoCurrentIndividualClaim,WEATHER_TIME; EDITOR_PRESETS
+F0214,Weather transitions,NoCurrentIndividualClaim,WEATHER_TIME
+F0215,Weather-dependent lighting,NoCurrentIndividualClaim,WEATHER_TIME; LIGHTS_EMISSIVES
+F0216,Weather-dependent sky,NoCurrentIndividualClaim,SKY_ATMOSPHERE; WEATHER_TIME
+F0217,Weather-dependent fog,NoCurrentIndividualClaim,SKY_ATMOSPHERE; WEATHER_TIME
+F0218,Weather-dependent rays,NoCurrentIndividualClaim,SKY_ATMOSPHERE; WEATHER_TIME
+F0219,Weather-dependent reflections,NoCurrentIndividualClaim,REFLECTION_IBL; WEATHER_TIME
+F0220,Weather-dependent material response,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WEATHER_TIME
+F0221,Weather-dependent color grading,NoCurrentIndividualClaim,WEATHER_TIME; COLOR_HDR
+F0222,Interior weather-system overrides,NoCurrentIndividualClaim,WEATHER_TIME
+F0223,Exterior weather-system behavior,NoCurrentIndividualClaim,WEATHER_TIME
+F0224,Custom programmable post-processing shaders,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; SCENE_UI
+F0225,Custom programmable pre-pass shaders,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; SCENE_UI
+F0226,Custom programmable lens shaders,NoCurrentIndividualClaim,OPTICS; PROGRAMMABLE_FRAMEWORK
+F0227,Custom programmable bloom shaders,NoCurrentIndividualClaim,OPTICS; PROGRAMMABLE_FRAMEWORK
+F0228,Custom programmable depth-of-field shaders,NoCurrentIndividualClaim,CAMERA_DOF_MOTION; PROGRAMMABLE_FRAMEWORK
+F0229,Custom programmable underwater shaders,NoCurrentIndividualClaim,WATER; PROGRAMMABLE_FRAMEWORK
+F0230,Custom textures accessible by shaders,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0231,Depth-buffer access for ENB effects,Partial,PROGRAMMABLE_FRAMEWORK
+F0232,Normal-buffer use,Partial,PROGRAMMABLE_FRAMEWORK
+F0233,HDR-buffer access,Partial,COLOR_HDR; PROGRAMMABLE_FRAMEWORK
+F0234,Scene-data access,Partial,PROGRAMMABLE_FRAMEWORK
+F0235,Camera information exposed to shaders,Partial,CAMERA_DOF_MOTION; PROGRAMMABLE_FRAMEWORK
+F0236,Field-of-view information exposed to shaders,Partial,CAMERA_DOF_MOTION; PROGRAMMABLE_FRAMEWORK
+F0237,Weather information exposed to shaders/ENB SDK,NoCurrentIndividualClaim,WEATHER_TIME; PROGRAMMABLE_FRAMEWORK
+F0238,Time-of-day information exposed to shaders/ENB SDK,NoCurrentIndividualClaim,WEATHER_TIME; PROGRAMMABLE_FRAMEWORK
+F0239,External shader parameters exposed in the in-game editor,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0240,Shader dropdown parameters,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0241,Shader quality controls,CurrentKnownImplementedInScope,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0242,Shader recompilation/reload,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0243,Shader caching,Partial,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0244,In-game ENB editor,NoCurrentIndividualClaim,EDITOR_PRESETS
+F0245,Live effect enable/disable,CurrentKnownImplementedInScope,EDITOR_PRESETS; TOOLS_DIAGNOSTICS
+F0246,Live effect parameter editing,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0247,Live per-weather editing,NoCurrentIndividualClaim,WEATHER_TIME; EDITOR_PRESETS
+F0248,Live shader parameter editing,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0249,Preset loading,CurrentKnownImplementedInScope,EDITOR_PRESETS; SCENE_UI
+F0250,Preset saving,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0251,Modular preset architecture,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0252,Separate global and weather-specific configuration,NoCurrentIndividualClaim,WEATHER_TIME; EDITOR_PRESETS
+F0253,Effect quality tiers,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0254,Performance-quality controls,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0255,FPS limiter,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS
+F0256,FPS counter,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS
+F0257,Screenshot capture,Partial,TOOLS_DIAGNOSTICS
+F0258,Screenshot hotkeys,Partial,EDITOR_PRESETS; TOOLS_DIAGNOSTICS
+F0259,Profiler,Partial,TOOLS_DIAGNOSTICS
+F0260,GPU/performance profiling,Partial,TOOLS_DIAGNOSTICS
+F0261,Polygon-count visualization,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS
+F0262,Wireframe visualization,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS
+F0263,Debug visualizations,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS
+F0266,Original post-processing bypass/use controls,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS; SCENE_UI
+F0267,Original game DOF disable controls,NoCurrentIndividualClaim,CAMERA_DOF_MOTION; TOOLS_DIAGNOSTICS; SCENE_UI
+F0268,Original game post-processing replacement,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS; SCENE_UI
+F0269,Game dithering disable controls,NoCurrentIndividualClaim,IMAGE_FILTER_ART; TOOLS_DIAGNOSTICS
+F0270,Black-crush correction,NoCurrentIndividualClaim,COLOR_HDR; TOOLS_DIAGNOSTICS
+F0271,Volumetric-ray bug fixes,AbsentNamedNative,SKY_ATMOSPHERE; TOOLS_DIAGNOSTICS
+F0272,Cloud-rendering fixes,NoCurrentIndividualClaim,SKY_ATMOSPHERE; TOOLS_DIAGNOSTICS
+F0273,Water-rendering fixes,NoCurrentIndividualClaim,WATER; TOOLS_DIAGNOSTICS
+F0274,Reflection fixes,NoCurrentIndividualClaim,REFLECTION_IBL; TOOLS_DIAGNOSTICS
+F0275,Shadow fixes,AbsentNamedNative,SHADOW; TOOLS_DIAGNOSTICS
+F0276,Parallax fixes,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; TOOLS_DIAGNOSTICS
+F0277,Grass-lighting fixes,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; LIGHTS_EMISSIVES; TOOLS_DIAGNOSTICS
+F0278,Tree-lighting fixes,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; LIGHTS_EMISSIVES; TOOLS_DIAGNOSTICS
+F0279,Snow-lighting fixes,NoCurrentIndividualClaim,MATERIAL_GEOMETRY; WEATHER_TIME; LIGHTS_EMISSIVES; TOOLS_DIAGNOSTICS
+F0280,First-person wetness fixes,NoCurrentIndividualClaim,WEATHER_TIME; TOOLS_DIAGNOSTICS
+F0281,Saved-game thumbnail fixes,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS; SCENE_UI
+F0282,Menu/loading-screen effect exclusions,Partial,EDITOR_PRESETS; SCENE_UI
+F0283,Runtime-specific renderer fixes,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS; PLATFORM_LOADER
+F0284,AMD-specific renderer fixes,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS; PLATFORM_LOADER
+F0287,Extensible external-shader architecture,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0288,Generic real-time post-processing injection,NoCurrentIndividualClaim,PLATFORM_LOADER; SCENE_UI
+F0291,Direct3D 11 support,NoCurrentIndividualClaim,PLATFORM_LOADER
+F0295,Frame-color-buffer access,Partial,COLOR_HDR; PROGRAMMABLE_FRAMEWORK
+F0296,Depth-buffer access,Partial,PROGRAMMABLE_FRAMEWORK
+F0297,Custom render-target creation,Partial,PROGRAMMABLE_FRAMEWORK
+F0298,Custom texture creation,Partial,PROGRAMMABLE_FRAMEWORK
+F0299,Multi-pass rendering,Partial,PROGRAMMABLE_FRAMEWORK
+F0301,Custom vertex shaders,Partial,PROGRAMMABLE_FRAMEWORK
+F0302,Custom pixel shaders,Partial,PROGRAMMABLE_FRAMEWORK
+F0303,Custom compute shaders where supported,Partial,PROGRAMMABLE_FRAMEWORK
+F0304,Custom textures,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0305,Custom samplers,Partial,PROGRAMMABLE_FRAMEWORK
+F0306,Custom render states,Partial,PROGRAMMABLE_FRAMEWORK
+F0307,Shader timers,Partial,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0308,Shader hotkey input,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0309,Frame-time access,Partial,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0310,Custom shader uniforms,Partial,PROGRAMMABLE_FRAMEWORK
+F0311,User-configurable shader parameters,Partial,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0313,Arbitrary custom post-processing effects,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; SCENE_UI
+F0315,Graphics-resource interception through add-ons,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0316,Pipeline interception through add-ons,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0317,Shader interception through add-ons,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0318,Texture inspection through add-ons,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0319,Texture replacement through add-ons,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0320,Shader replacement/modification through add-ons,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0321,Overlay creation through add-ons,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0322,Runtime instrumentation through add-ons,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0323,Custom native plugin functionality through add-ons,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0324,Screen-space ambient occlusion,CurrentKnownImplementedInScope,AO; SHADOW
+F0325,SSAO,CurrentKnownImplementedInScope,AO
+F0326,HBAO-style ambient occlusion,CurrentKnownImplementedInScope,AO; SHADOW
+F0327,GTAO,Partial,AO
+F0328,MXAO,NoCurrentIndividualClaim,AO
+F0329,Ray-marched ambient occlusion,Partial,AO; SHADOW
+F0330,Directional occlusion,AbsentNamedNative,AO; SHADOW
+F0331,Multi-scale ambient occlusion,Partial,AO; SHADOW; MASK_COMPOSITION
+F0332,Double-layer ambient occlusion,Partial,AO; SHADOW; MASK_COMPOSITION
+F0333,Depth-aware ambient occlusion,CurrentKnownImplementedInScope,AO; SHADOW
+F0334,Normal-aware ambient occlusion,CurrentKnownImplementedInScope,AO; SHADOW
+F0335,Screen-space directional occlusion,AbsentNamedNative,AO; SHADOW
+F0336,Screen-space indirect lighting,CurrentKnownImplementedInScope,INDIRECT; LIGHTS_EMISSIVES
+F0337,SSGI,Partial,INDIRECT
+F0338,SSDO,NoCurrentIndividualClaim,INDIRECT
+F0339,Fake GI,Partial,INDIRECT
+F0340,Radiance-transfer GI,NoCurrentIndividualClaim,INDIRECT
+F0341,Ray-marched GI,NoCurrentIndividualClaim,INDIRECT
+F0342,RTGI-style screen-space global illumination,NoCurrentIndividualClaim,INDIRECT
+F0343,Multi-bounce-style GI shaders,Partial,INDIRECT; PROGRAMMABLE_FRAMEWORK
+F0344,Indirect diffuse lighting,Partial,INDIRECT; LIGHTS_EMISSIVES
+F0345,Screen-space reflections,NoCurrentIndividualClaim,REFLECTION_IBL
+F0346,SSR,NoCurrentIndividualClaim,REFLECTION_IBL
+F0347,Glossy screen-space reflections,NoCurrentIndividualClaim,REFLECTION_IBL
+F0348,Reflection intensity controls,NoCurrentIndividualClaim,REFLECTION_IBL
+F0349,Custom screen-space relighting,NoCurrentIndividualClaim,LIGHTS_EMISSIVES; PROGRAMMABLE_FRAMEWORK
+F0350,ReLight/path-traced-light-studio-style shaders,NoCurrentIndividualClaim,LIGHTS_EMISSIVES; PROGRAMMABLE_FRAMEWORK
+F0351,User-positioned virtual lights,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0352,Spotlights,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0353,Rim lighting,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0354,Relighting effects,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0355,Local-light enhancement,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0356,Depth-based lighting effects,NoCurrentIndividualClaim,LIGHTS_EMISSIVES
+F0357,Surface-normal reconstruction,NoCurrentIndividualClaim,MATERIAL_GEOMETRY
+F0358,Smoothed reconstructed normals,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0359,Textured/detail normal reconstruction,NoCurrentIndividualClaim,MATERIAL_GEOMETRY
+F0360,Optical-flow estimation,NoCurrentIndividualClaim,CAMERA_DOF_MOTION
+F0361,Motion-vector reconstruction,NoCurrentIndividualClaim,CAMERA_DOF_MOTION; TEMPORAL_AA
+F0362,Temporal reprojection support in compatible shaders,Partial,TEMPORAL_AA; PROGRAMMABLE_FRAMEWORK
+F0363,Temporal accumulation,Partial,TEMPORAL_AA
+F0364,Temporal anti-aliasing shaders,NoCurrentIndividualClaim,TEMPORAL_AA; PROGRAMMABLE_FRAMEWORK
+F0365,TAA,NoCurrentIndividualClaim,TEMPORAL_AA
+F0366,TFAA,NoCurrentIndividualClaim,TEMPORAL_AA
+F0367,SMAA,NoCurrentIndividualClaim,TEMPORAL_AA
+F0368,FXAA,NoCurrentIndividualClaim,TEMPORAL_AA
+F0369,CMAA,NoCurrentIndividualClaim,TEMPORAL_AA
+F0370,CMAA2,NoCurrentIndividualClaim,TEMPORAL_AA
+F0371,DLAA,NoCurrentIndividualClaim,TEMPORAL_AA
+F0372,NFAA,NoCurrentIndividualClaim,TEMPORAL_AA
+F0373,HQAA,NoCurrentIndividualClaim,TEMPORAL_AA
+F0374,Edge-detection anti-aliasing,NoCurrentIndividualClaim,TEMPORAL_AA
+F0375,Depth-edge-aware anti-aliasing,NoCurrentIndividualClaim,TEMPORAL_AA
+F0376,Morphological anti-aliasing,NoCurrentIndividualClaim,TEMPORAL_AA
+F0377,Depth of field,CurrentKnownImplementedInScope,CAMERA_DOF_MOTION
+F0378,Cinematic depth of field,Partial,CAMERA_DOF_MOTION
+F0379,Autofocus depth of field,ImplementedButUnqualified,CAMERA_DOF_MOTION
+F0380,Manual-focus depth of field,CurrentKnownImplementedInScope,CAMERA_DOF_MOTION
+F0381,Near-field DOF,CurrentKnownImplementedInScope,CAMERA_DOF_MOTION
+F0382,Far-field DOF,CurrentKnownImplementedInScope,CAMERA_DOF_MOTION
+F0383,Bokeh DOF,Partial,CAMERA_DOF_MOTION
+F0384,Polygonal bokeh,NoCurrentIndividualClaim,CAMERA_DOF_MOTION; TOOLS_DIAGNOSTICS
+F0385,Circular bokeh,Partial,CAMERA_DOF_MOTION
+F0386,Aperture-shape controls,NoCurrentIndividualClaim,CAMERA_DOF_MOTION
+F0387,Aperture vignetting,NoCurrentIndividualClaim,CAMERA_DOF_MOTION
+F0388,Longitudinal chromatic aberration in DOF,Partial,CAMERA_DOF_MOTION; OPTICS
+F0389,Tilt-shift DOF,NoCurrentIndividualClaim,CAMERA_DOF_MOTION
+F0390,Gaussian DOF,NoCurrentIndividualClaim,CAMERA_DOF_MOTION
+F0391,Ring DOF,Partial,CAMERA_DOF_MOTION
+F0392,Bloom,CurrentKnownImplementedInScope,OPTICS
+F0393,Cinematic bloom,Partial,OPTICS
+F0394,HDR bloom,CurrentKnownImplementedInScope,COLOR_HDR; OPTICS
+F0395,Gaussian bloom,NoCurrentIndividualClaim,OPTICS
+F0396,Multi-scale bloom,CurrentKnownImplementedInScope,OPTICS; MASK_COMPOSITION
+F0397,Threshold bloom,CurrentKnownImplementedInScope,OPTICS
+F0398,Soft bloom,CurrentKnownImplementedInScope,OPTICS
+F0399,Lens bloom,Partial,OPTICS
+F0400,Light glow,Partial,LIGHTS_EMISSIVES
+F0401,Local glow,Partial,LIGHTS_EMISSIVES
+F0402,Lens flares,NoCurrentIndividualClaim,OPTICS
+F0403,Anamorphic lens flares,NoCurrentIndividualClaim,OPTICS
+F0404,Hexagonal lens flares,NoCurrentIndividualClaim,OPTICS
+F0405,Lens glare,NoCurrentIndividualClaim,OPTICS
+F0406,Lens diffusion,NoCurrentIndividualClaim,OPTICS
+F0407,Halation,NoCurrentIndividualClaim,OPTICS
+F0408,Lens dirt,CurrentKnownImplementedInScope,OPTICS
+F0409,Light persistence,NoCurrentIndividualClaim,LIGHTS_EMISSIVES; IMAGE_FILTER_ART
+F0410,God rays,AbsentNamedNative,SKY_ATMOSPHERE
+F0411,Screen-space light rays,NoCurrentIndividualClaim,SKY_ATMOSPHERE; LIGHTS_EMISSIVES
+F0412,Volumetric-fog-style shaders,NoCurrentIndividualClaim,SKY_ATMOSPHERE; PROGRAMMABLE_FRAMEWORK
+F0413,Height fog,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0414,Depth fog,CurrentKnownImplementedInScope,SKY_ATMOSPHERE
+F0415,Adaptive fog,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0416,Atmospheric density,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0417,Haze,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0418,Dehaze,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0419,Fog reintroduction,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0420,Fog removal/reduction,NoCurrentIndividualClaim,SKY_ATMOSPHERE
+F0421,HDR-style processing,Partial,COLOR_HDR
+F0422,HDR display/output extensions through compatible shaders/add-ons,NoCurrentIndividualClaim,COLOR_HDR; PROGRAMMABLE_FRAMEWORK
+F0423,HDR tonemapping,Partial,COLOR_HDR
+F0424,Fake HDR,NoCurrentIndividualClaim,COLOR_HDR
+F0425,Dynamic-range expansion,NoCurrentIndividualClaim,COLOR_HDR
+F0426,Exposure,CurrentKnownImplementedInScope,COLOR_HDR
+F0427,Automatic exposure,CurrentKnownImplementedInScope,COLOR_HDR
+F0428,Eye adaptation,CurrentKnownImplementedInScope,COLOR_HDR
+F0429,Auto exposure/adaptation,CurrentKnownImplementedInScope,COLOR_HDR
+F0430,White-point adjustment,Partial,COLOR_HDR
+F0431,Black-point adjustment,Partial,COLOR_HDR
+F0432,Tone mapping,Partial,COLOR_HDR
+F0433,Reinhard tone mapping,AbsentNamedNative,COLOR_HDR
+F0434,Filmic tone mapping,AbsentNamedNative,COLOR_HDR
+F0435,ACES-style tone mapping through community shaders,AbsentNamedNative,COLOR_HDR; PROGRAMMABLE_FRAMEWORK
+F0436,Custom tone curves,Partial,COLOR_HDR; PROGRAMMABLE_FRAMEWORK
+F0437,Highlight compression,Partial,LIGHTS_EMISSIVES; COLOR_HDR
+F0438,Shadow compression,AbsentNamedNative,SHADOW
+F0439,Highlight recovery-style grading,NoCurrentIndividualClaim,LIGHTS_EMISSIVES; COLOR_HDR
+F0440,Color grading,CurrentKnownImplementedInScope,COLOR_HDR
+F0441,LUT color grading,AbsentNamedNative,COLOR_HDR
+F0442,Multi-LUT grading,AbsentNamedNative,COLOR_HDR
+F0443,3D LUT-style workflows,AbsentNamedNative,COLOR_HDR
+F0444,LUT generation tools,AbsentNamedNative,COLOR_HDR
+F0445,LUT blending,AbsentNamedNative,COLOR_HDR
+F0446,Brightness,Partial,COLOR_HDR
+F0447,Contrast,CurrentKnownImplementedInScope,COLOR_HDR
+F0448,Saturation,CurrentKnownImplementedInScope,COLOR_HDR
+F0449,Vibrance,CurrentKnownImplementedInScope,COLOR_HDR
+F0450,Exposure,CurrentKnownImplementedInScope,COLOR_HDR
+F0451,Gamma,CurrentKnownImplementedInScope,COLOR_HDR
+F0452,Lift,CurrentKnownImplementedInScope,COLOR_HDR
+F0453,Gamma/gain,CurrentKnownImplementedInScope,COLOR_HDR
+F0454,Lift/gamma/gain grading,CurrentKnownImplementedInScope,COLOR_HDR
+F0455,Levels,Partial,COLOR_HDR
+F0456,Curves,Partial,COLOR_HDR
+F0457,S-curves,NoCurrentIndividualClaim,COLOR_HDR
+F0458,Local contrast,NoCurrentIndividualClaim,COLOR_HDR
+F0459,Contrast stretching,NoCurrentIndividualClaim,COLOR_HDR
+F0460,Color balance,CurrentKnownImplementedInScope,COLOR_HDR
+F0461,White balance,CurrentKnownImplementedInScope,COLOR_HDR
+F0462,Color temperature,CurrentKnownImplementedInScope,COLOR_HDR
+F0463,Tint,CurrentKnownImplementedInScope,COLOR_HDR
+F0464,Hue,Partial,COLOR_HDR
+F0465,Hue shifting,NoCurrentIndividualClaim,COLOR_HDR
+F0466,HSL adjustment,NoCurrentIndividualClaim,COLOR_HDR
+F0467,Selective-color adjustment,NoCurrentIndividualClaim,COLOR_HDR
+F0468,Selective hue adjustment,NoCurrentIndividualClaim,COLOR_HDR
+F0469,Selective saturation adjustment,NoCurrentIndividualClaim,COLOR_HDR
+F0470,Selective luminance adjustment,NoCurrentIndividualClaim,COLOR_HDR
+F0471,Color-matrix transforms,NoCurrentIndividualClaim,COLOR_HDR
+F0472,Color-space conversion,NoCurrentIndividualClaim,COLOR_HDR
+F0473,Color-gamut mapping,NoCurrentIndividualClaim,COLOR_HDR
+F0474,Shadows/midtones/highlights grading,Partial,SHADOW; LIGHTS_EMISSIVES; COLOR_HDR
+F0475,Black-and-white conversion,Partial,COLOR_HDR
+F0476,Monochrome,Partial,COLOR_HDR
+F0477,Sepia,NoCurrentIndividualClaim,COLOR_HDR
+F0478,Technicolor emulation,NoCurrentIndividualClaim,COLOR_HDR
+F0479,DPX color processing,NoCurrentIndividualClaim,COLOR_HDR
+F0480,Cross-processing,NoCurrentIndividualClaim,COLOR_HDR
+F0481,Filmic grading,Partial,COLOR_HDR
+F0482,Color isolation,NoCurrentIndividualClaim,COLOR_HDR
+F0483,Tint removal,Partial,COLOR_HDR
+F0484,Automatic color correction,NoCurrentIndividualClaim,COLOR_HDR; TOOLS_DIAGNOSTICS
+F0485,Automatic saturation adjustment,NoCurrentIndividualClaim,COLOR_HDR
+F0486,Adaptive color grading,NoCurrentIndividualClaim,COLOR_HDR
+F0487,Sharpening,CurrentKnownImplementedInScope,IMAGE_FILTER_ART
+F0488,Luma sharpening,Partial,COLOR_HDR; IMAGE_FILTER_ART
+F0489,Adaptive sharpening,Partial,IMAGE_FILTER_ART
+F0490,Contrast-adaptive sharpening,Partial,COLOR_HDR; IMAGE_FILTER_ART
+F0491,CAS,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0492,Depth-aware sharpening,Partial,IMAGE_FILTER_ART
+F0493,Local-contrast sharpening,Partial,COLOR_HDR; IMAGE_FILTER_ART
+F0494,High-pass sharpening,CurrentKnownImplementedInScope,IMAGE_FILTER_ART
+F0495,Filmic sharpening,Partial,COLOR_HDR; IMAGE_FILTER_ART
+F0496,Anamorphic sharpening,Partial,OPTICS; IMAGE_FILTER_ART
+F0497,Smart sharpening,Partial,IMAGE_FILTER_ART
+F0498,DELC sharpening,Partial,IMAGE_FILTER_ART
+F0499,Deblurring,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0500,Debanding,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0501,Gradient smoothing,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0502,Dithering,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0503,Blue-noise dithering,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0504,Denoising,CurrentKnownImplementedInScope,IMAGE_FILTER_ART
+F0505,Bilateral denoising,CurrentKnownImplementedInScope,IMAGE_FILTER_ART
+F0506,Non-local-means denoising,AbsentNamedNative,IMAGE_FILTER_ART
+F0507,K-nearest-neighbor denoising,AbsentNamedNative,IMAGE_FILTER_ART
+F0508,Surface blur,Partial,IMAGE_FILTER_ART
+F0509,Gaussian blur,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0510,Bilateral blur,Partial,IMAGE_FILTER_ART
+F0511,Directional blur,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0512,Depth-aware blur,Partial,IMAGE_FILTER_ART
+F0513,Motion blur,CurrentKnownImplementedInScope,CAMERA_DOF_MOTION; IMAGE_FILTER_ART
+F0514,Linear motion blur,CurrentKnownImplementedInScope,CAMERA_DOF_MOTION; IMAGE_FILTER_ART
+F0515,Optical-flow/motion-vector-assisted effects,CurrentKnownImplementedInScope,CAMERA_DOF_MOTION; TEMPORAL_AA
+F0516,Fake motion blur,NoCurrentIndividualClaim,CAMERA_DOF_MOTION; IMAGE_FILTER_ART
+F0517,Motion focus,NoCurrentIndividualClaim,CAMERA_DOF_MOTION
+F0518,Long-exposure simulation,NoCurrentIndividualClaim,CAMERA_DOF_MOTION; COLOR_HDR
+F0519,Image persistence,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0520,Light trails,NoCurrentIndividualClaim,LIGHTS_EMISSIVES; IMAGE_FILTER_ART
+F0521,Chromatic aberration,CurrentKnownImplementedInScope,OPTICS
+F0522,Longitudinal chromatic aberration,Partial,OPTICS
+F0523,Lateral chromatic aberration,CurrentKnownImplementedInScope,OPTICS
+F0524,Prism effects,NoCurrentIndividualClaim,OPTICS
+F0525,Lens distortion,NoCurrentIndividualClaim,OPTICS
+F0526,Barrel distortion,NoCurrentIndividualClaim,OPTICS
+F0527,Pincushion distortion,NoCurrentIndividualClaim,OPTICS
+F0528,Fisheye distortion,NoCurrentIndividualClaim,OPTICS
+F0529,Perspective correction,NoCurrentIndividualClaim,MASK_COMPOSITION; TOOLS_DIAGNOSTICS
+F0530,Aspect-ratio correction,Partial,MASK_COMPOSITION; TOOLS_DIAGNOSTICS
+F0531,Image scaling,NoCurrentIndividualClaim,MASK_COMPOSITION
+F0532,Image borders,Partial,MASK_COMPOSITION
+F0533,Cropping/masking,Partial,MATERIAL_GEOMETRY; MASK_COMPOSITION
+F0534,Vignette,CurrentKnownImplementedInScope,OPTICS
+F0535,Artistic vignette,CurrentKnownImplementedInScope,OPTICS
+F0536,Film grain,CurrentKnownImplementedInScope,WEATHER_TIME; IMAGE_FILTER_ART
+F0537,Dynamic film grain,CurrentKnownImplementedInScope,WEATHER_TIME; IMAGE_FILTER_ART
+F0538,Noise,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0539,Smart noise,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0540,Color noise,NoCurrentIndividualClaim,COLOR_HDR; IMAGE_FILTER_ART
+F0541,Film emulation,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0542,8mm-film effects,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0561,Edge outlines,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0562,Silhouette effects,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0566,Kuwahara filtering,NoCurrentIndividualClaim,IMAGE_FILTER_ART
+F0569,Reflective bump-mapping effects,NoCurrentIndividualClaim,REFLECTION_IBL; MATERIAL_GEOMETRY
+F0570,Bump-map simulation,NoCurrentIndividualClaim,MATERIAL_GEOMETRY
+F0571,Thin-film/interference effects,NoCurrentIndividualClaim,MATERIAL_GEOMETRY
+F0580,Color gradients,NoCurrentIndividualClaim,COLOR_HDR; IMAGE_FILTER_ART
+F0581,Background replacement/compositing,NoCurrentIndividualClaim,MASK_COMPOSITION; TOOLS_DIAGNOSTICS
+F0582,Layer compositing,NoCurrentIndividualClaim,MASK_COMPOSITION
+F0583,Multi-layer compositing,NoCurrentIndividualClaim,MASK_COMPOSITION
+F0584,Overlay textures,NoCurrentIndividualClaim,EDITOR_PRESETS
+F0585,Letterboxing,CurrentKnownImplementedInScope,MASK_COMPOSITION
+F0586,Cinematic framing,Partial,MASK_COMPOSITION
+F0587,Composition guides,NoCurrentIndividualClaim,MASK_COMPOSITION
+F0588,Rule-of-thirds guides,NoCurrentIndividualClaim,MASK_COMPOSITION
+F0589,Golden-ratio guides,NoCurrentIndividualClaim,MASK_COMPOSITION
+F0590,Center guides,NoCurrentIndividualClaim,MASK_COMPOSITION
+F0591,Depth-buffer visualization,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS
+F0592,Depth-map debugging,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS
+F0593,Normal-map visualization,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS
+F0594,Motion-vector visualization,NoCurrentIndividualClaim,CAMERA_DOF_MOTION; TEMPORAL_AA; TOOLS_DIAGNOSTICS
+F0595,Shader-debug views,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0596,Mask visualization,NoCurrentIndividualClaim,MASK_COMPOSITION; TOOLS_DIAGNOSTICS
+F0597,Depth slicing,NoCurrentIndividualClaim,MASK_COMPOSITION
+F0598,Depth masks,NoCurrentIndividualClaim,MASK_COMPOSITION
+F0599,Luma masks,NoCurrentIndividualClaim,COLOR_HDR; MASK_COMPOSITION
+F0600,Color masks,NoCurrentIndividualClaim,COLOR_HDR; MASK_COMPOSITION
+F0601,UI masking,Partial,MATERIAL_GEOMETRY; MASK_COMPOSITION; SCENE_UI
+F0602,Keep-UI/restore-UI pipelines,Partial,PROGRAMMABLE_FRAMEWORK; SCENE_UI
+F0603,Selective application before/after HUD,Partial,MASK_COMPOSITION; TOOLS_DIAGNOSTICS; SCENE_UI
+F0604,Selective application by depth,Partial,MASK_COMPOSITION
+F0605,Selective application by luminance,Partial,COLOR_HDR; MASK_COMPOSITION
+F0606,Selective application by color,NoCurrentIndividualClaim,COLOR_HDR; MASK_COMPOSITION
+F0607,Selective application by screen region,Partial,MASK_COMPOSITION
+F0608,Effect ordering,Partial,PROGRAMMABLE_FRAMEWORK
+F0610,Multi-pass effect chains,Partial,PROGRAMMABLE_FRAMEWORK
+F0611,Per-effect enable/disable,CurrentKnownImplementedInScope,EDITOR_PRESETS; TOOLS_DIAGNOSTICS
+F0612,Per-technique enable/disable,CurrentKnownImplementedInScope,EDITOR_PRESETS; TOOLS_DIAGNOSTICS
+F0613,Live parameter editing,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0614,Live shader reloading,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS; SCENE_UI
+F0615,Runtime shader compilation,Partial,PROGRAMMABLE_FRAMEWORK
+F0616,Effect search paths,NoCurrentIndividualClaim,EDITOR_PRESETS
+F0617,Texture search paths,NoCurrentIndividualClaim,EDITOR_PRESETS
+F0618,In-game overlay,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0619,In-game effect browser,NoCurrentIndividualClaim,EDITOR_PRESETS
+F0620,In-game shader settings,CurrentKnownImplementedInScope,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0621,Preset loading,CurrentKnownImplementedInScope,EDITOR_PRESETS; SCENE_UI
+F0622,Preset saving,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0623,Preset switching,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0624,Hotkey preset switching,AbsentNamedNative,EDITOR_PRESETS
+F0625,Shader hotkeys,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0626,Toggle hotkeys,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0627,Parameter hotkeys,NoCurrentIndividualClaim,EDITOR_PRESETS
+F0628,Per-game configuration,NoCurrentIndividualClaim,EDITOR_PRESETS
+F0629,Global preprocessor definitions,NoCurrentIndividualClaim,EDITOR_PRESETS
+F0630,Per-preset preprocessor definitions,AbsentNamedNative,EDITOR_PRESETS
+F0631,Performance mode,CurrentKnownImplementedInScope,EDITOR_PRESETS
+F0632,Shader compilation diagnostics,Partial,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0633,Effect error display,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS
+F0634,Frame-time statistics,Partial,TOOLS_DIAGNOSTICS
+F0635,FPS display,NoCurrentIndividualClaim,TOOLS_DIAGNOSTICS
+F0636,Performance statistics,Partial,TOOLS_DIAGNOSTICS
+F0637,Screenshot capture,Partial,TOOLS_DIAGNOSTICS
+F0638,Custom screenshot formats/settings,Partial,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS; TOOLS_DIAGNOSTICS
+F0639,Before/after comparison,Partial,TOOLS_DIAGNOSTICS
+F0640,Split-screen comparison shaders,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0641,Add-on-driven frame capture,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0643,Add-on-driven frame-rate limiting,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0644,Add-on-driven shader inspection,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0645,Add-on-driven texture inspection,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0646,Add-on-driven resource inspection,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0647,Add-on-driven texture replacement,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; TOOLS_DIAGNOSTICS
+F0648,Add-on-driven rendering modification,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0649,Add-on-driven overlays,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK; EDITOR_PRESETS
+F0650,Add-on-driven game-specific integration,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0651,Extensible custom shader ecosystem,NoCurrentIndividualClaim,PROGRAMMABLE_FRAMEWORK
+F0264,Proxy DLL chaining,Excluded,
+F0265,Compatibility/proxy loading for other graphics DLLs,Excluded,
+F0285,Linux/Wine compatibility options,Excluded,
+F0286,ENB SDK integration,Excluded,
+F0289,Direct3D 9 support,Excluded,
+F0290,Direct3D 10 support,Excluded,
+F0292,Direct3D 12 support,Excluded,
+F0293,OpenGL support,Excluded,
+F0294,Vulkan support,Excluded,
+F0300,ReShade FX programmable shader language,Excluded,
+F0312,Arbitrary community shader support,Excluded,
+F0314,ReShade add-on API,Excluded,
+F0543,VHS effects,Excluded,
+F0544,CRT effects,Excluded,
+F0545,Retro-TV effects,Excluded,
+F0546,VGA effects,Excluded,
+F0547,Interlacing,Excluded,
+F0548,Scanlines,Excluded,
+F0549,Cathode-ray-tube simulation,Excluded,
+F0550,Pixelation,Excluded,
+F0551,Posterization,Excluded,
+F0552,Color quantization,Excluded,
+F0553,Retro palette simulation,Excluded,
+F0554,PSX-style dithering,Excluded,
+F0555,EGA-style filtering,Excluded,
+F0556,Cartoon rendering,Excluded,
+F0557,Cel shading,Excluded,
+F0558,Comic-book rendering,Excluded,
+F0559,Sketch effects,Excluded,
+F0560,Pencil effects,Excluded,
+F0563,Embossing,Excluded,
+F0564,Halftone,Excluded,
+F0565,Oil-paint effects,Excluded,
+F0567,Flat shading,Excluded,
+F0568,MatCap rendering,Excluded,
+F0572,Neon/TRON effects,Excluded,
+F0573,Night vision,Excluded,
+F0574,Chroma key,Excluded,
+F0575,ASCII rendering,Excluded,
+F0576,Glitch effects,Excluded,
+F0577,Deep-fry effects,Excluded,
+F0578,Image inversion,Excluded,
+F0579,Color sorting,Excluded,
+F0609,Arbitrary effect-chain ordering,Excluded,
+F0642,Add-on-driven video capture,Excluded,
+F0652,Extensible native add-on ecosystem,Excluded,
