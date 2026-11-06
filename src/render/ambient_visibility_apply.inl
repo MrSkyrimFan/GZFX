@@ -2,7 +2,8 @@
         const std::uint64_t frame,
         ID3D11Device* device,
         ID3D11DeviceContext* context,
-        const gzfx::diagnostics::resource_intelligence::LiveInputs& inputs) noexcept
+        const gzfx::diagnostics::resource_intelligence::LiveInputs& inputs,
+        const bool allowAo) noexcept
     {
         try
         {
@@ -19,7 +20,11 @@
 
             const auto& settings = gzfx::settings::Get();
 
-            if (!settings.horizonOcclusionEnabled &&
+            const bool effectiveAoEnabled =
+                allowAo &&
+                settings.horizonOcclusionEnabled;
+
+            if (!effectiveAoEnabled &&
                 !settings.indirectBounceEnabled)
             {
                 WriteLog(frame, "skipped_disabled");
@@ -235,7 +240,7 @@
             parameters.mode = mode;
 
             parameters.aoEnabled =
-                settings.horizonOcclusionEnabled
+                effectiveAoEnabled
                 ? 1u
                 : 0u;
 
