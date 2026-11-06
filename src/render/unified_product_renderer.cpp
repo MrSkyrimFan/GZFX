@@ -2181,20 +2181,11 @@ float4 PSComposite(VSOutput input) : SV_TARGET
             parameters.bloomStrength =
                 values.bloomStrength;
             parameters.bloomThreshold =
-                values.bloomEnabled &&
-                    values.localGlowEnabled
-                ? std::min(
-                    values.bloomThreshold,
-                    values.localGlowThreshold)
-                : (values.bloomEnabled
-                    ? values.bloomThreshold
-                    : values.localGlowThreshold);
+                values.bloomThreshold;
             parameters.bloomSoftKnee =
                 values.bloomSoftKnee;
             parameters.bloomRadius =
-                std::max(
-                    values.bloomRadius,
-                    values.localGlowRadiusPixels / 8.0f);
+                values.bloomRadius;
             parameters.lensDirtStrength =
                 values.lensDirtStrength;
 
