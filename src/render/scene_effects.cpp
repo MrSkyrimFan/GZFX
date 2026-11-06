@@ -4,6 +4,7 @@
 #include "gzfx/render/ambient_depth_stack.hpp"
 #include "gzfx/render/runtime_state.hpp"
 #include "gzfx/render/ambient_visibility_v2.hpp"
+#include "gzfx/render/product_control_mapping.hpp"
 #include "gzfx/settings.hpp"
 #include "gzfx/version.hpp"
 
@@ -74,6 +75,7 @@ namespace gzfx::render::scene_effects
         std::uint64_t g_injectionCount = 0;
         std::uint64_t g_lastFrame = 0;
         std::uint64_t g_lastDraw = 0;
+        std::uint64_t g_lastControlProofFrame = 0;
 
         void WriteLog(
             const std::uint64_t frame,
@@ -137,6 +139,157 @@ namespace gzfx::render::scene_effects
             {
                 out << "detail=" << detail << "\n";
             }
+        }
+
+        void WriteProductControlSubmission(
+            const std::uint64_t frame,
+            const bool wave4OwnsAo,
+            const bool indirectApplied)
+        {
+            if (g_lastControlProofFrame != 0 &&
+                frame > g_lastControlProofFrame &&
+                frame - g_lastControlProofFrame < 120)
+            {
+                return;
+            }
+
+            const fs::path root =
+                gzfx::paths::DiagnosticsRoot();
+
+            if (root.empty())
+            {
+                return;
+            }
+
+            std::error_code error;
+            fs::create_directories(
+                root,
+                error);
+
+            if (error)
+            {
+                return;
+            }
+
+            const auto& settings =
+                gzfx::settings::Get();
+
+            const auto quality =
+                gzfx::render::product_control::
+                    HorizonBudget(
+                        settings.
+                            horizonOcclusionQuality);
+
+            std::ofstream out(
+                root /
+                    L"product_control_submission.txt",
+                std::ios::out |
+                    std::ios::trunc);
+
+            if (!out)
+            {
+                return;
+            }
+
+            out
+                << "GZFX product control submission\n"
+                << "version="
+                << gzfx::kVersion
+                << "\n"
+                << "frame="
+                << frame
+                << "\n"
+                << "mode="
+                << gzfx::render::state::
+                    GetDevelopmentMode()
+                << "\n"
+                << "ambient_contact_strength="
+                << settings.ambientContactStrength
+                << "\n"
+                << "ambient_contact_radius="
+                << settings.ambientContactRadiusPixels
+                << "\n"
+                << "horizon_enabled="
+                << (settings.horizonOcclusionEnabled
+                    ? "true"
+                    : "false")
+                << "\n"
+                << "horizon_strength_setting="
+                << settings.horizonOcclusionStrength
+                << "\n"
+                << "horizon_strength_multiplier="
+                << gzfx::render::product_control::
+                    HorizonStrengthMultiplier(
+                        settings.
+                            horizonOcclusionStrength)
+                << "\n"
+                << "horizon_radius_setting="
+                << settings.horizonOcclusionRadiusPixels
+                << "\n"
+                << "horizon_radius_world="
+                << gzfx::render::product_control::
+                    HorizonRadiusWorld(
+                        settings.
+                            horizonOcclusionRadiusPixels)
+                << "\n"
+                << "horizon_quality="
+                << settings.horizonOcclusionQuality
+                << "\n"
+                << "horizon_slices="
+                << quality.slices
+                << "\n"
+                << "horizon_steps="
+                << quality.steps
+                << "\n"
+                << "indirect_enabled="
+                << (settings.indirectBounceEnabled
+                    ? "true"
+                    : "false")
+                << "\n"
+                << "indirect_strength="
+                << settings.indirectBounceStrength
+                << "\n"
+                << "indirect_radius="
+                << settings.indirectBounceRadiusPixels
+                << "\n"
+                << "indirect_saturation="
+                << settings.indirectBounceSaturation
+                << "\n"
+                << "local_glow_enabled="
+                << (settings.localGlowEnabled
+                    ? "true"
+                    : "false")
+                << "\n"
+                << "local_glow_strength="
+                << settings.localGlowStrength
+                << "\n"
+                << "local_glow_threshold="
+                << settings.localGlowThreshold
+                << "\n"
+                << "local_glow_radius="
+                << settings.localGlowRadiusPixels
+                << "\n"
+                << "wave4_owns_ao="
+                << (wave4OwnsAo
+                    ? "true"
+                    : "false")
+                << "\n"
+                << "av2_applied_current_frame="
+                << (gzfx::render::
+                        ambient_visibility_v2::
+                        WasAppliedFrame(frame)
+                    ? "true"
+                    : "false")
+                << "\n"
+                << "indirect_stack_applied="
+                << (indirectApplied
+                    ? "true"
+                    : "false")
+                << "\n"
+                << "scene_effects_injected=true\n";
+
+            g_lastControlProofFrame =
+                frame;
         }
 
         void ReleaseRuntime()
@@ -1424,6 +1577,11 @@ float4 PSMain(VSOutput input) : SV_TARGET
                 frame,
                 drawOrdinal,
                 "pre_ui_injected");
+
+            WriteProductControlSubmission(
+                frame,
+                wave4OwnsAo,
+                ambientDepthApplied);
 
             return true;
         }
