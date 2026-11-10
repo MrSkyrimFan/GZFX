@@ -1,0 +1,80 @@
+GZFX 0.0.38 — COHERENT PRODUCT RECOVERY + SIX NEW INTEGRATED CONTROLS
+Implementation blueprint, approved by explicit 2026-11-10 owner directive
+Phase: BLUEPRINT
+Source: field findings 0.0.38 + research 0.0.38 + live 0.0.37 main.
+
+SCOPE
+  One large integrated implementation, not multiple release/test DLLs.
+  Platform: Skyrim Steam AE 1.7.104, SKSE 2.3.1, MIT CommonLibSSE-GG,
+  Address Library v5. One GZFX.dll.
+  Runtime label: 0.0.38-calibrated-unified-renderer.
+
+CONTROL/PRESET RECOVERY
+  - Add Reset Defaults action visibly near preset/custom rows.
+  - Reset active state to safe Values{} and persist, preserve saved
+    Custom1/2/3 profile sections and metadata.
+  - Selecting a built-in look in the Preset slider applies its fields
+    immediately. Retain ApplyPreset for explicitly reloading a look.
+  - Built-in looks start from Values{}, never prior edited g_values.
+    Preserve current quality tier and selected custom slot, not old art.
+  - Shrink disastrous ranges across ambient, exposure, bloom, color,
+    DoF, motion, fog, optics, filtering. Keep 0/neutral and fine steps.
+    Migrate legacy INI by existing clamping on Reload.
+  - Tone processing must protect hue/black; no unbounded shoulder
+    crushing and no forced greyscale.
+  - Every persisted slider update to exactly same value should be no-op,
+    reducing drag/write churn.
+  - Colorblind accessibility remains monochrome/text, not hue-dependent.
+
+MODE CONTROL RECOVERY
+  - Shift+Num3 toggles exactly 0=Vanilla vs 2=GZFX ON.
+  - Startup default mode ON, legacy 1/3/4 default INI normalize to ON.
+  - Startup mode slider only OFF / GZFX, no debug modes.
+  - Menu and manual diagnostics remain independently usable.
+
+SIX COHERENT NEW SCENE POST FEATURES (SAME HDR COMPOSITE)
+  (1) Shadow recovery strength
+  (2) Highlight rolloff strength
+  (3) Luminance clarity/local contrast strength
+  (4) Warm halation strength
+  (5) Split toning: independent shadow & highlight warmth controls
+  (6) Subtle pre-tonemap dither strength
+  All default zero; conservative slider maxima; each has real HLSL effect,
+  safe neutral path, live parameter, setting persistence, menu label and
+  effect-mask/status visibility. No new full-resolution renderer, scheduler,
+  GPU texture resource, temporal history or scene writeback.
+
+IMPLEMENT FILES
+  include/gzfx/settings.hpp, src/settings.cpp
+  src/render/runtime_state.cpp
+  include/gzfx/render/unified_product_math.hpp
+  src/render/unified_product_renderer.cpp
+  src/ui/settings_menu.cpp
+  include/gzfx/version.hpp, vcpkg.json, if needed CMakeLists.txt
+  tests/unified_product_contract_harness.cpp, add focused 0.0.38 tests.
+
+HLSL / RESOURCE ORDER
+  Shared bright-pyramid should be built when either bloom or halation
+  needs it. Compute bright source once in composite and scale for bloom
+  and halation; no duplicate 6-layer bloom scheduler.
+  New effects inserted in one ordered post-tonal path:
+    denoise/motion/DoF/ambient/fog -> bloom/local glow/halation
+    -> exposure -> shadow recovery -> highlight rolloff
+    -> ApplyColor -> split tone -> shared clarity -> tone shaping
+    -> optional fine dither -> original optics and composition.
+  Hue-preserving tone shoulder uses luminance ratio, maintains HDR.
+  C++/HLSL cbuffer parameters 16-byte aligned, same order.
+  BuildEffectMask bits must remain unique and never collide with
+  AmbientContact/HBAO/Indirect/LocalGlow.
+  Avoid unnecessary GPU samples when new feature sliders are zero.
+
+GATE
+  First add full DATA/RESEARCH/BLUEPRINT records to new/.
+  Apply all implementation as one coherent branch, check generated diff.
+  Full Windows CI >=42/42 plus added targeted contracts.
+  PR -> green -> merge -> merged-main green -> exact package publication.
+  Write engineering record to old/ and archive this cycle's records.
+  One combined 0.0.38 visual field run including preset/reset/toggle,
+  ambient post + six new controls, exterior and water/night/inn route.
+  Do not assert native water/cloud/fire/shadow ownership until evidence.
+END BLUEPRINT
