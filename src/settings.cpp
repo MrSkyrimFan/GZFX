@@ -1380,6 +1380,9 @@ namespace gzfx::settings
 
             // Only active keys are rewritten. Custom1/2/3 snapshots are kept.
             g_values = Values{};
+            // The factory reset is a real, restrained Clearfell baseline,
+            // not just a Clearfell label attached to uninitialized sliders.
+            ApplyPresetUnlocked(Preset::Clearfell);
             if (!PersistUnlocked())
             {
                 return false;

@@ -158,7 +158,11 @@ int wmain(int argc, wchar_t** argv)
     }
 
     const auto reset = gzfx::settings::Get();
-    if (!Near(reset.shadowRecovery, 0.0f) ||
+    if (reset.productPreset !=
+            static_cast<std::uint32_t>(Preset::Clearfell) ||
+        !reset.exposureEnabled ||
+        reset.autoExposureEnabled ||
+        !Near(reset.shadowRecovery, 0.0f) ||
         !Near(reset.highlightRolloff, 0.0f) ||
         !Near(reset.clarityStrength, 0.0f) ||
         !Near(reset.halationStrength, 0.0f) ||
