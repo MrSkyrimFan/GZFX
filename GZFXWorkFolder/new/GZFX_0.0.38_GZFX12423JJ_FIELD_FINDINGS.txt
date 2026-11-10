@@ -1,0 +1,129 @@
+GZFX 0.0.38 — RAW FIELD FINDINGS / SOURCE-LEVEL PRODUCT DEFECT AUDIT
+Date: 2026-11-10 (America/Denver)
+Phase: DATA. This file is observations and verified code behavior; it does not claim release or runtime proof of any patch.
+
+SOURCE OF TRUTH
+  Owner-uploaded raw session: GZFX12423JJ.zip
+  Raw Git object: 363057b024f5e6ed9f96cb8f9f923b7fb84452c7
+  Permanent path: GZFXWorkFolder/field_uploads/GZFX12423JJ.zip
+  Root upload moved byte-for-byte, not overwritten.
+  Unpacked by GitHub Action 42890253339, archive artifact 13797703277.
+  Runtime: 0.0.37-native-domain-anchors; SkyrimSE.exe; 2560x1440.
+
+OWNER VISUAL REPORT (DIRECT FIELD OBSERVATION, NOT RECREATED FROM LOGS)
+  Sliders overshoot and create severe over-darkening, greyed/stylized output.
+  Several controls have poor practical response.
+  Preset selection and recovery are confusing; explicit reset is required.
+  Shift+Numpad3 must be only GZFX ON vs vanilla OFF, no five-stage debug cycling.
+  Owner requires a broad coherent implementation including existing-product refinement
+  and multiple new renderer features in one pass. HBAO flicker remains known.
+
+FIELD FORENSICS (UNPACKED RAW DATA, NOT ENGINEERING ASSUMPTIONS)
+  telemetry session: session_20261110_124153_7004
+  Frames: 7,754
+  Frames with valid 2560x1440 resolution: 6,881
+  Engine event rows: 330,428; paired enter/exit: 165,214 each.
+  Engine event distinct frames: 7,588
+  Frames by recorded development mode: 0=76; 1=2932; 2=4705; 3=27; 4=14.
+  Median FPS (valid-resolution frames): ~31.57; p10 ~27.17.
+  These FPS observations do NOT isolate GPU cost or causal attribution.
+  Telemetry closure: enqueued=798,925; written=798,925; dropped=0;
+  queue_depth=0; writer_alive=false; status=complete.
+
+  native_domain_anchors.txt:
+    armed=true, test_bypass=false
+    high_level_hooks=7/7; post_processing_hooked=true; pre_ui_hooked=true
+    image_effects_bound=37/37; shadow_targets_hooked=1
+    events=327024; last_error empty
+  Note: binding a hook != observing that named draw/effect on a test route.
+
+  Unique frame counts for selected ENTER anchor events:
+    pre_ui=7588, post_processing=7584, tonemap=7584
+    hdr_downsample=7584 frames / 45505 enters
+    main_depth=6881, main_shadowmasks=6881, main_world=6881
+    main_water_effects=6881, volumetric_blur_h=6881, volumetric_blur_v=6881
+    shadow_directional=6794
+    shadow_spot=0, shadow_omni=0, water_taa=0, water_blend=0
+    underwater_mask=0, apply_reflections=0, ui_taa=0, global_taa=0
+    volumetric_lighting=0, refraction=0
+  0 events may reflect route coverage or identity mapping, not absent engine stages.
+  Do not promote WaterDomain, AfterShadowProduction, PostTonemapPreUi from hook counts.
+
+  unified_renderer_status.txt:
+    status=applied; applications=6620; skips=2; failures=0
+    active mask included exposure, bloom, color, tone, sharpen, HBAO,
+    indirect bounce and Local Glow; source copies/writebacks 1 each.
+    product enabled, preset Clearfell, Ultra+.
+  Current Settings.ini (late snapshot):
+    AmbientContact strength 0
+    Horizon strength 0.222222; quality 3; radius 28
+    Indirect strength 0.496667 (against 0.60 legacy max),
+      saturation 0.441667; radius 19.3972
+    LocalGlow strength 1.38333 (against 1.5 legacy max)
+    auto exposure true, Clearfell preset, exposure compensation +0.15
+    bloom 0.20, sharpening 0.26
+  These unusually high indirect and glow strengths coexist with the reported
+  over-dark/grey effect; causality of each visual symptom is not yet isolated.
+  Product visual issue is a bona fide owner field failure; automated smoke green
+  never established artistic correctness.
+
+CODE-AUDIT DEFECTS / VERIFIED ENGINEERING OPPORTUNITIES
+  src/settings.cpp kDescriptors:
+    many cinematic controls expose destructive ranges:
+      indirect <=0.60, glow <=1.5, HBAO <=2.0, bloom <=3.0,
+      exposure EV +/-4, contrast <=2, saturation <=2,
+      vignette <=1, DoF radius <=32, fog density <=4,
+      sharpening <=2, CA <=8.
+    broad linear sliders map full user drag to those ranges.
+    existing persistent values read via descriptor clamp and NormalizeRelations;
+    changing descriptors can safely cap older settings on reload without
+    requiring manual INI deletion.
+
+  src/settings.cpp SetNormalized(ProductPreset):
+    writes the enum/label and persists but never calls ApplyPresetUnlocked.
+    ApplyPresetAction is separate. UI suggests a selected look has applied when
+    underlying live fields can remain from the previous look. This is a genuine
+    control/preset UX defect and can masquerade as nonfunctional sliders.
+  src/settings.cpp ApplyPresetUnlocked:
+    begins from g_values (current edited state) then resets only selected
+    families. Existing ambient HBAO/indirect/LocalGlow carry over untouched.
+    Therefore switching a built-in look does not provide a clean known baseline.
+  No explicit factory/reset action is defined in settings::Editable/Activate.
+  Custom slot persistence exists; it must not be destroyed by reset.
+
+  src/render/runtime_state.cpp:
+    modes 0/1/2/3/4, CycleDevelopmentMode=(current+1)%5.
+    1=debug split ambient; 2=full ambient; 3=depth; 4=pre-UI color.
+    owner requirement is strictly 0=vanilla, 2=GZFX ON on hotkey.
+    Existing debug captures can remain internal but not user mode choices.
+  src/render/visible_pass.cpp and src/render/ambient_visibility_v2.cpp:
+    debug split semantics are controlled by development mode; normal GZFX is
+    mode 2. Retain fail-closed off path and menu draw ability.
+  src/ui/settings_menu.cpp:
+    Shift+Numpad3 requests mode cycle, rendering relies on settings::GetNormalized.
+    Every slider drag persists INI and bumps settings revision; both value mapping
+    and actual render kernel must be tuned, not only menu labels.
+
+  src/render/unified_product_renderer.cpp:
+    one MAIN_HDR source snapshot, shared bloom/exposure pyramid,
+    one ordered composite, one writeback. Valid integration point for additional
+    post/tone controls WITHOUT adding independent renderers.
+    Color operations apply raw lift/gain/pow/saturation/contrast; tone shoulder
+    compresses all channels; original shader allows extreme destructive ranges.
+    Existing exposure history is not automatically reset on every look edit.
+    Current effect mask names cover existing post, HBAO, indirect and LocalGlow.
+    New features must have real parameters, actual HLSL response, mask/status
+    visibility, persistence, and regression tests; do not label TODOs features.
+
+PRIORITY FOR RESEARCH / BLUEPRINT
+  A. Explicit Reset Defaults action, preserves custom save slots.
+  B. Immediate preset application + coherent ambient/post reset baseline.
+  C. Five-mode key reduced to exact off/on semantics; default user state ON.
+  D. Conservative per-effect slider ranges + internal computational guards
+     against grey/crushed dark/light output and stale persisted extremes.
+  E. Add at least six integrated post/tone capabilities sharing existing HDR
+     scene inputs/pyramid without new native claims or independent executors.
+  F. Verify settings, menu, shader/constant buffer parity, smoke, one-DLL CI;
+     real-Skyrim visual approval requires a new field return.
+
+END FINDINGS
