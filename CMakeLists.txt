@@ -14,7 +14,7 @@ set(
 
 project(
     GZFX
-    VERSION 0.0.37
+    VERSION 0.0.38
     DESCRIPTION "SKSE-hosted native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )

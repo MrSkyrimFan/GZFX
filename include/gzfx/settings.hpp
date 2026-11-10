@@ -19,27 +19,27 @@ namespace gzfx::settings
     struct Values
     {
         // Current ambient foundation.
-        float ambientContactStrength = 0.62f;
+        float ambientContactStrength = 0.20f;
         float ambientContactRadiusPixels = 4.0f;
 
         bool horizonOcclusionEnabled = true;
-        float horizonOcclusionStrength = 0.25f;
-        float horizonOcclusionRadiusPixels = 28.0f;
+        float horizonOcclusionStrength = 0.16f;
+        float horizonOcclusionRadiusPixels = 22.0f;
         std::uint32_t horizonOcclusionQuality = 2;
 
         bool indirectBounceEnabled = true;
-        float indirectBounceStrength = 0.12f;
-        float indirectBounceRadiusPixels = 36.0f;
-        float indirectBounceSaturation = 1.00f;
+        float indirectBounceStrength = 0.07f;
+        float indirectBounceRadiusPixels = 24.0f;
+        float indirectBounceSaturation = 0.85f;
 
         bool localGlowEnabled = true;
-        float localGlowStrength = 0.18f;
-        float localGlowThreshold = 1.10f;
-        float localGlowRadiusPixels = 8.0f;
+        float localGlowStrength = 0.10f;
+        float localGlowThreshold = 1.30f;
+        float localGlowRadiusPixels = 6.0f;
 
         // Unified product renderer.
         bool productEnabled = true;
-        std::uint32_t productQuality = 1;
+        std::uint32_t productQuality = 0;
         std::uint32_t productPreset =
             static_cast<std::uint32_t>(Preset::Custom);
         std::uint32_t productCustomSlot = 1;
@@ -75,6 +75,15 @@ namespace gzfx::settings
         float toneToe = 0.0f;
         float toneShoulder = 0.0f;
         float toneWhiteClip = 16.0f;
+
+        // Shared-HDR appearance controls. Zero keeps the renderer neutral.
+        float shadowRecovery = 0.0f;
+        float highlightRolloff = 0.0f;
+        float clarityStrength = 0.0f;
+        float halationStrength = 0.0f;
+        float shadowWarmth = 0.0f;
+        float highlightWarmth = 0.0f;
+        float ditherStrength = 0.0f;
 
         bool dofEnabled = false;
         float dofFocusDistance = 2500.0f;
@@ -119,7 +128,7 @@ namespace gzfx::settings
         float pillarboxAmount = 0.0f;
 
         // Development / diagnostics.
-        std::uint32_t defaultMode = 1;
+        std::uint32_t defaultMode = 2;
         std::uint64_t activationDrawIndexedThreshold = 1000;
         bool accessibleDiagnostics = true;
         bool captureOnModeChange = true;
@@ -134,6 +143,7 @@ namespace gzfx::settings
         ApplyPresetAction,
         LoadCustomAction,
         SaveCustomAction,
+        ResetDefaultsAction,
 
         AmbientContactStrength,
         AmbientContactRadiusPixels,
@@ -180,6 +190,13 @@ namespace gzfx::settings
         ToneToe,
         ToneShoulder,
         ToneWhiteClip,
+        ShadowRecovery,
+        HighlightRolloff,
+        ClarityStrength,
+        HalationStrength,
+        ShadowWarmth,
+        HighlightWarmth,
+        DitherStrength,
 
         DofEnabled,
         DofFocusDistance,
@@ -240,6 +257,7 @@ namespace gzfx::settings
     bool IsAction(Editable setting) noexcept;
 
     bool ApplyPreset(Preset preset) noexcept;
+    bool ResetDefaults() noexcept;
     bool SaveCustom(std::uint32_t slot) noexcept;
     bool LoadCustom(std::uint32_t slot) noexcept;
 
