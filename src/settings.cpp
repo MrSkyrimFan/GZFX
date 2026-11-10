@@ -804,6 +804,15 @@ namespace gzfx::settings
             next.productEnabled = true;
             next.productQuality = g_values.productQuality;
             next.productCustomSlot = g_values.productCustomSlot;
+            // Presets change only appearance, not the user's startup,
+            // accessibility, diagnostic or capture configuration.
+            next.defaultMode = g_values.defaultMode;
+            next.activationDrawIndexedThreshold =
+                g_values.activationDrawIndexedThreshold;
+            next.accessibleDiagnostics =
+                g_values.accessibleDiagnostics;
+            next.captureOnModeChange =
+                g_values.captureOnModeChange;
             next.productPreset =
                 static_cast<std::uint32_t>(
                     preset);

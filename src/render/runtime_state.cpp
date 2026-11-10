@@ -1,6 +1,9 @@
 #include "gzfx/render/runtime_state.hpp"
 
+#include "gzfx/paths.hpp"
 #include "gzfx/settings.hpp"
+
+#include <Windows.h>
 
 #include <atomic>
 #include <algorithm>
@@ -15,6 +18,20 @@ namespace gzfx::render::state
 
         void Initialize()
         {
+            // Preserve split-screen resource/temporal diagnostics strictly
+            // inside the synthetic Windows test override. Players cannot
+            // enter this state via Shift+Numpad3 or their Settings.ini.
+            wchar_t splitTestFlag[8]{};
+            if (gzfx::paths::TestOverrideActive() &&
+                GetEnvironmentVariableW(
+                    L"GZFX_TEST_INTERNAL_SPLIT_MODE",
+                    splitTestFlag,
+                    8u) > 0)
+            {
+                g_mode.store(1u, std::memory_order_relaxed);
+                return;
+            }
+
             g_mode.store(
                 gzfx::settings::Get().defaultMode == 0u
                     ? 0u : 2u,

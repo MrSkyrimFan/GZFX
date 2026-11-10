@@ -377,6 +377,9 @@ int wmain(int argc, wchar_t** argv)
             L"1") ||
         !SetEnvironmentVariableW(
             L"GZFX_TEST_WAVE4_ACTIVE",
+            L"1") ||
+        !SetEnvironmentVariableW(
+            L"GZFX_TEST_INTERNAL_SPLIT_MODE",
             L"1"))
     {
         return 3;
