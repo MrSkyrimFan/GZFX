@@ -1346,14 +1346,7 @@ float4 CompositePS(
             input.uv,
             0);
 
-    if (Mode != 1 &&
-        Mode != 2)
-    {
-        return original;
-    }
-
-    if (Mode == 1 &&
-        input.uv.x < 0.5)
+    if (Mode != 2)
     {
         return original;
     }
@@ -2191,8 +2184,7 @@ float4 CompositePS(
                 gzfx::render::state::
                     GetDevelopmentMode();
 
-            if (mode != 1 &&
-                mode != 2)
+            if (mode != 2)
             {
                 WriteLog(
                     frame,
