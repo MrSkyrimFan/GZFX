@@ -142,26 +142,7 @@ namespace gzfx::render
 
         const char* ModeName(const std::uint32_t mode)
         {
-            switch (mode)
-            {
-            case 0: return "off";
-            case 1:
-                return gzfx::render::
-                    ambient_visibility_v2::
-                    OwnsDevelopmentMode(1)
-                    ? "split_ambient_visibility_v2"
-                    : "split_ambient_contact";
-
-            case 2:
-                return gzfx::render::
-                    ambient_visibility_v2::
-                    OwnsDevelopmentMode(2)
-                    ? "full_ambient_visibility_v2"
-                    : "full_ambient_contact";
-            case 3: return "depth_view";
-            case 4: return "pre_ui_scene_color";
-            default: return "unknown";
-            }
+            return mode == 0u ? "vanilla_off" : "gzfx_on";
         }
 
         void LogState(
@@ -216,8 +197,7 @@ namespace gzfx::render
             stream
                 << "controls=Shift+Numpad1 menu; "
                    "Shift+Numpad2 reload Settings.ini; "
-                   "Shift+Numpad3 cycles Off/Split Contact/"
-                   "Full Contact/Depth/Pre-UI Color; "
+                   "Shift+Numpad3 GZFX ON / vanilla OFF; "
                    "Shift+Numpad4 saves frame+settings\n"
                 << "diagnostic_accessibility="
                 << (gzfx::settings::Get().accessibleDiagnostics
@@ -459,248 +439,6 @@ float AmbientContact(float2 uv)
     return saturate(occlusion / 8.0);
 }
 
-float3 ToneMap(float3 color)
-{
-    color = max(color, 0.0);
-    color = color / (1.0 + color);
-    return pow(color, 1.0 / 2.2);
-}
-
-
-uint GlyphRow(uint code, uint row)
-{
-    if (code == 0) // O
-    {
-        if (row == 0 || row == 6) return 14;
-        return 17;
-    }
-
-    if (code == 1) // R
-    {
-        if (row == 0 || row == 3) return 30;
-        if (row == 1 || row == 2) return 17;
-        if (row == 4) return 20;
-        if (row == 5) return 18;
-        return 17;
-    }
-
-    if (code == 2) // I
-    {
-        if (row == 0 || row == 6) return 31;
-        return 4;
-    }
-
-    if (code == 3) // G
-    {
-        if (row == 0) return 14;
-        if (row == 1 || row == 4 || row == 5) return 17;
-        if (row == 2) return 16;
-        if (row == 3) return 23;
-        return 15;
-    }
-
-    if (code == 4) // N
-    {
-        if (row == 1) return 25;
-        if (row == 2) return 21;
-        if (row == 3) return 19;
-        return 17;
-    }
-
-    if (code == 5) // A
-    {
-        if (row == 0) return 14;
-        if (row == 3) return 31;
-        return 17;
-    }
-
-    if (code == 6) // L
-    {
-        return row == 6 ? 31 : 16;
-    }
-
-    if (code == 7) // Z
-    {
-        if (row == 0 || row == 6) return 31;
-        if (row == 1) return 1;
-        if (row == 2) return 2;
-        if (row == 3) return 4;
-        if (row == 4) return 8;
-        return 16;
-    }
-
-    if (code == 8) // F
-    {
-        if (row == 0) return 31;
-        if (row == 3) return 30;
-        return 16;
-    }
-
-    if (code == 9) // X
-    {
-        if (row == 0 || row == 1 || row == 5 || row == 6) return 17;
-        if (row == 2 || row == 4) return 10;
-        return 4;
-    }
-
-    return 0;
-}
-
-uint OriginalCode(uint index)
-{
-    if (index == 0) return 0;
-    if (index == 1) return 1;
-    if (index == 2) return 2;
-    if (index == 3) return 3;
-    if (index == 4) return 2;
-    if (index == 5) return 4;
-    if (index == 6) return 5;
-    return 6;
-}
-
-uint GzfxCode(uint index)
-{
-    if (index == 0) return 3;
-    if (index == 1) return 7;
-    if (index == 2) return 8;
-    return 9;
-}
-
-float WordPixel(
-    float2 pixel,
-    float2 origin,
-    uint word,
-    uint length)
-{
-    const float scale = 2.0;
-    const float advance = 6.0 * scale;
-
-    float2 local = pixel - origin;
-
-    if (local.x < 0.0 ||
-        local.y < 0.0 ||
-        local.y >= 7.0 * scale)
-    {
-        return 0.0;
-    }
-
-    uint charIndex =
-        (uint)floor(local.x / advance);
-
-    if (charIndex >= length)
-    {
-        return 0.0;
-    }
-
-    float charX =
-        local.x -
-        charIndex * advance;
-
-    if (charX >= 5.0 * scale)
-    {
-        return 0.0;
-    }
-
-    uint column =
-        (uint)floor(charX / scale);
-
-    uint row =
-        (uint)floor(local.y / scale);
-
-    uint code =
-        word == 0
-        ? OriginalCode(charIndex)
-        : GzfxCode(charIndex);
-
-    uint bits = GlyphRow(code, row);
-    uint mask = 1u << (4u - column);
-
-    return (bits & mask) != 0u ? 1.0 : 0.0;
-}
-
-float4 AccessibleSplitOverlay(
-    float4 color,
-    VSOutput input)
-{
-    if (AccessibleDiagnostics == 0 ||
-        Mode != 1)
-    {
-        return color;
-    }
-
-    float2 pixel = input.position.xy;
-    float width = 1.0 / InvSize.x;
-    float center = width * 0.5;
-
-    if (abs(pixel.x - center) <= 3.0)
-    {
-        uint dash =
-            ((uint)floor(pixel.y / 8.0)) & 1u;
-
-        return dash == 0u
-            ? float4(1, 1, 1, 1)
-            : float4(0, 0, 0, 1);
-    }
-
-    float2 leftBoxMin = float2(12, 12);
-    float2 leftBoxMax = float2(116, 36);
-
-    float2 rightBoxMin =
-        float2(width - 68, 12);
-    float2 rightBoxMax =
-        float2(width - 12, 36);
-
-    bool inLeft =
-        all(pixel >= leftBoxMin) &&
-        all(pixel < leftBoxMax);
-
-    bool inRight =
-        all(pixel >= rightBoxMin) &&
-        all(pixel < rightBoxMax);
-
-    if (inLeft)
-    {
-        bool border =
-            pixel.x < leftBoxMin.x + 1 ||
-            pixel.x >= leftBoxMax.x - 1 ||
-            pixel.y < leftBoxMin.y + 1 ||
-            pixel.y >= leftBoxMax.y - 1;
-
-        float glyph =
-            WordPixel(
-                pixel,
-                leftBoxMin + float2(4, 5),
-                0,
-                8);
-
-        return (border || glyph > 0.5)
-            ? float4(1, 1, 1, 1)
-            : float4(0, 0, 0, 1);
-    }
-
-    if (inRight)
-    {
-        bool border =
-            pixel.x < rightBoxMin.x + 1 ||
-            pixel.x >= rightBoxMax.x - 1 ||
-            pixel.y < rightBoxMin.y + 1 ||
-            pixel.y >= rightBoxMax.y - 1;
-
-        float glyph =
-            WordPixel(
-                pixel,
-                rightBoxMin + float2(4, 5),
-                1,
-                4);
-
-        return (border || glyph > 0.5)
-            ? float4(1, 1, 1, 1)
-            : float4(0, 0, 0, 1);
-    }
-
-    return color;
-}
-
 float4 ApplyMenuOverlay(
     float4 baseColor,
     VSOutput input)
@@ -753,41 +491,6 @@ float4 PSMain(VSOutput input) : SV_TARGET
             input);
     }
 
-    if (Mode == 3)
-    {
-        float depth =
-            SceneDepth.SampleLevel(
-                PointSampler,
-                DepthUv(input.uv),
-                0).x;
-
-        float visible =
-            pow(
-                saturate(1.0 - depth),
-                0.20);
-
-        return ApplyMenuOverlay(
-            float4(
-                visible,
-                visible,
-                visible,
-                1.0),
-            input);
-    }
-
-    if (Mode == 4)
-    {
-        return ApplyMenuOverlay(
-            float4(
-                ToneMap(
-                    PreUiColor.SampleLevel(
-                        LinearSampler,
-                        DepthUv(input.uv),
-                        0).rgb),
-                1.0),
-            input);
-    }
-
     float4 effected = original;
 
     // The real effect stack now runs on Skyrim's HDR scene texture
@@ -802,24 +505,6 @@ float4 PSMain(VSOutput input) : SV_TARGET
         effected.rgb =
             original.rgb *
             (1.0 - contact * Strength);
-    }
-
-    if (Mode == 1)
-    {
-        if (input.uv.x < 0.5)
-        {
-            return ApplyMenuOverlay(
-                AccessibleSplitOverlay(
-                    original,
-                    input),
-                input);
-        }
-
-        return ApplyMenuOverlay(
-            AccessibleSplitOverlay(
-                effected,
-                input),
-            input);
     }
 
     return ApplyMenuOverlay(
@@ -1392,21 +1077,9 @@ float4 PSMain(VSOutput input) : SV_TARGET
         const wchar_t* ModeCaptureFile(
             const std::uint32_t mode)
         {
-            switch (mode)
-            {
-            case 0:
-                return L"visible_mode_0_off.bmp";
-            case 1:
-                return L"visible_mode_1_split_contact.bmp";
-            case 2:
-                return L"visible_mode_2_full_contact.bmp";
-            case 3:
-                return L"visible_mode_3_depth.bmp";
-            case 4:
-                return L"visible_mode_4_pre_ui_color.bmp";
-            default:
-                return L"visible_mode_unknown.bmp";
-            }
+            return mode == 0u
+                ? L"visible_mode_0_off.bmp"
+                : L"visible_mode_2_gzfx_on.bmp";
         }
 
         bool WriteManualCaptureSettings(

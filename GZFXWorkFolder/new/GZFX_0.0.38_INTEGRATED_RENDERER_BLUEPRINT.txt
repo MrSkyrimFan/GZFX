@@ -78,3 +78,21 @@ GATE
   ambient post + six new controls, exterior and water/night/inn route.
   Do not assert native water/cloud/fire/shadow ownership until evidence.
 END BLUEPRINT
+
+
+OWNER FINAL MODE CORRECTION — 2026-11-10
+  Exactly TWO display states, with no split-screen or additional
+  diagnostic modes, whether exposed to players or hidden behind test flags.
+  0 = vanilla OFF. 2 = GZFX ON across the ENTIRE screen.
+  Shift+Numpad3 must toggle only 0 <-> 2.
+  Startup choice is a genuine two-state ON/OFF toggle; persisted numeric
+  input cannot form a third intermediate state.
+  Explicitly delete the former test-only split workaround and Mode 1/3/4
+  branches from source shaders, pass scheduling and mode descriptions.
+  Legacy Wave 3 tests must validate full-screen AO coverage on both sides
+  instead of expecting stock AO on left and GZFX on right. The visible-pass
+  test must fail if the retired central split separator is rendered.
+  Normal raw telemetry/capture may remain for diagnosis. Capturing data is
+  NOT an extra selectable visual mode.
+  This directive supersedes any earlier suggestion of hidden split modes.
+END OWNER CORRECTION

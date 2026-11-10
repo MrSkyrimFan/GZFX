@@ -1466,28 +1466,12 @@ void PackCS(
 
     if (!active)
     {
-        if (Mode == 1)
-        {
-            float stockOutside =
-                T1.Load(
-                    int3(pixel, 0)).r;
-
-            OutColor[pixel] =
-                float4(
-                    stockOutside,
-                    stockOutside,
-                    stockOutside,
-                    1.0);
-        }
-        else
-        {
-            OutColor[pixel] =
-                float4(
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0);
-        }
+        OutColor[pixel] =
+            float4(
+                1.0,
+                1.0,
+                1.0,
+                1.0);
 
         return;
     }
@@ -1508,22 +1492,6 @@ void PackCS(
                 max(
                     HorizonStrengthMultiplier,
                     0.0));
-
-    if (Mode == 1 &&
-        pixel.x <
-            activeSize.x / 2)
-    {
-        float4 stock =
-            T1.Load(
-                int3(pixel, 0));
-
-        OutColor[pixel] =
-            float4(
-                stock.rgb,
-                1.0);
-
-        return;
-    }
 
     OutColor[pixel] =
         float4(
@@ -4079,8 +4047,7 @@ void PackCS(
                 const std::uint32_t mode =
                     state::GetDevelopmentMode();
 
-                if (mode != 1 &&
-                    mode != 2)
+                if (mode != 2)
                 {
                     return;
                 }
@@ -4354,8 +4321,7 @@ void PackCS(
                 const std::uint32_t mode =
                     state::GetDevelopmentMode();
 
-                if ((mode != 1 &&
-                     mode != 2) ||
+                if (mode != 2 ||
                     g_finalVisibilityFrame !=
                         event.frame ||
                     !g_signalHistory.valid)
@@ -4438,9 +4404,7 @@ void PackCS(
                     g_capture.selectedFrame ==
                         event.frame;
 
-                const bool needStockCopy =
-                    mode == 1 ||
-                    capture;
+                const bool needStockCopy = capture;
 
                 ID3D11CommandList* commands =
                     nullptr;
@@ -4526,9 +4490,7 @@ void PackCS(
                 {
                     WriteStatus(
                         event.frame,
-                        mode == 1
-                            ? "applied_split"
-                            : "applied_full");
+                        "applied_full");
 
                     g_lastStatusFrame =
                         event.frame;
@@ -4604,8 +4566,7 @@ void PackCS(
         return
             g_initialized &&
             !DisabledForLegacyHarness() &&
-            (mode == 1 ||
-             mode == 2);
+            mode == 2;
     }
 
     void RequestManualCapture() noexcept

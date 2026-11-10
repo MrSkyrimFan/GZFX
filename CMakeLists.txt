@@ -14,7 +14,7 @@ set(
 
 project(
     GZFX
-    VERSION 0.0.37
+    VERSION 0.0.38
     DESCRIPTION "SKSE-hosted native graphics framework for Skyrim SE/AE"
     LANGUAGES C CXX
 )
@@ -164,6 +164,35 @@ target_link_libraries(
         CommonLibSSE::CommonLibSSE
 )
 gzfx_apply_common(GZFXCommonLibContractHarness)
+
+add_executable(GZFXCalibratedProductContractHarness
+    tests/calibrated_product_contract_harness.cpp
+    src/settings.cpp
+    src/paths.cpp
+    src/render/runtime_state.cpp
+)
+target_include_directories(
+    GZFXCalibratedProductContractHarness
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+target_link_libraries(
+    GZFXCalibratedProductContractHarness
+    PRIVATE
+        shell32
+        ole32
+)
+gzfx_apply_common(GZFXCalibratedProductContractHarness)
+
+add_executable(GZFXEmbeddedShaderContractHarness
+    tests/embedded_shader_contract_harness.cpp
+)
+target_link_libraries(
+    GZFXEmbeddedShaderContractHarness
+    PRIVATE
+        d3dcompiler
+)
+gzfx_apply_common(GZFXEmbeddedShaderContractHarness)
 
 add_executable(GZFXNativeDomainAnchorContractHarness
     tests/native_domain_anchor_contract_harness.cpp
@@ -454,6 +483,20 @@ add_test(
     COMMAND
         "$<TARGET_FILE:GZFXUnifiedProductContractHarness>"
         "${CMAKE_BINARY_DIR}/unified-product-contract-output"
+)
+
+add_test(
+    NAME calibrated_product_controls
+    COMMAND
+        "$<TARGET_FILE:GZFXCalibratedProductContractHarness>"
+        "${CMAKE_BINARY_DIR}/calibrated-product-contract-output"
+)
+
+add_test(
+    NAME embedded_hlsl_compile
+    COMMAND
+        "$<TARGET_FILE:GZFXEmbeddedShaderContractHarness>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/render/unified_product_renderer.cpp"
 )
 
 add_test(

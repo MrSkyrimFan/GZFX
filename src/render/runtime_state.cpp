@@ -2,6 +2,7 @@
 
 #include "gzfx/settings.hpp"
 
+
 #include <atomic>
 #include <algorithm>
 #include <mutex>
@@ -10,15 +11,14 @@ namespace gzfx::render::state
 {
     namespace
     {
-        std::atomic<std::uint32_t> g_mode{1};
+        std::atomic<std::uint32_t> g_mode{2};
         std::once_flag g_once;
 
         void Initialize()
         {
             g_mode.store(
-                std::min<std::uint32_t>(
-                    gzfx::settings::Get().defaultMode,
-                    4u),
+                gzfx::settings::Get().defaultMode == 0u
+                    ? 0u : 2u,
                 std::memory_order_relaxed);
         }
 
@@ -41,7 +41,7 @@ namespace gzfx::render::state
         }
         catch (...)
         {
-            return 1;
+            return 2;
         }
     }
 
@@ -53,9 +53,7 @@ namespace gzfx::render::state
             EnsureInitialized();
 
             g_mode.store(
-                std::min<std::uint32_t>(
-                    mode,
-                    4u),
+                mode == 0u ? 0u : 2u,
                 std::memory_order_relaxed);
         }
         catch (...)
@@ -73,8 +71,10 @@ namespace gzfx::render::state
                 g_mode.load(
                     std::memory_order_relaxed);
 
+            // Shift+Numpad3: vanilla OFF <-> complete GZFX ON.
+            // No alternate, split, or diagnostic display mode exists.
             const std::uint32_t next =
-                (current + 1u) % 5u;
+                current == 0u ? 2u : 0u;
 
             g_mode.store(
                 next,
@@ -84,7 +84,7 @@ namespace gzfx::render::state
         }
         catch (...)
         {
-            return 1;
+            return 2;
         }
     }
 }

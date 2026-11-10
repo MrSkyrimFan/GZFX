@@ -112,9 +112,14 @@ namespace gzfx::render::unified_product_renderer
             float letterboxAmount = 0.0f;
 
             float pillarboxAmount = 0.0f;
-            float padding0 = 0.0f;
-            float padding1 = 0.0f;
-            float padding2 = 0.0f;
+            float shadowRecovery = 0.0f;
+            float highlightRolloff = 0.0f;
+            float clarityStrength = 0.0f;
+
+            float halationStrength = 0.0f;
+            float shadowWarmth = 0.0f;
+            float highlightWarmth = 0.0f;
+            float ditherStrength = 0.0f;
 
             std::uint32_t productEnabled = 0;
             std::uint32_t exposureEnabled = 0;
@@ -432,9 +437,14 @@ cbuffer GZFXUnifiedParameters : register(b0)
     float LetterboxAmount;
 
     float PillarboxAmount;
-    float ParameterPadding0;
-    float ParameterPadding1;
-    float ParameterPadding2;
+    float ShadowRecovery;
+    float HighlightRolloff;
+    float ClarityStrength;
+
+    float HalationStrength;
+    float ShadowWarmth;
+    float HighlightWarmth;
+    float DitherStrength;
 
     uint ProductEnabled;
     uint ExposureEnabled;
@@ -507,6 +517,12 @@ static const uint EFFECT_SHARPEN = 1u << 13;
 static const uint EFFECT_BARS = 1u << 14;
 static const uint EFFECT_CONTACT = 1u << 15;
 static const uint EFFECT_LOCAL_GLOW = 1u << 18;
+static const uint EFFECT_SHADOW_RECOVERY = 1u << 19;
+static const uint EFFECT_HIGHLIGHT_ROLLOFF = 1u << 20;
+static const uint EFFECT_CLARITY = 1u << 21;
+static const uint EFFECT_HALATION = 1u << 22;
+static const uint EFFECT_SPLIT_TONING = 1u << 23;
+static const uint EFFECT_FINE_DITHER = 1u << 24;
 
 bool HasEffect(uint flag)
 {
@@ -659,8 +675,9 @@ float4 PSLuminanceBloom(VSOutput input) : SV_TARGET
 
     float3 bright = 0.0;
 
-    if (HasEffect(EFFECT_BLOOM) &&
-        BloomEnabled != 0)
+    if ((HasEffect(EFFECT_BLOOM) &&
+         BloomEnabled != 0) ||
+        HasEffect(EFFECT_HALATION))
     {
         bright =
             color *
@@ -1119,11 +1136,12 @@ float3 DepthOfFieldColor(
         defocus);
 }
 
-float3 BloomColor(float2 uv)
+float3 BloomSource(float2 uv)
 {
-    if (!HasEffect(EFFECT_BLOOM) ||
-        BloomEnabled == 0 ||
-        BloomStrength <= 0.0)
+    // Bloom and halation share this precomputed HDR pyramid. Never
+    // issue another full-resolution bloom/halation renderer pass.
+    if (!HasEffect(EFFECT_BLOOM) &&
+        !HasEffect(EFFECT_HALATION))
     {
         return 0.0;
     }
@@ -1178,7 +1196,8 @@ float3 BloomColor(float2 uv)
             weightTotal,
             1e-5);
 
-    if (LensDirtEnabled != 0 &&
+    if (HasEffect(EFFECT_BLOOM) &&
+        LensDirtEnabled != 0 &&
         LensDirtStrength > 0.0)
     {
         float2 cell =
@@ -1198,8 +1217,7 @@ float3 BloomColor(float2 uv)
                     LensDirtStrength * 0.5));
     }
 
-    return bloom *
-        max(BloomStrength, 0.0);
+    return bloom;
 }
 
 float3 LocalGlowColor(float2 uv)
@@ -1272,6 +1290,87 @@ float3 LocalGlowColor(float2 uv)
         max(LocalGlowStrength, 0.0);
 }
 
+float3 ApplyShadowHighlightRecovery(float3 color)
+{
+    color = max(color, 0.0);
+
+    if (HasEffect(EFFECT_SHADOW_RECOVERY) &&
+        ShadowRecovery > 0.0)
+    {
+        float luminance = Luminance(color);
+        float shadowWeight = saturate(1.0 - luminance / 0.75);
+        color *= 1.0 + min(ShadowRecovery, 0.35) *
+            shadowWeight * shadowWeight;
+    }
+
+    if (HasEffect(EFFECT_HIGHLIGHT_ROLLOFF) &&
+        HighlightRolloff > 0.0)
+    {
+        float luminance = Luminance(color);
+        float excess = max(luminance - 1.0, 0.0);
+        float strength = min(HighlightRolloff, 0.5);
+        float compressed = luminance /
+            (1.0 + strength * excess / (1.0 + 0.1 * luminance));
+        color *= compressed / max(luminance, 1e-5);
+    }
+
+    return color;
+}
+
+float3 ApplySplitToning(float3 color)
+{
+    if (!HasEffect(EFFECT_SPLIT_TONING))
+    {
+        return color;
+    }
+
+    float luminance = Luminance(color);
+    float shadowWeight = saturate((0.75 - luminance) / 0.75);
+    float highlightWeight = saturate((luminance - 0.60) / 1.80);
+    float warmth = clamp(
+        ShadowWarmth * shadowWeight +
+        HighlightWarmth * highlightWeight,
+        -0.35,
+        0.35);
+
+    return max(color * float3(
+        1.0 + 0.30 * warmth,
+        1.0,
+        1.0 - 0.30 * warmth), 0.0);
+}
+
+float3 ApplyLocalClarity(float2 uv, float3 color)
+{
+    if (!HasEffect(EFFECT_CLARITY) ||
+        ClarityStrength <= 0.0 ||
+        PyramidMipCount < 2u)
+    {
+        return color;
+    }
+
+    // The shared HDR pyramid alpha channel is log2 luminance.
+    // Sampling its already-generated coarse mip adds no new resource.
+    float lod = min(3.0, float(PyramidMipCount - 1u));
+    float referenceLuminance = exp2(
+        clamp(
+            PyramidTexture.SampleLevel(
+                LinearSampler,
+                uv,
+                lod).a,
+            -16.0, 16.0));
+    float luminance = Luminance(color);
+    float delta = clamp(
+        (luminance - referenceLuminance) /
+            max(referenceLuminance, 0.25),
+        -0.35,
+        0.35);
+
+    return max(
+        color * (1.0 +
+            min(ClarityStrength, 0.35) * delta),
+        0.0);
+}
+
 float3 ApplyColor(float3 color)
 {
     if (ColorEnabled == 0)
@@ -1339,10 +1438,16 @@ float3 ApplyColor(float3 color)
             color,
             1.0 + vibrance);
 
-    color =
-        (color - 0.18) *
-        max(ColorContrast, 0.0) +
-        0.18;
+    // Contrast on luminance only avoids exaggerated per-channel
+    // black crush / grayscale comic-book edges at the limits.
+    float luminanceBeforeContrast = Luminance(color);
+    float shapedLuminance = max(
+        (luminanceBeforeContrast - 0.18) *
+            clamp(ColorContrast, 0.85, 1.25) +
+            0.18,
+        0.0);
+    color *= shapedLuminance /
+        max(luminanceBeforeContrast, 1e-5);
 
     return max(color, 0.0);
 }
@@ -1356,23 +1461,30 @@ float3 ApplyTone(float3 color)
 
     color = max(color, 0.0);
 
+    // Shape luminance, then apply the same ratio to R/G/B to
+    // preserve color relationships instead of desaturating highlights.
+    float initialLuminance = Luminance(color);
+    float shapedLuminance = initialLuminance;
+
     if (ToneToe > 0.0)
     {
-        color =
-            pow(
-                color,
-                1.0 + ToneToe * 0.75);
+        shapedLuminance = pow(
+            max(shapedLuminance, 1e-6),
+            1.0 + min(ToneToe, 0.25) * 0.75);
     }
 
     if (ToneShoulder > 0.0)
     {
-        color =
-            color /
-            (1.0 + color * ToneShoulder);
+        shapedLuminance /=
+            1.0 + shapedLuminance *
+            min(ToneShoulder, 0.35);
     }
 
+    color *= shapedLuminance /
+        max(initialLuminance, 1e-5);
+
     return min(
-        color,
+        max(color, 0.0),
         max(ToneWhiteClip, 1.0));
 }
 
@@ -1433,8 +1545,7 @@ float4 PSComposite(VSOutput input) : SV_TARGET
             input.uv,
             0);
 
-    if (ProductEnabled == 0 ||
-        (Mode == 1 && input.uv.x < 0.5))
+    if (ProductEnabled == 0 || Mode != 2)
     {
         return original;
     }
@@ -1506,7 +1617,23 @@ float4 PSComposite(VSOutput input) : SV_TARGET
                 saturate(exponentialFog));
     }
 
-    color += BloomColor(input.uv);
+    // Bloom and halation reuse one HDR bright pyramid sample group.
+    float3 sharedBloom = BloomSource(input.uv);
+    if (HasEffect(EFFECT_BLOOM) &&
+        BloomEnabled != 0)
+    {
+        color += sharedBloom *
+            min(max(BloomStrength, 0.0), 0.65);
+    }
+
+    if (HasEffect(EFFECT_HALATION) &&
+        HalationStrength > 0.0)
+    {
+        color += sharedBloom *
+            float3(1.0, 0.38, 0.12) *
+            min(HalationStrength, 0.20);
+    }
+
     color += LocalGlowColor(input.uv);
 
     if (ExposureEnabled != 0)
@@ -1523,7 +1650,10 @@ float4 PSComposite(VSOutput input) : SV_TARGET
         color *= exposure;
     }
 
+    color = ApplyShadowHighlightRecovery(color);
     color = ApplyColor(color);
+    color = ApplySplitToning(color);
+    color = ApplyLocalClarity(input.uv, color);
     color = ApplyTone(color);
 
     if (VignetteEnabled != 0 &&
@@ -1593,6 +1723,19 @@ float4 PSComposite(VSOutput input) : SV_TARGET
             0.5;
 
         color += grain * FilmGrainStrength;
+    }
+
+    if (HasEffect(EFFECT_FINE_DITHER) &&
+        DitherStrength > 0.0)
+    {
+        float2 pixel = floor(input.uv /
+            float2(InvWidth, InvHeight));
+        float frameSeed = float(FrameIndex & 255u);
+        float triangularNoise =
+            Hash12(pixel + float2(frameSeed, 0.0)) -
+            Hash12(pixel + float2(113.0, 47.0 + frameSeed));
+        color += triangularNoise *
+            min(DitherStrength, 0.006);
     }
 
     color =
@@ -2241,6 +2384,20 @@ float4 PSComposite(VSOutput input) : SV_TARGET
                 values.toneShoulder;
             parameters.toneWhiteClip =
                 values.toneWhiteClip;
+            parameters.shadowRecovery =
+                values.shadowRecovery;
+            parameters.highlightRolloff =
+                values.highlightRolloff;
+            parameters.clarityStrength =
+                values.clarityStrength;
+            parameters.halationStrength =
+                values.halationStrength;
+            parameters.shadowWarmth =
+                values.shadowWarmth;
+            parameters.highlightWarmth =
+                values.highlightWarmth;
+            parameters.ditherStrength =
+                values.ditherStrength;
 
             parameters.dofFocusDistance =
                 values.dofFocusDistance;
@@ -2351,7 +2508,7 @@ float4 PSComposite(VSOutput input) : SV_TARGET
                 const char* name;
             };
 
-            static constexpr std::array<Entry, 19> entries
+            static constexpr std::array<Entry, 25> entries
             {{
                 {unified_product::Effect::ExposureManual, "exposure_manual"},
                 {unified_product::Effect::ExposureAuto, "exposure_auto"},
@@ -2371,7 +2528,13 @@ float4 PSComposite(VSOutput input) : SV_TARGET
                 {unified_product::Effect::AmbientContact, "ambient_contact"},
                 {unified_product::Effect::HorizonOcclusion, "horizon_occlusion"},
                 {unified_product::Effect::IndirectBounce, "indirect_bounce"},
-                {unified_product::Effect::LocalGlow, "local_glow"}
+                {unified_product::Effect::LocalGlow, "local_glow"},
+                {unified_product::Effect::ShadowRecovery, "shadow_recovery"},
+                {unified_product::Effect::HighlightRolloff, "highlight_rolloff"},
+                {unified_product::Effect::Clarity, "local_clarity"},
+                {unified_product::Effect::Halation, "warm_halation"},
+                {unified_product::Effect::SplitToning, "split_toning"},
+                {unified_product::Effect::FineDither, "fine_dither"}
             }};
 
             std::ostringstream stream;
@@ -2760,8 +2923,7 @@ float4 PSComposite(VSOutput input) : SV_TARGET
                 return false;
             }
 
-            if (mode != 1 &&
-                mode != 2)
+            if (mode != 2)
             {
                 ++g_status.skips;
                 g_lastError = "unsupported development mode";

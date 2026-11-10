@@ -3,7 +3,7 @@
 namespace gzfx
 {
     inline constexpr char kVersion[] =
-        "0.0.37-native-domain-anchors";
+        "0.0.38-calibrated-unified-renderer";
 }
 
 extern "C" __declspec(dllexport)

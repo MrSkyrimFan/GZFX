@@ -174,10 +174,11 @@ int wmain(
             static_cast<std::uint32_t>(
                 gzfx::settings::Preset::Emberveil) ||
         !ember.exposureEnabled ||
-        !ember.autoExposureEnabled ||
+        ember.autoExposureEnabled ||
         !ember.bloomEnabled ||
         !ember.colorEnabled ||
-        !Has(emberMask, Effect::ExposureAuto) ||
+        !Has(emberMask, Effect::ExposureManual) ||
+        Has(emberMask, Effect::ExposureAuto) ||
         !Has(emberMask, Effect::Bloom) ||
         !Has(emberMask, Effect::Color))
     {

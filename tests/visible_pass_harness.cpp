@@ -609,9 +609,10 @@ int wmain(int argc, wchar_t** argv)
         visibleText.find("status=active") !=
         std::string::npos;
 
-    const bool splitMode =
-        visibleText.find("split_ambient_contact") !=
-        std::string::npos;
+    // Full-screen GZFX ON is the only enabled display state.
+    const bool fullMode =
+        visibleText.find("mode=2 (gzfx_on)") !=
+            std::string::npos;
 
     const bool validated =
         validationText.find("status=validated") !=
@@ -646,11 +647,12 @@ int wmain(int argc, wchar_t** argv)
         std::string::npos;
 
     if (!active ||
-        !splitMode ||
+        !fullMode ||
         !validated ||
         !settingsMenuVisible ||
         !settingsPersisted ||
-        !manualSettingsComplete)
+        !manualSettingsComplete ||
+        accessibleSeparator)
     {
         std::cerr
             << "visible_pass.txt:\n"
@@ -659,11 +661,11 @@ int wmain(int argc, wchar_t** argv)
             << validationText
             << "\nchecks: active="
             << active
-            << " split="
-            << splitMode
+            << " full_mode="
+            << fullMode
             << " validated="
             << validated
-            << " accessible_separator_behind_menu="
+            << " retired_split_separator_present="
             << accessibleSeparator
             << " settings_menu_visible="
             << settingsMenuVisible

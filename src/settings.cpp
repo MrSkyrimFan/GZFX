@@ -86,91 +86,99 @@ namespace gzfx::settings
             GZFX_ACTION(ApplyPresetAction),
             GZFX_ACTION(LoadCustomAction),
             GZFX_ACTION(SaveCustomAction),
+            GZFX_ACTION(ResetDefaultsAction),
 
-            GZFX_FLOAT(AmbientContactStrength, ambientContactStrength, "AmbientContact", "Strength", 0.0, 2.0, 0.05, Linear, true),
-            GZFX_FLOAT(AmbientContactRadiusPixels, ambientContactRadiusPixels, "AmbientContact", "RadiusPixels", 1.0, 24.0, 0.5, Logarithmic, true),
+            GZFX_FLOAT(AmbientContactStrength, ambientContactStrength, "AmbientContact", "Strength", 0.0, 0.50, 0.01, Linear, true),
+            GZFX_FLOAT(AmbientContactRadiusPixels, ambientContactRadiusPixels, "AmbientContact", "RadiusPixels", 1.0, 12.0, 0.25, Logarithmic, true),
             GZFX_BOOL(HorizonOcclusionEnabled, horizonOcclusionEnabled, "HorizonOcclusion", "Enabled", true),
-            GZFX_FLOAT(HorizonOcclusionStrength, horizonOcclusionStrength, "HorizonOcclusion", "Strength", 0.0, 2.0, 0.05, Linear, true),
-            GZFX_FLOAT(HorizonOcclusionRadiusPixels, horizonOcclusionRadiusPixels, "HorizonOcclusion", "RadiusPixels", 4.0, 96.0, 2.0, Logarithmic, true),
+            GZFX_FLOAT(HorizonOcclusionStrength, horizonOcclusionStrength, "HorizonOcclusion", "Strength", 0.0, 0.35, 0.01, Linear, true),
+            GZFX_FLOAT(HorizonOcclusionRadiusPixels, horizonOcclusionRadiusPixels, "HorizonOcclusion", "RadiusPixels", 4.0, 48.0, 1.0, Logarithmic, true),
             GZFX_U32(HorizonOcclusionQuality, horizonOcclusionQuality, "HorizonOcclusion", "Quality", 0, 3, 1, true),
             GZFX_BOOL(IndirectBounceEnabled, indirectBounceEnabled, "IndirectBounce", "Enabled", true),
-            GZFX_FLOAT(IndirectBounceStrength, indirectBounceStrength, "IndirectBounce", "Strength", 0.0, 0.60, 0.025, Linear, true),
-            GZFX_FLOAT(IndirectBounceRadiusPixels, indirectBounceRadiusPixels, "IndirectBounce", "RadiusPixels", 4.0, 128.0, 2.0, Logarithmic, true),
-            GZFX_FLOAT(IndirectBounceSaturation, indirectBounceSaturation, "IndirectBounce", "Saturation", 0.0, 1.5, 0.05, Linear, true),
+            GZFX_FLOAT(IndirectBounceStrength, indirectBounceStrength, "IndirectBounce", "Strength", 0.0, 0.22, 0.01, Linear, true),
+            GZFX_FLOAT(IndirectBounceRadiusPixels, indirectBounceRadiusPixels, "IndirectBounce", "RadiusPixels", 4.0, 64.0, 1.0, Logarithmic, true),
+            GZFX_FLOAT(IndirectBounceSaturation, indirectBounceSaturation, "IndirectBounce", "Saturation", 0.0, 1.20, 0.025, Linear, true),
             GZFX_BOOL(LocalGlowEnabled, localGlowEnabled, "LocalGlow", "Enabled", true),
-            GZFX_FLOAT(LocalGlowStrength, localGlowStrength, "LocalGlow", "Strength", 0.0, 1.5, 0.05, Linear, true),
-            GZFX_FLOAT(LocalGlowThreshold, localGlowThreshold, "LocalGlow", "Threshold", 0.25, 4.0, 0.05, Linear, true),
-            GZFX_FLOAT(LocalGlowRadiusPixels, localGlowRadiusPixels, "LocalGlow", "RadiusPixels", 1.0, 32.0, 0.5, Logarithmic, true),
+            GZFX_FLOAT(LocalGlowStrength, localGlowStrength, "LocalGlow", "Strength", 0.0, 0.40, 0.01, Linear, true),
+            GZFX_FLOAT(LocalGlowThreshold, localGlowThreshold, "LocalGlow", "Threshold", 0.70, 3.0, 0.05, Linear, true),
+            GZFX_FLOAT(LocalGlowRadiusPixels, localGlowRadiusPixels, "LocalGlow", "RadiusPixels", 1.0, 20.0, 0.5, Logarithmic, true),
 
             GZFX_BOOL(ExposureEnabled, exposureEnabled, "Exposure", "Enabled", true),
             GZFX_BOOL(AutoExposureEnabled, autoExposureEnabled, "Exposure", "AutoEnabled", true),
-            GZFX_FLOAT(ManualExposureEv, manualExposureEv, "Exposure", "ManualEV", -4.0, 4.0, 0.10, Linear, true),
-            GZFX_FLOAT(ExposureCompensationEv, exposureCompensationEv, "Exposure", "CompensationEV", -4.0, 4.0, 0.10, Linear, true),
-            GZFX_FLOAT(ExposureKey, exposureKey, "Exposure", "Key", 0.05, 0.50, 0.01, Linear, true),
-            GZFX_FLOAT(ExposureMinEv, exposureMinEv, "Exposure", "MinEV", -12.0, 0.0, 0.25, Linear, true),
-            GZFX_FLOAT(ExposureMaxEv, exposureMaxEv, "Exposure", "MaxEV", 0.0, 12.0, 0.25, Linear, true),
-            GZFX_FLOAT(ExposureSpeedUp, exposureSpeedUp, "Exposure", "SpeedUp", 0.10, 10.0, 0.10, Logarithmic, true),
-            GZFX_FLOAT(ExposureSpeedDown, exposureSpeedDown, "Exposure", "SpeedDown", 0.10, 10.0, 0.10, Logarithmic, true),
+            GZFX_FLOAT(ManualExposureEv, manualExposureEv, "Exposure", "ManualEV", -1.5, 1.5, 0.05, Linear, true),
+            GZFX_FLOAT(ExposureCompensationEv, exposureCompensationEv, "Exposure", "CompensationEV", -1.0, 1.0, 0.05, Linear, true),
+            GZFX_FLOAT(ExposureKey, exposureKey, "Exposure", "Key", 0.12, 0.26, 0.005, Linear, true),
+            GZFX_FLOAT(ExposureMinEv, exposureMinEv, "Exposure", "MinEV", -4.0, 0.0, 0.20, Linear, true),
+            GZFX_FLOAT(ExposureMaxEv, exposureMaxEv, "Exposure", "MaxEV", 0.0, 4.0, 0.20, Linear, true),
+            GZFX_FLOAT(ExposureSpeedUp, exposureSpeedUp, "Exposure", "SpeedUp", 0.25, 4.0, 0.10, Logarithmic, true),
+            GZFX_FLOAT(ExposureSpeedDown, exposureSpeedDown, "Exposure", "SpeedDown", 0.25, 4.0, 0.10, Logarithmic, true),
 
             GZFX_BOOL(BloomEnabled, bloomEnabled, "Bloom", "Enabled", true),
-            GZFX_FLOAT(BloomStrength, bloomStrength, "Bloom", "Strength", 0.0, 3.0, 0.05, Linear, true),
-            GZFX_FLOAT(BloomThreshold, bloomThreshold, "Bloom", "Threshold", 0.0, 8.0, 0.10, Linear, true),
+            GZFX_FLOAT(BloomStrength, bloomStrength, "Bloom", "Strength", 0.0, 0.65, 0.01, Linear, true),
+            GZFX_FLOAT(BloomThreshold, bloomThreshold, "Bloom", "Threshold", 0.50, 4.0, 0.05, Linear, true),
             GZFX_FLOAT(BloomSoftKnee, bloomSoftKnee, "Bloom", "SoftKnee", 0.0, 1.0, 0.025, Linear, true),
-            GZFX_FLOAT(BloomRadius, bloomRadius, "Bloom", "Radius", 0.0, 8.0, 0.25, Linear, true),
+            GZFX_FLOAT(BloomRadius, bloomRadius, "Bloom", "Radius", 0.0, 6.0, 0.20, Linear, true),
             GZFX_BOOL(LensDirtEnabled, lensDirtEnabled, "Bloom", "LensDirtEnabled", true),
-            GZFX_FLOAT(LensDirtStrength, lensDirtStrength, "Bloom", "LensDirtStrength", 0.0, 2.0, 0.05, Linear, true),
+            GZFX_FLOAT(LensDirtStrength, lensDirtStrength, "Bloom", "LensDirtStrength", 0.0, 0.35, 0.01, Linear, true),
 
             GZFX_BOOL(ColorEnabled, colorEnabled, "Color", "Enabled", true),
-            GZFX_FLOAT(ColorContrast, colorContrast, "Color", "Contrast", 0.50, 2.0, 0.025, Linear, true),
-            GZFX_FLOAT(ColorGamma, colorGamma, "Color", "Gamma", 0.50, 2.0, 0.025, Linear, true),
-            GZFX_FLOAT(ColorSaturation, colorSaturation, "Color", "Saturation", 0.0, 2.0, 0.025, Linear, true),
-            GZFX_FLOAT(ColorVibrance, colorVibrance, "Color", "Vibrance", -1.0, 1.0, 0.025, Linear, true),
-            GZFX_FLOAT(ColorTemperature, colorTemperature, "Color", "Temperature", -1.0, 1.0, 0.025, Linear, true),
-            GZFX_FLOAT(ColorTint, colorTint, "Color", "Tint", -1.0, 1.0, 0.025, Linear, true),
-            GZFX_FLOAT(ColorLift, colorLift, "Color", "Lift", -0.25, 0.25, 0.01, Linear, true),
-            GZFX_FLOAT(ColorGain, colorGain, "Color", "Gain", 0.50, 2.0, 0.025, Linear, true),
-            GZFX_FLOAT(ToneToe, toneToe, "Tone", "Toe", 0.0, 1.0, 0.025, Linear, true),
-            GZFX_FLOAT(ToneShoulder, toneShoulder, "Tone", "Shoulder", 0.0, 1.0, 0.025, Linear, true),
+            GZFX_FLOAT(ColorContrast, colorContrast, "Color", "Contrast", 0.85, 1.25, 0.01, Linear, true),
+            GZFX_FLOAT(ColorGamma, colorGamma, "Color", "Gamma", 0.85, 1.20, 0.01, Linear, true),
+            GZFX_FLOAT(ColorSaturation, colorSaturation, "Color", "Saturation", 0.75, 1.25, 0.01, Linear, true),
+            GZFX_FLOAT(ColorVibrance, colorVibrance, "Color", "Vibrance", -0.30, 0.30, 0.01, Linear, true),
+            GZFX_FLOAT(ColorTemperature, colorTemperature, "Color", "Temperature", -0.40, 0.40, 0.01, Linear, true),
+            GZFX_FLOAT(ColorTint, colorTint, "Color", "Tint", -0.35, 0.35, 0.01, Linear, true),
+            GZFX_FLOAT(ColorLift, colorLift, "Color", "Lift", -0.08, 0.08, 0.005, Linear, true),
+            GZFX_FLOAT(ColorGain, colorGain, "Color", "Gain", 0.85, 1.20, 0.01, Linear, true),
+            GZFX_FLOAT(ToneToe, toneToe, "Tone", "Toe", 0.0, 0.25, 0.01, Linear, true),
+            GZFX_FLOAT(ToneShoulder, toneShoulder, "Tone", "Shoulder", 0.0, 0.35, 0.01, Linear, true),
             GZFX_FLOAT(ToneWhiteClip, toneWhiteClip, "Tone", "WhiteClip", 1.0, 16.0, 0.25, Logarithmic, true),
+            GZFX_FLOAT(ShadowRecovery, shadowRecovery, "Filmic", "ShadowRecovery", 0.0, 0.35, 0.01, Linear, true),
+            GZFX_FLOAT(HighlightRolloff, highlightRolloff, "Filmic", "HighlightRolloff", 0.0, 0.50, 0.01, Linear, true),
+            GZFX_FLOAT(ClarityStrength, clarityStrength, "Detail", "Clarity", 0.0, 0.35, 0.01, Linear, true),
+            GZFX_FLOAT(HalationStrength, halationStrength, "Optics", "Halation", 0.0, 0.20, 0.01, Linear, true),
+            GZFX_FLOAT(ShadowWarmth, shadowWarmth, "Color", "ShadowWarmth", -0.35, 0.35, 0.01, Linear, true),
+            GZFX_FLOAT(HighlightWarmth, highlightWarmth, "Color", "HighlightWarmth", -0.35, 0.35, 0.01, Linear, true),
+            GZFX_FLOAT(DitherStrength, ditherStrength, "Filtering", "FineDither", 0.0, 0.006, 0.00025, Linear, true),
 
             GZFX_BOOL(DofEnabled, dofEnabled, "DepthOfField", "Enabled", true),
             GZFX_FLOAT(DofFocusDistance, dofFocusDistance, "DepthOfField", "FocusDistance", 10.0, 50000.0, 50.0, Logarithmic, true),
             GZFX_FLOAT(DofFocusRange, dofFocusRange, "DepthOfField", "FocusRange", 10.0, 10000.0, 25.0, Logarithmic, true),
-            GZFX_FLOAT(DofNearStrength, dofNearStrength, "DepthOfField", "NearStrength", 0.0, 1.0, 0.025, Linear, true),
-            GZFX_FLOAT(DofFarStrength, dofFarStrength, "DepthOfField", "FarStrength", 0.0, 1.0, 0.025, Linear, true),
-            GZFX_FLOAT(DofMaxRadius, dofMaxRadius, "DepthOfField", "MaxRadius", 0.0, 32.0, 0.50, Linear, true),
+            GZFX_FLOAT(DofNearStrength, dofNearStrength, "DepthOfField", "NearStrength", 0.0, 0.60, 0.025, Linear, true),
+            GZFX_FLOAT(DofFarStrength, dofFarStrength, "DepthOfField", "FarStrength", 0.0, 0.60, 0.025, Linear, true),
+            GZFX_FLOAT(DofMaxRadius, dofMaxRadius, "DepthOfField", "MaxRadius", 0.0, 14.0, 0.25, Linear, true),
 
             GZFX_BOOL(MotionBlurEnabled, motionBlurEnabled, "MotionBlur", "Enabled", true),
-            GZFX_FLOAT(MotionBlurStrength, motionBlurStrength, "MotionBlur", "Strength", 0.0, 2.0, 0.025, Linear, true),
-            GZFX_FLOAT(MotionBlurMaxPixels, motionBlurMaxPixels, "MotionBlur", "MaxPixels", 0.0, 64.0, 1.0, Linear, true),
+            GZFX_FLOAT(MotionBlurStrength, motionBlurStrength, "MotionBlur", "Strength", 0.0, 0.50, 0.01, Linear, true),
+            GZFX_FLOAT(MotionBlurMaxPixels, motionBlurMaxPixels, "MotionBlur", "MaxPixels", 0.0, 24.0, 0.5, Linear, true),
 
             GZFX_BOOL(DepthFogEnabled, depthFogEnabled, "DepthFog", "Enabled", true),
             GZFX_FLOAT(DepthFogStart, depthFogStart, "DepthFog", "Start", 0.0, 50000.0, 100.0, Linear, true),
             GZFX_FLOAT(DepthFogEnd, depthFogEnd, "DepthFog", "End", 10.0, 100000.0, 100.0, Logarithmic, true),
-            GZFX_FLOAT(DepthFogDensity, depthFogDensity, "DepthFog", "Density", 0.0, 4.0, 0.05, Linear, true),
-            GZFX_FLOAT(DepthFogColorR, depthFogColorR, "DepthFog", "ColorR", 0.0, 2.0, 0.025, Linear, true),
-            GZFX_FLOAT(DepthFogColorG, depthFogColorG, "DepthFog", "ColorG", 0.0, 2.0, 0.025, Linear, true),
-            GZFX_FLOAT(DepthFogColorB, depthFogColorB, "DepthFog", "ColorB", 0.0, 2.0, 0.025, Linear, true),
+            GZFX_FLOAT(DepthFogDensity, depthFogDensity, "DepthFog", "Density", 0.0, 0.85, 0.025, Linear, true),
+            GZFX_FLOAT(DepthFogColorR, depthFogColorR, "DepthFog", "ColorR", 0.0, 1.20, 0.025, Linear, true),
+            GZFX_FLOAT(DepthFogColorG, depthFogColorG, "DepthFog", "ColorG", 0.0, 1.20, 0.025, Linear, true),
+            GZFX_FLOAT(DepthFogColorB, depthFogColorB, "DepthFog", "ColorB", 0.0, 1.20, 0.025, Linear, true),
 
             GZFX_BOOL(VignetteEnabled, vignetteEnabled, "Optics", "VignetteEnabled", true),
-            GZFX_FLOAT(VignetteStrength, vignetteStrength, "Optics", "VignetteStrength", 0.0, 1.0, 0.025, Linear, true),
+            GZFX_FLOAT(VignetteStrength, vignetteStrength, "Optics", "VignetteStrength", 0.0, 0.40, 0.01, Linear, true),
             GZFX_FLOAT(VignetteRadius, vignetteRadius, "Optics", "VignetteRadius", 0.0, 1.0, 0.025, Linear, true),
             GZFX_FLOAT(VignetteSoftness, vignetteSoftness, "Optics", "VignetteSoftness", 0.01, 1.0, 0.025, Linear, true),
             GZFX_BOOL(FilmGrainEnabled, filmGrainEnabled, "Optics", "FilmGrainEnabled", true),
-            GZFX_FLOAT(FilmGrainStrength, filmGrainStrength, "Optics", "FilmGrainStrength", 0.0, 0.25, 0.005, Linear, true),
+            GZFX_FLOAT(FilmGrainStrength, filmGrainStrength, "Optics", "FilmGrainStrength", 0.0, 0.06, 0.002, Linear, true),
             GZFX_FLOAT(FilmGrainScale, filmGrainScale, "Optics", "FilmGrainScale", 0.50, 4.0, 0.10, Logarithmic, true),
             GZFX_BOOL(ChromaticAberrationEnabled, chromaticAberrationEnabled, "Optics", "ChromaticAberrationEnabled", true),
-            GZFX_FLOAT(ChromaticAberrationStrength, chromaticAberrationStrength, "Optics", "ChromaticAberrationStrength", 0.0, 8.0, 0.10, Linear, true),
+            GZFX_FLOAT(ChromaticAberrationStrength, chromaticAberrationStrength, "Optics", "ChromaticAberrationStrength", 0.0, 2.0, 0.05, Linear, true),
             GZFX_BOOL(DenoiseEnabled, denoiseEnabled, "Filtering", "DenoiseEnabled", true),
-            GZFX_FLOAT(DenoiseStrength, denoiseStrength, "Filtering", "DenoiseStrength", 0.0, 1.0, 0.025, Linear, true),
+            GZFX_FLOAT(DenoiseStrength, denoiseStrength, "Filtering", "DenoiseStrength", 0.0, 0.50, 0.01, Linear, true),
             GZFX_BOOL(SharpenEnabled, sharpenEnabled, "Filtering", "SharpenEnabled", true),
-            GZFX_FLOAT(SharpenStrength, sharpenStrength, "Filtering", "SharpenStrength", 0.0, 2.0, 0.025, Linear, true),
-            GZFX_FLOAT(SharpenClamp, sharpenClamp, "Filtering", "SharpenClamp", 0.0, 2.0, 0.025, Linear, true),
+            GZFX_FLOAT(SharpenStrength, sharpenStrength, "Filtering", "SharpenStrength", 0.0, 0.55, 0.01, Linear, true),
+            GZFX_FLOAT(SharpenClamp, sharpenClamp, "Filtering", "SharpenClamp", 0.0, 0.40, 0.01, Linear, true),
             GZFX_BOOL(BarsEnabled, barsEnabled, "Composition", "BarsEnabled", true),
-            GZFX_FLOAT(LetterboxAmount, letterboxAmount, "Composition", "LetterboxAmount", 0.0, 0.30, 0.005, Linear, true),
-            GZFX_FLOAT(PillarboxAmount, pillarboxAmount, "Composition", "PillarboxAmount", 0.0, 0.30, 0.005, Linear, true),
+            GZFX_FLOAT(LetterboxAmount, letterboxAmount, "Composition", "LetterboxAmount", 0.0, 0.18, 0.005, Linear, true),
+            GZFX_FLOAT(PillarboxAmount, pillarboxAmount, "Composition", "PillarboxAmount", 0.0, 0.18, 0.005, Linear, true),
 
-            GZFX_U32(DefaultMode, defaultMode, "Development", "DefaultMode", 0, 4, 1, false),
+            GZFX_U32(DefaultMode, defaultMode, "Development", "DefaultMode", 0, 2, 2, false),
             GZFX_U64(ActivationDrawIndexedThreshold, activationDrawIndexedThreshold, "Development", "ActivationDrawIndexedThreshold", 0, 20000, 250, false),
             GZFX_BOOL(AccessibleDiagnostics, accessibleDiagnostics, "Development", "AccessibleDiagnostics", false),
             GZFX_BOOL(CaptureOnModeChange, captureOnModeChange, "Development", "CaptureOnModeChange", false)
@@ -378,6 +386,13 @@ namespace gzfx::settings
                     descriptor.minimum,
                     descriptor.maximum);
 
+            // Startup mode is exactly 0 (vanilla) or 2 (GZFX).
+            // Intermediate numeric INI values are not selectable states.
+            if (descriptor.editable == Editable::DefaultMode)
+            {
+                number = number < 1.0 ? 0.0 : 2.0;
+            }
+
             switch (descriptor.type)
             {
             case ValueType::Boolean:
@@ -583,6 +598,9 @@ namespace gzfx::settings
                     values.depthFogStart +
                         10.0f);
 
+            values.defaultMode =
+                values.defaultMode == 0u ? 0u : 2u;
+
             values.productPreset =
                 std::min<std::uint32_t>(
                     values.productPreset,
@@ -692,6 +710,7 @@ namespace gzfx::settings
             case Editable::ApplyPresetAction:
             case Editable::LoadCustomAction:
             case Editable::SaveCustomAction:
+            case Editable::ResetDefaultsAction:
             case Editable::DefaultMode:
             case Editable::ActivationDrawIndexedThreshold:
             case Editable::AccessibleDiagnostics:
@@ -785,28 +804,41 @@ namespace gzfx::settings
                 return;
             }
 
-            Values next =
-                g_values;
+            Values next{};
 
-            // Start every built-in look from a known coherent product base.
+            // Built-in looks must never inherit extreme values from prior edits.
+            // Quality and selected custom slot are user workflow metadata.
             next.productEnabled = true;
-            next.productQuality = 1;
+            next.productQuality = g_values.productQuality;
+            next.productCustomSlot = g_values.productCustomSlot;
+            // Presets change only appearance, not the user's startup,
+            // accessibility, diagnostic or capture configuration.
+            next.defaultMode = g_values.defaultMode;
+            next.activationDrawIndexedThreshold =
+                g_values.activationDrawIndexedThreshold;
+            next.accessibleDiagnostics =
+                g_values.accessibleDiagnostics;
+            next.captureOnModeChange =
+                g_values.captureOnModeChange;
             next.productPreset =
                 static_cast<std::uint32_t>(
                     preset);
 
+            // Skyrim already provides HDR exposure and tonemapping.
+            // Built-in looks start with neutral manual exposure rather than
+            // multiplying by an arbitrary automatic luminance adaptation.
             next.exposureEnabled = true;
-            next.autoExposureEnabled = true;
+            next.autoExposureEnabled = false;
             next.manualExposureEv = 0.0f;
             next.exposureCompensationEv = 0.0f;
             next.exposureKey = 0.18f;
-            next.exposureMinEv = -8.0f;
-            next.exposureMaxEv = 8.0f;
+            next.exposureMinEv = -3.0f;
+            next.exposureMaxEv = 3.0f;
             next.exposureSpeedUp = 2.5f;
             next.exposureSpeedDown = 1.5f;
 
             next.bloomEnabled = true;
-            next.bloomStrength = 0.28f;
+            next.bloomStrength = 0.16f;
             next.bloomThreshold = 1.1f;
             next.bloomSoftKnee = 0.5f;
             next.bloomRadius = 4.0f;
@@ -835,7 +867,7 @@ namespace gzfx::settings
             next.chromaticAberrationEnabled = false;
             next.denoiseEnabled = false;
             next.sharpenEnabled = true;
-            next.sharpenStrength = 0.18f;
+            next.sharpenStrength = 0.10f;
             next.sharpenClamp = 0.25f;
             next.barsEnabled = false;
             next.letterboxAmount = 0.0f;
@@ -850,73 +882,78 @@ namespace gzfx::settings
                 break;
 
             case Preset::Clearfell:
-                next.exposureCompensationEv = 0.15f;
-                next.bloomStrength = 0.20f;
-                next.colorContrast = 1.06f;
+                next.manualExposureEv = 0.08f;
+                next.bloomStrength = 0.12f;
+                next.colorContrast = 1.025f;
                 next.colorSaturation = 1.02f;
-                next.colorTemperature = -0.04f;
-                next.colorVibrance = 0.08f;
-                next.toneShoulder = 0.10f;
-                next.sharpenStrength = 0.26f;
+                next.colorTemperature = -0.02f;
+                next.colorVibrance = 0.04f;
+                next.toneShoulder = 0.04f;
+                next.sharpenStrength = 0.12f;
                 break;
 
             case Preset::Emberveil:
-                next.exposureCompensationEv = 0.10f;
-                next.bloomStrength = 0.48f;
-                next.bloomThreshold = 0.85f;
+                next.manualExposureEv = 0.06f;
+                next.bloomStrength = 0.24f;
+                next.bloomThreshold = 1.15f;
                 next.lensDirtEnabled = true;
-                next.lensDirtStrength = 0.18f;
-                next.colorContrast = 1.10f;
-                next.colorSaturation = 1.08f;
-                next.colorTemperature = 0.18f;
-                next.colorTint = -0.03f;
-                next.toneToe = 0.08f;
-                next.toneShoulder = 0.28f;
+                next.lensDirtStrength = 0.06f;
+                next.colorContrast = 1.05f;
+                next.colorSaturation = 1.05f;
+                next.colorTemperature = 0.11f;
+                next.colorTint = -0.02f;
+                next.toneToe = 0.02f;
+                next.toneShoulder = 0.09f;
                 next.vignetteEnabled = true;
-                next.vignetteStrength = 0.12f;
+                next.vignetteStrength = 0.05f;
+                next.halationStrength = 0.06f;
                 break;
 
             case Preset::Moonforge:
-                next.exposureCompensationEv = -0.35f;
-                next.bloomStrength = 0.30f;
-                next.colorContrast = 1.13f;
-                next.colorSaturation = 0.82f;
-                next.colorTemperature = -0.24f;
-                next.colorTint = 0.04f;
-                next.toneToe = 0.12f;
-                next.toneShoulder = 0.18f;
+                next.manualExposureEv = -0.10f;
+                next.bloomStrength = 0.18f;
+                next.colorContrast = 1.05f;
+                next.colorSaturation = 0.96f;
+                next.colorTemperature = -0.14f;
+                next.colorTint = 0.02f;
+                next.toneToe = 0.03f;
+                next.toneShoulder = 0.06f;
                 next.vignetteEnabled = true;
-                next.vignetteStrength = 0.16f;
+                next.vignetteStrength = 0.08f;
+                next.shadowRecovery = 0.10f;
+                next.highlightWarmth = -0.07f;
                 break;
 
             case Preset::VerdantNorth:
-                next.exposureCompensationEv = 0.05f;
-                next.bloomStrength = 0.24f;
-                next.colorContrast = 1.04f;
-                next.colorSaturation = 1.08f;
-                next.colorVibrance = 0.16f;
-                next.colorTemperature = -0.02f;
-                next.colorTint = -0.10f;
-                next.toneShoulder = 0.08f;
-                next.sharpenStrength = 0.22f;
+                next.manualExposureEv = 0.03f;
+                next.bloomStrength = 0.15f;
+                next.colorContrast = 1.03f;
+                next.colorSaturation = 1.04f;
+                next.colorVibrance = 0.08f;
+                next.colorTemperature = -0.01f;
+                next.colorTint = -0.04f;
+                next.toneShoulder = 0.04f;
+                next.sharpenStrength = 0.12f;
+                next.clarityStrength = 0.08f;
                 break;
 
             case Preset::SableCinema:
-                next.exposureCompensationEv = -0.20f;
-                next.bloomStrength = 0.22f;
-                next.colorContrast = 1.20f;
-                next.colorGamma = 0.96f;
-                next.colorSaturation = 0.72f;
-                next.colorVibrance = -0.08f;
-                next.toneToe = 0.18f;
-                next.toneShoulder = 0.24f;
+                next.manualExposureEv = -0.08f;
+                next.bloomStrength = 0.14f;
+                next.colorContrast = 1.09f;
+                next.colorGamma = 0.98f;
+                next.colorSaturation = 0.91f;
+                next.colorVibrance = -0.04f;
+                next.toneToe = 0.05f;
+                next.toneShoulder = 0.08f;
                 next.vignetteEnabled = true;
-                next.vignetteStrength = 0.24f;
+                next.vignetteStrength = 0.09f;
                 next.filmGrainEnabled = true;
-                next.filmGrainStrength = 0.035f;
+                next.filmGrainStrength = 0.010f;
                 next.barsEnabled = true;
-                next.letterboxAmount = 0.055f;
-                next.sharpenStrength = 0.14f;
+                next.letterboxAmount = 0.035f;
+                next.sharpenStrength = 0.09f;
+                next.highlightRolloff = 0.10f;
                 break;
 
             case Preset::Count:
@@ -1034,6 +1071,9 @@ namespace gzfx::settings
                 return false;
             }
 
+            const double before =
+                NumberFrom(g_values, *descriptor);
+
             if (descriptor->type ==
                     ValueType::Boolean)
             {
@@ -1060,7 +1100,20 @@ namespace gzfx::settings
                             : -descriptor->step));
             }
 
-            MarkCustomUnlocked(setting);
+            if (NumberFrom(g_values, *descriptor) == before)
+            {
+                return true;
+            }
+
+            if (setting == Editable::ProductPreset)
+            {
+                ApplyPresetUnlocked(
+                    static_cast<Preset>(g_values.productPreset));
+            }
+            else
+            {
+                MarkCustomUnlocked(setting);
+            }
             NormalizeRelations(g_values);
 
             if (!PersistUnlocked())
@@ -1104,6 +1157,9 @@ namespace gzfx::settings
                 return false;
             }
 
+            const double before =
+                NumberFrom(g_values, *descriptor);
+
             SetNumber(
                 g_values,
                 *descriptor,
@@ -1111,7 +1167,20 @@ namespace gzfx::settings
                     *descriptor,
                     normalized));
 
-            MarkCustomUnlocked(setting);
+            if (NumberFrom(g_values, *descriptor) == before)
+            {
+                return true;
+            }
+
+            if (setting == Editable::ProductPreset)
+            {
+                ApplyPresetUnlocked(
+                    static_cast<Preset>(g_values.productPreset));
+            }
+            else
+            {
+                MarkCustomUnlocked(setting);
+            }
             NormalizeRelations(g_values);
 
             if (!PersistUnlocked())
@@ -1183,21 +1252,29 @@ namespace gzfx::settings
                 DescriptorFor(setting);
 
             if (descriptor == nullptr ||
-                descriptor->type !=
-                    ValueType::Boolean)
+                (descriptor->type != ValueType::Boolean &&
+                 setting != Editable::DefaultMode))
             {
                 return false;
             }
 
-            const bool current =
+            if (setting == Editable::DefaultMode)
+            {
+                g_values.defaultMode =
+                    g_values.defaultMode == 0u ? 2u : 0u;
+            }
+            else
+            {
+                const bool current =
+                    Field<bool>(
+                        g_values,
+                        descriptor->offset);
+
                 Field<bool>(
                     g_values,
-                    descriptor->offset);
-
-            Field<bool>(
-                g_values,
-                descriptor->offset) =
-                !current;
+                    descriptor->offset) =
+                    !current;
+            }
 
             MarkCustomUnlocked(setting);
 
@@ -1237,6 +1314,9 @@ namespace gzfx::settings
             return SaveCustom(
                 Get().productCustomSlot);
 
+        case Editable::ResetDefaultsAction:
+            return ResetDefaults();
+
         default:
             return false;
         }
@@ -1249,8 +1329,8 @@ namespace gzfx::settings
             DescriptorFor(setting);
 
         return descriptor != nullptr &&
-            descriptor->type ==
-                ValueType::Boolean;
+            (descriptor->type == ValueType::Boolean ||
+             setting == Editable::DefaultMode);
     }
 
     bool IsSlider(
@@ -1260,6 +1340,7 @@ namespace gzfx::settings
             DescriptorFor(setting);
 
         return descriptor != nullptr &&
+            setting != Editable::DefaultMode &&
             descriptor->type !=
                 ValueType::Boolean &&
             descriptor->type !=
@@ -1298,6 +1379,35 @@ namespace gzfx::settings
 
             ApplyPresetUnlocked(preset);
 
+            if (!PersistUnlocked())
+            {
+                return false;
+            }
+
+            ++g_revision;
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    bool ResetDefaults() noexcept
+    {
+        try
+        {
+            std::scoped_lock lock(g_mutex);
+            if (!g_loaded && !LoadUnlocked())
+            {
+                return false;
+            }
+
+            // Only active keys are rewritten. Custom1/2/3 snapshots are kept.
+            g_values = Values{};
+            // The factory reset is a real, restrained Clearfell baseline,
+            // not just a Clearfell label attached to uninitialized sliders.
+            ApplyPresetUnlocked(Preset::Clearfell);
             if (!PersistUnlocked())
             {
                 return false;
@@ -1510,6 +1620,7 @@ namespace gzfx::settings
             L"APPLY PRESET",
             L"LOAD CUSTOM PROFILE",
             L"SAVE CUSTOM PROFILE",
+            L"RESET DEFAULTS",
 
             L"AMBIENT CONTACT STRENGTH",
             L"AMBIENT CONTACT RADIUS",
@@ -1556,6 +1667,13 @@ namespace gzfx::settings
             L"TONE TOE",
             L"TONE SHOULDER",
             L"TONE WHITE CLIP",
+            L"SHADOW RECOVERY",
+            L"HIGHLIGHT ROLLOFF",
+            L"LOCAL CLARITY",
+            L"WARM HALATION",
+            L"SHADOW WARMTH",
+            L"HIGHLIGHT WARMTH",
+            L"FINE DITHER",
 
             L"DEPTH OF FIELD",
             L"DOF FOCUS DISTANCE",
@@ -1594,7 +1712,7 @@ namespace gzfx::settings
             L"LETTERBOX AMOUNT",
             L"PILLARBOX AMOUNT",
 
-            L"DEFAULT DEVELOPMENT VIEW",
+            L"STARTUP GZFX MODE",
             L"WORLD DRAW THRESHOLD",
             L"ACCESSIBLE DIAGNOSTICS",
             L"CAPTURE ON MODE CHANGE"
@@ -1657,6 +1775,9 @@ namespace gzfx::settings
             case Editable::SaveCustomAction:
                 return L"SAVE";
 
+            case Editable::ResetDefaultsAction:
+                return L"RESET";
+
             case Editable::HorizonOcclusionQuality:
                 switch (values.horizonOcclusionQuality)
                 {
@@ -1670,13 +1791,18 @@ namespace gzfx::settings
             case Editable::DefaultMode:
                 switch (values.defaultMode)
                 {
-                case 0: return L"OFF";
-                case 1: return L"SPLIT";
-                case 2: return L"FULL";
-                case 3: return L"DEPTH";
-                case 4: return L"PRE-UI COLOR";
+                case 0: return L"VANILLA";
+                case 2: return L"GZFX ON";
                 default: return L"UNKNOWN";
                 }
+
+            case Editable::DitherStrength:
+            {
+                std::wostringstream output;
+                output << std::fixed << std::setprecision(4)
+                       << values.ditherStrength;
+                return output.str();
+            }
 
             default:
                 break;
