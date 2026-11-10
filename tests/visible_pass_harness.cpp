@@ -609,7 +609,7 @@ int wmain(int argc, wchar_t** argv)
         visibleText.find("status=active") !=
         std::string::npos;
 
-    // Public startup mode is full-screen GZFX ON, not split debug.
+    // Full-screen GZFX ON is the only enabled display state.
     const bool fullMode =
         visibleText.find("full_ambient_contact") !=
             std::string::npos ||

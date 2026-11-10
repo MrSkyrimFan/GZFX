@@ -377,9 +377,6 @@ int wmain(int argc, wchar_t** argv)
             L"1") ||
         !SetEnvironmentVariableW(
             L"GZFX_TEST_WAVE4_ACTIVE",
-            L"1") ||
-        !SetEnvironmentVariableW(
-            L"GZFX_TEST_INTERNAL_SPLIT_MODE",
             L"1"))
     {
         return 3;
@@ -1502,18 +1499,18 @@ int wmain(int argc, wchar_t** argv)
             wave4Root /
             L"ambient_visibility_v2_status.txt");
 
-    float splitLeft = 0.0f;
-    float splitRight = 0.0f;
+    float leftVisibility = 0.0f;
+    float rightVisibility = 0.0f;
 
-    const bool splitRead =
+    const bool coverageRead =
         ReadRgba8Pair(
             device,
             context,
             aoFinal.texture,
             width,
             height,
-            &splitLeft,
-            &splitRight);
+            &leftVisibility,
+            &rightVisibility);
 
     const bool wave4Applied =
         wave4Status.find(
@@ -1523,12 +1520,13 @@ int wmain(int argc, wchar_t** argv)
             "last_applied_frame=0") ==
             std::string::npos;
 
-    const bool stageCorrectSplit =
-        splitRead &&
-        std::abs(splitLeft - 0.80f) <
-            0.03f &&
-        splitRight >
-            splitLeft + 0.05f;
+    // Verify full-screen AV2 on BOTH halves instead of preserving
+    // the retired split-screen diagnostic mode. Stock AO here is 0.80.
+    const bool stageCorrectFullScreen =
+        coverageRead &&
+        leftVisibility > 0.85f &&
+        rightVisibility > 0.85f &&
+        std::abs(leftVisibility - rightVisibility) < 0.03f;
 
     if (!executed ||
         !hierarchy ||
@@ -1539,7 +1537,7 @@ int wmain(int argc, wchar_t** argv)
         !stableContract ||
         !delayedCapture ||
         !wave4Applied ||
-        !stageCorrectSplit)
+        !stageCorrectFullScreen)
     {
         std::cerr
             << "Wave 3 ping-pong continuity failed\n"
@@ -1557,10 +1555,10 @@ int wmain(int argc, wchar_t** argv)
             << normalGenerationC
             << "\nwave4_status:\n"
             << wave4Status
-            << "\nsplit_left="
-            << splitLeft
-            << " split_right="
-            << splitRight
+            << "\nfull_left="
+            << leftVisibility
+            << " full_right="
+            << rightVisibility
             << "\ncontracts="
             << contractA
             << ","

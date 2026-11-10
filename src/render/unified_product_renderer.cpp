@@ -1545,8 +1545,7 @@ float4 PSComposite(VSOutput input) : SV_TARGET
             input.uv,
             0);
 
-    if (ProductEnabled == 0 ||
-        (Mode == 1 && input.uv.x < 0.5))
+    if (ProductEnabled == 0 || Mode != 2)
     {
         return original;
     }
@@ -2924,8 +2923,7 @@ float4 PSComposite(VSOutput input) : SV_TARGET
                 return false;
             }
 
-            if (mode != 1 &&
-                mode != 2)
+            if (mode != 2)
             {
                 ++g_status.skips;
                 g_lastError = "unsupported development mode";

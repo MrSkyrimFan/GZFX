@@ -348,8 +348,7 @@ namespace gzfx::render::scene_effects
                     ambient_visibility_v2::
                     OwnsDevelopmentMode(mode);
 
-            if (mode != 1 &&
-                mode != 2)
+            if (mode != 2)
             {
                 WriteLog(
                     frame,
