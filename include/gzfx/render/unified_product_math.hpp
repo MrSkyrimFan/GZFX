@@ -29,7 +29,13 @@ namespace gzfx::render::unified_product
         AmbientContact = 1ull << 15,
         HorizonOcclusion = 1ull << 16,
         IndirectBounce = 1ull << 17,
-        LocalGlow = 1ull << 18
+        LocalGlow = 1ull << 18,
+        ShadowRecovery = 1ull << 19,
+        HighlightRolloff = 1ull << 20,
+        Clarity = 1ull << 21,
+        Halation = 1ull << 22,
+        SplitToning = 1ull << 23,
+        FineDither = 1ull << 24
     };
 
     constexpr std::uint64_t Bit(
@@ -159,6 +165,37 @@ namespace gzfx::render::unified_product
         if (values.localGlowEnabled)
         {
             mask |= Bit(Effect::LocalGlow);
+        }
+
+        if (values.shadowRecovery > 0.0f)
+        {
+            mask |= Bit(Effect::ShadowRecovery);
+        }
+
+        if (values.highlightRolloff > 0.0f)
+        {
+            mask |= Bit(Effect::HighlightRolloff);
+        }
+
+        if (values.clarityStrength > 0.0f)
+        {
+            mask |= Bit(Effect::Clarity);
+        }
+
+        if (values.halationStrength > 0.0f)
+        {
+            mask |= Bit(Effect::Halation);
+        }
+
+        if (values.shadowWarmth != 0.0f ||
+            values.highlightWarmth != 0.0f)
+        {
+            mask |= Bit(Effect::SplitToning);
+        }
+
+        if (values.ditherStrength > 0.0f)
+        {
+            mask |= Bit(Effect::FineDither);
         }
 
         return mask;
