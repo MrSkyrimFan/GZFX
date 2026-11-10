@@ -28,8 +28,8 @@ Wave 2: CLOSED
 Wave 3: CLOSED
 broad foundation renderer cartography: COMPLETE
 Wave 4: renderer-stack ownership architecture PROVEN
-current runtime: 0.0.37-native-domain-anchors
-current phase: 0.0.37 ENGINEERING CLOSED / COMBINED REAL-SKYRIM PRODUCT + NATIVE-DOMAIN FIELD VALIDATION NEXT
+current runtime: 0.0.38-calibrated-unified-renderer
+current phase: 0.0.38 ENGINEERING CLOSED / COMBINED REAL-SKYRIM VISUAL AND PERFORMANCE FIELD VALIDATION NEXT
 primary discovery authority: Continuous Renderer Telemetry Listener
 graphics front door: SKSE Preload/Load + internal GZFX D3D11/DXGI lifecycle capture
 engine access: pinned MIT CommonLibSSE-GG + Address Library v5 on Skyrim 1.7.104
@@ -257,3 +257,32 @@ PRs #42 and #43 are merged. The latest Windows merged-main run #301 (42162962740
 0.0.37 adds a read-only engine-domain observer for shadow-light subtypes, world/water/effects phases, image-space water/reflection/underwater/volumetric identities and late post-processing/global and UI TAA/HDR/tonemap/copy/refraction/pre-UI anchors. It does not yet replace native weather, water, shadows, fire or lighting and does not prove final product visual quality. Shadow/water/PostTonemapPreUi promotions await real-Skyrim field correlation. The next step is one combined GZFX4 field test of the 0.0.36 unified renderer + 0.0.37 observers; HBAO flicker, performance and final tuning stay deferred.
 
 Controlling closeout: `GZFXWorkFolder/old/GZFX_FULL_NEW_CHAT_CONTINUITY_INDEX_0.0.37.txt` and `GZFXWorkFolder/old/GZFX_0.0.37_NATIVE_DOMAIN_ANCHOR_ENGINEERING_RESULT.txt`.
+
+## 0.0.38 calibrated unified renderer (automated-engineering closed)
+
+The owner-returned `GZFX12423JJ.zip` 0.0.37 session exposed severe over-strong
+controls, dark/grey output, misleading preset selection, and an unwanted
+five-position Shift+Numpad3 display cycle. PR #44 implements one coherent
+0.0.38 wave: 48 restrained ranges, safer exposure and tone behavior, actual
+preset-on-selection, RESET DEFAULTS preserving three saved custom profiles,
+**exactly two modes (vanilla OFF / full-screen GZFX ON)** and six additional
+shared-HDR post/tone features (shadow recovery, highlight rolloff, clarity,
+halation, split toning, fine dither). No half-screen or hidden diagnostic
+display modes remain. New contract + embedded HLSL tests bring suite to 44.
+
+PR #44 merged at `60d7952152ec652e1597fbc144349efb376213ab`.
+PR run #310 and merged-main run #311 pass 44/44, Windows x64 PE and
+one-DLL package checks. The validated `821671`-byte archive (SHA-256
+`5802701929e8c293c7a252d89890e13d34181e93422174356ec5b50e926e7f8d`)
+was staged on `lance-package`, then published exactly unchanged on main in
+package-only commit `3331489a3ed31d3c1f03cdbdf9d41c1ec73ee106`.
+
+`LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip` contains only
+`Data/SKSE/Plugins/GZFX.dll`. SKSE 2.3.1 and Address Library v5 are external.
+
+The real-Skyrim 0.0.38 visual/performance gate is **not** yet closed.
+GZFX remains independent of ENB and ReShade but has not achieved full native
+feature parity; shadow, weather/sky, water/reflections, fire/emissive,
+materials and native lighting ownership still require evidence-based work.
+Read the 0.0.38 engineering result and new-chat index in `GZFXWorkFolder/old/`
+before proceeding to the combined field session.

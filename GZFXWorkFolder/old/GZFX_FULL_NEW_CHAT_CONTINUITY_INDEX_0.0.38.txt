@@ -1,0 +1,62 @@
+GZFX — FULL CONTINUITY INDEX, 0.0.38
+Date: 2026-11-10
+Status: ENGINEERING CLOSED / NEXT FIELD SESSION REQUIRED
+
+READ FIRST
+    AGENT.md
+    GZFXWorkFolder/old/GZFX_0.0.38_CALIBRATED_UNIFIED_RENDERER_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/old/GZFX_0.0.38_GZFX12423JJ_FIELD_FINDINGS.txt
+    GZFXWorkFolder/old/GZFX_0.0.38_PRODUCT_RECOVERY_RESEARCH.txt
+    GZFXWorkFolder/old/GZFX_0.0.38_INTEGRATED_RENDERER_BLUEPRINT.txt
+    GZFXWorkFolder/old/GZFX_0.0.37_NATIVE_DOMAIN_ANCHOR_ENGINEERING_RESULT.txt
+    GZFXWorkFolder/new/README.md
+
+AUTHORITATIVE SOURCE AND RELEASE
+    Version: 0.0.38-calibrated-unified-renderer
+    PR #44 merged at 60d7952152ec652e1597fbc144349efb376213ab.
+    PR CI #310: 44/44, PE, HLSL, package success.
+    Main CI #311: 44/44, PE, package and stage success.
+    Validated ZIP SHA-256:
+        5802701929e8c293c7a252d89890e13d34181e93422174356ec5b50e926e7f8d
+    Git blob: c7c3f49cdcf7dc8b78e569870716ddd1ad6df7e3
+    Main published at package-only commit:
+        3331489a3ed31d3c1f03cdbdf9d41c1ec73ee106
+    Download repository path:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    One DLL: Data/SKSE/Plugins/GZFX.dll
+    Target: Steam Skyrim 1.7.104 / SKSE 2.3.1 / Address Library v5
+
+FINAL OWNER MODE DECISION
+    EXACTLY TWO MODES, INCLUDING TESTS AND SHADERS:
+        vanilla OFF (0), full-screen GZFX ON (2).
+    Shift+Numpad3 toggles OFF/ON only.
+    Absolutely no half-screen comparison, hidden split-test mode,
+    depth-view or pre-UI visual mode.
+    Read-only telemetry and frame captures are NOT visual modes.
+
+PRODUCT CHANGES
+    48 legacy controls calibrated to restrained ranges.
+    Real Reset Defaults, clean built-in presets applied immediately.
+    Custom profiles persist across reset.
+    Six new shared-HDR post/tone families: shadow recovery,
+    highlight rolloff, local clarity, warm halation, split toning
+    (COLOR grading only), fine dither.
+    No independent renderer/shader pipeline duplication.
+
+NEXT DIRECT ACTION
+    One combined in-game field session validating controls, full-screen
+    ON/OFF, visual quality/performance, and remaining native-domain
+    instrumentation across exterior day, water, night and inn fire.
+    Owner uploads bounded field ZIP in repo; agent reads it directly.
+    Then DATA -> RESEARCH -> BLUEPRINT -> integrated implementation.
+    No XForge-style drift, no obsolete test exceptions, no one-feature
+    DLL cycles, no unsupported ENB/ReShade coexistence.
+
+NON-CLOSURES
+    Real game visual quality/performance 0.0.38 still untested.
+    HBAO flicker, water, native shadows, sky/cloud/weather/fire,
+    lighting/material reflection and proper native tonemap still
+    require evidence-driven work. Do not label post tools as full
+    native rendering parity.
+
+END CONTINUITY INDEX

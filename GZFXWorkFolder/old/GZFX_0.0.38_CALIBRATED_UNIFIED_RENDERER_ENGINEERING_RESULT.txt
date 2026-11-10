@@ -1,0 +1,145 @@
+GZFX 0.0.38 — CALIBRATED UNIFIED RENDERER
+FINAL ENGINEERING RESULT
+UTC closure date: 2026-11-10
+Status: AUTOMATED ENGINEERING CLOSED / REAL-SKYRIM VISUAL VALIDATION OPEN
+
+SOURCE FIELD
+    Raw owner-uploaded GZFX12423JJ.zip
+    Permanent raw: GZFXWorkFolder/field_uploads/GZFX12423JJ.zip
+    Git raw blob: 363057b024f5e6ed9f96cb8f9f923b7fb84452c7
+    Unpacked GitHub Action 42890253339, artifact 13797703277
+    Skyrim 1.7.104, 2560x1440, 7754 session frames
+    Telemetry enqueued=798925 written=798925 dropped=0
+    Source field visual report: over-strong sliders, over-dark greying,
+    poor visual response, misleading presets, unwanted multiple modes.
+    Current pre-patch INI reached localGlow=1.38333, indirect=0.496667.
+    Field CPU/GPU performance attribution not established; HBAO temporal
+    flicker remains an open quality defect.
+
+DATA -> RESEARCH -> BLUEPRINT
+    0.0.38 full findings, research and coherent blueprint completed in new/,
+    then archived byte-identically into old/ in the final documentation commit.
+    Native-domain re-audit records remain available without reconstruction.
+
+IMPLEMENTATION (ONE COHERENT WAVE)
+    48 legacy control range reductions and conservative defaults across
+    AO/indirect, glow, HDR/exposure, bloom, grading, contrast, tone,
+    DoF, motion, fog, optics, composition and filtering.
+    Legacy INI values use descriptor clamp/reload, no destructive migration.
+    Preset selection immediately applies a built-in look. Built-ins reset
+    from coherent Values{}, not the previous look or extreme ambient values.
+    Retain user quality tier, custom slot, startup/accessibility config.
+    RESET DEFAULTS restores a restrained Clearfell baseline while preserving
+    Custom 1/2/3 saved INI sections and later reload.
+    Fine slider changes avoid redundant persistence when value unchanged.
+
+    EXACT VISUAL MODES:
+        0 = vanilla OFF.
+        2 = full-screen GZFX ON.
+    Shift+Numpad3 toggles these exclusively. Startup mode controls accept
+    only these two values. Mode 1 split screen, mode 3 depth, mode 4 pre-UI
+    color and synthetic test-only split were REMOVED. The old Wave 3
+    split diagnostic acceptance was replaced by actual full-frame left/right
+    coverage; no split behavior is retained to satisfy tests.
+
+    SIX NEW INTEGRATED SHARED-HDR FAMILIES:
+        1. Shadow recovery (luminance-preserving bounded enhancement)
+        2. Highlight rolloff/recovery (uniform RGB scale)
+        3. Local clarity/contrast (reuses shared luminance pyramid)
+        4. Warm halation (reuses shared bright pyramid)
+        5. Split toning (independent shadow/highlight warmth sliders;
+           split TONING is a COLOR TECHNIQUE, NOT split-screen view)
+        6. Fine pre-tonemap dither
+    Added seven actual settings values, real HLSL response, effect mask,
+    live UI rows and INI persistence.
+    No extra full-resolution render executor, no new runtime AI, no ENB
+    or ReShade dependency, no native-domain semantic promotions.
+    Existing architecture remains one MAIN_HDR scene snapshot, shared
+    bloom/luminance pyramid, exposure history, ordered composite and
+    one MAIN_HDR writeback. AV2 remains sole HBAO owner.
+
+VERSION AND PACKAGING
+    CMake version=0.0.38, vcpkg=0.0.38, SKSE pluginVersion=38
+    Runtime tag: 0.0.38-calibrated-unified-renderer
+    Target Skyrim Steam 1.7.104 + SKSE 2.3.1 + external Address Library v5
+    CommonLibSSE-GG pinned MIT revision unchanged.
+    Package: Data/SKSE/Plugins/GZFX.dll only.
+    No proxy DLL, ENB, ReShade, SKSE or Address Library packaged.
+
+PR AND MAIN PROOF
+    PR #44: https://github.com/MrSkyrimFan/GZFX/pull/44
+    Final PR head:
+        0aefb1657dd8511a5cfe75197aa22022f8fdc148
+    Merged source commit:
+        60d7952152ec652e1597fbc144349efb376213ab
+    Tested PR and merged source tree EXACT MATCH:
+        3af46d7772d236c9c7272bad7a83f35929f3f221
+    Final PR Windows x64 run #310:
+        42900372727 SUCCESS
+        44/44 PASS, PE PASS, runtime smoke PASS,
+        independent embedded HLSL compile of VSMain, PSLuminanceBloom,
+        PSExposure and PSComposite PASS, one-DLL package PASS
+    Earlier PR runs exercised retired split test failures; acceptance
+    fixed by removing split-screen from product AND removing split-screen
+    expectation from diagnostic tests. No failure was waived.
+    Merged-main Windows x64 run #311:
+        42920471555 SUCCESS
+        44/44 PASS, PE PASS, smoke PASS, package PASS, stage PASS
+    Merged-main GitHub Actions artifact:
+        13813190086, outer ZIP bytes=820425
+
+EXACT PACKAGE PROOF
+    Inner ZIP filename: GZFX-SkyrimSE-x64.zip
+    Inner ZIP bytes: 821671
+    Inner ZIP SHA-256:
+        5802701929e8c293c7a252d89890e13d34181e93422174356ec5b50e926e7f8d
+    Inner ZIP Git blob SHA-1 (Git framing):
+        c7c3f49cdcf7dc8b78e569870716ddd1ad6df7e3
+    Only runtime file: Data/SKSE/Plugins/GZFX.dll
+    DLL bytes: 1876992
+    DLL SHA-256:
+        b6846ac27455154603074df9ef25ad95549e71c8cef855e590c73be090cb6421
+    PE MZ/PE signature: PASS
+    Independent inner archive validation: PASS
+    Staged lance-package branch commit:
+        3f221d3e2adca3ec1e41db0bf68fde0841572b89
+    Staged ZIP Git blob MATCHED independently verified CI artifact.
+    Main ZIP publication commit:
+        3331489a3ed31d3c1f03cdbdf9d41c1ec73ee106
+    Package-only source diff: exactly ONE changed file:
+        LANCE YOUR FILE IS HERE/GZFX-SkyrimSE-x64.zip
+    Main Git blob MATCHED staged exact validated archive.
+    No rezip/rebuild/source change during artifact publication.
+
+NON-CLOSURES (DO NOT MISLABEL AS SUCCESS)
+    0.0.38 has not yet had a real-Skyrim field session.
+    Subjective color/lighting quality, preset practical feel and extreme
+    residual tone artifacts need owner visual verification in game.
+    No GPU profiling shows production performance is acceptable.
+    HBAO temporal flicker, general GPU cost and artistic defaults open.
+    Native sky/weather/cloud shadows, water/reflections/refraction,
+    real shadow cascade/local-light replacement, fire/emissive/particles,
+    material weather response, native tonemap/display-HDR remain open.
+    AfterShadowProduction, WaterDomain, PostTonemapPreUi UNPROMOTED.
+    Other runtime families not real-field certified by current campaign.
+
+NEXT REQUIRED OWNER FIELD GATE
+    Download exact validated package from main and extract over previous
+    GZFX.dll into Skyrim; SKSE 2.3.1 and Address Library v5 separately.
+    Shift+Numpad1 opens menu. First click RESET DEFAULTS.
+    Shift+Numpad3: confirm ONLY vanilla OFF vs full-screen GZFX ON.
+    Try preset looks and Custom 1/2/3 save/load, moderate glow,
+    exposure/contrast and new shadow recovery, highlight rolloff,
+    clarity, halation, split-toning warmth and fine dither sliders.
+    One normal day/water/night/inn-fire gameplay route.
+    Do not demand one-by-one microtests of all 94 controls or
+    impossible simultaneous hotkeys.
+    Exit Skyrim normally to finalize bounded logs.
+    Upload one bounded next field ZIP under
+    GZFXWorkFolder/field_uploads/ (e.g. GZFX5.zip);
+    keep each GitHub file <=25 MB. A second bounded diagnostics ZIP is
+    acceptable if needed. No massive raw telemetry request.
+    Then repeat DATA -> FINDINGS -> RESEARCH -> BLUEPRINT ->
+    coherent native-domain implementation as verified by field evidence.
+
+END 0.0.38 ENGINEERING RESULT
