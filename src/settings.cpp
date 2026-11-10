@@ -386,6 +386,13 @@ namespace gzfx::settings
                     descriptor.minimum,
                     descriptor.maximum);
 
+            // Startup mode is exactly 0 (vanilla) or 2 (GZFX).
+            // Intermediate numeric INI values are not selectable states.
+            if (descriptor.editable == Editable::DefaultMode)
+            {
+                number = number < 1.0 ? 0.0 : 2.0;
+            }
+
             switch (descriptor.type)
             {
             case ValueType::Boolean:
@@ -1245,21 +1252,29 @@ namespace gzfx::settings
                 DescriptorFor(setting);
 
             if (descriptor == nullptr ||
-                descriptor->type !=
-                    ValueType::Boolean)
+                (descriptor->type != ValueType::Boolean &&
+                 setting != Editable::DefaultMode))
             {
                 return false;
             }
 
-            const bool current =
+            if (setting == Editable::DefaultMode)
+            {
+                g_values.defaultMode =
+                    g_values.defaultMode == 0u ? 2u : 0u;
+            }
+            else
+            {
+                const bool current =
+                    Field<bool>(
+                        g_values,
+                        descriptor->offset);
+
                 Field<bool>(
                     g_values,
-                    descriptor->offset);
-
-            Field<bool>(
-                g_values,
-                descriptor->offset) =
-                !current;
+                    descriptor->offset) =
+                    !current;
+            }
 
             MarkCustomUnlocked(setting);
 
@@ -1314,8 +1329,8 @@ namespace gzfx::settings
             DescriptorFor(setting);
 
         return descriptor != nullptr &&
-            descriptor->type ==
-                ValueType::Boolean;
+            (descriptor->type == ValueType::Boolean ||
+             setting == Editable::DefaultMode);
     }
 
     bool IsSlider(
@@ -1325,6 +1340,7 @@ namespace gzfx::settings
             DescriptorFor(setting);
 
         return descriptor != nullptr &&
+            setting != Editable::DefaultMode &&
             descriptor->type !=
                 ValueType::Boolean &&
             descriptor->type !=

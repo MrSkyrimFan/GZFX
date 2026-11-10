@@ -78,6 +78,19 @@ int wmain(int argc, wchar_t** argv)
     if (GetDevelopmentMode() != 0 ||
         CycleDevelopmentMode() != 2) return 9;
 
+    // Startup mode is a binary toggle, not a three-position slider.
+    if (!gzfx::settings::IsToggle(Editable::DefaultMode) ||
+        gzfx::settings::IsSlider(Editable::DefaultMode) ||
+        !gzfx::settings::Toggle(Editable::DefaultMode) ||
+        gzfx::settings::Get().defaultMode != 0u ||
+        !gzfx::settings::Toggle(Editable::DefaultMode) ||
+        gzfx::settings::Get().defaultMode != 2u ||
+        !gzfx::settings::SetNormalized(Editable::DefaultMode, 0.5f) ||
+        gzfx::settings::Get().defaultMode != 2u)
+    {
+        return 23;
+    }
+
     if (!gzfx::settings::SetNormalized(Editable::LocalGlowStrength, 1.0f) ||
         !gzfx::settings::SetNormalized(Editable::IndirectBounceStrength, 1.0f) ||
         !gzfx::settings::SetNormalized(Editable::HorizonOcclusionStrength, 1.0f) ||
