@@ -142,17 +142,7 @@ namespace gzfx::render
 
         const char* ModeName(const std::uint32_t mode)
         {
-            switch (mode)
-            {
-            case 0: return "vanilla_off";
-            case 2:
-                return gzfx::render::
-                    ambient_visibility_v2::
-                    OwnsDevelopmentMode(2)
-                    ? "full_ambient_visibility_v2"
-                    : "full_ambient_contact";
-            default: return "unknown";
-            }
+            return mode == 0u ? "vanilla_off" : "gzfx_on";
         }
 
         void LogState(
@@ -1087,15 +1077,9 @@ float4 PSMain(VSOutput input) : SV_TARGET
         const wchar_t* ModeCaptureFile(
             const std::uint32_t mode)
         {
-            switch (mode)
-            {
-            case 0:
-                return L"visible_mode_0_off.bmp";
-            case 2:
-                return L"visible_mode_2_gzfx_on.bmp";
-            default:
-                return L"visible_mode_unknown.bmp";
-            }
+            return mode == 0u
+                ? L"visible_mode_0_off.bmp"
+                : L"visible_mode_2_gzfx_on.bmp";
         }
 
         bool WriteManualCaptureSettings(

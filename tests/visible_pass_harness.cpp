@@ -611,9 +611,7 @@ int wmain(int argc, wchar_t** argv)
 
     // Full-screen GZFX ON is the only enabled display state.
     const bool fullMode =
-        visibleText.find("full_ambient_contact") !=
-            std::string::npos ||
-        visibleText.find("full_ambient_visibility_v2") !=
+        visibleText.find("mode=2 (gzfx_on)") !=
             std::string::npos;
 
     const bool validated =
