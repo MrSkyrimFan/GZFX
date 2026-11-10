@@ -651,7 +651,8 @@ int wmain(int argc, wchar_t** argv)
         !validated ||
         !settingsMenuVisible ||
         !settingsPersisted ||
-        !manualSettingsComplete)
+        !manualSettingsComplete ||
+        accessibleSeparator)
     {
         std::cerr
             << "visible_pass.txt:\n"
@@ -664,7 +665,7 @@ int wmain(int argc, wchar_t** argv)
             << fullMode
             << " validated="
             << validated
-            << " accessible_separator_behind_menu="
+            << " retired_split_separator_present="
             << accessibleSeparator
             << " settings_menu_visible="
             << settingsMenuVisible
