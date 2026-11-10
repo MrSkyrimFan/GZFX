@@ -808,8 +808,11 @@ namespace gzfx::settings
                 static_cast<std::uint32_t>(
                     preset);
 
+            // Skyrim already provides HDR exposure and tonemapping.
+            // Built-in looks start with neutral manual exposure rather than
+            // multiplying by an arbitrary automatic luminance adaptation.
             next.exposureEnabled = true;
-            next.autoExposureEnabled = true;
+            next.autoExposureEnabled = false;
             next.manualExposureEv = 0.0f;
             next.exposureCompensationEv = 0.0f;
             next.exposureKey = 0.18f;
@@ -863,7 +866,7 @@ namespace gzfx::settings
                 break;
 
             case Preset::Clearfell:
-                next.exposureCompensationEv = 0.08f;
+                next.manualExposureEv = 0.08f;
                 next.bloomStrength = 0.12f;
                 next.colorContrast = 1.025f;
                 next.colorSaturation = 1.02f;
@@ -874,7 +877,7 @@ namespace gzfx::settings
                 break;
 
             case Preset::Emberveil:
-                next.exposureCompensationEv = 0.06f;
+                next.manualExposureEv = 0.06f;
                 next.bloomStrength = 0.24f;
                 next.bloomThreshold = 1.15f;
                 next.lensDirtEnabled = true;
@@ -891,7 +894,7 @@ namespace gzfx::settings
                 break;
 
             case Preset::Moonforge:
-                next.exposureCompensationEv = -0.10f;
+                next.manualExposureEv = -0.10f;
                 next.bloomStrength = 0.18f;
                 next.colorContrast = 1.05f;
                 next.colorSaturation = 0.96f;
@@ -906,7 +909,7 @@ namespace gzfx::settings
                 break;
 
             case Preset::VerdantNorth:
-                next.exposureCompensationEv = 0.03f;
+                next.manualExposureEv = 0.03f;
                 next.bloomStrength = 0.15f;
                 next.colorContrast = 1.03f;
                 next.colorSaturation = 1.04f;
@@ -919,7 +922,7 @@ namespace gzfx::settings
                 break;
 
             case Preset::SableCinema:
-                next.exposureCompensationEv = -0.08f;
+                next.manualExposureEv = -0.08f;
                 next.bloomStrength = 0.14f;
                 next.colorContrast = 1.09f;
                 next.colorGamma = 0.98f;
