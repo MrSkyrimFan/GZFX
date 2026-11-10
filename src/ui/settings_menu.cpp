@@ -6,6 +6,7 @@
 #include "gzfx/render/wave3_pipeline.hpp"
 #include "gzfx/render/ambient_visibility_v2.hpp"
 #include "gzfx/render/unified_product_renderer.hpp"
+#include "gzfx/render/runtime_state.hpp"
 
 #include <Windows.h>
 #include <windowsx.h>
@@ -355,7 +356,7 @@ namespace gzfx::ui
                 << "controls="
                    "Shift+Numpad1 menu; "
                    "Shift+Numpad2 reload; "
-                   "Shift+Numpad3 cycle view; "
+                   "Shift+Numpad3 GZFX on/off; "
                    "Shift+Numpad4 capture frame+settings; "
                    "Shift+Numpad5 arm semantic + Wave3 capture; "
                    "mouse click/drag sliders; "
@@ -1067,24 +1068,38 @@ namespace gzfx::ui
                     g_cursor.x <=
                         kSliderRight + 12)
                 {
-                    settings::SetNormalized(
-                        item,
-                        normalized);
+                    const std::uint64_t revisionBefore =
+                        settings::Revision();
 
-                    MarkChanged();
+                    if (settings::SetNormalized(item, normalized) &&
+                        settings::Revision() != revisionBefore)
+                    {
+                        MarkChanged();
+                    }
                 }
             }
             else if (click &&
                      BooleanItem(item))
             {
-                settings::Toggle(item);
-                MarkChanged();
+                if (settings::Toggle(item))
+                {
+                    MarkChanged();
+                }
             }
             else if (click &&
                      ActionItem(item))
             {
-                settings::Activate(item);
-                MarkChanged();
+                if (settings::Activate(item))
+                {
+                    if (item == settings::Editable::ResetDefaultsAction)
+                    {
+                        // Reset leaves saved Custom profiles intact and
+                        // restores a full-screen GZFX ON preview.
+                        gzfx::render::state::SetDevelopmentMode(2u);
+                    }
+
+                    MarkChanged();
+                }
             }
             else
             {
@@ -1465,7 +1480,7 @@ namespace gzfx::ui
 
                 WriteState(
                     frame,
-                    "cycle_view_requested");
+                    "gzfx_on_off_requested");
             }
 
             if (shiftDown && num4)

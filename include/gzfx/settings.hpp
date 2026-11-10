@@ -49,8 +49,8 @@ namespace gzfx::settings
         float manualExposureEv = 0.0f;
         float exposureCompensationEv = 0.0f;
         float exposureKey = 0.18f;
-        float exposureMinEv = -8.0f;
-        float exposureMaxEv = 8.0f;
+        float exposureMinEv = -3.0f;
+        float exposureMaxEv = 3.0f;
         float exposureSpeedUp = 2.5f;
         float exposureSpeedDown = 1.5f;
 

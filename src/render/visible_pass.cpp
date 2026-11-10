@@ -144,7 +144,7 @@ namespace gzfx::render
         {
             switch (mode)
             {
-            case 0: return "off";
+            case 0: return "vanilla_off";
             case 1:
                 return gzfx::render::
                     ambient_visibility_v2::
